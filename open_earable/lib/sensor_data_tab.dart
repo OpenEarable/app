@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:charts_flutter/flutter.dart' as charts;
 import 'dart:math';
 
-class SensorDataPage extends StatefulWidget {
+class SensorDataTab extends StatefulWidget {
   @override
-  _SensorDataPageState createState() => _SensorDataPageState();
+  _SensorDataTabState createState() => _SensorDataTabState();
 }
 
-class _SensorDataPageState extends State<SensorDataPage> with SingleTickerProviderStateMixin {
+class _SensorDataTabState extends State<SensorDataTab> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   List<charts.Series<dynamic, num>> seriesList = [];
 

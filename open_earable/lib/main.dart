@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'now_playing_tab.dart';
 import 'sensor_data_tab.dart';
 import 'ble.dart';
+import 'apps_tab.dart';
 
 void main() => runApp(MyApp());
 
@@ -26,8 +27,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   final List<Widget> _widgetOptions = <Widget>[
     NowPlayingTab(),
-    SensorDataPage(),
-    Center(child: Text('Apps')),
+    SensorDataTab(),
+    AppsTab(),
   ];
 
   void _onItemTapped(int index) {
