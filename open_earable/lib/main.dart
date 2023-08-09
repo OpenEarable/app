@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'now_playing_tab.dart';
+import 'sensor_data_tab.dart';
+import 'ble.dart';
 
 void main() => runApp(MyApp());
 
@@ -6,8 +9,8 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Bottom Bar Demo',
-      theme: ThemeData(primarySwatch: Colors.blue),
+      title: '🦻 OpenEarable',
+      theme: ThemeData(primarySwatch: Colors.brown),
       home: MyHomePage(),
     );
   }
@@ -21,10 +24,10 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   int _selectedIndex = 0;
 
-  static const List<Widget> _widgetOptions = <Widget>[
-    Center(child: Text('Now Playing')),
-    Center(child: Text('Preview')),
-    Center(child: Text('Tab 3')),
+  final List<Widget> _widgetOptions = <Widget>[
+    NowPlayingTab(),
+    SensorDataPage(),
+    Center(child: Text('Apps')),
   ];
 
   void _onItemTapped(int index) {
@@ -37,7 +40,15 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('OpenEarable'),
+        title: Text('🦻 OpenEarable'),
+        actions: <Widget>[
+         IconButton(
+           icon: Icon(Icons.bluetooth),
+           onPressed: () {
+            Navigator.of(context).push(MaterialPageRoute(builder: (context) => BLEPage()));
+           },
+         ),
+       ],
       ),
       body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: BottomNavigationBar(
@@ -51,8 +62,8 @@ class _MyHomePageState extends State<MyHomePage> {
             label: 'Sensor Data',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.three_k),
-            label: 'Tab 3',
+            icon: Icon(Icons.apps),
+            label: 'Apps',
           ),
         ],
         currentIndex: _selectedIndex,
