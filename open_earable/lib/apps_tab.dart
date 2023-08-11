@@ -21,7 +21,7 @@ List<AppInfo> sampleApps = [
   AppInfo(
     iconData: Icons.directions_walk, 
     title: "Step Counter", 
-    description: "Counts number of steps taken by user.", 
+    description: "Counts number of steps taken.", 
     onTap: () {
       // Action when the card is tapped, for example:
       // Navigator.push(context, MaterialPageRoute(builder: (context) => PostureTracker()));
@@ -30,7 +30,16 @@ List<AppInfo> sampleApps = [
   AppInfo(
     iconData: Icons.face_6, 
     title: "Posture Tracker", 
-    description: "Gives feedback on bad posture.", 
+    description: "Get feedback on bad posture.", 
+    onTap: () {
+      // Action when the card is tapped, for example:
+      // Navigator.push(context, MaterialPageRoute(builder: (context) => PostureTracker()));
+    }
+  ),
+  AppInfo(
+    iconData: Icons.lunch_dining, 
+    title: "Asissted Dietary Monitoring", 
+    description: "Detect eating episodes.", 
     onTap: () {
       // Action when the card is tapped, for example:
       // Navigator.push(context, MaterialPageRoute(builder: (context) => PostureTracker()));
@@ -39,16 +48,7 @@ List<AppInfo> sampleApps = [
   AppInfo(
     iconData: Icons.height, 
     title: "Jump Height Test", 
-    description: "Tests how high a person jumps.", 
-    onTap: () {
-      // Action when the card is tapped, for example:
-      // Navigator.push(context, MaterialPageRoute(builder: (context) => PostureTracker()));
-    }
-  ),
-  AppInfo(
-    iconData: Icons.lunch_dining, 
-    title: "Eating Tracker", 
-    description: "Detects chewing activity of a person.", 
+    description: "Test your maximum jump height.", 
     onTap: () {
       // Action when the card is tapped, for example:
       // Navigator.push(context, MaterialPageRoute(builder: (context) => PostureTracker()));
