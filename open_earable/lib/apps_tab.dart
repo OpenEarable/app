@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import './apps/step_counter.dart';
-import './apps/posture_tracker.dart';
+import 'apps/posture_tracker/model/attitude_tracker.dart';
 
 class AppInfo {
   final IconData iconData;
