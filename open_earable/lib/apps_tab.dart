@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:open_earable/apps/posture_tracker/view/posture_tracker_view.dart';
 
 import './apps/step_counter.dart';
-import 'apps/posture_tracker/model/attitude_tracker.dart';
+import 'apps/posture_tracker/model/phone_attitude_tracker.dart';
 
 class AppInfo {
   final IconData iconData;
   final String title;
   final String description;
-  final VoidCallback onTap;
+  final void Function(BuildContext) onTap;
 
   AppInfo({
     required this.iconData, 
@@ -22,7 +23,7 @@ List<AppInfo> sampleApps = [
     iconData: Icons.directions_walk, 
     title: "Step Counter", 
     description: "Counts number of steps taken.", 
-    onTap: () {
+    onTap: (context) {
       // Action when the card is tapped, for example:
       // Navigator.push(context, MaterialPageRoute(builder: (context) => PostureTracker()));
     }
@@ -31,16 +32,19 @@ List<AppInfo> sampleApps = [
     iconData: Icons.face_6, 
     title: "Posture Tracker", 
     description: "Get feedback on bad posture.", 
-    onTap: () {
+    onTap: (context) {
       // Action when the card is tapped, for example:
-      // Navigator.push(context, MaterialPageRoute(builder: (context) => PostureTracker()));
+      Navigator.push(context, MaterialPageRoute(builder: (context) => PostureTrackerView()));
+
+      // show the PostureTrackerView
+
     }
   ),
   AppInfo(
     iconData: Icons.lunch_dining, 
     title: "Asissted Dietary Monitoring", 
     description: "Detect eating episodes.", 
-    onTap: () {
+    onTap: (context) {
       // Action when the card is tapped, for example:
       // Navigator.push(context, MaterialPageRoute(builder: (context) => PostureTracker()));
     }
@@ -49,7 +53,7 @@ List<AppInfo> sampleApps = [
     iconData: Icons.height, 
     title: "Jump Height Test", 
     description: "Test your maximum jump height.", 
-    onTap: () {
+    onTap: (context) {
       // Action when the card is tapped, for example:
       // Navigator.push(context, MaterialPageRoute(builder: (context) => PostureTracker()));
     }
@@ -70,7 +74,7 @@ class AppsTab extends StatelessWidget {
             title: Text(sampleApps[index].title),
             subtitle: Text(sampleApps[index].description),
             trailing: Icon(Icons.arrow_forward_ios, size: 16.0),  // Arrow icon on the right
-            onTap: sampleApps[index].onTap, // Callback when the card is tapped
+            onTap: () { sampleApps[index].onTap(context); }, // Callback when the card is tapped
           ),
         );
       },

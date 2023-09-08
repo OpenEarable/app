@@ -2,7 +2,7 @@
 
 import "package:flutter/material.dart";
 import "package:open_earable/apps/posture_tracker/model/attitude.dart";
-import "package:open_earable/apps/posture_tracker/model/attitude_tracker.dart";
+import 'package:open_earable/apps/posture_tracker/model/attitude_tracker.dart';
 
 class AttitudeNotifier extends ChangeNotifier {
   Attitude _attitude = Attitude();
