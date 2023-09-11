@@ -7,12 +7,17 @@ import 'package:open_earable/apps/posture_tracker/model/attitude.dart';
 import 'package:open_earable/apps/posture_tracker/model/attitude_tracker.dart';
 
 class MockAttitudeTracker extends AttitudeTracker {
-  final Random _random = Random();
   Stream<Attitude> _attitudeStream = Stream.empty();
   StreamSubscription<Attitude>? _attitudeSubscription;
 
   MockAttitudeTracker() {
-    this._attitudeStream = Stream<Attitude>.periodic(Duration(seconds: 1), (count) => (Attitude(roll: pi / 2 - this._random.nextDouble() * pi)));
+    this._attitudeStream = Stream.periodic(Duration(milliseconds: 100), (count) {
+      return Attitude(
+        roll: sin(count / 10) * pi / 4,
+        pitch: sin(count / 20) * pi / 4,
+        yaw: sin(count / 30) * pi / 4
+      );
+    });
   }
 
   @override
