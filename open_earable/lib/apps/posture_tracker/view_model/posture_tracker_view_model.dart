@@ -8,6 +8,9 @@ class PostureTrackerViewModel extends ChangeNotifier {
   Attitude _attitude = Attitude();
   Attitude get attitude => this._attitude;
 
+  bool _isTracking = false;
+  bool get isTracking => this._isTracking;
+
   AttitudeTracker _attitudeTracker;
 
   PostureTrackerViewModel(this._attitudeTracker) {
@@ -19,9 +22,16 @@ class PostureTrackerViewModel extends ChangeNotifier {
 
   void startTracking() {
     this._attitudeTracker.start();
+    this._setTracking(true);
   }
 
   void stopTracking() {
     this._attitudeTracker.stop();
+    this._setTracking(false);
+  }
+
+  void _setTracking(bool value) {
+    this._isTracking = value;
+    notifyListeners();
   }
 }

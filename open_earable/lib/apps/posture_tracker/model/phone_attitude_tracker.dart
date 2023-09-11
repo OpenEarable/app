@@ -11,6 +11,9 @@ class PhoneAttitudeTracker extends AttitudeTracker {
   StreamSubscription<OrientationEvent>? _orientationSubscription;
 
   @override
+  bool get isTracking => this._orientationSubscription != null && !this._orientationSubscription!.isPaused; 
+
+  @override
   void start() {
     this._orientationSubscription = motionSensors.orientation.listen((event) { 
       print("roll: ${event.roll}, pitch: ${event.pitch}, yaw: ${event.yaw}");

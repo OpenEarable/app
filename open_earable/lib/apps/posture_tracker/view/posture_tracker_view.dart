@@ -60,12 +60,10 @@ class _PostureTrackerViewState extends State<PostureTrackerView> {
                     ),
                   ],
                 ),
-                Row(
-                  children: [
-                    CupertinoButton(child: Text("start"), onPressed: () => this._viewModel.startTracking()),
-                    CupertinoButton(child: Text("stop"), onPressed: () => this._viewModel.stopTracking()),
-                  ],
-                )
+                if (!value.isTracking)
+                  CupertinoButton.filled(child: Text("Start Tracking"), onPressed: () => this._viewModel.startTracking())
+                else
+                  CupertinoButton.filled(child: Text("Stop Tracking"), onPressed: () => this._viewModel.stopTracking()),
               ]
             )
           )

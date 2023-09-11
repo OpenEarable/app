@@ -10,6 +10,9 @@ class MockAttitudeTracker extends AttitudeTracker {
   Stream<Attitude> _attitudeStream = Stream.empty();
   StreamSubscription<Attitude>? _attitudeSubscription;
 
+  @override
+  bool get isTracking => this._attitudeSubscription != null && !this._attitudeSubscription!.isPaused; 
+
   MockAttitudeTracker() {
     this._attitudeStream = Stream.periodic(Duration(milliseconds: 100), (count) {
       return Attitude(
