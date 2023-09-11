@@ -1,6 +1,7 @@
 // ignore_for_file: unnecessary_this
 
 import 'package:flutter/material.dart';
+import 'package:open_earable/apps/posture_tracker/view/arc_painter.dart';
 
 class PostureRollView extends StatelessWidget {
   final double roll;
@@ -26,14 +27,8 @@ class PostureRollView extends StatelessWidget {
           fontWeight: FontWeight.bold
         )
       ),
-      Container(
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: Color.fromRGBO(0, 0, 0, 0.3),
-            width: 5
-          ),
-          borderRadius: BorderRadius.circular(1000)
-        ),
+      CustomPaint(
+        painter: ArcPainter(angle: this.roll),
         child: Padding(
         padding: EdgeInsets.all(10),
           child: ClipOval(
@@ -47,7 +42,7 @@ class PostureRollView extends StatelessWidget {
             ])
           )
         )
-      )
+      ),
     ]);
   }
 }
