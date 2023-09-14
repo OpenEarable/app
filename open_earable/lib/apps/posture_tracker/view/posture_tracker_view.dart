@@ -44,7 +44,7 @@ class _PostureTrackerViewState extends State<PostureTrackerView> {
                           roll: value.attitude.roll,
                           headAssetPath: "assets/posture_tracker/Head_Front.png",
                           neckAssetPath: "assets/posture_tracker/Neck_Front.png",
-                          headAlignment: Alignment.center.add(Alignment(0, 0.25)),
+                          headAlignment: Alignment.center.add(Alignment(0, 0.3)),
                         ),
                       )
                     ),
@@ -55,6 +55,7 @@ class _PostureTrackerViewState extends State<PostureTrackerView> {
                           roll: value.attitude.pitch,
                           headAssetPath: "assets/posture_tracker/Head_Side.png",
                           neckAssetPath: "assets/posture_tracker/Neck_Side.png",
+                          headAlignment: Alignment.center.add(Alignment(0, 0.3)),
                         )
                       )
                     ),
