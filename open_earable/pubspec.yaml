@@ -30,6 +30,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  open_earable_flutter:
+    git: 
+      url: https://github.com/o-bagge/open_earable_flutter
 
 
   # The following adds the Cupertino Icons font to your application.
