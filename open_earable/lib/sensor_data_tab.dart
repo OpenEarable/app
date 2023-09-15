@@ -47,19 +47,19 @@ class _SensorDataTabState extends State<SensorDataTab>
             x: data["ACC"]["X"],
             y: data["ACC"]["Y"],
             z: data["ACC"]["Z"],
-            units: data["units"]);
+            units: data["ACC"]["units"]);
         XYZValue gyroscopeValue = XYZValue(
             timestamp: timestamp,
             x: data["GYRO"]["X"],
             y: data["GYRO"]["Y"],
             z: data["GYRO"]["Z"],
-            units: data["units"]);
+            units: data["ACC"]["units"]);
         XYZValue magnetometerValue = XYZValue(
             timestamp: timestamp,
             x: data["MAG"]["X"],
             y: data["MAG"]["Y"],
             z: data["MAG"]["Z"],
-            units: data["units"]);
+            units: data["MAG"]["units"]);
         _checkLength(accelerometerData);
         _checkLength(gyroscopeData);
         _checkLength(magnetometerData);
@@ -81,7 +81,7 @@ class _SensorDataTabState extends State<SensorDataTab>
           timestamp: timestamp,
           pressure: data["BARO"]["Pressure"],
           temperature: data["TEMP"]["Temperature"],
-          units: data["units"]);
+          units: {data["BARO"]["units"], data["TEMP"]["units"]});
 
       _checkLength(barometerData);
       setState(() {

@@ -152,12 +152,6 @@ class _BLEPageState extends State<BLEPage> {
             )
           ],
         )),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            _startScanning();
-          },
-          child: const Text("Scan"),
-        ),
       ),
     );
   }
