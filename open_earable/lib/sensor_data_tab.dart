@@ -75,13 +75,15 @@ class _SensorDataTabState extends State<SensorDataTab>
 
     _barometerSubscription =
         _openEarable.sensorManager.subscribeToSensorData(1).listen((data) {
+      Map<dynamic, dynamic> units = {};
+      units.addAll(data["BARO"]["units"]);
+      units.addAll(data["TEMP"]["units"]);
       int timestamp = data["timestamp"];
-
       BarometerValue barometerValue = BarometerValue(
           timestamp: timestamp,
           pressure: data["BARO"]["Pressure"],
           temperature: data["TEMP"]["Temperature"],
-          units: {data["BARO"]["units"], data["TEMP"]["units"]});
+          units: units);
 
       _checkLength(barometerData);
       setState(() {
