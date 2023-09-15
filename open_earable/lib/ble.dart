@@ -15,6 +15,7 @@ class BLEPage extends StatefulWidget {
 class _BLEPageState extends State<BLEPage> {
   late OpenEarable _openEarable;
   StreamSubscription? _scanSubscription;
+  StreamSubscription? _connectionStateStream;
   List dummyDevices = [];
   List discoveredDevices = [];
   bool _connectedToEarable = false;
@@ -32,6 +33,13 @@ class _BLEPageState extends State<BLEPage> {
   }
 
   @override
+  void dispose() {
+    _scanSubscription?.cancel();
+    _connectionStateStream?.cancel();
+    super.dispose();
+  }
+
+  @override
   void initState() {
     super.initState();
     _openEarable = widget.openEarable;
@@ -45,7 +53,8 @@ class _BLEPageState extends State<BLEPage> {
   }
 
   void _setupListeners() async {
-    _openEarable.bleManager.connectionStateStream.listen((connectionState) {
+    _connectionStateStream =
+        _openEarable.bleManager.connectionStateStream.listen((connectionState) {
       if (connectionState) {
         _readDeviceInfo();
         _writeSensorConfig();
@@ -195,13 +204,13 @@ class _BLEPageState extends State<BLEPage> {
 
   Future<void> _writeSensorConfig() async {
     OpenEarableSensorConfig config =
-        OpenEarableSensorConfig(sensorId: 3, samplingRate: 0, latency: 0);
+        OpenEarableSensorConfig(sensorId: 4, samplingRate: 8, latency: 0);
     _openEarable.sensorManager.writeSensorConfig(config);
     _openEarable.sensorManager.readScheme();
-    _openEarable.sensorManager.subscribeToSensorData(0).listen((data) {
-      print(data);
-    });
-    _openEarable.sensorManager.getButtonStateStream().listen((event) {});
-    await _openEarable.rgbLed.setLEDstate(0);
+    //_openEarable.sensorManager.subscribeToSensorData(0).listen((data) {
+    //  print(data);
+    //});
+    //_openEarable.sensorManager.getButtonStateStream().listen((event) {});
+    //await _openEarable.rgbLed.setLEDstate(0);
   }
 }

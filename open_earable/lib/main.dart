@@ -25,12 +25,20 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _selectedIndex = 0;
-  OpenEarable _openEarable = OpenEarable();
-  final List<Widget> _widgetOptions = <Widget>[
-    NowPlayingTab(),
-    SensorDataTab(),
-    AppsTab(),
-  ];
+  late OpenEarable _openEarable;
+
+  late List<Widget> _widgetOptions;
+
+  @override
+  void initState() {
+    super.initState();
+    _openEarable = OpenEarable();
+    _widgetOptions = <Widget>[
+      NowPlayingTab(),
+      SensorDataTab(_openEarable),
+      AppsTab(),
+    ];
+  }
 
   void _onItemTapped(int index) {
     setState(() {
