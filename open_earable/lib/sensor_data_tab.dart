@@ -7,6 +7,8 @@ import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:ditredi/ditredi.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
 
+import 'MahonyAHRS.dart';
+
 class SensorDataTab extends StatefulWidget {
   final OpenEarable _openEarable;
   SensorDataTab(this._openEarable);
@@ -22,6 +24,7 @@ class _SensorDataTabState extends State<SensorDataTab>
   late int _maxX;
   late StreamSubscription _imuSubscription;
   late StreamSubscription _barometerSubscription;
+  late MahonyAHRS mahonyAHRS;
   late DiTreDiController diTreDiController;
   Mesh3D? earableMesh;
   int _numDatapoints = 100;
@@ -29,7 +32,9 @@ class _SensorDataTabState extends State<SensorDataTab>
   List<XYZValue> gyroscopeData = [];
   List<XYZValue> magnetometerData = [];
   List<BarometerValue> barometerData = [];
-
+  double pitch = 0;
+  double yaw = 0;
+  double roll = 0;
   _SensorDataTabState(this._openEarable);
 
   @override
@@ -40,7 +45,9 @@ class _SensorDataTabState extends State<SensorDataTab>
     _maxX = _numDatapoints;
     _setupListeners();
     _loadMesh();
+    mahonyAHRS = MahonyAHRS();
     diTreDiController = DiTreDiController();
+    diTreDiController.update(rotationX: 0, rotationY: 0, rotationZ: 0);
   }
 
   void _loadMesh() async {
@@ -73,10 +80,36 @@ class _SensorDataTabState extends State<SensorDataTab>
             y: data["MAG"]["Y"],
             z: data["MAG"]["Z"],
             units: data["MAG"]["units"]);
+        mahonyAHRS.update(
+            accelerometerValue.x,
+            accelerometerValue.y,
+            accelerometerValue.z,
+            gyroscopeValue.x,
+            gyroscopeValue.y,
+            gyroscopeValue.z);
+        List<double> q = mahonyAHRS.Quaternion;
+        double qw = q[0];
+        double qx = q[1];
+        double qy = q[2];
+        double qz = q[3];
+        double _roll, _pitch, _yaw;
+
+        // Yaw (around Z-axis)
+        _yaw = atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy * qy + qz * qz));
+
+        // Pitch (around Y-axis)
+        _pitch = asin(2 * (qw * qy - qx * qz));
+
+        // Roll (around X-axis)
+        _roll = atan2(2 * (qw * qx + qy * qz), 1 - 2 * (qx * qx + qy * qy));
+
         _checkLength(accelerometerData);
         _checkLength(gyroscopeData);
         _checkLength(magnetometerData);
         setState(() {
+          yaw = _yaw;
+          pitch = _pitch;
+          roll = _roll;
           accelerometerData.add(accelerometerValue);
           gyroscopeData.add(gyroscopeValue);
           magnetometerData.add(magnetometerValue);
@@ -162,12 +195,17 @@ class _SensorDataTabState extends State<SensorDataTab>
           // child: Text(title, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
         ),
         Expanded(
-            child: DiTreDiDraggable(
+            child: DiTreDi(
+          figures: [
+            TransformModifier3D(
+                earableMesh ?? Cube3D(2, Vector3(0, 0, 0)),
+                Matrix4.identity()
+                  ..setRotationX(pi / 2)
+                  ..rotateZ(yaw)
+                  ..rotateY(-pitch)
+                  ..rotateX(-roll - pi / 2))
+          ],
           controller: diTreDiController,
-          child: DiTreDi(
-            figures: [earableMesh ?? Cube3D(2, Vector3(0, 0, 0))],
-            controller: diTreDiController,
-          ),
         )),
       ],
     );
