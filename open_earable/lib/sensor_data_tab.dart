@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:charts_flutter/flutter.dart' as charts;
 import 'dart:math';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:ditredi/ditredi.dart';
+import 'package:vector_math/vector_math_64.dart' show Vector3;
 
 class SensorDataTab extends StatefulWidget {
   final OpenEarable _openEarable;
@@ -20,6 +22,8 @@ class _SensorDataTabState extends State<SensorDataTab>
   late int _maxX;
   late StreamSubscription _imuSubscription;
   late StreamSubscription _barometerSubscription;
+  late DiTreDiController diTreDiController;
+  Mesh3D? earableMesh;
   int _numDatapoints = 100;
   List<XYZValue> accelerometerData = [];
   List<XYZValue> gyroscopeData = [];
@@ -31,10 +35,19 @@ class _SensorDataTabState extends State<SensorDataTab>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(vsync: this, length: 4);
+    _tabController = TabController(vsync: this, length: 5);
     _minX = 0;
     _maxX = _numDatapoints;
     _setupListeners();
+    _loadMesh();
+    diTreDiController = DiTreDiController();
+  }
+
+  void _loadMesh() async {
+    var mesh = Mesh3D(await ObjParser().loadFromResources("assets/model.obj"));
+    setState(() {
+      earableMesh = mesh;
+    });
   }
 
   _setupListeners() {
@@ -123,6 +136,7 @@ class _SensorDataTabState extends State<SensorDataTab>
               Tab(text: 'Gyro.'),
               Tab(text: 'Magnet.'),
               Tab(text: 'Pressure'),
+              Tab(text: '3D'),
             ],
           ),
         ),
@@ -134,9 +148,34 @@ class _SensorDataTabState extends State<SensorDataTab>
           _buildGraphXYZ('Gyroscope Data', gyroscopeData),
           _buildGraphXYZ('Magnetometer Data', magnetometerData),
           _buildGraphXYZ('Pressure Data', barometerData),
+          _build3D(),
         ],
       ),
     );
+  }
+
+  Widget _build3D() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          // child: Text(title, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+        ),
+        Expanded(
+            child: DiTreDiDraggable(
+          controller: diTreDiController,
+          child: DiTreDi(
+            figures: [earableMesh ?? Cube3D(2, Vector3(0, 0, 0))],
+            controller: diTreDiController,
+          ),
+        )),
+      ],
+    );
+  }
+
+  Future<Mesh3D> _load3DModel() async {
+    dynamic model = await ObjParser().loadFromResources("assets/model.obj");
+    return Mesh3D(model);
   }
 
   Widget _buildGraphXYZ(String title, List<DataValue> data) {
