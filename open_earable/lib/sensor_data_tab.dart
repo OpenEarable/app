@@ -5,8 +5,8 @@ import 'package:charts_flutter/flutter.dart' as charts;
 import 'dart:math';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:ditredi/ditredi.dart';
-import 'package:vector_math/vector_math_64.dart' show Vector3;
-
+import 'package:vector_math/vector_math_64.dart' show Vector3, Quaternion;
+import 'package:simple_kalman/simple_kalman.dart';
 import 'MahonyAHRS.dart';
 
 class SensorDataTab extends StatefulWidget {
@@ -26,15 +26,29 @@ class _SensorDataTabState extends State<SensorDataTab>
   late StreamSubscription _barometerSubscription;
   late MahonyAHRS mahonyAHRS;
   late DiTreDiController diTreDiController;
+  final double errorMeasureAcc = 5;
+  final double errorMeasureGyro = 10;
+  final double errorMeasureMag = 25;
+  late SimpleKalman kalmanAX,
+      kalmanAY,
+      kalmanAZ,
+      kalmanGX,
+      kalmanGY,
+      kalmanGZ,
+      kalmanMX,
+      kalmanMY,
+      kalmanMZ;
+  late double qw, qx, qy, qz;
   Mesh3D? earableMesh;
   int _numDatapoints = 100;
   List<XYZValue> accelerometerData = [];
   List<XYZValue> gyroscopeData = [];
   List<XYZValue> magnetometerData = [];
   List<BarometerValue> barometerData = [];
-  double pitch = 0;
-  double yaw = 0;
-  double roll = 0;
+  double _pitch = 0;
+  double _yaw = 0;
+  double _roll = 0;
+  late Quaternion _quaternion = Quaternion(1, 0, 0, 0);
   _SensorDataTabState(this._openEarable);
 
   @override
@@ -47,7 +61,31 @@ class _SensorDataTabState extends State<SensorDataTab>
     _loadMesh();
     mahonyAHRS = MahonyAHRS();
     diTreDiController = DiTreDiController();
-    diTreDiController.update(rotationX: 0, rotationY: 0, rotationZ: 0);
+    diTreDiController.update(rotationX: 0, rotationY: 45, rotationZ: 0);
+    kalmanAX = SimpleKalman(
+        errorMeasure: errorMeasureAcc, errorEstimate: errorMeasureAcc, q: 0.9);
+    kalmanAY = SimpleKalman(
+        errorMeasure: errorMeasureAcc, errorEstimate: errorMeasureAcc, q: 0.9);
+    kalmanAZ = SimpleKalman(
+        errorMeasure: errorMeasureAcc, errorEstimate: errorMeasureAcc, q: 0.9);
+    kalmanGX = SimpleKalman(
+        errorMeasure: errorMeasureGyro,
+        errorEstimate: errorMeasureGyro,
+        q: 0.9);
+    kalmanGY = SimpleKalman(
+        errorMeasure: errorMeasureGyro,
+        errorEstimate: errorMeasureGyro,
+        q: 0.9);
+    kalmanGZ = SimpleKalman(
+        errorMeasure: errorMeasureGyro,
+        errorEstimate: errorMeasureGyro,
+        q: 0.9);
+    kalmanMX = SimpleKalman(
+        errorMeasure: errorMeasureMag, errorEstimate: errorMeasureMag, q: 0.9);
+    kalmanMY = SimpleKalman(
+        errorMeasure: errorMeasureMag, errorEstimate: errorMeasureMag, q: 0.9);
+    kalmanMZ = SimpleKalman(
+        errorMeasure: errorMeasureMag, errorEstimate: errorMeasureMag, q: 0.9);
   }
 
   void _loadMesh() async {
@@ -61,7 +99,9 @@ class _SensorDataTabState extends State<SensorDataTab>
     _imuSubscription =
         _openEarable.sensorManager.subscribeToSensorData(0).listen((data) {
       int timestamp = data["timestamp"];
+
       if (data["sensorId"] == 0) {
+        /*
         XYZValue accelerometerValue = XYZValue(
             timestamp: timestamp,
             x: data["ACC"]["X"],
@@ -80,19 +120,40 @@ class _SensorDataTabState extends State<SensorDataTab>
             y: data["MAG"]["Y"],
             z: data["MAG"]["Z"],
             units: data["MAG"]["units"]);
+            */
+        XYZValue accelerometerValue = XYZValue(
+            timestamp: timestamp,
+            x: kalmanAX.filtered(data["ACC"]["X"]),
+            y: kalmanAY.filtered(data["ACC"]["Y"]),
+            z: kalmanAZ.filtered(data["ACC"]["Z"]),
+            units: data["ACC"]["units"]);
+        XYZValue gyroscopeValue = XYZValue(
+            timestamp: timestamp,
+            x: kalmanGX.filtered(data["GYRO"]["X"]),
+            y: kalmanGY.filtered(data["GYRO"]["Y"]),
+            z: kalmanGZ.filtered(data["GYRO"]["Z"]),
+            units: data["ACC"]["units"]);
+        XYZValue magnetometerValue = XYZValue(
+            timestamp: timestamp,
+            x: kalmanMX.filtered(data["MAG"]["X"]),
+            y: kalmanMX.filtered(data["MAG"]["Y"]),
+            z: kalmanMX.filtered(data["MAG"]["Z"]),
+            units: data["MAG"]["units"]);
+
         mahonyAHRS.update(
-            accelerometerValue.x,
-            accelerometerValue.y,
-            accelerometerValue.z,
-            gyroscopeValue.x,
-            gyroscopeValue.y,
-            gyroscopeValue.z);
+          accelerometerValue.x,
+          accelerometerValue.y,
+          accelerometerValue.z,
+          gyroscopeValue.x,
+          gyroscopeValue.y,
+          gyroscopeValue.z,
+        );
         List<double> q = mahonyAHRS.Quaternion;
-        double qw = q[0];
-        double qx = q[1];
-        double qy = q[2];
-        double qz = q[3];
-        double _roll, _pitch, _yaw;
+        qw = q[0];
+        qx = q[1];
+        qy = q[2];
+        qz = q[3];
+        Quaternion _quaternion = Quaternion(q[0], q[2], q[2], q[3]);
 
         // Yaw (around Z-axis)
         _yaw = atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy * qy + qz * qz));
@@ -102,14 +163,13 @@ class _SensorDataTabState extends State<SensorDataTab>
 
         // Roll (around X-axis)
         _roll = atan2(2 * (qw * qx + qy * qz), 1 - 2 * (qx * qx + qy * qy));
-
         _checkLength(accelerometerData);
         _checkLength(gyroscopeData);
         _checkLength(magnetometerData);
         setState(() {
-          yaw = _yaw;
-          pitch = _pitch;
-          roll = _roll;
+          _yaw = _yaw;
+          _pitch = _pitch;
+          _roll = _roll;
           accelerometerData.add(accelerometerValue);
           gyroscopeData.add(gyroscopeValue);
           magnetometerData.add(magnetometerValue);
@@ -197,16 +257,25 @@ class _SensorDataTabState extends State<SensorDataTab>
         Expanded(
             child: DiTreDi(
           figures: [
+            Line3D(Vector3(0, 0, 0), Vector3(3, 0, 0),
+                width: 4, color: Color.fromARGB(255, 255, 0, 0)),
+            Line3D(Vector3(0, 0, 0), Vector3(0, 3, 0),
+                width: 4, color: Color.fromARGB(255, 0, 255, 0)),
+            Line3D(Vector3(0, 0, 0), Vector3(0, 0, 3),
+                width: 4, color: Color.fromARGB(255, 0, 0, 255)),
             TransformModifier3D(
                 earableMesh ?? Cube3D(2, Vector3(0, 0, 0)),
                 Matrix4.identity()
-                  ..setRotationX(pi / 2)
-                  ..rotateZ(yaw)
-                  ..rotateY(-pitch)
-                  ..rotateX(-roll - pi / 2))
+                  ..rotateY(-_yaw)
+                  ..rotateZ(-_pitch)
+                  ..rotateX(-_roll))
           ],
           controller: diTreDiController,
         )),
+        Padding(
+            padding: EdgeInsets.only(bottom: 16),
+            child: Text(
+                "Yaw: ${(_yaw * 180 / pi).toStringAsFixed(1)}°\nPitch: ${(_pitch * 180 / pi).toStringAsFixed(1)}°\nRoll: ${(_roll * 180 / pi).toStringAsFixed(1)}°"))
       ],
     );
   }

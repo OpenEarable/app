@@ -15,7 +15,7 @@ class MahonyAHRS {
   late double _kp; // 2 * proportional gain (Kp), (2.0 * 0.5) = 1.0
 
   MahonyAHRS() {
-    this._sampleFrequency = 1.0; // (1.0 / 512.0) maximum precision
+    this._sampleFrequency = 1; // (1.0 / 512.0) maximum precision
     this._qW = 1.0;
     this._qX = 0.0;
     this._qY = 0.0;
@@ -39,6 +39,119 @@ class MahonyAHRS {
     this._integralFbZ = 0.0;
     this._kp = 1.0;
     this._ki = 0.0;
+  }
+
+  void updateWithMag(double ax, double ay, double az, double gx, double gy,
+      double gz, double mx, double my, double mz) {
+    var recipNorm;
+    var q0q0, q0q1, q0q2, q0q3, q1q1, q1q2, q1q3, q2q2, q2q3, q3q3;
+    var hx, hy, bx, bz;
+    var halfvx, halfvy, halfvz, halfwx, halfwy, halfwz;
+    var halfex, halfey, halfez;
+
+    double q0 = this._qW;
+    double q1 = this._qX;
+    double q2 = this._qY;
+    double q3 = this._qZ;
+
+    double recipSampleFreq = 1.0 / _sampleFrequency;
+
+    if (mx == 0 && my == 0 && mz == 0) {
+      update(gx, gy, gz, ax, ay, az);
+      return;
+    }
+
+    if (ax != 0 && ay != 0 && az != 0) {
+      // Normalise accelerometer measurement
+      recipNorm = pow((ax * ax + ay * ay + az * az), -0.5);
+      ax *= recipNorm;
+      ay *= recipNorm;
+      az *= recipNorm;
+
+      // Normalise magnetometer measurement
+      recipNorm = pow((mx * mx + my * my + mz * mz), -0.5);
+      mx *= recipNorm;
+      my *= recipNorm;
+      mz *= recipNorm;
+
+      // Auxiliary variables to repeated arithmetic
+      q0q0 = q0 * q0;
+      q0q1 = q0 * q1;
+      q0q2 = q0 * q2;
+      q0q3 = q0 * q3;
+      q1q1 = q1 * q1;
+      q1q2 = q1 * q2;
+      q1q3 = q1 * q3;
+      q2q2 = q2 * q2;
+      q2q3 = q2 * q3;
+      q3q3 = q3 * q3;
+
+      // Reference direction of Earth's magnetic field
+      hx = 2.0 *
+          (mx * (0.5 - q2q2 - q3q3) + my * (q1q2 - q0q3) + mz * (q1q3 + q0q2));
+      hy = 2.0 *
+          (mx * (q1q2 + q0q3) + my * (0.5 - q1q1 - q3q3) + mz * (q2q3 - q0q1));
+      bx = sqrt(hx * hx + hy * hy);
+      bz = 2.0 *
+          (mx * (q1q3 - q0q2) + my * (q2q3 + q0q1) + mz * (0.5 - q1q1 - q2q2));
+
+      // Estimated direction of gravity and magnetic field
+      halfvx = q1q3 - q0q2;
+      halfvy = q0q1 + q2q3;
+      halfvz = q0q0 - 0.5 + q3q3;
+      halfwx = bx * (0.5 - q2q2 - q3q3) + bz * (q1q3 - q0q2);
+      halfwy = bx * (q1q2 - q0q3) + bz * (q0q1 + q2q3);
+      halfwz = bx * (q0q2 + q1q3) + bz * (0.5 - q1q1 - q2q2);
+
+      // Error is sum of cross product between estimated direction and measured direction of field vectors
+      halfex = ay * halfvz - az * halfvy + (my * halfwz - mz * halfwy);
+      halfey = az * halfvx - ax * halfvz + (mz * halfwx - mx * halfwz);
+      halfez = ax * halfvy - ay * halfvx + (mx * halfwy - my * halfwx);
+
+      // Compute and apply integral feedback if enabled
+      if (_ki > 0.0) {
+        _integralFbX +=
+            _ki * halfex * recipSampleFreq; // integral error scaled by Ki
+        _integralFbY += _ki * halfey * recipSampleFreq;
+        _integralFbZ += _ki * halfez * recipSampleFreq;
+        gx += _integralFbX; // apply integral feedback
+        gy += _integralFbY;
+        gz += _integralFbZ;
+      } else {
+        _integralFbX = 0.0; // prevent integral windup
+        _integralFbY = 0.0;
+        _integralFbZ = 0.0;
+      }
+
+      // Apply proportional feedback
+      gx += _kp * halfex;
+      gy += _kp * halfey;
+      gz += _kp * halfez;
+    }
+
+    // Integrate rate of change of quaternion
+    gx *= 0.5 * recipSampleFreq; // pre-multiply common factors
+    gy *= 0.5 * recipSampleFreq;
+    gz *= 0.5 * recipSampleFreq;
+    double qa = q0;
+    double qb = q1;
+    double qc = q2;
+    q0 += -qb * gx - qc * gy - q3 * gz;
+    q1 += qa * gx + qc * gz - q3 * gy;
+    q2 += qa * gy - qb * gz + q3 * gx;
+    q3 += qa * gz + qb * gy - qc * gx;
+
+    // Normalise quaternion
+    recipNorm = pow((q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3), -0.5);
+    q0 *= recipNorm;
+    q1 *= recipNorm;
+    q2 *= recipNorm;
+    q3 *= recipNorm;
+
+    this._qW = q0;
+    this._qX = q1;
+    this._qY = q2;
+    this._qZ = q3;
   }
 
   void update(
