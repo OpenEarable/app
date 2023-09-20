@@ -152,12 +152,6 @@ class _BLEPageState extends State<BLEPage> {
             )
           ],
         )),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            _startScanning();
-          },
-          child: const Text("Scan"),
-        ),
       ),
     );
   }
@@ -194,7 +188,6 @@ class _BLEPageState extends State<BLEPage> {
 
   Future<void> _connectToDevice(device) async {
     _scanSubscription?.cancel();
-    _openEarable.sensorManager.disposeAllSensorDataControllers();
     try {
       await _openEarable.bleManager.connectToDevice(device);
     } catch (e) {
