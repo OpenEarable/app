@@ -101,6 +101,12 @@ class _SensorDataTabState extends State<SensorDataTab>
   }
 
   _setupListeners() {
+    _openEarable.sensorManager.getBatteryLevelStream().listen((data) {
+      print("Battery level is ${data[0]}");
+    });
+    _openEarable.sensorManager.getButtonStateStream().listen((data) {
+      print("Button State is ${data[0]}");
+    });
     _imuSubscription =
         _openEarable.sensorManager.subscribeToSensorData(0).listen((data) {
       int timestamp = data["timestamp"];
