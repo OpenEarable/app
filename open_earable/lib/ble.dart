@@ -16,7 +16,6 @@ class _BLEPageState extends State<BLEPage> {
   late OpenEarable _openEarable;
   StreamSubscription? _scanSubscription;
   StreamSubscription? _connectionStateStream;
-  List dummyDevices = [];
   List discoveredDevices = [];
   bool _connectedToEarable = false;
   bool _waitingToConnect = false;
@@ -45,11 +44,6 @@ class _BLEPageState extends State<BLEPage> {
     _openEarable = widget.openEarable;
     _startScanning();
     _setupListeners();
-    for (int i = 0; i < 10; i++) {
-      setState(() {
-        //dummyDevices.add(DummyDevice("$i", "Device number $i"));
-      });
-    }
   }
 
   void _setupListeners() async {
@@ -188,18 +182,13 @@ class _BLEPageState extends State<BLEPage> {
 
   Future<void> _connectToDevice(device) async {
     _scanSubscription?.cancel();
-    try {
-      await _openEarable.bleManager.connectToDevice(device);
-    } catch (e) {
-      // Handle connection error.
-    }
+    await _openEarable.bleManager.connectToDevice(device);
   }
 
   Future<void> _writeSensorConfig() async {
     OpenEarableSensorConfig config =
         OpenEarableSensorConfig(sensorId: 4, samplingRate: 8, latency: 0);
     _openEarable.sensorManager.writeSensorConfig(config);
-    _openEarable.sensorManager.readScheme();
     //_openEarable.sensorManager.subscribeToSensorData(0).listen((data) {
     //  print(data);
     //});

@@ -7,7 +7,7 @@ import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:ditredi/ditredi.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3, Quaternion;
 import 'package:simple_kalman/simple_kalman.dart';
-import 'MahonyAHRS.dart';
+import '../utils/mahony_ahrs.dart';
 
 class SensorDataTab extends StatefulWidget {
   final OpenEarable _openEarable;
@@ -38,7 +38,6 @@ class _SensorDataTabState extends State<SensorDataTab>
       kalmanMX,
       kalmanMY,
       kalmanMZ;
-  late double qw, qx, qy, qz;
   Mesh3D? earableMesh;
   int _numDatapoints = 100;
   List<XYZValue> accelerometerData = [];
@@ -48,8 +47,14 @@ class _SensorDataTabState extends State<SensorDataTab>
   double _pitch = 0;
   double _yaw = 0;
   double _roll = 0;
-  late Quaternion _quaternion = Quaternion(1, 0, 0, 0);
   _SensorDataTabState(this._openEarable);
+  List<bool> _tabVisibility = [
+    true,
+    false,
+    false,
+    false,
+    false
+  ]; // All tabs except the first one are hidden
 
   @override
   void initState() {
@@ -149,27 +154,20 @@ class _SensorDataTabState extends State<SensorDataTab>
           gyroscopeValue.z,
         );
         List<double> q = mahonyAHRS.Quaternion;
-        qw = q[0];
-        qx = q[1];
-        qy = q[2];
-        qz = q[3];
-        Quaternion _quaternion = Quaternion(q[0], q[2], q[2], q[3]);
-
-        // Yaw (around Z-axis)
-        _yaw = atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy * qy + qz * qz));
-
-        // Pitch (around Y-axis)
-        _pitch = asin(2 * (qw * qy - qx * qz));
-
-        // Roll (around X-axis)
-        _roll = atan2(2 * (qw * qx + qy * qz), 1 - 2 * (qx * qx + qy * qy));
+        var qw = q[0];
+        var qx = q[1];
+        var qy = q[2];
+        var qz = q[3];
         _checkLength(accelerometerData);
         _checkLength(gyroscopeData);
         _checkLength(magnetometerData);
         setState(() {
-          _yaw = _yaw;
-          _pitch = _pitch;
-          _roll = _roll;
+          // Yaw (around Z-axis)
+          _yaw = atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy * qy + qz * qz));
+          // Pitch (around Y-axis)
+          _pitch = asin(2 * (qw * qy - qx * qz));
+          // Roll (around X-axis)
+          _roll = atan2(2 * (qw * qx + qy * qz), 1 - 2 * (qx * qx + qy * qy));
           accelerometerData.add(accelerometerValue);
           gyroscopeData.add(gyroscopeValue);
           magnetometerData.add(magnetometerValue);
@@ -231,17 +229,40 @@ class _SensorDataTabState extends State<SensorDataTab>
               Tab(text: 'Pressure'),
               Tab(text: '3D'),
             ],
+            onTap: (index) {
+              setState(() {
+                // Set the selected tab to be visible and others to be hidden
+                for (int i = 0; i < _tabVisibility.length; i++) {
+                  _tabVisibility[i] = (i == index);
+                }
+              });
+            },
           ),
         ),
       ),
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildGraphXYZ('Accelerometer Data', accelerometerData),
-          _buildGraphXYZ('Gyroscope Data', gyroscopeData),
-          _buildGraphXYZ('Magnetometer Data', magnetometerData),
-          _buildGraphXYZ('Pressure Data', barometerData),
-          _build3D(),
+          Offstage(
+            offstage: !_tabVisibility[0],
+            child: _buildGraphXYZ('Accelerometer Data', accelerometerData),
+          ),
+          Offstage(
+            offstage: !_tabVisibility[1],
+            child: _buildGraphXYZ('Gyroscope Data', gyroscopeData),
+          ),
+          Offstage(
+            offstage: !_tabVisibility[2],
+            child: _buildGraphXYZ('Magnetometer Data', magnetometerData),
+          ),
+          Offstage(
+            offstage: !_tabVisibility[3],
+            child: _buildGraphXYZ('Pressure Data', barometerData),
+          ),
+          Offstage(
+            offstage: !_tabVisibility[4],
+            child: _build3D(),
+          ),
         ],
       ),
     );
@@ -278,11 +299,6 @@ class _SensorDataTabState extends State<SensorDataTab>
                 "Yaw: ${(_yaw * 180 / pi).toStringAsFixed(1)}°\nPitch: ${(_pitch * 180 / pi).toStringAsFixed(1)}°\nRoll: ${(_roll * 180 / pi).toStringAsFixed(1)}°"))
       ],
     );
-  }
-
-  Future<Mesh3D> _load3DModel() async {
-    dynamic model = await ObjParser().loadFromResources("assets/model.obj");
-    return Mesh3D(model);
   }
 
   Widget _buildGraphXYZ(String title, List<DataValue> data) {
