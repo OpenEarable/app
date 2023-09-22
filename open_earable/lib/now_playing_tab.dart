@@ -13,6 +13,7 @@ class _NowPlayingTabState extends State<NowPlayingTab> {
   final OpenEarable _openEarable;
   _NowPlayingTabState(this._openEarable);
   bool isPlaying = false;
+  bool songStarted = false;
   int currentSongIndex = 0;
   int elapsedTime = 0; // elapsed time in seconds
   Timer? _timer;
@@ -69,10 +70,15 @@ class _NowPlayingTabState extends State<NowPlayingTab> {
       _openEarable.wavAudioPlayer.writeWAVState(
           WavAudioPlayerState.pause, "${songs[currentSongIndex]['title']}.wav");
     } else {
-      _startTimer();
       print("Playing ${songs[currentSongIndex]['title']}.wav");
-      _openEarable.wavAudioPlayer.writeWAVState(WavAudioPlayerState.unpause,
-          "${songs[currentSongIndex]['title']}.wav");
+      _startTimer();
+      if (!songStarted) {
+        _openEarable.wavAudioPlayer.writeWAVState(WavAudioPlayerState.start,
+            "${songs[currentSongIndex]['title']}.wav");
+      } else {
+        _openEarable.wavAudioPlayer.writeWAVState(WavAudioPlayerState.unpause,
+            "${songs[currentSongIndex]['title']}.wav");
+      }
     }
 
     setState(() {
@@ -91,12 +97,17 @@ class _NowPlayingTabState extends State<NowPlayingTab> {
 
   void changeSong(int newIndex) {
     _resetTimer();
+    //_openEarable.wavAudioPlayer.writeWAVState(
+    //    WavAudioPlayerState.stop, "${songs[currentSongIndex]['title']}.wav");
 
     setState(() {
       currentSongIndex = newIndex;
     });
-    _openEarable.wavAudioPlayer.writeWAVState(
-        WavAudioPlayerState.start, "${songs[newIndex]['title']}.wav");
+    if (isPlaying) {
+      Future.delayed(Duration(seconds: 2));
+      _openEarable.wavAudioPlayer.writeWAVState(
+          WavAudioPlayerState.start, "${songs[newIndex]['title']}.wav");
+    }
   }
 
   String formatTime(int seconds) {
