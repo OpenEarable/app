@@ -34,7 +34,7 @@ class _MyHomePageState extends State<MyHomePage> {
     super.initState();
     _openEarable = OpenEarable();
     _widgetOptions = <Widget>[
-      NowPlayingTab(),
+      NowPlayingTab(_openEarable),
       SensorDataTab(_openEarable),
       AppsTab(),
     ];

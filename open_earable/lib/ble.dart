@@ -165,8 +165,10 @@ class _BLEPageState extends State<BLEPage> {
   }
 
   void _startScanning() async {
-    discoveredDevices.removeWhere(
-        (device) => device.id != _openEarable.bleManager.connectedDevice?.id);
+    discoveredDevices = [];
+    if (_openEarable.bleManager.connectedDevice != null) {
+      discoveredDevices.add(_openEarable.bleManager.connectedDevice);
+    }
     _openEarable.bleManager.startScan();
     _scanSubscription?.cancel();
     _scanSubscription =

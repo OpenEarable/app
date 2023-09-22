@@ -164,9 +164,6 @@ class _SensorDataTabState extends State<SensorDataTab>
         var qx = q[1];
         var qy = q[2];
         var qz = q[3];
-        _checkLength(accelerometerData);
-        _checkLength(gyroscopeData);
-        _checkLength(magnetometerData);
         setState(() {
           // Yaw (around Z-axis)
           _yaw = atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy * qy + qz * qz));
@@ -177,6 +174,9 @@ class _SensorDataTabState extends State<SensorDataTab>
           accelerometerData.add(accelerometerValue);
           gyroscopeData.add(gyroscopeValue);
           magnetometerData.add(magnetometerValue);
+          _checkLength(accelerometerData);
+          _checkLength(gyroscopeData);
+          _checkLength(magnetometerData);
           _maxX = accelerometerValue.timestamp;
           _minX = accelerometerData[0].timestamp;
         });
@@ -195,9 +195,9 @@ class _SensorDataTabState extends State<SensorDataTab>
           temperature: data["TEMP"]["Temperature"],
           units: units);
 
-      _checkLength(barometerData);
       setState(() {
         barometerData.add(barometerValue);
+        _checkLength(barometerData);
       });
     });
   }

@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'dart:async';
 
 class NowPlayingTab extends StatefulWidget {
+  final OpenEarable _openEarable;
+  NowPlayingTab(this._openEarable);
   @override
-  _NowPlayingTabState createState() => _NowPlayingTabState();
+  _NowPlayingTabState createState() => _NowPlayingTabState(_openEarable);
 }
 
 class _NowPlayingTabState extends State<NowPlayingTab> {
+  final OpenEarable _openEarable;
+  _NowPlayingTabState(this._openEarable);
   bool isPlaying = false;
   int currentSongIndex = 0;
   int elapsedTime = 0; // elapsed time in seconds
@@ -16,19 +21,22 @@ class _NowPlayingTabState extends State<NowPlayingTab> {
     {
       'title': 'Midnight City',
       'artist': 'M83',
-      'albumCover': 'https://i.scdn.co/image/ab67616d0000b273fff2cb485c36a6d8f639bdba',
+      'albumCover':
+          'https://i.scdn.co/image/ab67616d0000b273fff2cb485c36a6d8f639bdba',
       'duration': 243
     },
     {
       'title': 'Radioactive',
       'artist': 'Imagine Dragons',
-      'albumCover': 'https://i1.sndcdn.com/artworks-000069495641-rx1t0z-t500x500.jpg',
+      'albumCover':
+          'https://i1.sndcdn.com/artworks-000069495641-rx1t0z-t500x500.jpg',
       'duration': 186
     },
     {
       'title': 'Lose Yourself to Dance',
       'artist': 'Daft Punk',
-      'albumCover': 'https://i1.sndcdn.com/artworks-nbWsTnCZR3m7yAyd-KBkcDQ-t500x500.jpg',
+      'albumCover':
+          'https://i1.sndcdn.com/artworks-nbWsTnCZR3m7yAyd-KBkcDQ-t500x500.jpg',
       'duration': 353
     },
   ];
@@ -58,8 +66,13 @@ class _NowPlayingTabState extends State<NowPlayingTab> {
   void togglePlay() {
     if (isPlaying) {
       _pauseTimer();
+      _openEarable.wavAudioPlayer.writeWAVState(
+          WavAudioPlayerState.pause, "${songs[currentSongIndex]['title']}.wav");
     } else {
       _startTimer();
+      print("Playing ${songs[currentSongIndex]['title']}.wav");
+      _openEarable.wavAudioPlayer.writeWAVState(WavAudioPlayerState.unpause,
+          "${songs[currentSongIndex]['title']}.wav");
     }
 
     setState(() {
@@ -82,6 +95,8 @@ class _NowPlayingTabState extends State<NowPlayingTab> {
     setState(() {
       currentSongIndex = newIndex;
     });
+    _openEarable.wavAudioPlayer.writeWAVState(
+        WavAudioPlayerState.start, "${songs[newIndex]['title']}.wav");
   }
 
   String formatTime(int seconds) {
@@ -154,10 +169,11 @@ class _NowPlayingTabState extends State<NowPlayingTab> {
                 ),
                 SizedBox(width: 25.0), // provide space between buttons
                 SizedBox(
-                  height: 100.0,  // desired height
-                  width: 80.0,   // desired width
+                  height: 100.0, // desired height
+                  width: 80.0, // desired width
                   child: IconButton(
-                    icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow, size: 60.0),
+                    icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow,
+                        size: 60.0),
                     onPressed: togglePlay,
                   ),
                 ),
@@ -177,5 +193,9 @@ class _NowPlayingTabState extends State<NowPlayingTab> {
     );
   }
 
-
+  @override
+  void dispose() {
+    super.dispose();
+    _timer?.cancel();
+  }
 }
