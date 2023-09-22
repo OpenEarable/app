@@ -3,6 +3,7 @@ import 'now_playing_tab.dart';
 import 'sensor_data_tab.dart';
 import 'ble.dart';
 import 'apps_tab.dart';
+import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
 void main() => runApp(MyApp());
 
@@ -24,12 +25,20 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _selectedIndex = 0;
+  late OpenEarable _openEarable;
 
-  final List<Widget> _widgetOptions = <Widget>[
-    NowPlayingTab(),
-    SensorDataTab(),
-    AppsTab(),
-  ];
+  late List<Widget> _widgetOptions;
+
+  @override
+  void initState() {
+    super.initState();
+    _openEarable = OpenEarable();
+    _widgetOptions = <Widget>[
+      NowPlayingTab(),
+      SensorDataTab(_openEarable),
+      AppsTab(),
+    ];
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -43,13 +52,14 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         title: Text('🦻 OpenEarable'),
         actions: <Widget>[
-         IconButton(
-           icon: Icon(Icons.bluetooth),
-           onPressed: () {
-            Navigator.of(context).push(MaterialPageRoute(builder: (context) => BLEPage()));
-           },
-         ),
-       ],
+          IconButton(
+            icon: Icon(Icons.bluetooth),
+            onPressed: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                  builder: (context) => BLEPage(_openEarable)));
+            },
+          ),
+        ],
       ),
       body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: BottomNavigationBar(
