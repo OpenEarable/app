@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'dart:async';
 
-class NowPlayingTab extends StatefulWidget {
+class ActuatorsTab extends StatefulWidget {
   final OpenEarable _openEarable;
-  NowPlayingTab(this._openEarable);
+  ActuatorsTab(this._openEarable);
   @override
-  _NowPlayingTabState createState() => _NowPlayingTabState(_openEarable);
+  _ActuatorsTabState createState() => _ActuatorsTabState(_openEarable);
 }
 
-class _NowPlayingTabState extends State<NowPlayingTab> {
+class _ActuatorsTabState extends State<ActuatorsTab> {
   final OpenEarable _openEarable;
-  _NowPlayingTabState(this._openEarable);
+  _ActuatorsTabState(this._openEarable);
   bool isPlaying = false;
   bool songStarted = false;
   int currentSongIndex = 0;
   int elapsedTime = 0; // elapsed time in seconds
   Timer? _timer;
+  Color _selectedColor = Colors.deepPurple;
 
   List<Map<String, dynamic>> songs = [
     {
@@ -116,6 +118,38 @@ class _NowPlayingTabState extends State<NowPlayingTab> {
     return '$min:${sec.toString().padLeft(2, '0')}';
   }
 
+  void _openColorPicker() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Pick a color for the RGB LED'),
+          content: SingleChildScrollView(
+            child: ColorPicker(
+              pickerColor: _selectedColor,
+              onColorChanged: (color) {
+                setState(() {
+                  _selectedColor = color;
+                });
+              },
+              showLabel: true,
+              pickerAreaHeightPercent: 0.8,
+              enableAlpha: false,
+            ),
+          ),
+          actions: <Widget>[
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Done'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final double progress = elapsedTime / songs[currentSongIndex]['duration'];
@@ -124,6 +158,41 @@ class _NowPlayingTabState extends State<NowPlayingTab> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        Card( //LED Color picker card
+          color: Colors.black,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              mainAxisAlignment:
+                  MainAxisAlignment.spaceBetween, // Align to the right
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'LED Color',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18.0,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                    ElevatedButton(
+                      onPressed: _openColorPicker,
+                      child: Text('Configure RGB-LED color'),
+                    ),
+                  ],
+                ),
+                Container(
+                  width: 40,
+                  height: 40,
+                  color: _selectedColor,
+                ),
+              ],
+            ),
+          ),
+        ),
         Spacer(),
         ClipRect(
           child: Image.network(
