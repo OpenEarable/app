@@ -221,8 +221,8 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                     ElevatedButton(
                       onPressed: togglePlay,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Color.fromARGB(255, 255, 0, 0),
-                        foregroundColor: Colors.white,
+                        backgroundColor: Color(0xff77F2A1),
+                        foregroundColor: Colors.black,
                       ),
                       child: Icon(Icons.play_arrow),
                     ),
@@ -230,12 +230,12 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                       child: SizedBox(
                         height: 37.0, // Set the desired height
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 5),
                           child: TextField(
                             obscureText: false,
                             decoration: InputDecoration(
                               border: OutlineInputBorder(),
-                              labelText: 'filename',
+                              labelText: 'filename.wav',
                               filled: true,
                               fillColor: Colors.white,
                             ),
@@ -247,20 +247,17 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                     ElevatedButton(
                       onPressed: togglePlay,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.yellow,
-                        foregroundColor: Colors.white,
+                        backgroundColor: Color(0xffe0f277),
+                        foregroundColor: Colors.black,
                       ),
                       child: Icon(Icons.pause),
                     ),
-                    SizedBox(
-                      height: 10,
-                      width: 10,
-                    ),
+                    SizedBox(height: 10, width: 5),
                     ElevatedButton(
                       onPressed: () {},
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
+                        backgroundColor: Color(0xfff27777),
+                        foregroundColor: Colors.black,
                       ),
                       child: Icon(Icons.stop),
                     ),
