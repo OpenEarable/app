@@ -158,7 +158,8 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Card( //LED Color picker card
+        Card(
+          //LED Color picker card
           color: Colors.black,
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -182,6 +183,10 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                       onPressed: _openColorPicker,
                       child: Text('Configure RGB-LED color'),
                     ),
+                    ElevatedButton(
+                      onPressed: () {}, //TODO
+                      child: Text('Turn on'),
+                    )
                   ],
                 ),
                 Container(
@@ -193,81 +198,125 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
             ),
           ),
         ),
-        Spacer(),
-        ClipRect(
-          child: Image.network(
-            songs[currentSongIndex]['albumCover'],
-            width: 320,
-            height: 320,
-            fit: BoxFit.cover,
+
+        Card(
+          //Audio Player Card
+          color: Colors.black,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0), // Add padding around all items
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Audio Player',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18.0,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Row(
+                  children: [
+                    SizedBox(height: 10),
+                    ElevatedButton(
+                      onPressed: togglePlay,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color.fromARGB(255, 255, 0, 0),
+                        foregroundColor: Colors.white,
+                      ),
+                      child: Icon(Icons.play_arrow),
+                    ),
+                    Expanded(
+                      child: SizedBox(
+                        height: 37.0, // Set the desired height
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          child: TextField(
+                            obscureText: false,
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(),
+                              labelText: 'filename',
+                              filled: true,
+                              fillColor: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 10, width: 10),
+                    ElevatedButton(
+                      onPressed: togglePlay,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.yellow,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: Icon(Icons.pause),
+                    ),
+                    SizedBox(
+                      height: 10,
+                      width: 10,
+                    ),
+                    ElevatedButton(
+                      onPressed: () {},
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: Icon(Icons.stop),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
-        SizedBox(height: 20),
-        Text(
-          songs[currentSongIndex]['title'],
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        ),
-        Text(
-          songs[currentSongIndex]['artist'],
-          style: TextStyle(fontSize: 20, color: Colors.grey[700]),
-        ),
-        SizedBox(height: 20),
-        Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  formatTime(songs[currentSongIndex]['duration']),
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                SizedBox(width: 10),
-                Container(
-                  width: MediaQuery.of(context).size.width * 0.6,
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    color: Colors.brown,
-                    backgroundColor: Colors.grey[200],
-                  ),
-                ),
-                SizedBox(width: 10),
-                Text(
-                  '-${formatTime(remainingTime)}',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ],
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                IconButton(
-                  icon: Icon(Icons.skip_previous, size: 30.0),
-                  onPressed: () {
-                    previous_song();
-                  },
-                ),
-                SizedBox(width: 25.0), // provide space between buttons
-                SizedBox(
-                  height: 100.0, // desired height
-                  width: 80.0, // desired width
-                  child: IconButton(
-                    icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow,
-                        size: 60.0),
-                    onPressed: togglePlay,
-                  ),
-                ),
-                SizedBox(width: 25.0),
-                IconButton(
-                  icon: Icon(Icons.skip_next, size: 30.0),
-                  onPressed: () {
-                    next_song();
-                  },
-                ),
-              ],
-            ),
-          ],
-        ),
+
+        // ClipRect(
+        //   child: Image.network(
+        //     songs[currentSongIndex]['albumCover'],
+        //     width: 320,
+        //     height: 320,
+        //     fit: BoxFit.cover,
+        //   ),
+        // ),
+        // SizedBox(height: 20),
+        // Text(
+        //   songs[currentSongIndex]['title'],
+        //   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        // ),
+        // Text(
+        //   songs[currentSongIndex]['artist'],
+        //   style: TextStyle(fontSize: 20, color: Colors.grey[700]),
+        // ),
+        // SizedBox(height: 20),
+        // Column(
+        //   children: [
+        //     Row(
+        //       mainAxisAlignment: MainAxisAlignment.center,
+        //       children: [
+        //         Text(
+        //           formatTime(songs[currentSongIndex]['duration']),
+        //           style: TextStyle(fontSize: 12, color: Colors.grey),
+        //         ),
+        //         SizedBox(width: 10),
+        //         Container(
+        //           width: MediaQuery.of(context).size.width * 0.6,
+        //           child: LinearProgressIndicator(
+        //             value: progress,
+        //             color: Colors.brown,
+        //             backgroundColor: Colors.grey[200],
+        //           ),
+        //         ),
+        //         SizedBox(width: 10),
+        //         Text(
+        //           '-${formatTime(remainingTime)}',
+        //           style: TextStyle(fontSize: 12, color: Colors.grey),
+        //         ),
+        //       ],
+        //     ),
+        //   ],
+        // ),
+
         Spacer(),
       ],
     );
