@@ -15,9 +15,6 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
   _ActuatorsTabState(this._openEarable);
   bool isPlaying = false;
   bool songStarted = false;
-  int currentSongIndex = 0;
-  int elapsedTime = 0; // elapsed time in seconds
-  Timer? _timer;
   Color _selectedColor = Colors.deepPurple;
 
   List<Map<String, dynamic>> songs = [
@@ -44,78 +41,20 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
     },
   ];
 
-  void _startTimer() {
-    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
-      if (elapsedTime < songs[currentSongIndex]['duration']) {
-        setState(() {
-          elapsedTime++;
-        });
-      } else {
-        next_song();
-      }
-    });
-  }
-
-  void _pauseTimer() {
-    _timer?.cancel();
-  }
-
-  void _resetTimer() {
-    setState(() {
-      elapsedTime = 0;
-    });
-  }
-
   void togglePlay() {
-    if (isPlaying) {
-      _pauseTimer();
-      _openEarable.wavAudioPlayer.writeWAVState(
-          WavAudioPlayerState.pause, "${songs[currentSongIndex]['title']}.wav");
-    } else {
-      print("Playing ${songs[currentSongIndex]['title']}.wav");
-      _startTimer();
-      if (!songStarted) {
-        _openEarable.wavAudioPlayer.writeWAVState(WavAudioPlayerState.start,
-            "${songs[currentSongIndex]['title']}.wav");
-      } else {
-        _openEarable.wavAudioPlayer.writeWAVState(WavAudioPlayerState.unpause,
-            "${songs[currentSongIndex]['title']}.wav");
-      }
-    }
-
-    setState(() {
-      isPlaying = !isPlaying;
-    });
-    // Implement actual play/pause logic here
+    //TODO
   }
 
-  void previous_song() {
-    changeSong((currentSongIndex - 1) % songs.length);
+  void togglePause() {
+    //TODO
   }
 
-  void next_song() {
-    changeSong((currentSongIndex + 1) % songs.length);
+  void toggleStop() {
+    //TODO
   }
 
-  void changeSong(int newIndex) {
-    _resetTimer();
-    //_openEarable.wavAudioPlayer.writeWAVState(
-    //    WavAudioPlayerState.stop, "${songs[currentSongIndex]['title']}.wav");
-
-    setState(() {
-      currentSongIndex = newIndex;
-    });
-    if (isPlaying) {
-      Future.delayed(Duration(seconds: 2));
-      _openEarable.wavAudioPlayer.writeWAVState(
-          WavAudioPlayerState.start, "${songs[newIndex]['title']}.wav");
-    }
-  }
-
-  String formatTime(int seconds) {
-    final int min = seconds ~/ 60;
-    final int sec = seconds % 60;
-    return '$min:${sec.toString().padLeft(2, '0')}';
+  void selectFilename() {
+    //TODO
   }
 
   void _openColorPicker() {
@@ -152,58 +91,58 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final double progress = elapsedTime / songs[currentSongIndex]['duration'];
-    final int remainingTime = songs[currentSongIndex]['duration'] - elapsedTime;
-
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Card(
-          //LED Color picker card
+        Card(//LED Color Picker Card
           color: Colors.black,
           child: Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment:
-                  MainAxisAlignment.spaceBetween, // Align to the right
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                Text(
+                  'LED Color',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18.0,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Row(
                   children: [
-                    Text(
-                      'LED Color',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18.0,
-                        fontWeight: FontWeight.bold,
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: _selectedColor, //TODO: send selection to earable
+                        borderRadius: BorderRadius.circular(5),
                       ),
                     ),
-                    SizedBox(height: 10),
+                    SizedBox(height: 10, width: 10),
                     ElevatedButton(
                       onPressed: _openColorPicker,
-                      child: Text('Configure RGB-LED color'),
+                      child: Text('set color'),
                     ),
+                    Spacer(),
                     ElevatedButton(
-                      onPressed: () {}, //TODO
-                      child: Text('Turn on'),
-                    )
+                        onPressed: () {}, //TODO
+                        child: Text('off'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xfff27777),
+                          foregroundColor: Colors.black,
+                        ))
                   ],
-                ),
-                Container(
-                  width: 40,
-                  height: 40,
-                  color: _selectedColor,
                 ),
               ],
             ),
           ),
         ),
 
-        Card(
-          //Audio Player Card
+        Card(//Audio Player Card
           color: Colors.black,
           child: Padding(
-            padding: const EdgeInsets.all(16.0), // Add padding around all items
+            padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -231,7 +170,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                         height: 37.0, // Set the desired height
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 5),
-                          child: TextField(
+                          child: TextField( // TODO: use text input to select file on earable
                             obscureText: false,
                             decoration: InputDecoration(
                               border: OutlineInputBorder(),
@@ -245,7 +184,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                     ),
                     SizedBox(height: 10, width: 10),
                     ElevatedButton(
-                      onPressed: togglePlay,
+                      onPressed: togglePause,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color(0xffe0f277),
                         foregroundColor: Colors.black,
@@ -254,7 +193,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                     ),
                     SizedBox(height: 10, width: 5),
                     ElevatedButton(
-                      onPressed: () {},
+                      onPressed: toggleStop,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color(0xfff27777),
                         foregroundColor: Colors.black,
@@ -268,52 +207,6 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
           ),
         ),
 
-        // ClipRect(
-        //   child: Image.network(
-        //     songs[currentSongIndex]['albumCover'],
-        //     width: 320,
-        //     height: 320,
-        //     fit: BoxFit.cover,
-        //   ),
-        // ),
-        // SizedBox(height: 20),
-        // Text(
-        //   songs[currentSongIndex]['title'],
-        //   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        // ),
-        // Text(
-        //   songs[currentSongIndex]['artist'],
-        //   style: TextStyle(fontSize: 20, color: Colors.grey[700]),
-        // ),
-        // SizedBox(height: 20),
-        // Column(
-        //   children: [
-        //     Row(
-        //       mainAxisAlignment: MainAxisAlignment.center,
-        //       children: [
-        //         Text(
-        //           formatTime(songs[currentSongIndex]['duration']),
-        //           style: TextStyle(fontSize: 12, color: Colors.grey),
-        //         ),
-        //         SizedBox(width: 10),
-        //         Container(
-        //           width: MediaQuery.of(context).size.width * 0.6,
-        //           child: LinearProgressIndicator(
-        //             value: progress,
-        //             color: Colors.brown,
-        //             backgroundColor: Colors.grey[200],
-        //           ),
-        //         ),
-        //         SizedBox(width: 10),
-        //         Text(
-        //           '-${formatTime(remainingTime)}',
-        //           style: TextStyle(fontSize: 12, color: Colors.grey),
-        //         ),
-        //       ],
-        //     ),
-        //   ],
-        // ),
-
         Spacer(),
       ],
     );
@@ -322,6 +215,5 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
   @override
   void dispose() {
     super.dispose();
-    _timer?.cancel();
   }
 }
