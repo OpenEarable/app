@@ -3,7 +3,7 @@
 import 'dart:math';
 
 class MahonyAHRS {
-  late double _defaultFrequency = 512.0; // (1.0 / 512.0) sample frequency in Hz
+  //late double _defaultFrequency = 512.0; // (1.0 / 512.0) sample frequency in Hz
   late double _sampleFrequency; // frequency;
   late double _qW; // data quaternion
   late double _qX; // data quaternion
@@ -24,11 +24,11 @@ class MahonyAHRS {
     this._integralFbX = 0.0;
     this._integralFbY = 0.0;
     this._integralFbZ = 0.0;
-    this._kp = 1.0;
+    this._kp = 10.0;
     this._ki = 0.0;
   }
 
-  List<double> get Quaternion => [this._qW, this._qX, this._qY, this._qZ];
+  List<double> get quaternion => [_qW, _qX, _qY, _qZ];
 
   void resetValues() {
     this._qW = 1.0;
@@ -42,8 +42,8 @@ class MahonyAHRS {
     this._ki = 0.0;
   }
 
-  void update(
-      double ax, double ay, double az, double gx, double gy, double gz) {
+  void update(double ax, double ay, double az, double gx, double gy, double gz,
+      double td) {
     double q1 = this._qW;
     double q2 = this._qX;
     double q3 = this._qY;
@@ -98,9 +98,9 @@ class MahonyAHRS {
     }
 
     // Integrate rate of change of quaternion
-    gx *= (0.5 * this._sampleFrequency); // pre-multiply common factors
-    gy *= (0.5 * this._sampleFrequency);
-    gz *= (0.5 * this._sampleFrequency);
+    gx *= (0.5 * td); // pre-multiply common factors
+    gy *= (0.5 * td);
+    gz *= (0.5 * td);
     pa = q2;
     pb = q3;
     pc = q4;

@@ -8,6 +8,7 @@ import 'package:ditredi/ditredi.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3, Quaternion;
 import 'package:simple_kalman/simple_kalman.dart';
 import '../utils/mahony_ahrs.dart';
+import '../utils/madgwick_ahrs.dart';
 
 class SensorDataTab extends StatefulWidget {
   final OpenEarable _openEarable;
@@ -25,6 +26,7 @@ class _SensorDataTabState extends State<SensorDataTab>
   late StreamSubscription _imuSubscription;
   late StreamSubscription _barometerSubscription;
   late MahonyAHRS mahonyAHRS;
+  late MadgwickAHRS madgwickAHRS;
   late DiTreDiController diTreDiController;
   final double errorMeasureAcc = 5;
   final double errorMeasureGyro = 10;
@@ -65,8 +67,9 @@ class _SensorDataTabState extends State<SensorDataTab>
     _setupListeners();
     _loadMesh();
     mahonyAHRS = MahonyAHRS();
+    madgwickAHRS = MadgwickAHRS();
     diTreDiController = DiTreDiController();
-    diTreDiController.update(rotationX: 0, rotationY: 45, rotationZ: 0);
+    diTreDiController.update(rotationX: 0, rotationY: 0, rotationZ: 0);
     kalmanAX = SimpleKalman(
         errorMeasure: errorMeasureAcc, errorEstimate: errorMeasureAcc, q: 0.9);
     kalmanAY = SimpleKalman(
@@ -100,6 +103,7 @@ class _SensorDataTabState extends State<SensorDataTab>
     });
   }
 
+  int lastTimestamp = 0;
   _setupListeners() {
     _openEarable.sensorManager.getBatteryLevelStream().listen((data) {
       print("Battery level is ${data[0]}");
@@ -109,8 +113,8 @@ class _SensorDataTabState extends State<SensorDataTab>
     });
     _imuSubscription =
         _openEarable.sensorManager.subscribeToSensorData(0).listen((data) {
+      print(data);
       int timestamp = data["timestamp"];
-
       if (data["sensorId"] == 0) {
         /*
         XYZValue accelerometerValue = XYZValue(
@@ -124,14 +128,14 @@ class _SensorDataTabState extends State<SensorDataTab>
             x: data["GYRO"]["X"],
             y: data["GYRO"]["Y"],
             z: data["GYRO"]["Z"],
-            units: data["ACC"]["units"]);
+            units: data["GYRO"]["units"]);
         XYZValue magnetometerValue = XYZValue(
             timestamp: timestamp,
             x: data["MAG"]["X"],
             y: data["MAG"]["Y"],
             z: data["MAG"]["Z"],
             units: data["MAG"]["units"]);
-            */
+        */
         XYZValue accelerometerValue = XYZValue(
             timestamp: timestamp,
             x: kalmanAX.filtered(data["ACC"]["X"]),
@@ -143,7 +147,7 @@ class _SensorDataTabState extends State<SensorDataTab>
             x: kalmanGX.filtered(data["GYRO"]["X"]),
             y: kalmanGY.filtered(data["GYRO"]["Y"]),
             z: kalmanGZ.filtered(data["GYRO"]["Z"]),
-            units: data["ACC"]["units"]);
+            units: data["GYRO"]["units"]);
         XYZValue magnetometerValue = XYZValue(
             timestamp: timestamp,
             x: kalmanMX.filtered(data["MAG"]["X"]),
@@ -151,15 +155,17 @@ class _SensorDataTabState extends State<SensorDataTab>
             z: kalmanMX.filtered(data["MAG"]["Z"]),
             units: data["MAG"]["units"]);
 
+        double dt = (timestamp - lastTimestamp) / 1000.0;
         mahonyAHRS.update(
-          accelerometerValue.x,
-          accelerometerValue.y,
-          accelerometerValue.z,
-          gyroscopeValue.x,
-          gyroscopeValue.y,
-          gyroscopeValue.z,
-        );
-        List<double> q = mahonyAHRS.Quaternion;
+            accelerometerValue.x,
+            accelerometerValue.y,
+            accelerometerValue.z,
+            gyroscopeValue.x,
+            gyroscopeValue.y,
+            gyroscopeValue.z,
+            dt);
+        lastTimestamp = timestamp;
+        List<double> q = mahonyAHRS.quaternion;
         var qw = q[0];
         var qx = q[1];
         var qy = q[2];
