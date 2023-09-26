@@ -5,7 +5,7 @@ import 'package:charts_flutter/flutter.dart' as charts;
 import 'dart:math';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:ditredi/ditredi.dart';
-import 'package:vector_math/vector_math_64.dart' show Vector3, Quaternion;
+import 'package:vector_math/vector_math_64.dart' show Vector3;
 import 'package:simple_kalman/simple_kalman.dart';
 import '../utils/mahony_ahrs.dart';
 import '../utils/madgwick_ahrs.dart';
@@ -227,7 +227,6 @@ class _SensorDataTabState extends State<SensorDataTab>
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(kToolbarHeight), // Default AppBar height
         child: Container(
-          color: Colors.brown,
           child: TabBar(
             controller: _tabController,
             indicatorColor: Colors.white, // Color of the underline indicator
