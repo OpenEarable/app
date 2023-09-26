@@ -17,6 +17,30 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
   bool songStarted = false;
   Color _selectedColor = Colors.deepPurple;
 
+  List<Map<String, dynamic>> songs = [
+    {
+      'title': 'Midnight City',
+      'artist': 'M83',
+      'albumCover':
+          'https://i.scdn.co/image/ab67616d0000b273fff2cb485c36a6d8f639bdba',
+      'duration': 243
+    },
+    {
+      'title': 'Radioactive',
+      'artist': 'Imagine Dragons',
+      'albumCover':
+          'https://i1.sndcdn.com/artworks-000069495641-rx1t0z-t500x500.jpg',
+      'duration': 186
+    },
+    {
+      'title': 'Lose Yourself to Dance',
+      'artist': 'Daft Punk',
+      'albumCover':
+          'https://i1.sndcdn.com/artworks-nbWsTnCZR3m7yAyd-KBkcDQ-t500x500.jpg',
+      'duration': 353
+    },
+  ];
+
   void togglePlay() {
     //TODO
   }
@@ -67,184 +91,190 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-      Card(
-        //LED Color Picker Card
-        color: Colors.black,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'LED Color',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18.0,
-                  fontWeight: FontWeight.bold,
+    return Container(
+        color: Theme.of(context).colorScheme.background,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Card(
+              //LED Color Picker Card
+              color: Colors.black,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'LED Color',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18.0,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color:
+                                _selectedColor, //TODO: send selection to earable
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                        ),
+                        SizedBox(height: 10, width: 10),
+                        ElevatedButton(
+                          onPressed: _openColorPicker,
+                          child: Text('set color'),
+                        ),
+                        Spacer(),
+                        ElevatedButton(
+                            onPressed: () {}, //TODO
+                            child: Text('off'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Color(0xfff27777),
+                              foregroundColor: Colors.black,
+                            ))
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              Row(
-                children: [
-                  Container(
-                    width: 66,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: _selectedColor, //TODO: send selection to earable
-                      borderRadius: BorderRadius.circular(5),
+            ),
+            Card(
+              //Audio Player Card
+              color: Colors.black,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Audio Player',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18.0,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  SizedBox(width: 5),
-                  SizedBox(
-                    width: 130,
-                    child: ElevatedButton(
-                      onPressed: _openColorPicker,
-                      child: Text('set color'),
-                    ),
-                  ),
-                  Spacer(),
-                  ElevatedButton(
-                      onPressed: () {}, //TODO
-                      child: Text('off'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xfff27777),
-                        foregroundColor: Colors.black,
-                      ))
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-      Card(
-          //Audio Player Card
-          color: Colors.black,
-          child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Audio Player',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18.0,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'LED Color',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18.0,
-                          fontWeight: FontWeight.bold,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            SizedBox(height: 10),
+                            ElevatedButton(
+                              onPressed: togglePlay,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Color(0xff77F2A1),
+                                foregroundColor: Colors.black,
+                              ),
+                              child: Icon(Icons.play_arrow),
+                            ),
+                            Expanded(
+                              child: SizedBox(
+                                height: 37.0,
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(horizontal: 5),
+                                  child: TextField(
+                                    obscureText: false,
+                                    decoration: InputDecoration(
+                                      border: OutlineInputBorder(),
+                                      labelText: 'filename.wav',
+                                      filled: true,
+                                      fillColor: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: 10, width: 10),
+                            ElevatedButton(
+                              onPressed: togglePause,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Color(0xffe0f277),
+                                foregroundColor: Colors.black,
+                              ),
+                              child: Icon(Icons.pause),
+                            ),
+                            SizedBox(height: 10, width: 5),
+                            ElevatedButton(
+                              onPressed: toggleStop,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Color(0xfff27777),
+                                foregroundColor: Colors.black,
+                              ),
+                              child: Icon(Icons.stop),
+                            ),
+                          ],
                         ),
-                      ),
-                      Row(
-                        children: [
-                          ElevatedButton(
-                            onPressed: togglePlay,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Color(0xff77F2A1),
-                              foregroundColor: Colors.black,
+                        SizedBox(
+                            height: 20), // Add spacing between the two rows
+
+                        // New Row
+                        Row(
+                          children: [
+                            SizedBox(height: 10),
+                            ElevatedButton(
+                              onPressed: () {}, //TODO
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Color(0xff77F2A1),
+                                foregroundColor: Colors.black,
+                              ),
+                              child: Icon(Icons.play_arrow),
                             ),
-                            child: Icon(Icons.play_arrow),
-                          ),
-                          Expanded(
-                            child: SizedBox(
-                              height: 37.0,
-                              child: Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 5),
-                                child: TextField(
-                                  obscureText: false,
-                                  decoration: InputDecoration(
-                                    border: OutlineInputBorder(),
-                                    labelText: 'filename.wav',
-                                    filled: true,
-                                    fillColor: Colors.white,
+                            SizedBox(height: 10, width: 5),
+                            Expanded(
+                              child: SizedBox(
+                                height: 37.0,
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(horizontal: 0),
+                                  child: TextField(
+                                    textAlign: TextAlign.end,
+                                    decoration: InputDecoration(
+                                      border: OutlineInputBorder(),
+                                      labelText: '100',
+                                      filled: true,
+                                      fillColor: Colors.white,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                          SizedBox(width: 10),
-                          ElevatedButton(
-                            onPressed: _openColorPicker,
-                            child: Text('set color'),
-                          ),
-                          SizedBox(width: 5),
-                          ElevatedButton(
-                            onPressed: toggleStop,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Color(0xfff27777),
-                              foregroundColor: Colors.black,
-                            ),
-                            child: Icon(Icons.stop),
-                          ),
-                        ],
-                      ),
-                      Divider(thickness: 1.0, color: Colors.white),
-                      Row(
-                        children: [
-                          SizedBox(height: 10),
-                          ElevatedButton(
-                            onPressed: () {}, //TODO
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Color(0xff77F2A1),
-                              foregroundColor: Colors.black,
-                            ),
-                            child: Icon(Icons.play_arrow),
-                          ),
-                          SizedBox(width: 5),
-                          Expanded(
-                            child: SizedBox(
-                              height: 37.0,
-                              child: Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 0),
-                                child: TextField(
-                                  textAlign: TextAlign.end,
-                                  decoration: InputDecoration(
-                                    border: OutlineInputBorder(),
-                                    labelText: '100',
-                                    filled: true,
-                                    fillColor: Colors.white,
-                                  ),
-                                ),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 5),
+                              child: Text(
+                                'Hz',
+                                style: TextStyle(
+                                    color: Colors
+                                        .white), // Set text color to white
                               ),
                             ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 5),
-                            child: Text(
-                              'Hz',
-                              style: TextStyle(
-                                  color:
-                                      Colors.white), // Set text color to white
-                            ),
-                          ),
-                          SizedBox(width: 50),
-                          SizedBox(width: 5),
-                          ElevatedButton(
-                            onPressed: () {}, //TODO
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Color(0xfff27777),
-                              foregroundColor: Colors.black,
-                            ),
-                            child: Icon(Icons.stop),
-                          )
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
-              ))),
-      Spacer()
-    ]);
+                            SizedBox(width: 50),
+                            SizedBox(height: 10, width: 5),
+                            ElevatedButton(
+                              onPressed: () {}, //TODO
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Color(0xfff27777),
+                                foregroundColor: Colors.black,
+                              ),
+                              child: Icon(Icons.stop),
+                            )
+                          ],
+                        ),
+                      ],
+                    )
+                  ],
+                ),
+              ),
+            ),
+            Spacer(),
+          ],
+        ));
   }
 
   @override
