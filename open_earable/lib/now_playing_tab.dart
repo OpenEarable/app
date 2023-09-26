@@ -17,30 +17,6 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
   bool songStarted = false;
   Color _selectedColor = Colors.deepPurple;
 
-  List<Map<String, dynamic>> songs = [
-    {
-      'title': 'Midnight City',
-      'artist': 'M83',
-      'albumCover':
-          'https://i.scdn.co/image/ab67616d0000b273fff2cb485c36a6d8f639bdba',
-      'duration': 243
-    },
-    {
-      'title': 'Radioactive',
-      'artist': 'Imagine Dragons',
-      'albumCover':
-          'https://i1.sndcdn.com/artworks-000069495641-rx1t0z-t500x500.jpg',
-      'duration': 186
-    },
-    {
-      'title': 'Lose Yourself to Dance',
-      'artist': 'Daft Punk',
-      'albumCover':
-          'https://i1.sndcdn.com/artworks-nbWsTnCZR3m7yAyd-KBkcDQ-t500x500.jpg',
-      'duration': 353
-    },
-  ];
-
   void togglePlay() {
     //TODO
   }
@@ -113,17 +89,20 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                 Row(
                   children: [
                     Container(
-                      width: 36,
+                      width: 66,
                       height: 36,
                       decoration: BoxDecoration(
                         color: _selectedColor, //TODO: send selection to earable
                         borderRadius: BorderRadius.circular(5),
                       ),
                     ),
-                    SizedBox(height: 10, width: 10),
-                    ElevatedButton(
-                      onPressed: _openColorPicker,
-                      child: Text('set color'),
+                    SizedBox(width: 5),
+                    SizedBox(
+                      width: 130,
+                      child: ElevatedButton(
+                        onPressed: _openColorPicker,
+                        child: Text('set color'),
+                      ),
                     ),
                     Spacer(),
                     ElevatedButton(
@@ -160,7 +139,6 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                   children: [
                     Row(
                       children: [
-                        SizedBox(height: 10),
                         ElevatedButton(
                           onPressed: togglePlay,
                           style: ElevatedButton.styleFrom(
@@ -187,7 +165,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                             ),
                           ),
                         ),
-                        SizedBox(height: 10, width: 10),
+                        SizedBox(width: 10),
                         ElevatedButton(
                           onPressed: togglePause,
                           style: ElevatedButton.styleFrom(
@@ -196,7 +174,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                           ),
                           child: Icon(Icons.pause),
                         ),
-                        SizedBox(height: 10, width: 5),
+                        SizedBox(width: 5),
                         ElevatedButton(
                           onPressed: toggleStop,
                           style: ElevatedButton.styleFrom(
@@ -207,9 +185,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                         ),
                       ],
                     ),
-                    SizedBox(height: 20), // Add spacing between the two rows
-
-                    // New Row
+                    Divider(thickness: 1.0, color: Colors.white),
                     Row(
                       children: [
                         SizedBox(height: 10),
@@ -221,7 +197,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                           ),
                           child: Icon(Icons.play_arrow),
                         ),
-                        SizedBox(height: 10, width: 5),
+                        SizedBox(width: 5),
                         Expanded(
                           child: SizedBox(
                             height: 37.0,
@@ -249,7 +225,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                           ),
                         ),
                         SizedBox(width: 50),
-                        SizedBox(height: 10, width: 5),
+                        SizedBox(width: 5),
                         ElevatedButton(
                           onPressed: () {}, //TODO
                           style: ElevatedButton.styleFrom(
