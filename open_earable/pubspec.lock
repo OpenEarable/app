@@ -110,6 +110,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  flutter_colorpicker:
+    dependency: "direct main"
+    description:
+      name: flutter_colorpicker
+      sha256: "458a6ed8ea480eb16ff892aedb4b7092b2804affd7e046591fb03127e8d8ef8b"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.3"
   flutter_lints:
     dependency: "direct dev"
     description:
@@ -200,7 +208,7 @@ packages:
     description:
       path: "."
       ref: HEAD
-      resolved-ref: "4acb4ad62b338d3ee0f3a396861608484d9542dc"
+      resolved-ref: c6b0cbca97c0f79cc16e131965ecb20566eb127d
       url: "https://github.com/o-bagge/open_earable_flutter"
     source: git
     version: "0.0.1"

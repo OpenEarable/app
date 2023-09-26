@@ -47,7 +47,7 @@ class _MyHomePageState extends State<MyHomePage> {
     super.initState();
     _openEarable = OpenEarable();
     _widgetOptions = <Widget>[
-      NowPlayingTab(_openEarable),
+      ActuatorsTab(_openEarable),
       SensorDataTab(_openEarable),
       AppsTab(),
     ];
@@ -92,8 +92,8 @@ class _MyHomePageState extends State<MyHomePage> {
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
-            icon: Icon(Icons.music_note),
-            label: 'Now Playing',
+            icon: Icon(Icons.precision_manufacturing),
+            label: 'Actuators',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.sensors),

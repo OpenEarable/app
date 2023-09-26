@@ -23,8 +23,8 @@ class _SensorDataTabState extends State<SensorDataTab>
   late TabController _tabController;
   late int _minX;
   late int _maxX;
-  late StreamSubscription _imuSubscription;
-  late StreamSubscription _barometerSubscription;
+  StreamSubscription? _imuSubscription;
+  StreamSubscription? _barometerSubscription;
   late MahonyAHRS mahonyAHRS;
   late MadgwickAHRS madgwickAHRS;
   late DiTreDiController diTreDiController;
@@ -62,9 +62,20 @@ class _SensorDataTabState extends State<SensorDataTab>
   void initState() {
     super.initState();
     _tabController = TabController(vsync: this, length: 5);
+    _tabController.addListener(() {
+      if (_tabController.index != _tabController.previousIndex) {
+        setState(() {
+          for (int i = 0; i < _tabVisibility.length; i++) {
+            _tabVisibility[i] = (i == _tabController.index);
+          }
+        });
+      }
+    });
     _minX = 0;
     _maxX = _numDatapoints;
-    _setupListeners();
+    if (_openEarable.bleManager.connected) {
+      _setupListeners();
+    }
     _loadMesh();
     mahonyAHRS = MahonyAHRS();
     madgwickAHRS = MadgwickAHRS();
@@ -113,7 +124,7 @@ class _SensorDataTabState extends State<SensorDataTab>
     });
     _imuSubscription =
         _openEarable.sensorManager.subscribeToSensorData(0).listen((data) {
-      print(data);
+      //print(data);
       int timestamp = data["timestamp"];
       if (data["sensorId"] == 0) {
         /*
@@ -216,13 +227,52 @@ class _SensorDataTabState extends State<SensorDataTab>
 
   @override
   void dispose() {
-    _imuSubscription.cancel();
-    _barometerSubscription.cancel();
+    _imuSubscription?.cancel();
+    _barometerSubscription?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!_openEarable.bleManager.connected) {
+      return _notConnectedWidget();
+    } else {
+      return _buildSensorDataTabs();
+    }
+  }
+
+  Widget _notConnectedWidget() {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.warning,
+                size: 48,
+                color: Colors.red,
+              ),
+              SizedBox(height: 16),
+              Center(
+                child: Text(
+                  "Not connected to\nOpenEarable device",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSensorDataTabs() {
     return Scaffold(
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(kToolbarHeight), // Default AppBar height
@@ -240,14 +290,6 @@ class _SensorDataTabState extends State<SensorDataTab>
               Tab(text: 'Pressure'),
               Tab(text: '3D'),
             ],
-            onTap: (index) {
-              setState(() {
-                // Set the selected tab to be visible and others to be hidden
-                for (int i = 0; i < _tabVisibility.length; i++) {
-                  _tabVisibility[i] = (i == index);
-                }
-              });
-            },
           ),
         ),
       ),
@@ -388,7 +430,7 @@ class _SensorDataTabState extends State<SensorDataTab>
                     1, // Optional if you want to define max rows for the legend.
                 entryTextStyle: charts.TextStyleSpec(
                   // Optional styling for the text.
-                  color: charts.Color(r: 127, g: 63, b: 191),
+                  color: charts.Color(r: 255, g: 255, b: 255),
                   fontSize: 12,
                 ),
               )

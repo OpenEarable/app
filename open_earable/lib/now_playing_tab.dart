@@ -1,22 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'dart:async';
 
-class NowPlayingTab extends StatefulWidget {
+class ActuatorsTab extends StatefulWidget {
   final OpenEarable _openEarable;
-  NowPlayingTab(this._openEarable);
+  ActuatorsTab(this._openEarable);
   @override
-  _NowPlayingTabState createState() => _NowPlayingTabState(_openEarable);
+  _ActuatorsTabState createState() => _ActuatorsTabState(_openEarable);
 }
 
-class _NowPlayingTabState extends State<NowPlayingTab> {
+class _ActuatorsTabState extends State<ActuatorsTab> {
   final OpenEarable _openEarable;
-  _NowPlayingTabState(this._openEarable);
+  _ActuatorsTabState(this._openEarable);
   bool isPlaying = false;
   bool songStarted = false;
-  int currentSongIndex = 0;
-  int elapsedTime = 0; // elapsed time in seconds
-  Timer? _timer;
+  Color _selectedColor = Colors.deepPurple;
 
   List<Map<String, dynamic>> songs = [
     {
@@ -42,164 +41,236 @@ class _NowPlayingTabState extends State<NowPlayingTab> {
     },
   ];
 
-  void _startTimer() {
-    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
-      if (elapsedTime < songs[currentSongIndex]['duration']) {
-        setState(() {
-          elapsedTime++;
-        });
-      } else {
-        next_song();
-      }
-    });
-  }
-
-  void _pauseTimer() {
-    _timer?.cancel();
-  }
-
-  void _resetTimer() {
-    setState(() {
-      elapsedTime = 0;
-    });
-  }
-
   void togglePlay() {
-    if (isPlaying) {
-      _pauseTimer();
-      _openEarable.wavAudioPlayer.writeWAVState(
-          WavAudioPlayerState.pause, "${songs[currentSongIndex]['title']}.wav");
-    } else {
-      print("Playing ${songs[currentSongIndex]['title']}.wav");
-      _startTimer();
-      if (!songStarted) {
-        _openEarable.wavAudioPlayer.writeWAVState(WavAudioPlayerState.start,
-            "${songs[currentSongIndex]['title']}.wav");
-      } else {
-        _openEarable.wavAudioPlayer.writeWAVState(WavAudioPlayerState.unpause,
-            "${songs[currentSongIndex]['title']}.wav");
-      }
-    }
-
-    setState(() {
-      isPlaying = !isPlaying;
-    });
-    // Implement actual play/pause logic here
+    //TODO
   }
 
-  void previous_song() {
-    changeSong((currentSongIndex - 1) % songs.length);
+  void togglePause() {
+    //TODO
   }
 
-  void next_song() {
-    changeSong((currentSongIndex + 1) % songs.length);
+  void toggleStop() {
+    //TODO
   }
 
-  void changeSong(int newIndex) {
-    _resetTimer();
-    //_openEarable.wavAudioPlayer.writeWAVState(
-    //    WavAudioPlayerState.stop, "${songs[currentSongIndex]['title']}.wav");
-
-    setState(() {
-      currentSongIndex = newIndex;
-    });
-    if (isPlaying) {
-      Future.delayed(Duration(seconds: 2));
-      _openEarable.wavAudioPlayer.writeWAVState(
-          WavAudioPlayerState.start, "${songs[newIndex]['title']}.wav");
-    }
+  void selectFilename() {
+    //TODO
   }
 
-  String formatTime(int seconds) {
-    final int min = seconds ~/ 60;
-    final int sec = seconds % 60;
-    return '$min:${sec.toString().padLeft(2, '0')}';
+  void _openColorPicker() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Pick a color for the RGB LED'),
+          content: SingleChildScrollView(
+            child: ColorPicker(
+              pickerColor: _selectedColor,
+              onColorChanged: (color) {
+                setState(() {
+                  _selectedColor = color;
+                });
+              },
+              showLabel: true,
+              pickerAreaHeightPercent: 0.8,
+              enableAlpha: false,
+            ),
+          ),
+          actions: <Widget>[
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Done'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final double progress = elapsedTime / songs[currentSongIndex]['duration'];
-    final int remainingTime = songs[currentSongIndex]['duration'] - elapsedTime;
-
     return Container(
         color: Theme.of(context).colorScheme.background,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Spacer(),
-            ClipRect(
-              child: Image.network(
-                songs[currentSongIndex]['albumCover'],
-                width: 320,
-                height: 320,
-                fit: BoxFit.cover,
+            Card(
+              //LED Color Picker Card
+              color: Colors.black,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'LED Color',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18.0,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color:
+                                _selectedColor, //TODO: send selection to earable
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                        ),
+                        SizedBox(height: 10, width: 10),
+                        ElevatedButton(
+                          onPressed: _openColorPicker,
+                          child: Text('set color'),
+                        ),
+                        Spacer(),
+                        ElevatedButton(
+                            onPressed: () {}, //TODO
+                            child: Text('off'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Color(0xfff27777),
+                              foregroundColor: Colors.black,
+                            ))
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-            SizedBox(height: 20),
-            Text(
-              songs[currentSongIndex]['title'],
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              songs[currentSongIndex]['artist'],
-              style: TextStyle(fontSize: 20, color: Colors.grey[700]),
-            ),
-            SizedBox(height: 20),
-            Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+            Card(
+              //Audio Player Card
+              color: Colors.black,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      formatTime(songs[currentSongIndex]['duration']),
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                    SizedBox(width: 10),
-                    Container(
-                      width: MediaQuery.of(context).size.width * 0.6,
-                      child: LinearProgressIndicator(
-                        value: progress,
-                        color: Colors.brown,
-                        backgroundColor: Colors.grey[200],
+                      'Audio Player',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18.0,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(width: 10),
-                    Text(
-                      '-${formatTime(remainingTime)}',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            SizedBox(height: 10),
+                            ElevatedButton(
+                              onPressed: togglePlay,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Color(0xff77F2A1),
+                                foregroundColor: Colors.black,
+                              ),
+                              child: Icon(Icons.play_arrow),
+                            ),
+                            Expanded(
+                              child: SizedBox(
+                                height: 37.0,
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(horizontal: 5),
+                                  child: TextField(
+                                    obscureText: false,
+                                    decoration: InputDecoration(
+                                      border: OutlineInputBorder(),
+                                      labelText: 'filename.wav',
+                                      filled: true,
+                                      fillColor: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: 10, width: 10),
+                            ElevatedButton(
+                              onPressed: togglePause,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Color(0xffe0f277),
+                                foregroundColor: Colors.black,
+                              ),
+                              child: Icon(Icons.pause),
+                            ),
+                            SizedBox(height: 10, width: 5),
+                            ElevatedButton(
+                              onPressed: toggleStop,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Color(0xfff27777),
+                                foregroundColor: Colors.black,
+                              ),
+                              child: Icon(Icons.stop),
+                            ),
+                          ],
+                        ),
+                        SizedBox(
+                            height: 20), // Add spacing between the two rows
+
+                        // New Row
+                        Row(
+                          children: [
+                            SizedBox(height: 10),
+                            ElevatedButton(
+                              onPressed: () {}, //TODO
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Color(0xff77F2A1),
+                                foregroundColor: Colors.black,
+                              ),
+                              child: Icon(Icons.play_arrow),
+                            ),
+                            SizedBox(height: 10, width: 5),
+                            Expanded(
+                              child: SizedBox(
+                                height: 37.0,
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(horizontal: 0),
+                                  child: TextField(
+                                    textAlign: TextAlign.end,
+                                    decoration: InputDecoration(
+                                      border: OutlineInputBorder(),
+                                      labelText: '100',
+                                      filled: true,
+                                      fillColor: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 5),
+                              child: Text(
+                                'Hz',
+                                style: TextStyle(
+                                    color: Colors
+                                        .white), // Set text color to white
+                              ),
+                            ),
+                            SizedBox(width: 50),
+                            SizedBox(height: 10, width: 5),
+                            ElevatedButton(
+                              onPressed: () {}, //TODO
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Color(0xfff27777),
+                                foregroundColor: Colors.black,
+                              ),
+                              child: Icon(Icons.stop),
+                            )
+                          ],
+                        ),
+                      ],
+                    )
                   ],
                 ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      icon: Icon(Icons.skip_previous, size: 30.0),
-                      onPressed: () {
-                        previous_song();
-                      },
-                    ),
-                    SizedBox(width: 25.0), // provide space between buttons
-                    SizedBox(
-                      height: 100.0, // desired height
-                      width: 80.0, // desired width
-                      child: IconButton(
-                        icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow,
-                            size: 60.0),
-                        onPressed: togglePlay,
-                      ),
-                    ),
-                    SizedBox(width: 25.0),
-                    IconButton(
-                      icon: Icon(Icons.skip_next, size: 30.0),
-                      onPressed: () {
-                        next_song();
-                      },
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
             Spacer(),
           ],
@@ -209,6 +280,5 @@ class _NowPlayingTabState extends State<NowPlayingTab> {
   @override
   void dispose() {
     super.dispose();
-    _timer?.cancel();
   }
 }
