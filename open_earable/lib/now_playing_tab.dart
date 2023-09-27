@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'ble.dart';
 import 'dart:async';
 
 class ActuatorsTab extends StatefulWidget {
@@ -19,6 +20,54 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
 
   TextEditingController _filenameTextController = TextEditingController();
   TextEditingController _audioFrequencyTextController = TextEditingController();
+  StreamSubscription<bool>? _connectionStateSubscription;
+  StreamSubscription<dynamic>? _batteryLevelSubscription;
+  bool connected = false;
+  String earableDeviceName = "";
+  int earableSOC = 0;
+
+  @override
+  void dispose() {
+    super.dispose();
+    _connectionStateSubscription?.cancel();
+    _batteryLevelSubscription?.cancel();
+  }
+
+  @override
+  void initState() {
+    _connectionStateSubscription =
+        _openEarable.bleManager.connectionStateStream.listen((connected) {
+      setState(() {
+        this.connected = connected;
+
+        if (connected) {
+          getNameAndSOC();
+        }
+      });
+    });
+    setState(() {
+      connected = _openEarable.bleManager.connected;
+
+      if (connected) {
+        getNameAndSOC();
+      }
+      super.initState();
+    });
+  }
+
+  void getNameAndSOC() {
+    String? name = _openEarable.bleManager.connectedDevice?.name;
+
+    earableDeviceName = name ?? "";
+
+    _batteryLevelSubscription = _openEarable.sensorManager
+        .getBatteryLevelStream()
+        .listen((batteryLevel) {
+          setState(() {
+            earableSOC = batteryLevel[0].toInt();
+          });
+    });
+  }
 
   void togglePlay() {
     _openEarable.audioPlayer.setWavState(AudioPlayerState.start,
@@ -36,6 +85,17 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
 
   void toggleStop() {
     _openEarable.audioPlayer.setWavState(AudioPlayerState.stop);
+  }
+
+  void playFrequencySound() {
+    double frequency =
+        double.tryParse(_audioFrequencyTextController.text) ?? 100.0;
+    _openEarable.audioPlayer
+        .setFrequencyState(AudioPlayerState.start, frequency, 0);
+  }
+
+  void stopFrequencySound() {
+    _openEarable.audioPlayer.setFrequencyState(AudioPlayerState.stop, 0.0, 0);
   }
 
   void turnLEDoff() {
@@ -98,34 +158,46 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                 Row(
                   children: [
                     Text(
-                      'OpenEarable not connected.',
+                      !connected ? "OpenEarable not connected." : "$earableDeviceName Battery: $earableSOC%",
                       style: TextStyle(
                         color: Color.fromRGBO(168, 168, 172, 1.0),
                         fontSize: 15.0,
-                        fontStyle: FontStyle.italic,
+                        fontStyle: !connected ? FontStyle.italic : FontStyle.normal,
                       ),
                     ),
                   ],
                 ),
-
-                SizedBox(height: 5),
-
-                Row(children: [
-                  Expanded(
-                      child: SizedBox(
-                        height: 37.0,
-                        child: ElevatedButton(
-                          onPressed: () {}, //TODO
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xfff27777),
-                            foregroundColor: Colors.black,
+                Visibility(
+                  visible: !connected,
+                  child: Column(
+                    children: [
+                      SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SizedBox(
+                              height: 37.0,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  Navigator.of(context).push(MaterialPageRoute(
+                                      builder: (context) =>
+                                          BLEPage(_openEarable)));
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: !connected
+                                      ? Color(0xff77F2A1)
+                                      : Color(0xfff27777),
+                                  foregroundColor: Colors.black,
+                                ),
+                                child: Text("Connect"),
+                              ),
+                            ),
                           ),
-                          child: Text('Off'),
-                        ),
+                        ],
                       ),
-                    ),
-                ],
-                ),
+                    ],
+                  ),
+                )
               ],
             ),
           ),
@@ -149,7 +221,9 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                 Row(
                   children: [
                     GestureDetector(
-                      onTap: _openColorPicker, // Open color picker
+                      onTap: connected
+                          ? _openColorPicker
+                          : null, // Open color picker
                       child: Container(
                         width: 66,
                         height: 36,
@@ -163,7 +237,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                     SizedBox(
                       width: 130,
                       child: ElevatedButton(
-                        onPressed: setLEDColor, // Call foo() function
+                        onPressed: connected ? setLEDColor : null,
                         style: ElevatedButton.styleFrom(
                             backgroundColor: Color(
                                 0xff53515b), // Set the background color to grey
@@ -173,7 +247,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                     ),
                     Spacer(),
                     ElevatedButton(
-                      onPressed: turnLEDoff,
+                      onPressed: connected ? turnLEDoff : null,
                       child: Text('Off'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color(0xfff27777),
@@ -208,7 +282,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                     Row(
                       children: [
                         ElevatedButton(
-                          onPressed: togglePlay,
+                          onPressed: connected ? togglePlay : null,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Color(0xff77F2A1),
                             foregroundColor: Colors.black,
@@ -224,13 +298,21 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                               child: TextField(
                                 controller: _filenameTextController,
                                 obscureText: false,
-                                style: TextStyle(color: Colors.black),
+                                enabled: connected,
+                                style: TextStyle(
+                                    color:
+                                        connected ? Colors.black : Colors.grey),
                                 decoration: InputDecoration(
                                   border: OutlineInputBorder(),
                                   labelText: 'filename.wav',
-                                  labelStyle: TextStyle(color: Colors.black),
+                                  labelStyle: TextStyle(
+                                      color: connected
+                                          ? Colors.black
+                                          : Colors.grey),
                                   filled: true,
-                                  fillColor: Colors.white,
+                                  fillColor: connected
+                                      ? Colors.white
+                                      : Colors.grey[200],
                                 ),
                               ),
                             ),
@@ -238,7 +320,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                         ),
                         SizedBox(width: 10),
                         ElevatedButton(
-                          onPressed: togglePause,
+                          onPressed: connected ? togglePause : null,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Color(0xffe0f277),
                             foregroundColor: Colors.black,
@@ -247,7 +329,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                         ),
                         SizedBox(width: 5),
                         ElevatedButton(
-                          onPressed: toggleStop,
+                          onPressed: connected ? toggleStop : null,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Color(0xfff27777),
                             foregroundColor: Colors.black,
@@ -261,7 +343,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                       children: [
                         SizedBox(height: 10),
                         ElevatedButton(
-                          onPressed: () {}, //TODO
+                          onPressed: connected ? playFrequencySound : null,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Color(0xff77F2A1),
                             foregroundColor: Colors.black,
@@ -278,13 +360,20 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                               child: TextField(
                                 controller: _audioFrequencyTextController,
                                 textAlign: TextAlign.end,
-                                style: TextStyle(color: Colors.black),
+                                style: TextStyle(
+                                    color:
+                                        connected ? Colors.black : Colors.grey),
                                 decoration: InputDecoration(
                                   border: OutlineInputBorder(),
                                   labelText: '100',
                                   filled: true,
-                                  labelStyle: TextStyle(color: Colors.black),
-                                  fillColor: Colors.white,
+                                  labelStyle: TextStyle(
+                                      color: connected
+                                          ? Colors.black
+                                          : Colors.grey),
+                                  fillColor: connected
+                                      ? Colors.white
+                                      : Colors.grey[200],
                                 ),
                               ),
                             ),
@@ -295,13 +384,15 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                           child: Text(
                             'Hz',
                             style: TextStyle(
-                                color: Colors.white), // Set text color to white
+                                color: connected
+                                    ? Colors.white
+                                    : Colors.grey), // Set text color to white
                           ),
                         ),
                         SizedBox(width: 50),
                         SizedBox(width: 5),
                         ElevatedButton(
-                          onPressed: () {}, //TODO
+                          onPressed: connected ? stopFrequencySound : null,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Color(0xfff27777),
                             foregroundColor: Colors.black,
@@ -319,10 +410,5 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
         Spacer(),
       ],
     );
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
   }
 }
