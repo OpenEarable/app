@@ -80,6 +80,57 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Card(
+          color: Color(0xff161618),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Device Connection',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18.0,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 5),
+                Row(
+                  children: [
+                    Text(
+                      'OpenEarable not connected.',
+                      style: TextStyle(
+                        color: Color.fromRGBO(168, 168, 172, 1.0),
+                        fontSize: 15.0,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: 5),
+
+                Row(children: [
+                  Expanded(
+                      child: SizedBox(
+                        height: 37.0,
+                        child: ElevatedButton(
+                          onPressed: () {}, //TODO
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(0xfff27777),
+                            foregroundColor: Colors.black,
+                          ),
+                          child: Text('Off'),
+                        ),
+                      ),
+                    ),
+                ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        Card(
           //LED Color Picker Card
           color: Color(0xff161618),
           child: Padding(
@@ -114,22 +165,21 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                       child: ElevatedButton(
                         onPressed: setLEDColor, // Call foo() function
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Color(
-                              0xff53515b), // Set the background color to grey
-                          foregroundColor:
-                              Colors.white, // Set the text color to black
-                        ),
+                            backgroundColor: Color(
+                                0xff53515b), // Set the background color to grey
+                            foregroundColor: Colors.white),
                         child: Text('Set Color'),
                       ),
                     ),
                     Spacer(),
                     ElevatedButton(
-                        onPressed: turnLEDoff,
-                        child: Text('Off'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Color(0xfff27777),
-                          foregroundColor: Colors.black,
-                        ))
+                      onPressed: turnLEDoff,
+                      child: Text('Off'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xfff27777),
+                        foregroundColor: Colors.black,
+                      ),
+                    ),
                   ],
                 ),
               ],
