@@ -21,15 +21,16 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
   TextEditingController _audioFrequencyTextController = TextEditingController();
 
   void togglePlay() {
-    _openEarable.wavAudioPlayer.writeWAVState(WavAudioPlayerState.start, name: _filenameTextController.text);
+    _openEarable.audioPlayer
+        .setWavState(AudioPlayerState.play, name: _filenameTextController.text);
   }
 
   void togglePause() {
-    _openEarable.wavAudioPlayer.writeWAVState(WavAudioPlayerState.pause);
+    _openEarable.audioPlayer.setWavState(AudioPlayerState.pause);
   }
 
   void toggleStop() {
-    _openEarable.wavAudioPlayer.writeWAVState(WavAudioPlayerState.stop);
+    _openEarable.audioPlayer.setWavState(AudioPlayerState.stop);
   }
 
   void turnLEDoff() {
@@ -59,7 +60,10 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                _openEarable.rgbLed.writeLedColor(r: _selectedColor.red, g: _selectedColor.green, b: _selectedColor.blue);
+                _openEarable.rgbLed.writeLedColor(
+                    r: _selectedColor.red,
+                    g: _selectedColor.green,
+                    b: _selectedColor.blue);
               },
               child: const Text('Done'),
             ),
@@ -190,9 +194,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                         ),
                       ],
                     ),
-
                     Divider(thickness: 1.0, color: Colors.white),
-
                     Row(
                       children: [
                         SizedBox(height: 10),
