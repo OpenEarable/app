@@ -21,8 +21,13 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
   TextEditingController _audioFrequencyTextController = TextEditingController();
 
   void togglePlay() {
-    _openEarable.audioPlayer
-        .setWavState(AudioPlayerState.play, name: _filenameTextController.text);
+    _openEarable.audioPlayer.setWavState(AudioPlayerState.start,
+        name: _filenameTextController.text);
+  }
+
+  void setLEDColor() {
+    _openEarable.rgbLed.writeLedColor(
+        r: _selectedColor.red, g: _selectedColor.green, b: _selectedColor.blue);
   }
 
   void togglePause() {
@@ -60,10 +65,6 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                _openEarable.rgbLed.writeLedColor(
-                    r: _selectedColor.red,
-                    g: _selectedColor.green,
-                    b: _selectedColor.blue);
               },
               child: const Text('Done'),
             ),
@@ -80,7 +81,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
       children: [
         Card(
           //LED Color Picker Card
-          color: Colors.black,
+          color: Color(0xff161618),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -96,26 +97,35 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                 ),
                 Row(
                   children: [
-                    Container(
-                      width: 66,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: _selectedColor,
-                        borderRadius: BorderRadius.circular(5),
+                    GestureDetector(
+                      onTap: _openColorPicker, // Open color picker
+                      child: Container(
+                        width: 66,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: _selectedColor,
+                          borderRadius: BorderRadius.circular(5),
+                        ),
                       ),
                     ),
                     SizedBox(width: 5),
                     SizedBox(
                       width: 130,
                       child: ElevatedButton(
-                        onPressed: _openColorPicker,
-                        child: Text('set color'),
+                        onPressed: setLEDColor, // Call foo() function
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(
+                              0xff53515b), // Set the background color to grey
+                          foregroundColor:
+                              Colors.white, // Set the text color to black
+                        ),
+                        child: Text('Set Color'),
                       ),
                     ),
                     Spacer(),
                     ElevatedButton(
                         onPressed: turnLEDoff,
-                        child: Text('off'),
+                        child: Text('Off'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Color(0xfff27777),
                           foregroundColor: Colors.black,
@@ -128,7 +138,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
         ),
         Card(
           //Audio Player Card
-          color: Colors.black,
+          color: Color(0xff161618),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -153,7 +163,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                             backgroundColor: Color(0xff77F2A1),
                             foregroundColor: Colors.black,
                           ),
-                          child: Icon(Icons.play_arrow),
+                          child: Icon(Icons.play_arrow_outlined),
                         ),
                         Expanded(
                           child: SizedBox(
@@ -164,9 +174,11 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                               child: TextField(
                                 controller: _filenameTextController,
                                 obscureText: false,
+                                style: TextStyle(color: Colors.black),
                                 decoration: InputDecoration(
                                   border: OutlineInputBorder(),
                                   labelText: 'filename.wav',
+                                  labelStyle: TextStyle(color: Colors.black),
                                   filled: true,
                                   fillColor: Colors.white,
                                 ),
@@ -190,7 +202,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                             backgroundColor: Color(0xfff27777),
                             foregroundColor: Colors.black,
                           ),
-                          child: Icon(Icons.stop),
+                          child: Icon(Icons.stop_outlined),
                         ),
                       ],
                     ),
@@ -204,7 +216,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                             backgroundColor: Color(0xff77F2A1),
                             foregroundColor: Colors.black,
                           ),
-                          child: Icon(Icons.play_arrow),
+                          child: Icon(Icons.play_arrow_outlined),
                         ),
                         SizedBox(width: 5),
                         Expanded(
@@ -216,10 +228,12 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                               child: TextField(
                                 controller: _audioFrequencyTextController,
                                 textAlign: TextAlign.end,
+                                style: TextStyle(color: Colors.black),
                                 decoration: InputDecoration(
                                   border: OutlineInputBorder(),
                                   labelText: '100',
                                   filled: true,
+                                  labelStyle: TextStyle(color: Colors.black),
                                   fillColor: Colors.white,
                                 ),
                               ),
@@ -242,7 +256,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                             backgroundColor: Color(0xfff27777),
                             foregroundColor: Colors.black,
                           ),
-                          child: Icon(Icons.stop),
+                          child: Icon(Icons.stop_outlined),
                         )
                       ],
                     ),
