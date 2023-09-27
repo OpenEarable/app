@@ -31,6 +31,7 @@ class _SensorDataTabState extends State<SensorDataTab>
   final double errorMeasureAcc = 5;
   final double errorMeasureGyro = 10;
   final double errorMeasureMag = 25;
+  late int startTimestamp;
   late SimpleKalman kalmanAX,
       kalmanAY,
       kalmanAZ,
@@ -61,6 +62,15 @@ class _SensorDataTabState extends State<SensorDataTab>
   @override
   void initState() {
     super.initState();
+    startTimestamp = DateTime.now().millisecondsSinceEpoch;
+    for (int i = 0; i < 200; i++) {
+      //var data = XYZValue(timestamp: i, x: -3, y: 2, z: 4, units: {});
+      //accelerometerData.add(data);
+      //gyroscopeData.add(data);
+      //magnetometerData.add(data);
+      //barometerData.add(BarometerValue(
+      //    timestamp: i, pressure: 100000, temperature: 10, units: {}));
+    }
     _tabController = TabController(vsync: this, length: 5);
     _tabController.addListener(() {
       if (_tabController.index != _tabController.previousIndex) {
@@ -354,7 +364,20 @@ class _SensorDataTabState extends State<SensorDataTab>
     );
   }
 
+  _getColor(String title) {
+    if (title == "Accelerometer Data") {
+      return ['#FF6347', '#3CB371', '#1E90FF'];
+    } else if (title == "Gyroscope Data") {
+      return ['#FFD700', '#FF4500', '#D8BFD8'];
+    } else if (title == "Magnetometer Data") {
+      return ['#F08080', '#98FB98', '#ADD8E6'];
+    } else if (title == 'Pressure Data') {
+      return ['#32CD32', '#FFA07A'];
+    }
+  }
+
   Widget _buildGraphXYZ(String title, List<DataValue> data) {
+    List<String> colors = _getColor(title);
     List<charts.Series<dynamic, num>> seriesList = [];
     var minY = -25;
     var maxY = 25;
@@ -364,19 +387,19 @@ class _SensorDataTabState extends State<SensorDataTab>
     }
     if (title == 'Pressure Data') {
       minY = 0;
-      maxY = 40;
+      maxY = 130;
       data as List<BarometerValue>;
       seriesList = [
         charts.Series<BarometerValue, int>(
-          id: 'Pressure',
-          colorFn: (_, __) => charts.MaterialPalette.blue.shadeDefault,
+          id: 'Pressure${data.isNotEmpty ? " (${data[0].units['Pressure']})" : ""}',
+          colorFn: (_, __) => charts.Color.fromHex(code: colors[0]),
           domainFn: (BarometerValue data, _) => data.timestamp,
-          measureFn: (BarometerValue data, _) => data.pressure,
+          measureFn: (BarometerValue data, _) => data.pressure / 1000,
           data: data,
         ),
         charts.Series<BarometerValue, int>(
-          id: 'Temperature',
-          colorFn: (_, __) => charts.MaterialPalette.green.shadeDefault,
+          id: 'Temperature${data.isNotEmpty ? " (${data[0].units['Temperature']})" : ""}',
+          colorFn: (_, __) => charts.Color.fromHex(code: colors[1]),
           domainFn: (BarometerValue data, _) => data.timestamp,
           measureFn: (BarometerValue data, _) => data.temperature,
           data: data,
@@ -386,22 +409,22 @@ class _SensorDataTabState extends State<SensorDataTab>
       data as List<XYZValue>;
       seriesList = [
         charts.Series<XYZValue, int>(
-          id: 'X',
-          colorFn: (_, __) => charts.MaterialPalette.blue.shadeDefault,
+          id: 'X${data.isNotEmpty ? " (${data[0].units['X']})" : ""}',
+          colorFn: (_, __) => charts.Color.fromHex(code: colors[0]),
           domainFn: (XYZValue data, _) => data.timestamp,
           measureFn: (XYZValue data, _) => data.x,
           data: data,
         ),
         charts.Series<XYZValue, int>(
-          id: 'Y',
-          colorFn: (_, __) => charts.MaterialPalette.green.shadeDefault,
+          id: 'Y${data.isNotEmpty ? " (${data[0].units['Y']})" : ""}',
+          colorFn: (_, __) => charts.Color.fromHex(code: colors[1]),
           domainFn: (XYZValue data, _) => data.timestamp,
           measureFn: (XYZValue data, _) => data.y,
           data: data,
         ),
         charts.Series<XYZValue, int>(
-          id: 'Z',
-          colorFn: (_, __) => charts.MaterialPalette.red.shadeDefault,
+          id: 'Z${data.isNotEmpty ? " (${data[0].units['Z']})" : ""}',
+          colorFn: (_, __) => charts.Color.fromHex(code: colors[2]),
           domainFn: (XYZValue data, _) => data.timestamp,
           measureFn: (XYZValue data, _) => data.z,
           data: data,
@@ -436,9 +459,21 @@ class _SensorDataTabState extends State<SensorDataTab>
               )
             ],
             primaryMeasureAxis: charts.NumericAxisSpec(
+              renderSpec: charts.GridlineRendererSpec(
+                labelStyle: charts.TextStyleSpec(
+                  fontSize: 14,
+                  color: charts.MaterialPalette.white, // Set the color here
+                ),
+              ),
               viewport: charts.NumericExtents(minY, maxY),
             ),
             domainAxis: charts.NumericAxisSpec(
+                renderSpec: charts.GridlineRendererSpec(
+                  labelStyle: charts.TextStyleSpec(
+                    fontSize: 14,
+                    color: charts.MaterialPalette.white, // Set the color here
+                  ),
+                ),
                 viewport: charts.NumericExtents(_minX, _maxX)),
           ),
         ),
