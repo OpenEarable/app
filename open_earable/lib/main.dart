@@ -12,7 +12,20 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: '🦻 OpenEarable',
-      theme: ThemeData(primarySwatch: Colors.brown),
+      theme: ThemeData(
+          colorScheme: ColorScheme(
+              brightness: Brightness.dark,
+              primary: Color.fromARGB(255, 22, 22, 24),
+              onPrimary: Colors.white,
+              secondary: Color.fromARGB(255, 119, 242, 161),
+              onSecondary: Colors.white,
+              error: Colors.red,
+              onError: Colors.black,
+              background: Color.fromARGB(255, 54, 53, 59),
+              onBackground: Colors.white,
+              surface: Color.fromARGB(255, 22, 22, 24),
+              onSurface: Colors.white),
+          secondaryHeaderColor: Colors.black),
       home: MyHomePage(),
     );
   }
@@ -50,10 +63,24 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('🦻 OpenEarable'),
+        title: Center(
+            child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(width: 50),
+            Image.asset(
+              'assets/earable_logo.png', // Replace with your image path
+              width: 24, // Adjust the width as needed
+              height: 24, // Adjust the height as needed
+            ),
+            SizedBox(width: 8), // Add spacing between the image and text
+            Text('OpenEarable'),
+          ],
+        )),
         actions: <Widget>[
           IconButton(
-            icon: Icon(Icons.bluetooth),
+            icon: Icon(Icons.bluetooth,
+                color: Theme.of(context).colorScheme.secondary),
             onPressed: () {
               Navigator.of(context).push(MaterialPageRoute(
                   builder: (context) => BLEPage(_openEarable)));
