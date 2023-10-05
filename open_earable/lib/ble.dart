@@ -22,15 +22,6 @@ class _BLEPageState extends State<BLEPage> {
   String? _deviceIdentifier;
   String? _deviceGeneration;
 
-  void _readDeviceInfo() async {
-    String? deviceIdentifier = await _openEarable.readDeviceIdentifier();
-    String? deviceGeneration = await _openEarable.readDeviceGeneration();
-    setState(() {
-      _deviceIdentifier = deviceIdentifier;
-      _deviceGeneration = deviceGeneration;
-    });
-  }
-
   @override
   void dispose() {
     _scanSubscription?.cancel();
@@ -50,9 +41,10 @@ class _BLEPageState extends State<BLEPage> {
     _connectionStateStream =
         _openEarable.bleManager.connectionStateStream.listen((connectionState) {
       if (connectionState) {
-        _readDeviceInfo();
         _writeSensorConfig();
         setState(() {
+          _deviceIdentifier = _openEarable.deviceIdentifier;
+          _deviceGeneration = _openEarable.deviceFirmwareVersion;
           _waitingToConnect = false;
         });
       }

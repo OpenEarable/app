@@ -26,6 +26,9 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
   String earableDeviceName = "";
   int earableSOC = 0;
 
+  late Timer rainbowTimer;
+  late bool rainbowModeActive;
+
   @override
   void dispose() {
     super.dispose();
@@ -74,6 +77,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
   }
 
   void setLEDColor() {
+    stopRainbowMode();
     _openEarable.rgbLed.writeLedColor(
         r: _selectedColor.red, g: _selectedColor.green, b: _selectedColor.blue);
   }
@@ -89,16 +93,88 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
   void playFrequencySound() {
     double frequency =
         double.tryParse(_audioFrequencyTextController.text) ?? 100.0;
-    _openEarable.audioPlayer
-        .setFrequencyState(AudioPlayerState.start, frequency, 0);
+    _openEarable.audioPlayer.setFrequencyState(AudioPlayerState.start,
+        frequency: frequency, waveForm: 0);
   }
 
   void stopFrequencySound() {
-    _openEarable.audioPlayer.setFrequencyState(AudioPlayerState.stop, 0.0, 0);
+    _openEarable.audioPlayer
+        .setFrequencyState(AudioPlayerState.stop, frequency: 0.0, waveForm: 0);
   }
 
   void turnLEDoff() {
+    stopRainbowMode();
     _openEarable.rgbLed.writeLedColor(r: 0, g: 0, b: 0);
+  }
+
+  void startRainbowMode() {
+    if (rainbowModeActive) return;
+
+    rainbowModeActive = true;
+
+    double h = 0;
+    const double increment = 0.01;
+
+    rainbowTimer = Timer.periodic(Duration(milliseconds: 300), (Timer timer) {
+      Map<String, int> rgbValue = hslToRgb(h, 1, 0.5);
+      _openEarable.rgbLed.writeLedColor(
+          r: rgbValue['r']!, g: rgbValue['g']!, b: rgbValue['b']!);
+
+      h += increment;
+      if (h > 1) h = 0;
+    });
+  }
+
+  void stopRainbowMode() {
+    rainbowModeActive = false;
+
+    if (rainbowTimer.isActive) {
+      rainbowTimer.cancel();
+    }
+  }
+
+  Map<String, int> hexToRgb(String hex) {
+    hex = hex.startsWith('#') ? hex.substring(1) : hex;
+
+    int bigint = int.parse(hex, radix: 16);
+    int r = (bigint >> 16) & 255;
+    int g = (bigint >> 8) & 255;
+    int b = bigint & 255;
+
+    return {'r': r, 'g': g, 'b': b};
+  }
+
+  Map<String, int> hslToRgb(double h, double s, double l) {
+    double r, g, b;
+
+    if (s == 0) {
+      r = g = b = l;
+    } else {
+      double hue2rgb(double p, double q, double t) {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1 / 6) return p + (q - p) * 6 * t;
+        if (t < 1 / 2) return q;
+        if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+        return p;
+      }
+
+      double q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      double p = 2 * l - q;
+      r = hue2rgb(p, q, h + 1 / 3);
+      g = hue2rgb(p, q, h);
+      b = hue2rgb(p, q, h - 1 / 3);
+    }
+
+    return {
+      'r': (r * 255).round(),
+      'g': (g * 255).round(),
+      'b': (b * 255).round()
+    };
+  }
+
+  bool isValidHex(String hex) {
+    return RegExp(r'^#[0-9A-Fa-f]{6}$').hasMatch(hex);
   }
 
   void _openColorPicker() {
@@ -249,12 +325,12 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                     ),
                     SizedBox(width: 5),
                     ElevatedButton(
-                      onPressed: connected ? () {} : null, //TODO
-                      child: Text("🦄"),
+                      onPressed: connected ? startRainbowMode : null,
                       style: ElevatedButton.styleFrom(
                           backgroundColor: Color(
                               0xff53515b), // Set the background color to grey
                           foregroundColor: Colors.white),
+                      child: Text("🦄"),
                     ),
                     Spacer(),
                     ElevatedButton(
