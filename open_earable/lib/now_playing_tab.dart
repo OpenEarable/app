@@ -57,19 +57,18 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
 
   void getNameAndSOC() {
     String? name = _openEarable.bleManager.connectedDevice?.name;
-
     earableDeviceName = name ?? "";
 
     _batteryLevelSubscription = _openEarable.sensorManager
         .getBatteryLevelStream()
         .listen((batteryLevel) {
-          setState(() {
-            earableSOC = batteryLevel[0].toInt();
-          });
+      setState(() {
+        earableSOC = batteryLevel[0].toInt();
+      });
     });
   }
 
-  void togglePlay() {
+  void playWAV() {
     _openEarable.audioPlayer.setWavState(AudioPlayerState.start,
         name: _filenameTextController.text);
   }
@@ -79,11 +78,11 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
         r: _selectedColor.red, g: _selectedColor.green, b: _selectedColor.blue);
   }
 
-  void togglePause() {
+  void pauseWAV() {
     _openEarable.audioPlayer.setWavState(AudioPlayerState.pause);
   }
 
-  void toggleStop() {
+  void stopWAV() {
     _openEarable.audioPlayer.setWavState(AudioPlayerState.stop);
   }
 
@@ -158,11 +157,14 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                 Row(
                   children: [
                     Text(
-                      !connected ? "OpenEarable not connected." : "$earableDeviceName Battery: $earableSOC%",
+                      !connected
+                          ? "OpenEarable not connected."
+                          : "$earableDeviceName Battery: $earableSOC%",
                       style: TextStyle(
                         color: Color.fromRGBO(168, 168, 172, 1.0),
                         fontSize: 15.0,
-                        fontStyle: !connected ? FontStyle.italic : FontStyle.normal,
+                        fontStyle:
+                            !connected ? FontStyle.italic : FontStyle.normal,
                       ),
                     ),
                   ],
@@ -245,6 +247,15 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                         child: Text('Set Color'),
                       ),
                     ),
+                    SizedBox(width: 5),
+                    ElevatedButton(
+                      onPressed: connected ? () {} : null, //TODO
+                      child: Text("🦄"),
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(
+                              0xff53515b), // Set the background color to grey
+                          foregroundColor: Colors.white),
+                    ),
                     Spacer(),
                     ElevatedButton(
                       onPressed: connected ? turnLEDoff : null,
@@ -282,7 +293,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                     Row(
                       children: [
                         ElevatedButton(
-                          onPressed: connected ? togglePlay : null,
+                          onPressed: connected ? playWAV : null,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Color(0xff77F2A1),
                             foregroundColor: Colors.black,
@@ -320,7 +331,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                         ),
                         SizedBox(width: 10),
                         ElevatedButton(
-                          onPressed: connected ? togglePause : null,
+                          onPressed: connected ? pauseWAV : null,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Color(0xffe0f277),
                             foregroundColor: Colors.black,
@@ -329,7 +340,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                         ),
                         SizedBox(width: 5),
                         ElevatedButton(
-                          onPressed: connected ? toggleStop : null,
+                          onPressed: connected ? stopWAV : null,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Color(0xfff27777),
                             foregroundColor: Colors.black,
