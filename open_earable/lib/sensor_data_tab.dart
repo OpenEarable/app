@@ -8,7 +8,6 @@ import 'package:vector_math/vector_math_64.dart' show Vector3;
 import 'package:simple_kalman/simple_kalman.dart';
 import '../utils/mahony_ahrs.dart';
 import '../utils/madgwick_ahrs.dart';
-import 'model_3d.dart';
 import 'package:three_dart/three_dart.dart' as three;
 import 'package:three_dart_jsm/three_dart_jsm.dart' as three_jsm;
 import 'package:flutter_gl/flutter_gl.dart';
