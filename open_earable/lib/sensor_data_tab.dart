@@ -9,6 +9,11 @@ import 'package:simple_kalman/simple_kalman.dart';
 import '../utils/mahony_ahrs.dart';
 import '../utils/madgwick_ahrs.dart';
 import 'model_3d.dart';
+import 'package:three_dart/three_dart.dart' as three;
+import 'package:three_dart_jsm/three_dart_jsm.dart' as three_jsm;
+import 'package:flutter_gl/flutter_gl.dart';
+import 'package:three_dart/three3d/math/euler.dart';
+import 'package:flutter/foundation.dart';
 
 class SensorDataTab extends StatefulWidget {
   final OpenEarable _openEarable;
@@ -19,7 +24,40 @@ class SensorDataTab extends StatefulWidget {
 
 class _SensorDataTabState extends State<SensorDataTab>
     with SingleTickerProviderStateMixin {
-  late EarableModel _earableModel;
+  final String fileName = "assets/OpenEarable.obj";
+  Euler _euler = Euler(0, 0, 0, "YZX");
+
+  late FlutterGlPlugin three3dRender;
+  three.WebGLRenderer? renderer;
+
+  int? fboId;
+  late double width;
+  late double height;
+
+  Size? screenSize;
+
+  late three.Scene scene;
+  three.Color _sceneBackground = three.Color.fromArray([0, 0, 0]);
+  bool _sceneInitialized = false;
+  late three.Camera camera;
+  late three.Mesh mesh;
+
+  double dpr = 1.0;
+
+  var amount = 4;
+
+  bool verbose = true;
+  bool disposed = false;
+
+  late three.Object3D object;
+
+  late three.Texture texture;
+
+  late three.WebGLRenderTarget renderTarget;
+
+  dynamic sourceTexture;
+
+  //late EarableModel _earableModel;
   late dynamic _earableModelState;
   final OpenEarable _openEarable;
   late TabController _tabController;
@@ -27,6 +65,8 @@ class _SensorDataTabState extends State<SensorDataTab>
   late int _maxX;
   StreamSubscription? _imuSubscription;
   StreamSubscription? _barometerSubscription;
+  StreamSubscription? _batteryLevelSubscription;
+  StreamSubscription? _buttonStateSubscription;
   late MahonyAHRS mahonyAHRS;
   late MadgwickAHRS madgwickAHRS;
   final double errorMeasureAcc = 5;
@@ -66,7 +106,7 @@ class _SensorDataTabState extends State<SensorDataTab>
   @override
   void initState() {
     super.initState();
-    _earableModel = EarableModel(fileName: "assets/OpenEarable.obj");
+    //_earableModel = EarableModel(fileName: "assets/OpenEarable.obj");
 
     startTimestamp = DateTime.now().millisecondsSinceEpoch;
     for (int i = 0; i < 200; i++) {
@@ -122,10 +162,12 @@ class _SensorDataTabState extends State<SensorDataTab>
 
   int lastTimestamp = 0;
   _setupListeners() {
-    _openEarable.sensorManager.getBatteryLevelStream().listen((data) {
+    _batteryLevelSubscription =
+        _openEarable.sensorManager.getBatteryLevelStream().listen((data) {
       print("Battery level is ${data[0]}");
     });
-    _openEarable.sensorManager.getButtonStateStream().listen((data) {
+    _buttonStateSubscription =
+        _openEarable.sensorManager.getButtonStateStream().listen((data) {
       print("Button State is ${data[0]}");
     });
     _imuSubscription =
@@ -188,16 +230,17 @@ class _SensorDataTabState extends State<SensorDataTab>
         _qy = q[2];
         _qz = q[3];
         if (_tabVisibility[4]) {
-          // Yaw (around Z-axis)
-          _yaw = atan2(
-              2 * (_qw * _qz + _qx * _qy), 1 - 2 * (_qy * _qy + _qz * _qz));
-          // Pitch (around Y-axis)
-          _pitch = asin(2 * (_qw * _qy - _qx * _qz));
-          // Roll (around X-axis)
-          _roll = atan2(
-              2 * (_qw * _qx + _qy * _qz), 1 - 2 * (_qx * _qx + _qy * _qy));
-          _earableModel.updateRotation(
-              roll: _roll - pi / 2, pitch: -_pitch, yaw: _yaw);
+          setState(() {
+            // Yaw (around Z-axis)
+            _yaw = atan2(
+                2 * (_qw * _qz + _qx * _qy), 1 - 2 * (_qy * _qy + _qz * _qz));
+            // Pitch (around Y-axis)
+            _pitch = asin(2 * (_qw * _qy - _qx * _qz));
+            // Roll (around X-axis)
+            _roll = atan2(
+                2 * (_qw * _qx + _qy * _qz), 1 - 2 * (_qx * _qx + _qy * _qy));
+          });
+          updateRotation(roll: _roll - pi / 2, pitch: -_pitch, yaw: _yaw);
           //_earableModel.updateRotation(_qw, _qx, _qy, _qz);
         } else {
           setState(() {
@@ -244,16 +287,17 @@ class _SensorDataTabState extends State<SensorDataTab>
 
   @override
   void dispose() {
-    _earableModel.three3dRender.dispose();
+    three3dRender.dispose();
     _imuSubscription?.cancel();
     _barometerSubscription?.cancel();
+    _buttonStateSubscription?.cancel();
+    _batteryLevelSubscription?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     if (!_openEarable.bleManager.connected) {
-      return _buildSensorDataTabs();
       return _notConnectedWidget();
     } else {
       return _buildSensorDataTabs();
@@ -293,23 +337,21 @@ class _SensorDataTabState extends State<SensorDataTab>
 
   Widget _buildSensorDataTabs() {
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.background,
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(kToolbarHeight), // Default AppBar height
-        child: Container(
-          child: TabBar(
-            controller: _tabController,
-            indicatorColor: Colors.white, // Color of the underline indicator
-            labelColor: Colors.white, // Color of the active tab label
-            unselectedLabelColor:
-                Colors.grey, // Color of the inactive tab labels
-            tabs: [
-              Tab(text: 'Accel.'),
-              Tab(text: 'Gyro.'),
-              Tab(text: 'Magnet.'),
-              Tab(text: 'Pressure'),
-              Tab(text: '3D'),
-            ],
-          ),
+        child: TabBar(
+          controller: _tabController,
+          indicatorColor: Colors.white, // Color of the underline indicator
+          labelColor: Colors.white, // Color of the active tab label
+          unselectedLabelColor: Colors.grey, // Color of the inactive tab labels
+          tabs: [
+            Tab(text: 'Accel.'),
+            Tab(text: 'Gyro.'),
+            Tab(text: 'Magnet.'),
+            Tab(text: 'Pressure'),
+            Tab(text: '3D'),
+          ],
         ),
       ),
       body: TabBarView(
@@ -347,7 +389,40 @@ class _SensorDataTabState extends State<SensorDataTab>
           padding: const EdgeInsets.all(8.0),
           // child: Text(title, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
         ),
-        Expanded(child: _earableModel),
+        Expanded(child: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            width = constraints.maxWidth;
+            height = constraints.maxHeight;
+            Color c = Theme.of(context).colorScheme.background;
+            _sceneBackground = three.Color.fromArray([c.red, c.green, c.blue]);
+            initSize(context);
+            return Column(
+              children: [
+                Stack(
+                  children: [
+                    Container(
+                        width: width,
+                        height: height,
+                        color: Colors.black,
+                        child: Builder(builder: (BuildContext context) {
+                          if (kIsWeb) {
+                            return three3dRender.isInitialized
+                                ? HtmlElementView(
+                                    viewType:
+                                        three3dRender.textureId!.toString())
+                                : Container();
+                          } else {
+                            return three3dRender.isInitialized
+                                ? Texture(textureId: three3dRender.textureId!)
+                                : Container();
+                          }
+                        })),
+                  ],
+                ),
+              ],
+            );
+          },
+        )),
         Padding(
             padding: EdgeInsets.only(bottom: 16),
             child: Text(
@@ -471,6 +546,166 @@ class _SensorDataTabState extends State<SensorDataTab>
         ),
       ],
     );
+  }
+
+  // Platform messages are asynchronous, so we initialize in an async method.
+  Future<void> initPlatformState() async {
+    //width = screenSize!.width;
+    //height = screenSize!.height;
+
+    three3dRender = FlutterGlPlugin();
+
+    Map<String, dynamic> options = {
+      "antialias": true,
+      "alpha": false,
+      "width": width.toInt(),
+      "height": height.toInt(),
+      "dpr": dpr
+    };
+
+    await three3dRender.initialize(options: options);
+    // Wait for web
+    Future.delayed(const Duration(milliseconds: 100), () async {
+      await three3dRender.prepareContext();
+
+      initScene();
+    });
+  }
+
+  initSize(BuildContext context) {
+    if (screenSize != null) {
+      return;
+    }
+
+    final mqd = MediaQuery.of(context);
+
+    screenSize = mqd.size;
+    dpr = mqd.devicePixelRatio;
+
+    initPlatformState();
+  }
+
+  void updateRotation({
+    required double yaw,
+    required double pitch,
+    required double roll,
+  }) {
+    _yaw = yaw;
+    _pitch = pitch;
+    _roll = roll;
+    if (_sceneInitialized && three3dRender.isInitialized) {
+      render();
+    }
+  }
+
+  render() {
+    _euler.x = _roll;
+    _euler.y = _yaw;
+    _euler.z = _pitch;
+    _euler.order = "YZX";
+    //object.rotation = _euler;
+    //object.quaternion = three.Quaternion(0, 1, 0, 0);
+    object.setRotationFromEuler(_euler);
+    //object.setRotationFromAxisAngle(axis, angle)
+    //object.rotateY(_yaw);
+    //object.rotateZ(_pitch);
+    //object.rotateX(_roll);
+
+    int t = DateTime.now().millisecondsSinceEpoch;
+
+    final gl = three3dRender.gl;
+    scene.add(three.AxesHelper(75));
+    scene.castShadow = false;
+    scene.receiveShadow = false;
+    renderer!.alpha = true;
+    renderer!.render(scene, camera);
+
+    int t1 = DateTime.now().millisecondsSinceEpoch;
+
+    if (verbose) {
+      print("render cost: ${t1 - t} ");
+      print(renderer!.info.memory);
+      print(renderer!.info.render);
+    }
+
+    // 重要 更新纹理之前一定要调用 确保gl程序执行完毕
+    gl.flush();
+
+    if (verbose) print(" render: sourceTexture: $sourceTexture ");
+
+    if (!kIsWeb) {
+      three3dRender.updateTexture(sourceTexture);
+    }
+  }
+
+  initRenderer() {
+    Map<String, dynamic> options = {
+      "width": width,
+      "height": height,
+      "gl": three3dRender.gl,
+      "antialias": true,
+      "canvas": three3dRender.element,
+    };
+    renderer = three.WebGLRenderer(options);
+    renderer!.setPixelRatio(dpr);
+    renderer!.setSize(width, height, false);
+    renderer!.shadowMap.enabled = false;
+
+    if (!kIsWeb) {
+      var pars = three.WebGLRenderTargetOptions({"format": three.RGBAFormat});
+      renderTarget = three.WebGLRenderTarget(
+          (width * dpr).toInt(), (height * dpr).toInt(), pars);
+      renderTarget.samples = 4;
+      renderer!.setRenderTarget(renderTarget);
+      sourceTexture = renderer!.getRenderTargetGLTexture(renderTarget);
+    }
+  }
+
+  initScene() async {
+    initRenderer();
+    await initPage();
+    _sceneInitialized = true;
+  }
+
+  initPage() async {
+    camera = three.PerspectiveCamera(45, width / height, 1, 2000);
+    camera.position.z = 250;
+    camera.position.x = 50;
+    camera.position.y = 50;
+    camera.lookAt(three.Vector3(0, 0, 0));
+
+    // scene
+
+    scene = three.Scene();
+
+    var ambientLight = three.AmbientLight(0xcccccc, 0.4);
+    scene.add(ambientLight);
+
+    var pointLight = three.PointLight(0xffffff, 0.8);
+    camera.add(pointLight);
+    scene.add(camera);
+
+    var loader = three_jsm.OBJLoader(null);
+    object = await loader.loadAsync(fileName);
+
+    //object.scale.set(0.5, 0.5, 0.5);
+    scene.add(object);
+    scene.background = _sceneBackground;
+    animate();
+  }
+
+  animate() {
+    if (disposed) {
+      return;
+    }
+    _yaw += 0.05;
+    //_pitch += 0.5;
+    //_roll += 0.5;
+    render();
+
+    Future.delayed(Duration(seconds: 3), () {
+      setState(() {});
+    });
   }
 }
 

@@ -59,6 +59,7 @@ class AppsTab extends StatelessWidget {
       itemCount: sampleApps.length,
       itemBuilder: (BuildContext context, int index) {
         return Card(
+          color: Theme.of(context).colorScheme.primary,
           margin: EdgeInsets.all(8.0),
           child: ListTile(
             leading: Icon(sampleApps[index].iconData, size: 40.0),
