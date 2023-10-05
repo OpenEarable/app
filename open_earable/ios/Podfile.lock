@@ -1,5 +1,8 @@
 PODS:
   - Flutter (1.0.0)
+  - flutter_gl (0.0.3):
+    - Flutter
+    - three3d_egl (~> 0.1.3)
   - permission_handler_apple (9.1.1):
     - Flutter
   - Protobuf (3.23.2)
@@ -8,9 +11,11 @@ PODS:
     - Protobuf (~> 3.5)
     - SwiftProtobuf (~> 1.0)
   - SwiftProtobuf (1.23.0)
+  - three3d_egl (0.1.3)
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
+  - flutter_gl (from `.symlinks/plugins/flutter_gl/ios`)
   - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
   - reactive_ble_mobile (from `.symlinks/plugins/reactive_ble_mobile/ios`)
 
@@ -18,10 +23,13 @@ SPEC REPOS:
   trunk:
     - Protobuf
     - SwiftProtobuf
+    - three3d_egl
 
 EXTERNAL SOURCES:
   Flutter:
     :path: Flutter
+  flutter_gl:
+    :path: ".symlinks/plugins/flutter_gl/ios"
   permission_handler_apple:
     :path: ".symlinks/plugins/permission_handler_apple/ios"
   reactive_ble_mobile:
@@ -29,10 +37,12 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Flutter: f04841e97a9d0b0a8025694d0796dd46242b2854
+  flutter_gl: 5a5603f35db897697f064027864a32b15d0c421d
   permission_handler_apple: e76247795d700c14ea09e3a2d8855d41ee80a2e6
   Protobuf: 5df4e9d2abd535fb675c68d171f6bc87983d27a6
   reactive_ble_mobile: 9ce6723d37ccf701dbffd202d487f23f5de03b4c
   SwiftProtobuf: b70d65f419fbfe61a2d58003456ca5da58e337d6
+  three3d_egl: de2cd4950ad2d5f2122166c36583bde4c812e7b5
 
 PODFILE CHECKSUM: 70d9d25280d0dd177a5f637cdb0f0b0b12c6a189
 

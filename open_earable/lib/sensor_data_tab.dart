@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:charts_flutter/flutter.dart' as charts;
 import 'dart:math';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
-import 'package:ditredi/ditredi.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
 import 'package:simple_kalman/simple_kalman.dart';
 import '../utils/mahony_ahrs.dart';
 import '../utils/madgwick_ahrs.dart';
+import 'model_3d.dart';
 
 class SensorDataTab extends StatefulWidget {
   final OpenEarable _openEarable;
@@ -19,6 +19,8 @@ class SensorDataTab extends StatefulWidget {
 
 class _SensorDataTabState extends State<SensorDataTab>
     with SingleTickerProviderStateMixin {
+  late EarableModel _earableModel;
+  late dynamic _earableModelState;
   final OpenEarable _openEarable;
   late TabController _tabController;
   late int _minX;
@@ -27,7 +29,6 @@ class _SensorDataTabState extends State<SensorDataTab>
   StreamSubscription? _barometerSubscription;
   late MahonyAHRS mahonyAHRS;
   late MadgwickAHRS madgwickAHRS;
-  late DiTreDiController diTreDiController;
   final double errorMeasureAcc = 5;
   final double errorMeasureGyro = 10;
   final double errorMeasureMag = 25;
@@ -41,12 +42,15 @@ class _SensorDataTabState extends State<SensorDataTab>
       kalmanMX,
       kalmanMY,
       kalmanMZ;
-  Mesh3D? earableMesh;
   int _numDatapoints = 100;
   List<XYZValue> accelerometerData = [];
   List<XYZValue> gyroscopeData = [];
   List<XYZValue> magnetometerData = [];
   List<BarometerValue> barometerData = [];
+  double _qw = 0;
+  double _qx = 0;
+  double _qy = 0;
+  double _qz = 0;
   double _pitch = 0;
   double _yaw = 0;
   double _roll = 0;
@@ -62,6 +66,8 @@ class _SensorDataTabState extends State<SensorDataTab>
   @override
   void initState() {
     super.initState();
+    _earableModel = EarableModel(fileName: "assets/OpenEarable.obj");
+
     startTimestamp = DateTime.now().millisecondsSinceEpoch;
     for (int i = 0; i < 200; i++) {
       //var data = XYZValue(timestamp: i, x: -3, y: 2, z: 4, units: {});
@@ -86,11 +92,8 @@ class _SensorDataTabState extends State<SensorDataTab>
     if (_openEarable.bleManager.connected) {
       _setupListeners();
     }
-    _loadMesh();
     mahonyAHRS = MahonyAHRS();
     madgwickAHRS = MadgwickAHRS();
-    diTreDiController = DiTreDiController();
-    diTreDiController.update(rotationX: 0, rotationY: 0, rotationZ: 0);
     kalmanAX = SimpleKalman(
         errorMeasure: errorMeasureAcc, errorEstimate: errorMeasureAcc, q: 0.9);
     kalmanAY = SimpleKalman(
@@ -115,13 +118,6 @@ class _SensorDataTabState extends State<SensorDataTab>
         errorMeasure: errorMeasureMag, errorEstimate: errorMeasureMag, q: 0.9);
     kalmanMZ = SimpleKalman(
         errorMeasure: errorMeasureMag, errorEstimate: errorMeasureMag, q: 0.9);
-  }
-
-  void _loadMesh() async {
-    var mesh = Mesh3D(await ObjParser().loadFromResources("assets/model.obj"));
-    setState(() {
-      earableMesh = mesh;
-    });
   }
 
   int lastTimestamp = 0;
@@ -187,26 +183,35 @@ class _SensorDataTabState extends State<SensorDataTab>
             dt);
         lastTimestamp = timestamp;
         List<double> q = mahonyAHRS.quaternion;
-        var qw = q[0];
-        var qx = q[1];
-        var qy = q[2];
-        var qz = q[3];
-        setState(() {
+        _qw = q[0];
+        _qx = q[1];
+        _qy = q[2];
+        _qz = q[3];
+        if (_tabVisibility[4]) {
           // Yaw (around Z-axis)
-          _yaw = atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy * qy + qz * qz));
+          _yaw = atan2(
+              2 * (_qw * _qz + _qx * _qy), 1 - 2 * (_qy * _qy + _qz * _qz));
           // Pitch (around Y-axis)
-          _pitch = asin(2 * (qw * qy - qx * qz));
+          _pitch = asin(2 * (_qw * _qy - _qx * _qz));
           // Roll (around X-axis)
-          _roll = atan2(2 * (qw * qx + qy * qz), 1 - 2 * (qx * qx + qy * qy));
-          accelerometerData.add(accelerometerValue);
-          gyroscopeData.add(gyroscopeValue);
-          magnetometerData.add(magnetometerValue);
-          _checkLength(accelerometerData);
-          _checkLength(gyroscopeData);
-          _checkLength(magnetometerData);
-          _maxX = accelerometerValue.timestamp;
-          _minX = accelerometerData[0].timestamp;
-        });
+          _roll = atan2(
+              2 * (_qw * _qx + _qy * _qz), 1 - 2 * (_qx * _qx + _qy * _qy));
+          _earableModel.updateRotation(
+              roll: _roll - pi / 2, pitch: -_pitch, yaw: _yaw);
+          //_earableModel.updateRotation(_qw, _qx, _qy, _qz);
+        } else {
+          setState(() {
+            print("IMU");
+            accelerometerData.add(accelerometerValue);
+            gyroscopeData.add(gyroscopeValue);
+            magnetometerData.add(magnetometerValue);
+            _checkLength(accelerometerData);
+            _checkLength(gyroscopeData);
+            _checkLength(magnetometerData);
+            _maxX = accelerometerValue.timestamp;
+            _minX = accelerometerData[0].timestamp;
+          });
+        }
       }
     });
 
@@ -221,11 +226,13 @@ class _SensorDataTabState extends State<SensorDataTab>
           pressure: data["BARO"]["Pressure"],
           temperature: data["TEMP"]["Temperature"],
           units: units);
-
-      setState(() {
-        barometerData.add(barometerValue);
-        _checkLength(barometerData);
-      });
+      if (_tabVisibility[3]) {
+        setState(() {
+          print("BAROMETER");
+          barometerData.add(barometerValue);
+          _checkLength(barometerData);
+        });
+      }
     });
   }
 
@@ -237,6 +244,7 @@ class _SensorDataTabState extends State<SensorDataTab>
 
   @override
   void dispose() {
+    _earableModel.three3dRender.dispose();
     _imuSubscription?.cancel();
     _barometerSubscription?.cancel();
     super.dispose();
@@ -245,6 +253,7 @@ class _SensorDataTabState extends State<SensorDataTab>
   @override
   Widget build(BuildContext context) {
     if (!_openEarable.bleManager.connected) {
+      return _buildSensorDataTabs();
       return _notConnectedWidget();
     } else {
       return _buildSensorDataTabs();
@@ -338,24 +347,7 @@ class _SensorDataTabState extends State<SensorDataTab>
           padding: const EdgeInsets.all(8.0),
           // child: Text(title, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
         ),
-        Expanded(
-            child: DiTreDi(
-          figures: [
-            Line3D(Vector3(0, 0, 0), Vector3(3, 0, 0),
-                width: 4, color: Color.fromARGB(255, 255, 0, 0)),
-            Line3D(Vector3(0, 0, 0), Vector3(0, 3, 0),
-                width: 4, color: Color.fromARGB(255, 0, 255, 0)),
-            Line3D(Vector3(0, 0, 0), Vector3(0, 0, 3),
-                width: 4, color: Color.fromARGB(255, 0, 0, 255)),
-            TransformModifier3D(
-                earableMesh ?? Cube3D(2, Vector3(0, 0, 0)),
-                Matrix4.identity()
-                  ..rotateY(-_yaw)
-                  ..rotateZ(-_pitch)
-                  ..rotateX(-_roll))
-          ],
-          controller: diTreDiController,
-        )),
+        Expanded(child: _earableModel),
         Padding(
             padding: EdgeInsets.only(bottom: 16),
             child: Text(
