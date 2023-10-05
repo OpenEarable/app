@@ -701,10 +701,6 @@ class _SensorDataTabState extends State<SensorDataTab>
     //_pitch += 0.5;
     //_roll += 0.5;
     render();
-
-    Future.delayed(Duration(seconds: 3), () {
-      setState(() {});
-    });
   }
 }
 
