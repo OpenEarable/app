@@ -94,8 +94,8 @@ class _MyHomePageState extends State<MyHomePage> {
         backgroundColor: Theme.of(context).colorScheme.primary,
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
-            icon: Icon(Icons.precision_manufacturing),
-            label: 'Actuators',
+            icon: Icon(Icons.tune),
+            label: 'Controls',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.sensors),
