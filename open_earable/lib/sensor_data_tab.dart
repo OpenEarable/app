@@ -123,6 +123,11 @@ class _SensorDataTabState extends State<SensorDataTab>
           for (int i = 0; i < _tabVisibility.length; i++) {
             _tabVisibility[i] = (i == _tabController.index);
           }
+          if (_tabController.index == 4) {
+            accelerometerData = [];
+            magnetometerData = [];
+            barometerData = [];
+          }
         });
       }
     });
@@ -243,7 +248,6 @@ class _SensorDataTabState extends State<SensorDataTab>
           //_earableModel.updateRotation(_qw, _qx, _qy, _qz);
         } else {
           setState(() {
-            print("IMU");
             accelerometerData.add(accelerometerValue);
             gyroscopeData.add(gyroscopeValue);
             magnetometerData.add(magnetometerValue);
@@ -268,7 +272,7 @@ class _SensorDataTabState extends State<SensorDataTab>
           pressure: data["BARO"]["Pressure"],
           temperature: data["TEMP"]["Temperature"],
           units: units);
-      if (_tabVisibility[3]) {
+      if (!_tabVisibility[4]) {
         setState(() {
           print("BAROMETER");
           barometerData.add(barometerValue);
@@ -402,7 +406,7 @@ class _SensorDataTabState extends State<SensorDataTab>
                     Container(
                         width: width,
                         height: height,
-                        color: Colors.black,
+                        color: Theme.of(context).colorScheme.background,
                         child: Builder(builder: (BuildContext context) {
                           if (kIsWeb) {
                             return three3dRender.isInitialized
@@ -425,7 +429,7 @@ class _SensorDataTabState extends State<SensorDataTab>
         Padding(
             padding: EdgeInsets.only(bottom: 16),
             child: Text(
-                "Yaw: ${(_yaw * 180 / pi).toStringAsFixed(1)}°\nPitch: ${(_pitch * 180 / pi).toStringAsFixed(1)}°\nRoll: ${(_roll * 180 / pi).toStringAsFixed(1)}°"))
+                "Yaw: ${(_yaw * 180 / pi).toStringAsFixed(1)}°\nPitch: ${(-_pitch * 180 / pi).toStringAsFixed(1)}°\nRoll: ${(_roll * 180 / pi).toStringAsFixed(1)}°"))
       ],
     );
   }

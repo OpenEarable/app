@@ -13,14 +13,11 @@ class BLEPage extends StatefulWidget {
 }
 
 class _BLEPageState extends State<BLEPage> {
+  String _openEarableName = "OpenEarable";
   late OpenEarable _openEarable;
   StreamSubscription? _scanSubscription;
   StreamSubscription? _connectionStateStream;
   List discoveredDevices = [];
-  bool _connectedToEarable = false;
-  bool _waitingToConnect = false;
-  String? _deviceIdentifier;
-  String? _deviceFirmwareVersion;
 
   @override
   void dispose() {
@@ -39,18 +36,11 @@ class _BLEPageState extends State<BLEPage> {
 
   void _setupListeners() async {
     _connectionStateStream =
-        _openEarable.bleManager.connectionStateStream.listen((connectionState) {
-      if (connectionState) {
+        _openEarable.bleManager.connectionStateStream.listen((connected) {
+      if (connected) {
         _writeSensorConfig();
-        setState(() {
-          _deviceIdentifier = _openEarable.deviceIdentifier;
-          _deviceFirmwareVersion = _openEarable.deviceFirmwareVersion;
-          _waitingToConnect = false;
-        });
       }
-      setState(() {
-        _connectedToEarable = connectionState;
-      });
+      setState(() {});
     });
   }
 
@@ -78,7 +68,7 @@ class _BLEPageState extends State<BLEPage> {
           Visibility(
               visible: discoveredDevices.isNotEmpty,
               child: Container(
-                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
                   decoration: BoxDecoration(
                     border: Border.all(
                       color: Colors.grey,
@@ -105,7 +95,6 @@ class _BLEPageState extends State<BLEPage> {
                                   horizontal: -4, vertical: -4),
                               trailing: _buildTrailingWidget(device.id),
                               onTap: () {
-                                setState(() => _waitingToConnect = true);
                                 _connectToDevice(device);
                               },
                             )),
@@ -120,13 +109,17 @@ class _BLEPageState extends State<BLEPage> {
                       ]);
                     },
                   ))),
-          Visibility(
-              visible: _deviceIdentifier != null && _connectedToEarable,
+          Center(
               child: Padding(
-                  padding: EdgeInsets.fromLTRB(33, 8, 0, 8),
+                  padding: EdgeInsets.all(16),
                   child: Text(
-                    "Connected to $_deviceIdentifier $_deviceFirmwareVersion",
+                    (_openEarable.bleManager.deviceIdentifier != null &&
+                            _openEarable.bleManager.deviceFirmwareVersion !=
+                                null)
+                        ? "Connected to ${_openEarable.bleManager.deviceIdentifier} ${_openEarable.bleManager.deviceFirmwareVersion}"
+                        : "If your OpenEarable device is not shown here, try restarting it",
                     style: const TextStyle(fontSize: 16),
+                    textAlign: TextAlign.center,
                   ))),
           Center(
             child: ElevatedButton(
@@ -146,14 +139,12 @@ class _BLEPageState extends State<BLEPage> {
   }
 
   Widget _buildTrailingWidget(String id) {
-    if (_openEarable.bleManager.connectedDevice?.id != id) {
-      return const SizedBox.shrink();
-    } else if (_connectedToEarable) {
+    if (_openEarable.bleManager.connectedDevice?.id == id) {
       return Icon(
           size: 24,
           Icons.check,
           color: Theme.of(context).colorScheme.secondary);
-    } else if (_waitingToConnect) {
+    } else if (_openEarable.bleManager.connectingDevice?.id == id) {
       return const SizedBox(
           height: 24,
           width: 24,
@@ -165,13 +156,16 @@ class _BLEPageState extends State<BLEPage> {
   void _startScanning() async {
     discoveredDevices = [];
     if (_openEarable.bleManager.connectedDevice != null) {
-      discoveredDevices.add(_openEarable.bleManager.connectedDevice);
+      setState(() {
+        discoveredDevices.add(_openEarable.bleManager.connectedDevice);
+      });
     }
     _openEarable.bleManager.startScan();
     _scanSubscription?.cancel();
     _scanSubscription =
         _openEarable.bleManager.scanStream.listen((incomingDevice) {
       if (incomingDevice.name.isNotEmpty &&
+          incomingDevice.name.contains(_openEarableName) &&
           !discoveredDevices.any((device) => device.id == incomingDevice.id)) {
         setState(() {
           discoveredDevices.add(incomingDevice);
@@ -180,9 +174,9 @@ class _BLEPageState extends State<BLEPage> {
     });
   }
 
-  Future<void> _connectToDevice(device) async {
+  void _connectToDevice(device) {
     _scanSubscription?.cancel();
-    await _openEarable.bleManager.connectToDevice(device);
+    _openEarable.bleManager.connectToDevice(device);
   }
 
   Future<void> _writeSensorConfig() async {
