@@ -363,6 +363,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        SizedBox(height: 5,),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 5.0),
           child: Card(
