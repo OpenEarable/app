@@ -110,6 +110,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  flutter_colorpicker:
+    dependency: "direct main"
+    description:
+      name: flutter_colorpicker
+      sha256: "458a6ed8ea480eb16ff892aedb4b7092b2804affd7e046591fb03127e8d8ef8b"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.3"
   flutter_lints:
     dependency: "direct dev"
     description:
@@ -208,7 +216,7 @@ packages:
     description:
       path: "."
       ref: HEAD
-      resolved-ref: "32eac9a275bad1fe0774be93681c4b905bc692da"
+      resolved-ref: a430958407e73414d216fe37737e859ad0392c3b
       url: "https://github.com/o-bagge/open_earable_flutter"
     source: git
     version: "0.0.1"
@@ -300,6 +308,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "5.2.0"
+  simple_kalman:
+    dependency: "direct main"
+    description:
+      name: simple_kalman
+      sha256: "96554a62e4c5541362e0e8be2480d239606bfd491625f91800eecbf920bda1a7"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.2"
   sky_engine:
     dependency: transitive
     description: flutter
@@ -379,4 +395,4 @@ packages:
     version: "0.1.4-beta"
 sdks:
   dart: ">=3.1.0 <4.0.0"
-  flutter: ">=2.8.0"
+  flutter: ">=3.7.0"

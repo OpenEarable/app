@@ -1,181 +1,414 @@
 import 'package:flutter/material.dart';
+import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'ble.dart';
 import 'dart:async';
 
-class NowPlayingTab extends StatefulWidget {
+class ActuatorsTab extends StatefulWidget {
+  final OpenEarable _openEarable;
+  ActuatorsTab(this._openEarable);
   @override
-  _NowPlayingTabState createState() => _NowPlayingTabState();
+  _ActuatorsTabState createState() => _ActuatorsTabState(_openEarable);
 }
 
-class _NowPlayingTabState extends State<NowPlayingTab> {
+class _ActuatorsTabState extends State<ActuatorsTab> {
+  final OpenEarable _openEarable;
+  _ActuatorsTabState(this._openEarable);
   bool isPlaying = false;
-  int currentSongIndex = 0;
-  int elapsedTime = 0; // elapsed time in seconds
-  Timer? _timer;
+  bool songStarted = false;
+  Color _selectedColor = Colors.deepPurple;
 
-  List<Map<String, dynamic>> songs = [
-    {
-      'title': 'Midnight City',
-      'artist': 'M83',
-      'albumCover': 'https://i.scdn.co/image/ab67616d0000b273fff2cb485c36a6d8f639bdba',
-      'duration': 243
-    },
-    {
-      'title': 'Radioactive',
-      'artist': 'Imagine Dragons',
-      'albumCover': 'https://i1.sndcdn.com/artworks-000069495641-rx1t0z-t500x500.jpg',
-      'duration': 186
-    },
-    {
-      'title': 'Lose Yourself to Dance',
-      'artist': 'Daft Punk',
-      'albumCover': 'https://i1.sndcdn.com/artworks-nbWsTnCZR3m7yAyd-KBkcDQ-t500x500.jpg',
-      'duration': 353
-    },
-  ];
+  TextEditingController _filenameTextController = TextEditingController();
+  TextEditingController _audioFrequencyTextController = TextEditingController();
+  StreamSubscription<bool>? _connectionStateSubscription;
+  StreamSubscription<dynamic>? _batteryLevelSubscription;
+  bool connected = false;
+  String earableDeviceName = "";
+  int earableSOC = 0;
 
-  void _startTimer() {
-    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
-      if (elapsedTime < songs[currentSongIndex]['duration']) {
-        setState(() {
-          elapsedTime++;
-        });
-      } else {
-        next_song();
+  @override
+  void dispose() {
+    super.dispose();
+    _connectionStateSubscription?.cancel();
+    _batteryLevelSubscription?.cancel();
+  }
+
+  @override
+  void initState() {
+    _connectionStateSubscription =
+        _openEarable.bleManager.connectionStateStream.listen((connected) {
+      setState(() {
+        this.connected = connected;
+
+        if (connected) {
+          getNameAndSOC();
+        }
+      });
+    });
+    setState(() {
+      connected = _openEarable.bleManager.connected;
+
+      if (connected) {
+        getNameAndSOC();
       }
+      super.initState();
     });
   }
 
-  void _pauseTimer() {
-    _timer?.cancel();
-  }
+  void getNameAndSOC() {
+    String? name = _openEarable.bleManager.connectedDevice?.name;
 
-  void _resetTimer() {
-    setState(() {
-      elapsedTime = 0;
+    earableDeviceName = name ?? "";
+
+    _batteryLevelSubscription = _openEarable.sensorManager
+        .getBatteryLevelStream()
+        .listen((batteryLevel) {
+          setState(() {
+            earableSOC = batteryLevel[0].toInt();
+          });
     });
   }
 
   void togglePlay() {
-    if (isPlaying) {
-      _pauseTimer();
-    } else {
-      _startTimer();
-    }
-
-    setState(() {
-      isPlaying = !isPlaying;
-    });
-    // Implement actual play/pause logic here
+    _openEarable.audioPlayer.setWavState(AudioPlayerState.start,
+        name: _filenameTextController.text);
   }
 
-  void previous_song() {
-    changeSong((currentSongIndex - 1) % songs.length);
+  void setLEDColor() {
+    _openEarable.rgbLed.writeLedColor(
+        r: _selectedColor.red, g: _selectedColor.green, b: _selectedColor.blue);
   }
 
-  void next_song() {
-    changeSong((currentSongIndex + 1) % songs.length);
+  void togglePause() {
+    _openEarable.audioPlayer.setWavState(AudioPlayerState.pause);
   }
 
-  void changeSong(int newIndex) {
-    _resetTimer();
-
-    setState(() {
-      currentSongIndex = newIndex;
-    });
+  void toggleStop() {
+    _openEarable.audioPlayer.setWavState(AudioPlayerState.stop);
   }
 
-  String formatTime(int seconds) {
-    final int min = seconds ~/ 60;
-    final int sec = seconds % 60;
-    return '$min:${sec.toString().padLeft(2, '0')}';
+  void playFrequencySound() {
+    double frequency =
+        double.tryParse(_audioFrequencyTextController.text) ?? 100.0;
+    _openEarable.audioPlayer
+        .setFrequencyState(AudioPlayerState.start, frequency, 0);
+  }
+
+  void stopFrequencySound() {
+    _openEarable.audioPlayer.setFrequencyState(AudioPlayerState.stop, 0.0, 0);
+  }
+
+  void turnLEDoff() {
+    _openEarable.rgbLed.writeLedColor(r: 0, g: 0, b: 0);
+  }
+
+  void _openColorPicker() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Pick a color for the RGB LED'),
+          content: SingleChildScrollView(
+            child: ColorPicker(
+              pickerColor: _selectedColor,
+              onColorChanged: (color) {
+                setState(() {
+                  _selectedColor = color;
+                });
+              },
+              showLabel: true,
+              pickerAreaHeightPercent: 0.8,
+              enableAlpha: false,
+            ),
+          ),
+          actions: <Widget>[
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Done'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final double progress = elapsedTime / songs[currentSongIndex]['duration'];
-    final int remainingTime = songs[currentSongIndex]['duration'] - elapsedTime;
-
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Spacer(),
-        ClipRect(
-          child: Image.network(
-            songs[currentSongIndex]['albumCover'],
-            width: 320,
-            height: 320,
-            fit: BoxFit.cover,
+        Card(
+          color: Color(0xff161618),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Device Connection',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18.0,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 5),
+                Row(
+                  children: [
+                    Text(
+                      !connected ? "OpenEarable not connected." : "$earableDeviceName Battery: $earableSOC%",
+                      style: TextStyle(
+                        color: Color.fromRGBO(168, 168, 172, 1.0),
+                        fontSize: 15.0,
+                        fontStyle: !connected ? FontStyle.italic : FontStyle.normal,
+                      ),
+                    ),
+                  ],
+                ),
+                Visibility(
+                  visible: !connected,
+                  child: Column(
+                    children: [
+                      SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SizedBox(
+                              height: 37.0,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  Navigator.of(context).push(MaterialPageRoute(
+                                      builder: (context) =>
+                                          BLEPage(_openEarable)));
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: !connected
+                                      ? Color(0xff77F2A1)
+                                      : Color(0xfff27777),
+                                  foregroundColor: Colors.black,
+                                ),
+                                child: Text("Connect"),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                )
+              ],
+            ),
           ),
         ),
-        SizedBox(height: 20),
-        Text(
-          songs[currentSongIndex]['title'],
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        ),
-        Text(
-          songs[currentSongIndex]['artist'],
-          style: TextStyle(fontSize: 20, color: Colors.grey[700]),
-        ),
-        SizedBox(height: 20),
-        Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+        Card(
+          //LED Color Picker Card
+          color: Color(0xff161618),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  formatTime(songs[currentSongIndex]['duration']),
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                SizedBox(width: 10),
-                Container(
-                  width: MediaQuery.of(context).size.width * 0.6,
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    color: Colors.brown,
-                    backgroundColor: Colors.grey[200],
+                  'LED Color',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18.0,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                SizedBox(width: 10),
-                Text(
-                  '-${formatTime(remainingTime)}',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                Row(
+                  children: [
+                    GestureDetector(
+                      onTap: connected
+                          ? _openColorPicker
+                          : null, // Open color picker
+                      child: Container(
+                        width: 66,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: _selectedColor,
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 5),
+                    SizedBox(
+                      width: 130,
+                      child: ElevatedButton(
+                        onPressed: connected ? setLEDColor : null,
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(
+                                0xff53515b), // Set the background color to grey
+                            foregroundColor: Colors.white),
+                        child: Text('Set Color'),
+                      ),
+                    ),
+                    Spacer(),
+                    ElevatedButton(
+                      onPressed: connected ? turnLEDoff : null,
+                      child: Text('Off'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xfff27777),
+                        foregroundColor: Colors.black,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
+          ),
+        ),
+        Card(
+          //Audio Player Card
+          color: Color(0xff161618),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                IconButton(
-                  icon: Icon(Icons.skip_previous, size: 30.0),
-                  onPressed: () {
-                    previous_song();
-                  },
-                ),
-                SizedBox(width: 25.0), // provide space between buttons
-                SizedBox(
-                  height: 100.0,  // desired height
-                  width: 80.0,   // desired width
-                  child: IconButton(
-                    icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow, size: 60.0),
-                    onPressed: togglePlay,
+                Text(
+                  'Audio Player',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18.0,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                SizedBox(width: 25.0),
-                IconButton(
-                  icon: Icon(Icons.skip_next, size: 30.0),
-                  onPressed: () {
-                    next_song();
-                  },
-                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        ElevatedButton(
+                          onPressed: connected ? togglePlay : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(0xff77F2A1),
+                            foregroundColor: Colors.black,
+                          ),
+                          child: Icon(Icons.play_arrow_outlined),
+                        ),
+                        Expanded(
+                          child: SizedBox(
+                            height: 37.0,
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 5),
+                              child: TextField(
+                                controller: _filenameTextController,
+                                obscureText: false,
+                                enabled: connected,
+                                style: TextStyle(
+                                    color:
+                                        connected ? Colors.black : Colors.grey),
+                                decoration: InputDecoration(
+                                  border: OutlineInputBorder(),
+                                  labelText: 'filename.wav',
+                                  labelStyle: TextStyle(
+                                      color: connected
+                                          ? Colors.black
+                                          : Colors.grey),
+                                  filled: true,
+                                  fillColor: connected
+                                      ? Colors.white
+                                      : Colors.grey[200],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 10),
+                        ElevatedButton(
+                          onPressed: connected ? togglePause : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(0xffe0f277),
+                            foregroundColor: Colors.black,
+                          ),
+                          child: Icon(Icons.pause),
+                        ),
+                        SizedBox(width: 5),
+                        ElevatedButton(
+                          onPressed: connected ? toggleStop : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(0xfff27777),
+                            foregroundColor: Colors.black,
+                          ),
+                          child: Icon(Icons.stop_outlined),
+                        ),
+                      ],
+                    ),
+                    Divider(thickness: 1.0, color: Colors.white),
+                    Row(
+                      children: [
+                        SizedBox(height: 10),
+                        ElevatedButton(
+                          onPressed: connected ? playFrequencySound : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(0xff77F2A1),
+                            foregroundColor: Colors.black,
+                          ),
+                          child: Icon(Icons.play_arrow_outlined),
+                        ),
+                        SizedBox(width: 5),
+                        Expanded(
+                          child: SizedBox(
+                            height: 37.0,
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 0),
+                              child: TextField(
+                                controller: _audioFrequencyTextController,
+                                textAlign: TextAlign.end,
+                                style: TextStyle(
+                                    color:
+                                        connected ? Colors.black : Colors.grey),
+                                decoration: InputDecoration(
+                                  border: OutlineInputBorder(),
+                                  labelText: '100',
+                                  filled: true,
+                                  labelStyle: TextStyle(
+                                      color: connected
+                                          ? Colors.black
+                                          : Colors.grey),
+                                  fillColor: connected
+                                      ? Colors.white
+                                      : Colors.grey[200],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 5),
+                          child: Text(
+                            'Hz',
+                            style: TextStyle(
+                                color: connected
+                                    ? Colors.white
+                                    : Colors.grey), // Set text color to white
+                          ),
+                        ),
+                        SizedBox(width: 50),
+                        SizedBox(width: 5),
+                        ElevatedButton(
+                          onPressed: connected ? stopFrequencySound : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(0xfff27777),
+                            foregroundColor: Colors.black,
+                          ),
+                          child: Icon(Icons.stop_outlined),
+                        )
+                      ],
+                    ),
+                  ],
+                )
               ],
             ),
-          ],
+          ),
         ),
         Spacer(),
       ],
     );
   }
-
-
 }
