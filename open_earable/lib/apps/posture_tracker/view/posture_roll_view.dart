@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:open_earable/apps/posture_tracker/view/arc_painter.dart';
 
+/// A widget that displays the roll of the head and neck.
 class PostureRollView extends StatelessWidget {
   final double roll;
 
@@ -22,7 +23,8 @@ class PostureRollView extends StatelessWidget {
       Text(
         "${(this.roll * 180 / 3.14).abs().toStringAsFixed(0)}°",
         style: TextStyle(
-          color: Color.fromRGBO(0, 0, 0, 1),
+          // use dark gray color for light mode and dark gray color for dark mode
+          color: Theme.of(context).colorScheme.onBackground,
           fontSize: 30,
           fontWeight: FontWeight.bold
         )

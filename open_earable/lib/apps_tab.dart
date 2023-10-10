@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:open_earable/apps/posture_tracker/view/posture_tracker_view.dart';
 
 import './apps/step_counter.dart';
-import 'apps/posture_tracker/model/phone_attitude_tracker.dart';
 
 class AppInfo {
   final IconData iconData;

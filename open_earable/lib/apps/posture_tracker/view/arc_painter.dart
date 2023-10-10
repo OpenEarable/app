@@ -20,7 +20,7 @@ class ArcPainter extends CustomPainter {
 
     // Create a paint object with purple color and stroke style
     Paint paint = Paint()
-      ..color = Colors.purple
+      ..color = Colors.purpleAccent
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeWidth = 5.0;

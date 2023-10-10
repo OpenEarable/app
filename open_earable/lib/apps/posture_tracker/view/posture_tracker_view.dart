@@ -15,13 +15,17 @@ class PostureTrackerView extends StatefulWidget {
   PostureTrackerView() : this._tracker = MockAttitudeTracker();
 
   @override
-  _PostureTrackerViewState createState() => _PostureTrackerViewState(this._tracker);
+  State<PostureTrackerView> createState() => _PostureTrackerViewState();
 }
 
 class _PostureTrackerViewState extends State<PostureTrackerView> {
-  final PostureTrackerViewModel _viewModel;
+  late final PostureTrackerViewModel _viewModel;
 
-  _PostureTrackerViewState(AttitudeTracker tracker) : this._viewModel = PostureTrackerViewModel(tracker);
+  @override
+  void initState() {
+    super.initState();
+    this._viewModel = PostureTrackerViewModel(widget._tracker);
+  }
 
   @override
   Widget build(BuildContext context) {
