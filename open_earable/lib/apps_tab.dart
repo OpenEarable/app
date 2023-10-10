@@ -11,10 +11,13 @@ class AppInfo {
   final void Function(BuildContext) onTap;
 
   AppInfo(
-      {required this.iconData,
+    {
+      required this.iconData,
       required this.title,
       required this.description,
-      required this.onTap});
+      required this.onTap
+    }
+  );
 }
 
 List<AppInfo> sampleApps = [
@@ -30,9 +33,9 @@ List<AppInfo> sampleApps = [
       iconData: Icons.face_6,
       title: "Posture Tracker",
       description: "Get feedback on bad posture.",
-      onTap: (_) {
+      onTap: (context) {
         // Action when the card is tapped, for example:
-        // Navigator.push(context, MaterialPageRoute(builder: (context) => PostureTracker()));
+        Navigator.push(context, MaterialPageRoute(builder: (context) => PostureTrackerView()));
       }),
   AppInfo(
       iconData: Icons.lunch_dining,
@@ -67,7 +70,7 @@ class AppsTab extends StatelessWidget {
             subtitle: Text(sampleApps[index].description),
             trailing: Icon(Icons.arrow_forward_ios,
                 size: 16.0), // Arrow icon on the right
-            onTap: sampleApps[index].onTap, // Callback when the card is tapped
+            onTap: () { sampleApps[index].onTap(context); }, // Callback when the card is tapped
           ),
         );
       },
