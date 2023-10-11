@@ -15,15 +15,18 @@ class PhoneAttitudeTracker extends AttitudeTracker {
 
   @override
   void start() {
-    this._orientationSubscription = motionSensors.orientation.listen((event) { 
-      print("roll: ${event.roll}, pitch: ${event.pitch}, yaw: ${event.yaw}");
+    if (this._orientationSubscription?.isPaused ?? false) {
+      this._orientationSubscription?.resume();
+      return;
+    }
+    this._orientationSubscription = motionSensors.orientation.listen((event) {
       this._updateAttitude(event.roll, event.pitch, event.yaw);
     });
   }
 
   @override
   void stop() {
-    this._orientationSubscription?.cancel();
+    this._orientationSubscription?.pause();
   }
 
   @override
