@@ -42,4 +42,10 @@ class MockAttitudeTracker extends AttitudeTracker {
   void stop() {
     this._attitudeSubscription?.pause();
   }
+
+  @override
+  void cancle() {
+    this._attitudeSubscription?.cancel();
+    super.cancle();
+  }
 }

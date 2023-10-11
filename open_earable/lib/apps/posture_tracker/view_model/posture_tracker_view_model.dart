@@ -30,6 +30,12 @@ class PostureTrackerViewModel extends ChangeNotifier {
     this._setTracking(false);
   }
 
+  @override
+  void dispose() {
+    this._attitudeTracker.cancle();
+    super.dispose();
+  }
+
   void _setTracking(bool value) {
     this._isTracking = value;
     notifyListeners();

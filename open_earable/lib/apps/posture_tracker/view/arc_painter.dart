@@ -1,9 +1,12 @@
+// ignore_for_file: unnecessary_this
+
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 
 class ArcPainter extends CustomPainter {
-  final double angle; // the angle of rotation
+  /// the angle of rotation
+  final double angle;
 
   ArcPainter({required this.angle});
 
@@ -49,6 +52,7 @@ class ArcPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return true; // return true to update the painting when the angle changes
+    // check if oldDelegate is an ArcPainter and if the angle is the same
+    return oldDelegate is ArcPainter && oldDelegate.angle != this.angle;
   }
 }

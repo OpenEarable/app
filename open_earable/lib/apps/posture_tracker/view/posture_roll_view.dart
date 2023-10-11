@@ -23,7 +23,7 @@ class PostureRollView extends StatelessWidget {
       Text(
         "${(this.roll * 180 / 3.14).abs().toStringAsFixed(0)}°",
         style: TextStyle(
-          // use dark gray color for light mode and dark gray color for dark mode
+          // use proper color matching the background
           color: Theme.of(context).colorScheme.onBackground,
           fontSize: 30,
           fontWeight: FontWeight.bold
