@@ -29,42 +29,50 @@ class _PostureTrackerViewState extends State<PostureTrackerView> {
 
   @override
   Widget build(BuildContext context) {
-    createHeadViews(postureTrackerViewModel) => [
-      this._buildHeadView(
-        "assets/posture_tracker/Head_Front.png",
-        "assets/posture_tracker/Neck_Front.png",
-        Alignment.center.add(Alignment(0, 0.3)),
-        postureTrackerViewModel.attitude.roll
-      ),
-      this._buildHeadView(
-        "assets/posture_tracker/Head_Side.png",
-        "assets/posture_tracker/Neck_Side.png",
-        Alignment.center.add(Alignment(0, 0.3)),
-        postureTrackerViewModel.attitude.yaw
-      ),
-    ];
-
     return Scaffold(
-        appBar: AppBar(
-          title: const Text("Posture Tracker"),
-        ),
-        body: ChangeNotifierProvider<PostureTrackerViewModel>(
-          create: (_) => this._viewModel,
-          builder: (context, child) => Consumer<PostureTrackerViewModel>(
-            builder: (context, postureTrackerViewModel, child) => Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+      appBar: AppBar(
+        title: const Text("Posture Tracker"),
+      ),
+      body: ChangeNotifierProvider<PostureTrackerViewModel>(
+        create: (_) => this._viewModel,
+        builder: (context, child) => Consumer<PostureTrackerViewModel>(
+          builder: (context, postureTrackerViewModel, child) => this._buildContentView(postureTrackerViewModel)
+        )
+      )
+    );
+  }
+
+  Widget _buildContentView(PostureTrackerViewModel postureTrackerViewModel) {
+    var orientation = MediaQuery.of(context).orientation;
+    switch (orientation) {
+      case Orientation.landscape:
+        return Center(child: LayoutBuilder(
+          builder: (context, constraints) => SizedBox(
+            width: constraints.maxWidth / 2,
+            child: Column(
               children: [
-                Row(children: createHeadViews(postureTrackerViewModel)),
-                CupertinoButton(
-                  onPressed: postureTrackerViewModel.isTracking ? () => this._viewModel.stopTracking() : () => this._viewModel.startTracking(),
-                  color: postureTrackerViewModel.isTracking ? Colors.red : Colors.green,
-                  child: postureTrackerViewModel.isTracking ? const Text("Stop Tracking") : const Text("Start Tracking"),
+                Row(
+                  children: this._createHeadViews(postureTrackerViewModel)
                 ),
+                this._buildTrackingButton(postureTrackerViewModel),
               ]
             )
           )
-        )
-      );
+        ));
+
+      case Orientation.portrait:
+        var headViews = this._createHeadViews(postureTrackerViewModel);
+        return Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: headViews
+            ),
+            this._buildTrackingButton(postureTrackerViewModel),
+          ]
+        );
+    }
   }
 
   Widget _buildHeadView(String headAssetPath, String neckAssetPath, AlignmentGeometry headAlignment, double roll) {
@@ -79,6 +87,31 @@ class _PostureTrackerViewState extends State<PostureTrackerView> {
           headAlignment: headAlignment,
         ),
       )
+    );
+  }
+
+  List<Widget> _createHeadViews(postureTrackerViewModel) {
+    return [
+      this._buildHeadView(
+        "assets/posture_tracker/Head_Front.png",
+        "assets/posture_tracker/Neck_Front.png",
+        Alignment.center.add(Alignment(0, 0.3)),
+        postureTrackerViewModel.attitude.roll
+      ),
+      this._buildHeadView(
+        "assets/posture_tracker/Head_Side.png",
+        "assets/posture_tracker/Neck_Side.png",
+        Alignment.center.add(Alignment(0, 0.3)),
+        postureTrackerViewModel.attitude.yaw
+      ),
+    ];
+  }
+  
+  Widget _buildTrackingButton(PostureTrackerViewModel postureTrackerViewModel) {
+    return CupertinoButton(
+      onPressed: postureTrackerViewModel.isTracking ? () => this._viewModel.stopTracking() : () => this._viewModel.startTracking(),
+      color: postureTrackerViewModel.isTracking ? Colors.red : Colors.green,
+      child: postureTrackerViewModel.isTracking ? const Text("Stop Tracking") : const Text("Start Tracking"),
     );
   }
 }
