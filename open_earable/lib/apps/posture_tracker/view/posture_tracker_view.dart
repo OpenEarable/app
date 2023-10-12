@@ -29,50 +29,56 @@ class _PostureTrackerViewState extends State<PostureTrackerView> {
 
   @override
   Widget build(BuildContext context) {
+    createHeadViews(postureTrackerViewModel) => [
+      this._buildHeadView(
+        "assets/posture_tracker/Head_Front.png",
+        "assets/posture_tracker/Neck_Front.png",
+        Alignment.center.add(Alignment(0, 0.3)),
+        postureTrackerViewModel.attitude.roll
+      ),
+      this._buildHeadView(
+        "assets/posture_tracker/Head_Side.png",
+        "assets/posture_tracker/Neck_Side.png",
+        Alignment.center.add(Alignment(0, 0.3)),
+        postureTrackerViewModel.attitude.yaw
+      ),
+    ];
+
     return Scaffold(
         appBar: AppBar(
-          title: Text("Posture Tracker"),
+          title: const Text("Posture Tracker"),
         ),
         body: ChangeNotifierProvider<PostureTrackerViewModel>(
           create: (_) => this._viewModel,
           builder: (context, child) => Consumer<PostureTrackerViewModel>(
-            builder: (context, value, child) => Column(
+            builder: (context, postureTrackerViewModel, child) => Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Padding(
-                        padding: EdgeInsets.all(5),
-                        child: PostureRollView(
-                          roll: value.attitude.roll,
-                          headAssetPath: "assets/posture_tracker/Head_Front.png",
-                          neckAssetPath: "assets/posture_tracker/Neck_Front.png",
-                          headAlignment: Alignment.center.add(Alignment(0, 0.3)),
-                        ),
-                      )
-                    ),
-                    Expanded(
-                      child: Padding(
-                        padding: EdgeInsets.all(5),
-                        child: PostureRollView(
-                          roll: value.attitude.pitch,
-                          headAssetPath: "assets/posture_tracker/Head_Side.png",
-                          neckAssetPath: "assets/posture_tracker/Neck_Side.png",
-                          headAlignment: Alignment.center.add(Alignment(0, 0.3)),
-                        )
-                      )
-                    ),
-                  ],
+                Row(children: createHeadViews(postureTrackerViewModel)),
+                CupertinoButton(
+                  onPressed: postureTrackerViewModel.isTracking ? () => this._viewModel.stopTracking() : () => this._viewModel.startTracking(),
+                  color: postureTrackerViewModel.isTracking ? Colors.red : Colors.green,
+                  child: postureTrackerViewModel.isTracking ? const Text("Stop Tracking") : const Text("Start Tracking"),
                 ),
-                if (!value.isTracking)
-                  CupertinoButton.filled(child: Text("Start Tracking"), onPressed: () => this._viewModel.startTracking())
-                else
-                  CupertinoButton.filled(child: Text("Stop Tracking"), onPressed: () => this._viewModel.stopTracking()),
               ]
             )
           )
         )
       );
+  }
+
+  Widget _buildHeadView(String headAssetPath, String neckAssetPath, AlignmentGeometry headAlignment, double roll) {
+    return Flexible(
+      fit: FlexFit.loose,
+      child: Padding(
+        padding: const EdgeInsets.all(5),
+        child: PostureRollView(
+          roll: roll,
+          headAssetPath: headAssetPath,
+          neckAssetPath: neckAssetPath,
+          headAlignment: headAlignment,
+        ),
+      )
+    );
   }
 }

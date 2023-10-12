@@ -33,7 +33,6 @@ class MockAttitudeTracker extends AttitudeTracker {
     }
 
     this._attitudeSubscription = this._attitudeStream.listen((value) {
-      print("roll: ${value.roll}, pitch: ${value.pitch}, yaw: ${value.yaw}");
       this.attitudeStreamController.add(value);
     });
   }
