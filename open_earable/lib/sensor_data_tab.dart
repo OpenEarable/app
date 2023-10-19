@@ -176,7 +176,6 @@ class _SensorDataTabState extends State<SensorDataTab>
     });
     _imuSubscription =
         _openEarable.sensorManager.subscribeToSensorData(0).listen((data) {
-      //print(data);
       int timestamp = data["timestamp"];
       if (data["sensorId"] == 0) {
         /*
@@ -274,7 +273,6 @@ class _SensorDataTabState extends State<SensorDataTab>
           units: units);
       if (!_tabVisibility[4]) {
         setState(() {
-          print("BAROMETER");
           barometerData.add(barometerValue);
           _checkLength(barometerData);
         });
