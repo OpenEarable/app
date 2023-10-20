@@ -62,6 +62,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
         title: Center(
             child: Row(
@@ -90,10 +91,11 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: Theme.of(context).colorScheme.primary,
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
-            icon: Icon(Icons.precision_manufacturing),
-            label: 'Actuators',
+            icon: Icon(Icons.tune),
+            label: 'Controls',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.sensors),

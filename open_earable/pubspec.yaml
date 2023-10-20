@@ -47,6 +47,9 @@ dependencies:
   motion_sensors: ^0.1.0
   simple_kalman: ^1.0.2
   flutter_colorpicker: ^1.0.3
+  flutter_gl: ^0.0.21
+  three_dart: ^0.0.14
+  three_dart_jsm: ^0.0.9
 
 dev_dependencies:
   flutter_test:
