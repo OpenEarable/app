@@ -4,9 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:charts_flutter/flutter.dart' as charts;
 import 'dart:math';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
-import 'package:vector_math/vector_math_64.dart' show Vector3;
 import 'package:simple_kalman/simple_kalman.dart';
-import '../utils/mahony_ahrs.dart';
 import '../utils/madgwick_ahrs.dart';
 import 'package:three_dart/three_dart.dart' as three;
 import 'package:three_dart_jsm/three_dart_jsm.dart' as three_jsm;
@@ -57,7 +55,6 @@ class _SensorDataTabState extends State<SensorDataTab>
   dynamic sourceTexture;
 
   //late EarableModel _earableModel;
-  late dynamic _earableModelState;
   final OpenEarable _openEarable;
   late TabController _tabController;
   late int _minX;
@@ -66,7 +63,6 @@ class _SensorDataTabState extends State<SensorDataTab>
   StreamSubscription? _barometerSubscription;
   StreamSubscription? _batteryLevelSubscription;
   StreamSubscription? _buttonStateSubscription;
-  late MahonyAHRS mahonyAHRS;
   late MadgwickAHRS madgwickAHRS;
   final double errorMeasureAcc = 5;
   final double errorMeasureGyro = 10;
@@ -86,10 +82,6 @@ class _SensorDataTabState extends State<SensorDataTab>
   List<XYZValue> gyroscopeData = [];
   List<XYZValue> magnetometerData = [];
   List<BarometerValue> barometerData = [];
-  double _qw = 0;
-  double _qx = 0;
-  double _qy = 0;
-  double _qz = 0;
   double _pitch = 0;
   double _yaw = 0;
   double _roll = 0;
@@ -136,7 +128,6 @@ class _SensorDataTabState extends State<SensorDataTab>
     if (_openEarable.bleManager.connected) {
       _setupListeners();
     }
-    mahonyAHRS = MahonyAHRS();
     madgwickAHRS = MadgwickAHRS();
     kalmanAX = SimpleKalman(
         errorMeasure: errorMeasureAcc, errorEstimate: errorMeasureAcc, q: 0.9);
@@ -177,8 +168,7 @@ class _SensorDataTabState extends State<SensorDataTab>
     _imuSubscription =
         _openEarable.sensorManager.subscribeToSensorData(0).listen((data) {
       int timestamp = data["timestamp"];
-      if (data["sensorId"] == 0) {
-        /*
+      /*
         XYZValue accelerometerValue = XYZValue(
             timestamp: timestamp,
             x: data["ACC"]["X"],
@@ -198,65 +188,47 @@ class _SensorDataTabState extends State<SensorDataTab>
             z: data["MAG"]["Z"],
             units: data["MAG"]["units"]);
         */
-        XYZValue accelerometerValue = XYZValue(
-            timestamp: timestamp,
-            x: kalmanAX.filtered(data["ACC"]["X"]),
-            y: kalmanAY.filtered(data["ACC"]["Y"]),
-            z: kalmanAZ.filtered(data["ACC"]["Z"]),
-            units: data["ACC"]["units"]);
-        XYZValue gyroscopeValue = XYZValue(
-            timestamp: timestamp,
-            x: kalmanGX.filtered(data["GYRO"]["X"]),
-            y: kalmanGY.filtered(data["GYRO"]["Y"]),
-            z: kalmanGZ.filtered(data["GYRO"]["Z"]),
-            units: data["GYRO"]["units"]);
-        XYZValue magnetometerValue = XYZValue(
-            timestamp: timestamp,
-            x: kalmanMX.filtered(data["MAG"]["X"]),
-            y: kalmanMX.filtered(data["MAG"]["Y"]),
-            z: kalmanMX.filtered(data["MAG"]["Z"]),
-            units: data["MAG"]["units"]);
+      XYZValue accelerometerValue = XYZValue(
+          timestamp: timestamp,
+          x: kalmanAX.filtered(data["ACC"]["X"]),
+          y: kalmanAY.filtered(data["ACC"]["Y"]),
+          z: kalmanAZ.filtered(data["ACC"]["Z"]),
+          units: data["ACC"]["units"]);
+      XYZValue gyroscopeValue = XYZValue(
+          timestamp: timestamp,
+          x: kalmanGX.filtered(data["GYRO"]["X"]),
+          y: kalmanGY.filtered(data["GYRO"]["Y"]),
+          z: kalmanGZ.filtered(data["GYRO"]["Z"]),
+          units: data["GYRO"]["units"]);
+      XYZValue magnetometerValue = XYZValue(
+          timestamp: timestamp,
+          x: kalmanMX.filtered(data["MAG"]["X"]),
+          y: kalmanMX.filtered(data["MAG"]["Y"]),
+          z: kalmanMX.filtered(data["MAG"]["Z"]),
+          units: data["MAG"]["units"]);
 
-        double dt = (timestamp - lastTimestamp) / 1000.0;
-        mahonyAHRS.update(
-            accelerometerValue.x,
-            accelerometerValue.y,
-            accelerometerValue.z,
-            gyroscopeValue.x,
-            gyroscopeValue.y,
-            gyroscopeValue.z,
-            dt);
-        lastTimestamp = timestamp;
-        List<double> q = mahonyAHRS.quaternion;
-        _qw = q[0];
-        _qx = q[1];
-        _qy = q[2];
-        _qz = q[3];
-        if (_tabVisibility[4]) {
-          setState(() {
-            // Yaw (around Z-axis)
-            _yaw = atan2(
-                2 * (_qw * _qz + _qx * _qy), 1 - 2 * (_qy * _qy + _qz * _qz));
-            // Pitch (around Y-axis)
-            _pitch = asin(2 * (_qw * _qy - _qx * _qz));
-            // Roll (around X-axis)
-            _roll = atan2(
-                2 * (_qw * _qx + _qy * _qz), 1 - 2 * (_qx * _qx + _qy * _qy));
-          });
-          updateRotation(roll: _roll - pi / 2, pitch: -_pitch, yaw: _yaw);
-          //_earableModel.updateRotation(_qw, _qx, _qy, _qz);
-        } else {
-          setState(() {
-            accelerometerData.add(accelerometerValue);
-            gyroscopeData.add(gyroscopeValue);
-            magnetometerData.add(magnetometerValue);
-            _checkLength(accelerometerData);
-            _checkLength(gyroscopeData);
-            _checkLength(magnetometerData);
-            _maxX = accelerometerValue.timestamp;
-            _minX = accelerometerData[0].timestamp;
-          });
-        }
+      if (_tabVisibility[4]) {
+        setState(() {
+          // Yaw (around Z-axis)
+          _yaw = data["EULER"]["YAW"];
+          // Pitch (around Y-axis)
+          _pitch = data["EULER"]["PITCH"];
+          // Roll (around X-axis)
+          _roll = data["EULER"]["ROLL"];
+        });
+        updateRotation(roll: _roll, pitch: _pitch, yaw: _yaw);
+        //_earableModel.updateRotation(_qw, _qx, _qy, _qz);
+      } else {
+        setState(() {
+          accelerometerData.add(accelerometerValue);
+          gyroscopeData.add(gyroscopeValue);
+          magnetometerData.add(magnetometerValue);
+          _checkLength(accelerometerData);
+          _checkLength(gyroscopeData);
+          _checkLength(magnetometerData);
+          _maxX = accelerometerValue.timestamp;
+          _minX = accelerometerData[0].timestamp;
+        });
       }
     });
 

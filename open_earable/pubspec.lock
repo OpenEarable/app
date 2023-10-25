@@ -50,7 +50,7 @@ packages:
     source: hosted
     version: "0.12.0"
   charts_flutter:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       name: charts_flutter
       sha256: "4172c3f4b85322fdffe1896ffbed79ae4689ae72cb6fe6690dcaaea620a9c558"
