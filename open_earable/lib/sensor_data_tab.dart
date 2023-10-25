@@ -399,7 +399,7 @@ class _SensorDataTabState extends State<SensorDataTab>
         Padding(
             padding: EdgeInsets.only(bottom: 16),
             child: Text(
-                "Yaw: ${(_yaw * 180 / pi).toStringAsFixed(1)}°\nPitch: ${(-_pitch * 180 / pi).toStringAsFixed(1)}°\nRoll: ${(_roll * 180 / pi).toStringAsFixed(1)}°"))
+                "Yaw: ${(_yaw * 180 / pi).toStringAsFixed(1)}°\nPitch: ${(_pitch * 180 / pi).toStringAsFixed(1)}°\nRoll: ${(_roll * 180 / pi).toStringAsFixed(1)}°"))
       ],
     );
   }
@@ -565,7 +565,7 @@ class _SensorDataTabState extends State<SensorDataTab>
   }) {
     _yaw = yaw;
     _pitch = pitch;
-    _roll = roll;
+    _roll = roll - pi / 2;
     if (_sceneInitialized && three3dRender.isInitialized) {
       render();
     }
