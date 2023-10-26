@@ -11,7 +11,11 @@ class MockAttitudeTracker extends AttitudeTracker {
   StreamSubscription<Attitude>? _attitudeSubscription;
 
   @override
-  bool get isTracking => this._attitudeSubscription != null && !this._attitudeSubscription!.isPaused; 
+  bool get isTracking => this._attitudeSubscription != null && !this._attitudeSubscription!.isPaused;
+
+  bool _isAvailable = false;
+  @override
+  bool get isAvailable => _isAvailable;
 
   MockAttitudeTracker({Function(AttitudeTracker)? didChangeAvailability}) : super() {
     this._attitudeStream = Stream.periodic(Duration(milliseconds: 100), (count) {
@@ -24,6 +28,11 @@ class MockAttitudeTracker extends AttitudeTracker {
     this.didChangeAvailability = didChangeAvailability ?? (_) { };
 
     this.didChangeAvailability(this);
+    // wait for 5 seconds before setting the tracker to available
+    Timer(Duration(seconds: 3), () {
+      this._isAvailable = true;
+      this.didChangeAvailability(this);
+    });
   }
 
   @override

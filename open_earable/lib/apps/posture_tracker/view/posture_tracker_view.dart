@@ -109,13 +109,30 @@ class _PostureTrackerViewState extends State<PostureTrackerView> {
   }
   
   Widget _buildTrackingButton(PostureTrackerViewModel postureTrackerViewModel) {
-    return ElevatedButton(
-      onPressed: () { postureTrackerViewModel.isTracking ? this._viewModel.stopTracking() : this._viewModel.startTracking(); },
-      style: ElevatedButton.styleFrom(
-          backgroundColor: !postureTrackerViewModel.isTracking ? Color(0xff77F2A1) : Color(0xfff27777),
-          foregroundColor: Colors.black,
+    return Column(children: [
+      ElevatedButton(
+        onPressed: postureTrackerViewModel.isAvailable
+          ? () { postureTrackerViewModel.isTracking ? this._viewModel.stopTracking() : this._viewModel.startTracking(); }
+          : null,
+        style: ElevatedButton.styleFrom(
+            backgroundColor: !postureTrackerViewModel.isTracking ? Color(0xff77F2A1) : Color(0xfff27777),
+            foregroundColor: Colors.black,
+          ),
+        child: postureTrackerViewModel.isTracking ? const Text("Stop Tracking") : const Text("Start Tracking"),
+      ),
+      Visibility(
+        visible: !postureTrackerViewModel.isAvailable,
+        maintainState: true,
+        maintainAnimation: true,
+        maintainSize: true,
+        child: Text(
+          "No Earable Connected",
+          style: TextStyle(
+            color: Colors.red,
+            fontSize: 12,
+          ),
         ),
-      child: postureTrackerViewModel.isTracking ? const Text("Stop Tracking") : const Text("Start Tracking"),
-    );
+      )
+    ]);
   }
 }

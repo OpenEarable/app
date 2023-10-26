@@ -7,11 +7,21 @@ import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 class EarableAttitudeTracker extends AttitudeTracker {
   final OpenEarable _openEarable;
   StreamSubscription<Map<String, dynamic>>? _subscription;
-
-  EarableAttitudeTracker(this._openEarable);
-
+  
   @override
-  bool get isTracking => _subscription != null && !_subscription!.isPaused; 
+  bool get isTracking => _subscription != null && !_subscription!.isPaused;
+  @override
+  bool get isAvailable => _openEarable.bleManager.connected;
+
+  EarableAttitudeTracker(this._openEarable) {
+    _openEarable.bleManager.connectionStateStream.listen((connected) {
+      didChangeAvailability(this);
+      if (!connected) {
+        cancle();
+      }
+    });
+  }
+
 
   @override
   void start() {
