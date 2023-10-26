@@ -109,10 +109,12 @@ class _PostureTrackerViewState extends State<PostureTrackerView> {
   }
   
   Widget _buildTrackingButton(PostureTrackerViewModel postureTrackerViewModel) {
-    return CupertinoButton(
-      onPressed: postureTrackerViewModel.isTracking ? () => this._viewModel.stopTracking() : () => this._viewModel.startTracking(),
-      color: postureTrackerViewModel.isTracking ? Colors.red : Colors.green,
-      disabledColor: Colors.grey,
+    return ElevatedButton(
+      onPressed: () { postureTrackerViewModel.isTracking ? this._viewModel.stopTracking() : this._viewModel.startTracking(); },
+      style: ElevatedButton.styleFrom(
+          backgroundColor: !postureTrackerViewModel.isTracking ? Color(0xff77F2A1) : Color(0xfff27777),
+          foregroundColor: Colors.black,
+        ),
       child: postureTrackerViewModel.isTracking ? const Text("Stop Tracking") : const Text("Start Tracking"),
     );
   }
