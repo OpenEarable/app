@@ -13,7 +13,7 @@ class MockAttitudeTracker extends AttitudeTracker {
   @override
   bool get isTracking => this._attitudeSubscription != null && !this._attitudeSubscription!.isPaused; 
 
-  MockAttitudeTracker() {
+  MockAttitudeTracker({Function(AttitudeTracker)? didChangeAvailability}) : super() {
     this._attitudeStream = Stream.periodic(Duration(milliseconds: 100), (count) {
       return Attitude(
         roll: sin(count / 10) * pi / 4,
@@ -21,6 +21,9 @@ class MockAttitudeTracker extends AttitudeTracker {
         yaw: sin(count / 30) * pi / 4
       );
     });
+    this.didChangeAvailability = didChangeAvailability ?? (_) { };
+
+    this.didChangeAvailability(this);
   }
 
   @override

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:open_earable/apps/posture_tracker/model/mock_attitude_tracker.dart';
 import 'package:open_earable/apps/posture_tracker/view/posture_tracker_view.dart';
+import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
 import './apps/step_counter.dart';
 
@@ -7,7 +9,7 @@ class AppInfo {
   final IconData iconData;
   final String title;
   final String description;
-  final void Function(BuildContext) onTap;
+  final void Function(BuildContext, OpenEarable) onTap;
 
   AppInfo(
     {
@@ -24,7 +26,7 @@ List<AppInfo> sampleApps = [
       iconData: Icons.directions_walk,
       title: "Step Counter",
       description: "Counts number of steps taken.",
-      onTap: (_) {
+      onTap: (_, openEarable) {
         // Action when the card is tapped, for example:
         // Navigator.push(context, MaterialPageRoute(builder: (context) => PostureTracker()));
       }),
@@ -32,15 +34,15 @@ List<AppInfo> sampleApps = [
       iconData: Icons.face_6,
       title: "Posture Tracker",
       description: "Get feedback on bad posture.",
-      onTap: (context) {
+      onTap: (context, OpenEarable openEarable) {
         // Action when the card is tapped, for example:
-        Navigator.push(context, MaterialPageRoute(builder: (context) => PostureTrackerView()));
+        Navigator.push(context, MaterialPageRoute(builder: (context) => PostureTrackerView(MockAttitudeTracker())));
       }),
   AppInfo(
       iconData: Icons.lunch_dining,
       title: "Asissted Dietary Monitoring",
       description: "Detect eating episodes.",
-      onTap: (_) {
+      onTap: (_, openEarable) {
         // Action when the card is tapped, for example:
         // Navigator.push(context, MaterialPageRoute(builder: (context) => PostureTracker()));
       }),
@@ -48,7 +50,7 @@ List<AppInfo> sampleApps = [
       iconData: Icons.height,
       title: "Jump Height Test",
       description: "Test your maximum jump height.",
-      onTap: (_) {
+      onTap: (_, openEarable) {
         // Action when the card is tapped, for example:
         // Navigator.push(context, MaterialPageRoute(builder: (context) => PostureTracker()));
       }),
@@ -56,6 +58,10 @@ List<AppInfo> sampleApps = [
 ];
 
 class AppsTab extends StatelessWidget {
+  final OpenEarable _openEarable;
+
+  AppsTab(this._openEarable);
+
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
@@ -70,7 +76,7 @@ class AppsTab extends StatelessWidget {
             subtitle: Text(sampleApps[index].description),
             trailing: Icon(Icons.arrow_forward_ios,
                 size: 16.0), // Arrow icon on the right
-            onTap: () { sampleApps[index].onTap(context); }, // Callback when the card is tapped
+            onTap: () { sampleApps[index].onTap(context, _openEarable); }, // Callback when the card is tapped
           ),
         );
       },

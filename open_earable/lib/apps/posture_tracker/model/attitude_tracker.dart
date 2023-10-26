@@ -12,6 +12,11 @@ abstract class AttitudeTracker {
 
   Future<Attitude> get attitude => this.attitudeStreamController.stream.first;
   bool get isTracking;
+  /// check if tracking is available
+  bool get isAvailable => true;
+
+  /// Callback that is called when the tracker changes availability. Takes the tracker as an argument.
+  Function(AttitudeTracker) didChangeAvailability = (_) { };
 
   /// Listen to the attitude stream.
   /// 

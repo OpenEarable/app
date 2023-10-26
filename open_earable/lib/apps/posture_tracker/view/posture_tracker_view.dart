@@ -8,11 +8,12 @@ import 'package:open_earable/apps/posture_tracker/model/phone_attitude_tracker.d
 import 'package:open_earable/apps/posture_tracker/view/posture_roll_view.dart';
 import 'package:open_earable/apps/posture_tracker/view_model/posture_tracker_view_model.dart';
 import 'package:provider/provider.dart';
+import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
 class PostureTrackerView extends StatefulWidget {
   final AttitudeTracker _tracker;
 
-  PostureTrackerView() : this._tracker = MockAttitudeTracker();
+  PostureTrackerView(this._tracker);
 
   @override
   State<PostureTrackerView> createState() => _PostureTrackerViewState();
@@ -111,6 +112,7 @@ class _PostureTrackerViewState extends State<PostureTrackerView> {
     return CupertinoButton(
       onPressed: postureTrackerViewModel.isTracking ? () => this._viewModel.stopTracking() : () => this._viewModel.startTracking(),
       color: postureTrackerViewModel.isTracking ? Colors.red : Colors.green,
+      disabledColor: Colors.grey,
       child: postureTrackerViewModel.isTracking ? const Text("Stop Tracking") : const Text("Start Tracking"),
     );
   }

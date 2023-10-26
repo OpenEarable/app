@@ -1,43 +1,40 @@
-// ignore_for_file: unnecessary_this
-
 import "package:flutter/material.dart";
 import "package:open_earable/apps/posture_tracker/model/attitude.dart";
 import 'package:open_earable/apps/posture_tracker/model/attitude_tracker.dart';
 
 class PostureTrackerViewModel extends ChangeNotifier {
   Attitude _attitude = Attitude();
-  Attitude get attitude => this._attitude;
+  Attitude get attitude => _attitude;
 
-  bool _isTracking = false;
-  bool get isTracking => this._isTracking;
+  bool get isTracking => _attitudeTracker.isTracking;
+  bool get isAvailable => _attitudeTracker.isAvailable;
 
   AttitudeTracker _attitudeTracker;
 
   PostureTrackerViewModel(this._attitudeTracker) {
-    this._attitudeTracker.listen((attitude) {
-      this._attitude = attitude;
+    _attitudeTracker.didChangeAvailability = (_) {
+      notifyListeners();
+    };
+
+    _attitudeTracker.listen((attitude) {
+      _attitude = attitude;
       notifyListeners();
     });
   }
 
   void startTracking() {
-    this._attitudeTracker.start();
-    this._setTracking(true);
+    _attitudeTracker.start();
+    notifyListeners();
   }
 
   void stopTracking() {
-    this._attitudeTracker.stop();
-    this._setTracking(false);
+    _attitudeTracker.stop();
+    notifyListeners();
   }
 
   @override
   void dispose() {
-    this._attitudeTracker.cancle();
+    _attitudeTracker.cancle();
     super.dispose();
-  }
-
-  void _setTracking(bool value) {
-    this._isTracking = value;
-    notifyListeners();
   }
 }

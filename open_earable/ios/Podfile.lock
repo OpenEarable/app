@@ -1,10 +1,10 @@
 PODS:
   - Flutter (1.0.0)
-  - motion_sensors (0.0.1):
-    - Flutter
   - flutter_gl (0.0.3):
     - Flutter
     - three3d_egl (~> 0.1.3)
+  - motion_sensors (0.0.1):
+    - Flutter
   - permission_handler_apple (9.1.1):
     - Flutter
   - Protobuf (3.24.3)
@@ -17,8 +17,8 @@ PODS:
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
-  - motion_sensors (from `.symlinks/plugins/motion_sensors/ios`)
   - flutter_gl (from `.symlinks/plugins/flutter_gl/ios`)
+  - motion_sensors (from `.symlinks/plugins/motion_sensors/ios`)
   - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
   - reactive_ble_mobile (from `.symlinks/plugins/reactive_ble_mobile/ios`)
 
@@ -31,10 +31,10 @@ SPEC REPOS:
 EXTERNAL SOURCES:
   Flutter:
     :path: Flutter
-  motion_sensors:
-    :path: ".symlinks/plugins/motion_sensors/ios"
   flutter_gl:
     :path: ".symlinks/plugins/flutter_gl/ios"
+  motion_sensors:
+    :path: ".symlinks/plugins/motion_sensors/ios"
   permission_handler_apple:
     :path: ".symlinks/plugins/permission_handler_apple/ios"
   reactive_ble_mobile:
@@ -42,8 +42,8 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Flutter: f04841e97a9d0b0a8025694d0796dd46242b2854
-  motion_sensors: 03f55b7c637a7e365a0b5f9697a449f9059d5d91
   flutter_gl: 5a5603f35db897697f064027864a32b15d0c421d
+  motion_sensors: 03f55b7c637a7e365a0b5f9697a449f9059d5d91
   permission_handler_apple: e76247795d700c14ea09e3a2d8855d41ee80a2e6
   Protobuf: 970f7ee93a3a08e3cf64859b8efd95ee32b4f87f
   reactive_ble_mobile: 9ce6723d37ccf701dbffd202d487f23f5de03b4c
