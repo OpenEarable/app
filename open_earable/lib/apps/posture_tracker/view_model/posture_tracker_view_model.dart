@@ -32,6 +32,10 @@ class PostureTrackerViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void calibrate() {
+    _attitudeTracker.calibrate(_attitude);
+  }
+
   @override
   void dispose() {
     _attitudeTracker.cancle();

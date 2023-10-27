@@ -32,10 +32,10 @@ class EarableAttitudeTracker extends AttitudeTracker {
 
     _openEarable.sensorManager.writeSensorConfig(_buildSensorConfig());
     _subscription = _openEarable.sensorManager.subscribeToSensorData(0).listen((event) {
-      _updateAttitude(
-        event["EULER"]["ROLL"],
-        event["EULER"]["PITCH"],
-        event["EULER"]["YAW"]
+      updateAttitude(
+        roll: event["EULER"]["ROLL"],
+        pitch: event["EULER"]["PITCH"],
+        yaw: event["EULER"]["YAW"]
       );
     });
   }
@@ -57,9 +57,5 @@ class EarableAttitudeTracker extends AttitudeTracker {
       samplingRate: 30,
       latency: 0
     );
-  }
-
-  void _updateAttitude(double roll, double pitch, double yaw) {
-    attitudeStreamController.add(Attitude(roll: roll, pitch: pitch, yaw: yaw));
   }
 }

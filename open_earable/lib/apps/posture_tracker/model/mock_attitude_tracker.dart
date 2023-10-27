@@ -1,5 +1,3 @@
-// ignore_for_file: unnecessary_this
-
 import 'dart:async';
 import 'dart:math';
 
@@ -11,52 +9,52 @@ class MockAttitudeTracker extends AttitudeTracker {
   StreamSubscription<Attitude>? _attitudeSubscription;
 
   @override
-  bool get isTracking => this._attitudeSubscription != null && !this._attitudeSubscription!.isPaused;
+  bool get isTracking => _attitudeSubscription != null && !_attitudeSubscription!.isPaused;
 
   bool _isAvailable = false;
   @override
   bool get isAvailable => _isAvailable;
 
   MockAttitudeTracker({Function(AttitudeTracker)? didChangeAvailability}) : super() {
-    this._attitudeStream = Stream.periodic(Duration(milliseconds: 100), (count) {
+    _attitudeStream = Stream.periodic(Duration(milliseconds: 100), (count) {
       return Attitude(
         roll: sin(count / 10) * pi / 4,
         pitch: sin(count / 20) * pi / 4,
         yaw: sin(count / 30) * pi / 4
       );
     });
-    this.didChangeAvailability = didChangeAvailability ?? (_) { };
+    didChangeAvailability = didChangeAvailability ?? (_) { };
 
-    this.didChangeAvailability(this);
+    didChangeAvailability(this);
     // wait for 5 seconds before setting the tracker to available
     Timer(Duration(seconds: 3), () {
-      this._isAvailable = true;
+      _isAvailable = true;
       this.didChangeAvailability(this);
     });
   }
 
   @override
   void start() {
-    if (this._attitudeSubscription != null) {
-      if (this._attitudeSubscription!.isPaused) {
-        this._attitudeSubscription!.resume();
+    if (_attitudeSubscription != null) {
+      if (_attitudeSubscription!.isPaused) {
+        _attitudeSubscription!.resume();
       }
       return;
     }
 
-    this._attitudeSubscription = this._attitudeStream.listen((value) {
-      this.attitudeStreamController.add(value);
+    _attitudeSubscription = _attitudeStream.listen((value) {
+      updateAttitude(attitude: value);
     });
   }
 
   @override
   void stop() {
-    this._attitudeSubscription?.pause();
+    _attitudeSubscription?.pause();
   }
 
   @override
   void cancle() {
-    this._attitudeSubscription?.cancel();
+    _attitudeSubscription?.cancel();
     super.cancle();
   }
 }

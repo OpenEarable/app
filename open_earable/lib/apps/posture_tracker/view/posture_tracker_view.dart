@@ -2,14 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:open_earable/apps/posture_tracker/model/attitude_tracker.dart';
-import 'package:open_earable/apps/posture_tracker/model/mock_attitude_tracker.dart';
-import 'package:open_earable/apps/posture_tracker/model/phone_attitude_tracker.dart';
 import 'package:open_earable/apps/posture_tracker/view/posture_roll_view.dart';
 import 'package:open_earable/apps/posture_tracker/view/settings_view.dart';
 import 'package:open_earable/apps/posture_tracker/view_model/posture_tracker_view_model.dart';
-import 'package:open_earable/ble.dart';
 import 'package:provider/provider.dart';
-import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
 class PostureTrackerView extends StatefulWidget {
   final AttitudeTracker _tracker;
@@ -31,8 +27,8 @@ class _PostureTrackerViewState extends State<PostureTrackerView> {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<PostureTrackerViewModel>(
-        create: (_) => this._viewModel,
+    return ChangeNotifierProvider<PostureTrackerViewModel>.value(
+        value: _viewModel,
         builder: (context, child) => Consumer<PostureTrackerViewModel>(
           builder: (context, postureTrackerViewModel, child) => Scaffold(
             appBar: AppBar(

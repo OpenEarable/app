@@ -45,6 +45,36 @@ class _SettingsViewState extends State<SettingsView> {
             trailing: Text(_viewModel.isTracking ? "Tracking" : _viewModel.isAvailable ? "Available" : "Unavailable"),
           ),
         ),
+        Padding(
+          padding: EdgeInsets.all(8.0),
+          child: Row(
+              children: [
+              Expanded(
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: 
+                      _viewModel.isTracking
+                      ? Colors.green[300]
+                      : Colors.blue[300],
+                    foregroundColor: Colors.black,
+                  ),
+                  onPressed:
+                    _viewModel.isTracking
+                    ? () {
+                      _viewModel.calibrate();
+                      Navigator.of(context).pop();
+                    }
+                    : () => _viewModel.startTracking(),
+                  child: Text(
+                    _viewModel.isTracking
+                    ? "Set as default"
+                    : "Start Calibration"
+                  ),
+                ),
+              )
+              ]
+          ),
+        )
       ],
     );
   }
