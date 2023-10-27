@@ -1,12 +1,13 @@
 // ignore_for_file: unnecessary_this
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:open_earable/apps/posture_tracker/model/attitude_tracker.dart';
 import 'package:open_earable/apps/posture_tracker/model/mock_attitude_tracker.dart';
 import 'package:open_earable/apps/posture_tracker/model/phone_attitude_tracker.dart';
 import 'package:open_earable/apps/posture_tracker/view/posture_roll_view.dart';
+import 'package:open_earable/apps/posture_tracker/view/settings_view.dart';
 import 'package:open_earable/apps/posture_tracker/view_model/posture_tracker_view_model.dart';
+import 'package:open_earable/ble.dart';
 import 'package:provider/provider.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
@@ -30,17 +31,23 @@ class _PostureTrackerViewState extends State<PostureTrackerView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Posture Tracker"),
-      ),
-      body: ChangeNotifierProvider<PostureTrackerViewModel>(
+    return ChangeNotifierProvider<PostureTrackerViewModel>(
         create: (_) => this._viewModel,
         builder: (context, child) => Consumer<PostureTrackerViewModel>(
-          builder: (context, postureTrackerViewModel, child) => this._buildContentView(postureTrackerViewModel)
+          builder: (context, postureTrackerViewModel, child) => Scaffold(
+            appBar: AppBar(
+              title: const Text("Posture Tracker"),
+              actions: [
+                IconButton(
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => SettingsView(this._viewModel))),
+                  icon: Icon(Icons.settings)
+                ),
+              ],
+            ),
+            body: _buildContentView(postureTrackerViewModel)
+          )
         )
-      )
-    );
+      );
   }
 
   Widget _buildContentView(PostureTrackerViewModel postureTrackerViewModel) {
