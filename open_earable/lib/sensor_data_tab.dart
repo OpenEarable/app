@@ -226,8 +226,10 @@ class _SensorDataTabState extends State<SensorDataTab>
           _checkLength(accelerometerData);
           _checkLength(gyroscopeData);
           _checkLength(magnetometerData);
-          _maxX = accelerometerValue.timestamp;
-          _minX = accelerometerData[0].timestamp;
+          if (!_tabVisibility[3]) {
+            _maxX = accelerometerValue.timestamp;
+            _minX = accelerometerData[0].timestamp;
+          }
         });
       }
     });
@@ -247,6 +249,10 @@ class _SensorDataTabState extends State<SensorDataTab>
         setState(() {
           barometerData.add(barometerValue);
           _checkLength(barometerData);
+          if (_tabVisibility[3]) {
+            _maxX = barometerValue.timestamp;
+            _minX = barometerData[0].timestamp;
+          }
         });
       }
     });
