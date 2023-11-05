@@ -49,7 +49,7 @@ class _MyHomePageState extends State<MyHomePage> {
     _widgetOptions = <Widget>[
       ActuatorsTab(_openEarable),
       SensorDataTab(_openEarable),
-      AppsTab(),
+      AppsTab(_openEarable),
     ];
   }
 

@@ -98,7 +98,7 @@ class _SensorDataTabState extends State<SensorDataTab>
   void initState() {
     super.initState();
     //_earableModel = EarableModel(fileName: "assets/OpenEarable.obj");
-
+    three3dRender = FlutterGlPlugin();
     startTimestamp = DateTime.now().millisecondsSinceEpoch;
     for (int i = 0; i < 200; i++) {
       //var data = XYZValue(timestamp: i, x: -3, y: 2, z: 4, units: {});
@@ -525,8 +525,6 @@ class _SensorDataTabState extends State<SensorDataTab>
   Future<void> initPlatformState() async {
     //width = screenSize!.width;
     //height = screenSize!.height;
-
-    three3dRender = FlutterGlPlugin();
 
     Map<String, dynamic> options = {
       "antialias": true,

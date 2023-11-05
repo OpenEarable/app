@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
 import './apps/step_counter.dart';
 import './apps/posture_tracker.dart';
+import './apps/recorder.dart';
 
 class AppInfo {
   final IconData iconData;
@@ -16,58 +18,74 @@ class AppInfo {
       required this.onTap});
 }
 
-List<AppInfo> sampleApps = [
-  AppInfo(
-      iconData: Icons.directions_walk,
-      title: "Step Counter",
-      description: "Counts number of steps taken.",
-      onTap: () {
-        // Action when the card is tapped, for example:
-        // Navigator.push(context, MaterialPageRoute(builder: (context) => PostureTracker()));
-      }),
-  AppInfo(
-      iconData: Icons.face_6,
-      title: "Posture Tracker",
-      description: "Get feedback on bad posture.",
-      onTap: () {
-        // Action when the card is tapped, for example:
-        // Navigator.push(context, MaterialPageRoute(builder: (context) => PostureTracker()));
-      }),
-  AppInfo(
-      iconData: Icons.lunch_dining,
-      title: "Asissted Dietary Monitoring",
-      description: "Detect eating episodes.",
-      onTap: () {
-        // Action when the card is tapped, for example:
-        // Navigator.push(context, MaterialPageRoute(builder: (context) => PostureTracker()));
-      }),
-  AppInfo(
-      iconData: Icons.height,
-      title: "Jump Height Test",
-      description: "Test your maximum jump height.",
-      onTap: () {
-        // Action when the card is tapped, for example:
-        // Navigator.push(context, MaterialPageRoute(builder: (context) => PostureTracker()));
-      }),
-  // ... similarly for other apps
-];
-
 class AppsTab extends StatelessWidget {
+  final OpenEarable _openEarable;
+  AppsTab(this._openEarable);
+
+  List<AppInfo> sampleApps(BuildContext context) {
+    return [
+      AppInfo(
+          iconData: Icons.directions_walk,
+          title: "Step Counter",
+          description: "Counts number of steps taken.",
+          onTap: () {
+            // Action when the card is tapped, for example:
+            // Navigator.push(context, MaterialPageRoute(builder: (context) => PostureTracker()));
+          }),
+      AppInfo(
+          iconData: Icons.face_6,
+          title: "Posture Tracker",
+          description: "Get feedback on bad posture.",
+          onTap: () {
+            // Action when the card is tapped, for example:
+            // Navigator.push(context, MaterialPageRoute(builder: (context) => PostureTracker()));
+          }),
+      AppInfo(
+          iconData: Icons.lunch_dining,
+          title: "Asissted Dietary Monitoring",
+          description: "Detect eating episodes.",
+          onTap: () {
+            // Action when the card is tapped, for example:
+            // Navigator.push(context, MaterialPageRoute(builder: (context) => PostureTracker()));
+          }),
+      AppInfo(
+          iconData: Icons.height,
+          title: "Jump Height Test",
+          description: "Test your maximum jump height.",
+          onTap: () {
+            // Action when the card is tapped, for example:
+            // Navigator.push(context, MaterialPageRoute(builder: (context) => PostureTracker()));
+          }),
+      AppInfo(
+          iconData: Icons.fiber_smart_record,
+          title: "Recorder",
+          description: "Counts number of steps taken.",
+          onTap: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => Recorder(_openEarable)));
+          }),
+    ];
+    // ... similarly for other apps
+  }
+
   @override
   Widget build(BuildContext context) {
+    List<AppInfo> apps = sampleApps(context);
     return ListView.builder(
-      itemCount: sampleApps.length,
+      itemCount: apps.length,
       itemBuilder: (BuildContext context, int index) {
         return Card(
           color: Theme.of(context).colorScheme.primary,
           margin: EdgeInsets.all(8.0),
           child: ListTile(
-            leading: Icon(sampleApps[index].iconData, size: 40.0),
-            title: Text(sampleApps[index].title),
-            subtitle: Text(sampleApps[index].description),
+            leading: Icon(apps[index].iconData, size: 40.0),
+            title: Text(apps[index].title),
+            subtitle: Text(apps[index].description),
             trailing: Icon(Icons.arrow_forward_ios,
                 size: 16.0), // Arrow icon on the right
-            onTap: sampleApps[index].onTap, // Callback when the card is tapped
+            onTap: apps[index].onTap, // Callback when the card is tapped
           ),
         );
       },
