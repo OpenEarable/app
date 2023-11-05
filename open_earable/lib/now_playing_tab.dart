@@ -548,11 +548,12 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
         samplingRate: _barometerSettingSelected ? barometerSamplingRate! : 0,
         latency: 0);
     OpenEarableSensorConfig microphoneConfig = OpenEarableSensorConfig(
-        sensorId: 1,
+        sensorId: 2,
         samplingRate: _microphoneSettingSelected ? microphoneSamplingRate! : 0,
         latency: 0);
     _openEarable.sensorManager.writeSensorConfig(imuConfig);
     _openEarable.sensorManager.writeSensorConfig(barometerConfig);
+    print(barometerConfig);
     _openEarable.sensorManager.writeSensorConfig(microphoneConfig);
   }
 
