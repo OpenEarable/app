@@ -10,7 +10,10 @@ import 'attitude.dart';
 abstract class AttitudeTracker {
   StreamController<Attitude> _attitudeStreamController = StreamController<Attitude>();
 
-  Future<Attitude> get attitude => this._attitudeStreamController.stream.first;
+  Attitude _rawAttitude = Attitude();
+  Attitude get rawAttitude => _rawAttitude;
+  Attitude _attitude = Attitude();
+  Attitude get attitude => _attitude;
   bool get isTracking;
   /// check if tracking is available
   bool get isAvailable => true;
@@ -41,6 +44,11 @@ abstract class AttitudeTracker {
     _referenceAttitude = referenceAttitude;
   }
 
+  void calibrateToCurrentAttitude() async {
+    _referenceAttitude = _rawAttitude;
+    print("calibrated to {roll: ${_referenceAttitude.roll}, pitch: ${_referenceAttitude.pitch}, yaw: ${_referenceAttitude.yaw}}");
+  }
+
   /// Cancle the stream and close the stream controller.
   /// 
   /// If you want to use the tracker again, you need to call listen() again.
@@ -55,8 +63,10 @@ abstract class AttitudeTracker {
     }
     // Check if attitude is not null, otherwise use the angles
     attitude ??= Attitude(roll: roll ?? 0, pitch: pitch ?? 0, yaw: yaw ?? 0);
+    _rawAttitude = attitude;
     // Update the stream controller with the attitude
-    _attitudeStreamController.add (attitude - _referenceAttitude);
+    _attitude = attitude - _referenceAttitude;
+    _attitudeStreamController.add(_attitude);
   }
 
 }

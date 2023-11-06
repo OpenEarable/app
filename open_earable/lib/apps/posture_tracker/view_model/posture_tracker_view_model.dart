@@ -17,7 +17,11 @@ class PostureTrackerViewModel extends ChangeNotifier {
     };
 
     _attitudeTracker.listen((attitude) {
-      _attitude = attitude;
+      _attitude = Attitude(
+        roll: -attitude.roll,
+        pitch: attitude.pitch,
+        yaw: attitude.yaw
+      );
       notifyListeners();
     });
   }
@@ -33,7 +37,7 @@ class PostureTrackerViewModel extends ChangeNotifier {
   }
 
   void calibrate() {
-    _attitudeTracker.calibrate(_attitude);
+    _attitudeTracker.calibrateToCurrentAttitude();
   }
 
   @override
