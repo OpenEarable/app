@@ -37,9 +37,6 @@ class _BLEPageState extends State<BLEPage> {
   void _setupListeners() async {
     _connectionStateStream =
         _openEarable.bleManager.connectionStateStream.listen((connected) {
-      if (connected) {
-        _writeSensorConfig();
-      }
       setState(() {});
     });
   }
@@ -176,16 +173,5 @@ class _BLEPageState extends State<BLEPage> {
   void _connectToDevice(device) {
     _scanSubscription?.cancel();
     _openEarable.bleManager.connectToDevice(device);
-  }
-
-  Future<void> _writeSensorConfig() async {
-    OpenEarableSensorConfig config =
-        OpenEarableSensorConfig(sensorId: 4, samplingRate: 8, latency: 0);
-    _openEarable.sensorManager.writeSensorConfig(config);
-    //_openEarable.sensorManager.subscribeToSensorData(0).listen((data) {
-    //  print(data);
-    //});
-    //_openEarable.sensorManager.getButtonStateStream().listen((event) {});
-    //await _openEarable.rgbLed.setLEDstate(0);
   }
 }

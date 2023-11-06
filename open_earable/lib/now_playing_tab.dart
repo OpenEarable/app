@@ -521,7 +521,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
     );
   }
 
-  void writeSensorConfigs() {
+  Future<void> writeSensorConfigs() async {
     String imuText =
         (_imuTextController.text == "") ? "0" : _imuTextController.text;
     String barometerText = (_barometerTextController.text == "")
@@ -548,12 +548,12 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
         samplingRate: _barometerSettingSelected ? barometerSamplingRate! : 0,
         latency: 0);
     OpenEarableSensorConfig microphoneConfig = OpenEarableSensorConfig(
-        sensorId: 1,
+        sensorId: 2,
         samplingRate: _microphoneSettingSelected ? microphoneSamplingRate! : 0,
         latency: 0);
-    _openEarable.sensorManager.writeSensorConfig(imuConfig);
-    _openEarable.sensorManager.writeSensorConfig(barometerConfig);
-    _openEarable.sensorManager.writeSensorConfig(microphoneConfig);
+    await _openEarable.sensorManager.writeSensorConfig(imuConfig);
+    await _openEarable.sensorManager.writeSensorConfig(barometerConfig);
+    await _openEarable.sensorManager.writeSensorConfig(microphoneConfig);
   }
 
   @override
