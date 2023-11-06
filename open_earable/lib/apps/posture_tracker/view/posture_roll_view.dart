@@ -37,7 +37,7 @@ class PostureRollView extends StatelessWidget {
             child: Stack(children: [
               Image.asset(this.neckAssetPath),
               Transform.rotate(
-                angle: this.roll,
+                angle: this.roll.isFinite ? this.roll : 0,
                 alignment: this.headAlignment,
                 child: Image.asset(this.headAssetPath)
               ),

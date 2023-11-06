@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:open_earable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_earable/apps/posture_tracker/model/mock_attitude_tracker.dart';
 import 'package:open_earable/apps/posture_tracker/view/posture_tracker_view.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
@@ -36,7 +37,7 @@ List<AppInfo> sampleApps = [
       description: "Get feedback on bad posture.",
       onTap: (context, OpenEarable openEarable) {
         // Action when the card is tapped, for example:
-        Navigator.push(context, MaterialPageRoute(builder: (context) => PostureTrackerView(MockAttitudeTracker())));
+        Navigator.push(context, MaterialPageRoute(builder: (context) => PostureTrackerView(EarableAttitudeTracker(openEarable))));
       }),
   AppInfo(
       iconData: Icons.lunch_dining,
