@@ -5,10 +5,10 @@ packages:
     dependency: transitive
     description:
       name: archive
-      sha256: "27b24c1b1ab091964e7c0079dcedc9a04d992089df724b9cea45fe6f82d48de1"
+      sha256: "0da817eab9833cc222ee5575789664e99f60fe0c554be55dc1979f9b4ec6dd73"
       url: "https://pub.dev"
     source: hosted
-    version: "3.4.7"
+    version: "3.4.8"
   async:
     dependency: transitive
     description:
@@ -341,7 +341,7 @@ packages:
     description:
       path: "."
       ref: HEAD
-      resolved-ref: c1086189fd2ae99091f65fc153d206ffd3f0abce
+      resolved-ref: e09d85852f3021f8b3af43829baea6ecfedc373b
       url: "https://github.com/OpenEarable/open_earable_flutter.git"
     source: git
     version: "0.0.1"

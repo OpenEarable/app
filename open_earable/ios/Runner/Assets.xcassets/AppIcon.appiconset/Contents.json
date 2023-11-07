@@ -1,119 +1,119 @@
 {
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  },
   "images" : [
     {
-      "platform" : "ios",
-      "scale" : "2x",
       "filename" : "icon-20@2x.png",
       "size" : "20x20",
-      "idiom" : "universal"
+      "idiom" : "universal",
+      "scale" : "2x",
+      "platform" : "ios"
     },
     {
-      "platform" : "ios",
       "size" : "20x20",
-      "scale" : "3x",
+      "filename" : "icon-20@3x.png",
+      "platform" : "ios",
       "idiom" : "universal",
-      "filename" : "icon-20@3x.png"
+      "scale" : "3x"
     },
     {
       "filename" : "icon-29@2x.png",
+      "size" : "29x29",
       "idiom" : "universal",
       "platform" : "ios",
-      "size" : "29x29",
       "scale" : "2x"
     },
     {
-      "idiom" : "universal",
-      "scale" : "3x",
       "size" : "29x29",
       "platform" : "ios",
-      "filename" : "icon-29@3x.png"
+      "idiom" : "universal",
+      "filename" : "icon-29@3x.png",
+      "scale" : "3x"
     },
     {
+      "idiom" : "universal",
       "scale" : "2x",
-      "filename" : "icon-38@2x.png",
-      "platform" : "ios",
-      "idiom" : "universal",
-      "size" : "38x38"
-    },
-    {
-      "scale" : "3x",
-      "platform" : "ios",
-      "idiom" : "universal",
       "size" : "38x38",
-      "filename" : "icon-38@3x.png"
+      "platform" : "ios",
+      "filename" : "icon-38@2x.png"
     },
     {
+      "platform" : "ios",
+      "size" : "38x38",
+      "filename" : "icon-38@3x.png",
+      "idiom" : "universal",
+      "scale" : "3x"
+    },
+    {
+      "filename" : "icon-40@2x.png",
       "size" : "40x40",
       "idiom" : "universal",
-      "platform" : "ios",
-      "filename" : "icon-40@2x.png",
-      "scale" : "2x"
+      "scale" : "2x",
+      "platform" : "ios"
     },
     {
       "scale" : "3x",
       "filename" : "icon-40@3x.png",
-      "platform" : "ios",
       "idiom" : "universal",
+      "platform" : "ios",
       "size" : "40x40"
     },
     {
-      "scale" : "2x",
       "filename" : "icon-60@2x.png",
-      "platform" : "ios",
       "size" : "60x60",
-      "idiom" : "universal"
+      "scale" : "2x",
+      "idiom" : "universal",
+      "platform" : "ios"
     },
     {
-      "scale" : "3x",
-      "filename" : "icon-60@3x.png",
-      "size" : "60x60",
-      "platform" : "ios",
-      "idiom" : "universal"
-    },
-    {
-      "size" : "64x64",
       "idiom" : "universal",
       "platform" : "ios",
+      "scale" : "3x",
+      "filename" : "icon-60@3x.png",
+      "size" : "60x60"
+    },
+    {
+      "platform" : "ios",
       "scale" : "2x",
+      "idiom" : "universal",
+      "size" : "64x64",
       "filename" : "icon-64@2x.png"
     },
     {
       "scale" : "3x",
-      "filename" : "icon-64@3x.png",
-      "size" : "64x64",
       "idiom" : "universal",
-      "platform" : "ios"
+      "platform" : "ios",
+      "size" : "64x64",
+      "filename" : "icon-64@3x.png"
     },
     {
+      "filename" : "icon-68@2x.png",
       "size" : "68x68",
       "platform" : "ios",
-      "filename" : "icon-68@2x.png",
-      "scale" : "2x",
-      "idiom" : "universal"
-    },
-    {
-      "scale" : "2x",
       "idiom" : "universal",
-      "platform" : "ios",
-      "size" : "76x76",
-      "filename" : "icon-76@2x.png"
-    },
-    {
-      "filename" : "icon-83_5@2x.png",
-      "platform" : "ios",
-      "idiom" : "universal",
-      "size" : "83.5x83.5",
       "scale" : "2x"
     },
     {
-      "filename" : "ios-marketing.png",
       "idiom" : "universal",
-      "size" : "1024x1024",
+      "scale" : "2x",
+      "filename" : "icon-76@2x.png",
+      "size" : "76x76",
       "platform" : "ios"
+    },
+    {
+      "scale" : "2x",
+      "size" : "83.5x83.5",
+      "platform" : "ios",
+      "filename" : "icon-83_5@2x.png",
+      "idiom" : "universal"
+    },
+    {
+      "filename" : "ios-marketing.png",
+      "platform" : "ios",
+      "size" : "1024x1024",
+      "idiom" : "universal"
     }
-  ],
-  "info" : {
-    "author" : "xcode",
-    "version" : 1
-  }
+  ]
 }
