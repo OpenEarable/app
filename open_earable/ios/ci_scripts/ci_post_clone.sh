@@ -18,6 +18,7 @@ echo "🟩 Flutter Precache"
 time flutter precache --ios
 
 echo "🟩 Install Flutter Dependencies"
+cd open_earable
 echo $(pwd)
 echo "$(ls -la)"
 time flutter clean
