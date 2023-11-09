@@ -16,7 +16,7 @@ echo "🟩 Flutter Precache"
 time flutter precache --ios
 
 echo "🟩 Install Flutter Dependencies"
-time flutter flutter clean
+time flutter clean
 time flutter pub get
 
 echo "🟩 Install CocoaPods via Homebrew"
