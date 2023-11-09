@@ -16,6 +16,7 @@ echo "🟩 Flutter Precache"
 time flutter precache --ios
 
 echo "🟩 Install Flutter Dependencies"
+echo $(pwd)
 time flutter clean
 time flutter pub get
 
