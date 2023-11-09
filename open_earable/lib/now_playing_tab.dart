@@ -143,29 +143,11 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
   }
 
   void pauseButtonPressed() {
-    switch (_selectedRadio) {
-      case 0:
-        pauseWAV();
-        break;
-      case 1:
-        stopJingle();
-        break;
-      case 2:
-        stopFrequencySound();
-    }
+    _openEarable.audioPlayer.setState(AudioPlayerState.pause);
   }
 
   void stopButtonPressed() {
-    switch (_selectedRadio) {
-      case 0:
-        stopWAV();
-        break;
-      case 1:
-        stopJingle();
-        break;
-      case 2:
-        stopFrequencySound();
-    }
+    _openEarable.audioPlayer.setState(AudioPlayerState.stop);
   }
 
   void resetButtonPressed() {
@@ -173,17 +155,17 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
   }
 
   void playJingle() {
-    _openEarable.audioPlayer.setJingleState(AudioPlayerState.start,
-        name: _jingleTextController.text);
+    _openEarable.audioPlayer.jingle(getKeyFromValue(_jingleTextController.text, jingleMap));
+    _openEarable.audioPlayer.setState(AudioPlayerState.start);
   }
 
   void playWAV() {
-    _openEarable.audioPlayer.setWavState(AudioPlayerState.start,
-        name: _filenameTextController.text);
+    _openEarable.audioPlayer.wavFile(_filenameTextController.text);
+    _openEarable.audioPlayer.setState(AudioPlayerState.start);
   }
 
   void stopJingle() {
-    _openEarable.audioPlayer.setJingleState(AudioPlayerState.stop);
+    _openEarable.audioPlayer.setState(AudioPlayerState.stop);
   }
 
   void setLEDColor() {
@@ -192,26 +174,13 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
         r: _selectedColor.red, g: _selectedColor.green, b: _selectedColor.blue);
   }
 
-  void pauseWAV() {
-    _openEarable.audioPlayer.setWavState(AudioPlayerState.pause);
-  }
-
-  void stopWAV() {
-    _openEarable.audioPlayer.setWavState(AudioPlayerState.stop);
-  }
-
   void playFrequencySound() {
-    double frequency =
-        double.tryParse(_audioFrequencyTextController.text) ?? 100.0;
-    int waveForm =
-        getKeyFromValue(_audioWaveFormTextController.text, waveFormMap);
-    _openEarable.audioPlayer.setFrequencyState(AudioPlayerState.start,
-        frequency: frequency, waveForm: waveForm);
-  }
+    double frequency = double.tryParse(_audioFrequencyTextController.text) ?? 100.0;
+    int waveForm = getKeyFromValue(_audioWaveFormTextController.text, waveFormMap);
+    double loudness = (double.tryParse(_audioPercentageTextController.text) ?? 100.0) / 100.0;
 
-  void stopFrequencySound() {
-    _openEarable.audioPlayer
-        .setFrequencyState(AudioPlayerState.stop, frequency: 0.0, waveForm: 0);
+    _openEarable.audioPlayer.frequency(waveForm, frequency, loudness);
+    _openEarable.audioPlayer.setState(AudioPlayerState.start);
   }
 
   void turnLEDoff() {
