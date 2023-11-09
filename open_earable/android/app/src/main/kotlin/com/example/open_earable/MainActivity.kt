@@ -1,4 +1,4 @@
-package com.example.open_earable
+package edu.kit.teco.openEarable
 
 import io.flutter.embedding.android.FlutterActivity
 
