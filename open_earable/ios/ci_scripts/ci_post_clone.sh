@@ -7,6 +7,8 @@ set -e
 # CI_WORKSPACE is the directory of your cloned repo
 echo "🟩 Navigate from ($PWD) to ($CI_WORKSPACE)"
 cd $CI_WORKSPACE
+echo $(pwd)
+echo "$(ls -la)"
 
 echo "🟩 Install Flutter"
 time git clone https://github.com/flutter/flutter.git -b stable $HOME/flutter
@@ -17,6 +19,7 @@ time flutter precache --ios
 
 echo "🟩 Install Flutter Dependencies"
 echo $(pwd)
+echo "$(ls -la)"
 time flutter clean
 time flutter pub get
 
