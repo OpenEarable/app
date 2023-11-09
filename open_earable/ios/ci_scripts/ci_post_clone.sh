@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Fail this script if any subcommand fails.
+set -e
+
 # by default, the execution directory of this script is the ci_scripts directory
 # CI_WORKSPACE is the directory of your cloned repo
 echo "🟩 Navigate from ($PWD) to ($CI_WORKSPACE)"
@@ -20,5 +23,8 @@ time HOMEBREW_NO_AUTO_UPDATE=1 brew install cocoapods
 
 echo "🟩 Install CocoaPods dependencies..."
 time cd ios && pod install
+
+echo "🟩 build iOS"
+flutter build ios --no-codesign
 
 exit 0
