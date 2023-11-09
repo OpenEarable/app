@@ -47,7 +47,8 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
   TextEditingController _imuTextController = TextEditingController(text: "0");
   TextEditingController _barometerTextController =
       TextEditingController(text: "0");
-  List<String> microphoneOptions = [
+  List<String> _microphoneOptions = [
+    "0",
     "16000",
     "20000",
     "25000",
@@ -58,7 +59,10 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
     "50000",
     "62500"
   ];
-  late String selectedMicrophoneOption; // Initialize with the first option
+  List<String> _imuAndBarometerOptions = ["0", "10", "20", "30"];
+  late String selectedMicrophoneOption;
+  late String selectedImuOption;
+  late String selectedBarometerOption;
   TextEditingController _filenameTextController =
       TextEditingController(text: "filename.wav");
   TextEditingController _jingleTextController =
@@ -77,9 +81,9 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
   bool earableCharging = false;
   String earableFirmware = "0.0.0";
   int _selectedRadio = 0;
-  bool _imuSettingSelected = true;
-  bool _barometerSettingSelected = true;
-  bool _microphoneSettingSelected = true;
+  bool _imuSettingSelected = false;
+  bool _barometerSettingSelected = false;
+  bool _microphoneSettingSelected = false;
 
   Timer? rainbowTimer;
   late bool rainbowModeActive;
@@ -104,7 +108,9 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
       });
     });
     setState(() {
-      selectedMicrophoneOption = microphoneOptions[0];
+      selectedMicrophoneOption = _microphoneOptions[0];
+      selectedImuOption = _imuAndBarometerOptions[0];
+      selectedBarometerOption = _imuAndBarometerOptions[0];
       connected = _openEarable.bleManager.connected;
 
       if (connected) {
@@ -155,7 +161,8 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
   }
 
   void playJingle() {
-    _openEarable.audioPlayer.jingle(getKeyFromValue(_jingleTextController.text, jingleMap));
+    _openEarable.audioPlayer
+        .jingle(getKeyFromValue(_jingleTextController.text, jingleMap));
     _openEarable.audioPlayer.setState(AudioPlayerState.start);
   }
 
@@ -175,9 +182,12 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
   }
 
   void playFrequencySound() {
-    double frequency = double.tryParse(_audioFrequencyTextController.text) ?? 100.0;
-    int waveForm = getKeyFromValue(_audioWaveFormTextController.text, waveFormMap);
-    double loudness = (double.tryParse(_audioPercentageTextController.text) ?? 100.0) / 100.0;
+    double frequency =
+        double.tryParse(_audioFrequencyTextController.text) ?? 100.0;
+    int waveForm =
+        getKeyFromValue(_audioWaveFormTextController.text, waveFormMap);
+    double loudness =
+        (double.tryParse(_audioPercentageTextController.text) ?? 100.0) / 100.0;
 
     _openEarable.audioPlayer.frequency(waveForm, frequency, loudness);
     _openEarable.audioPlayer.setState(AudioPlayerState.start);
@@ -386,15 +396,20 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
     );
   }
 
-  Widget microphoneSettingRow(
-      String sensorName, bool boolean, Function(bool?) onValueChanged) {
+  Widget sensorSettingRow(
+      String sensorName,
+      List<String> options,
+      bool settingSelected,
+      String currentValue,
+      Function(bool?) changeBool,
+      Function(String) changeSelection) {
     return Row(
       children: [
         Checkbox(
           checkColor: Theme.of(context).colorScheme.primary,
           fillColor: MaterialStateProperty.resolveWith(_getCheckboxColor),
-          value: boolean,
-          onChanged: onValueChanged,
+          value: settingSelected,
+          onChanged: changeBool,
         ),
         Text(sensorName),
         Spacer(),
@@ -412,13 +427,19 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                       dropdownColor:
                           connected ? Colors.white : Colors.grey[200],
                       alignment: Alignment.centerRight,
-                      value: selectedMicrophoneOption,
+                      value: currentValue,
                       onChanged: (String? newValue) {
                         setState(() {
-                          selectedMicrophoneOption = newValue!;
+                          print(newValue!);
+                          changeSelection(newValue!);
+                          if (int.parse(newValue) != 0) {
+                            changeBool(true);
+                          } else {
+                            changeBool(false);
+                          }
                         });
                       },
-                      items: microphoneOptions.map((String value) {
+                      items: options.map((String value) {
                         return DropdownMenuItem<String>(
                           alignment: Alignment.centerRight,
                           value: value,
@@ -437,53 +458,6 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                         color: connected ? Colors.black : Colors.grey,
                       ),
                     )))),
-        SizedBox(width: 8),
-        Text("Hz"),
-      ],
-    );
-  }
-
-  Widget sensorSettingRow(
-    String sensorName,
-    TextEditingController controller,
-    bool boolean,
-    Function(bool?) onValueChanged,
-  ) {
-    return Row(
-      children: [
-        Checkbox(
-          checkColor: Theme.of(context).colorScheme.primary,
-          fillColor: MaterialStateProperty.resolveWith(_getCheckboxColor),
-          value: boolean,
-          onChanged: onValueChanged,
-        ),
-        Text(sensorName),
-        Spacer(),
-        SizedBox(
-          height: 37,
-          width: 100,
-          child: TextField(
-            keyboardType: TextInputType.number,
-            controller: controller,
-            obscureText: false,
-            enabled: connected,
-            textAlign: TextAlign.right,
-            style: TextStyle(
-              color: connected ? Colors.black : Colors.grey,
-            ),
-            decoration: InputDecoration(
-              contentPadding: EdgeInsets.all(10),
-              border: OutlineInputBorder(),
-              floatingLabelBehavior: FloatingLabelBehavior.never,
-              labelText: '0',
-              labelStyle: TextStyle(
-                color: connected ? Colors.black : Colors.grey,
-              ),
-              filled: true,
-              fillColor: connected ? Colors.white : Colors.grey[200],
-            ),
-          ),
-        ),
         SizedBox(width: 8),
         Text("Hz"),
       ],
@@ -645,32 +619,42 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                             ),
                           ),
                           sensorSettingRow(
-                              "IMU", _imuTextController, _imuSettingSelected,
-                              (bool? newValue) {
+                              "IMU",
+                              _imuAndBarometerOptions,
+                              _imuSettingSelected,
+                              selectedImuOption, (bool? newValue) {
                             if (newValue != null) {
                               setState(() {
                                 _imuSettingSelected = newValue;
                               });
                             }
+                          }, (String newValue) {
+                            print("new Value: $newValue");
+                            selectedImuOption = newValue;
                           }),
                           sensorSettingRow(
                               "Barometer",
-                              _barometerTextController,
-                              _barometerSettingSelected, (bool? newValue) {
+                              _imuAndBarometerOptions,
+                              _barometerSettingSelected,
+                              selectedBarometerOption, (bool? newValue) {
                             if (newValue != null) {
                               setState(() {
                                 _barometerSettingSelected = newValue;
                               });
                             }
+                          }, (String newValue) {
+                            selectedBarometerOption = newValue;
                           }),
-                          microphoneSettingRow(
-                              "Microphone", _microphoneSettingSelected,
-                              (bool? newValue) {
-                            if (newValue != null) {
-                              setState(() {
-                                _microphoneSettingSelected = newValue;
-                              });
-                            }
+                          sensorSettingRow(
+                              "Microphone",
+                              _microphoneOptions,
+                              _microphoneSettingSelected,
+                              selectedMicrophoneOption, (bool? newValue) {
+                            setState(() {
+                              _microphoneSettingSelected = newValue!;
+                            });
+                          }, (String newValue) {
+                            selectedMicrophoneOption = newValue;
                           }),
                           SizedBox(height: 8),
                           Row(
