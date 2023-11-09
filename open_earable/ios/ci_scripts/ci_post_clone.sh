@@ -16,15 +16,16 @@ echo "🟩 Flutter Precache"
 time flutter precache --ios
 
 echo "🟩 Install Flutter Dependencies"
+time flutter flutter clean
 time flutter pub get
 
 echo "🟩 Install CocoaPods via Homebrew"
 time HOMEBREW_NO_AUTO_UPDATE=1 brew install cocoapods
 
+echo "🟩 build iOS"
+flutter build ios --release --no-codesign
+
 echo "🟩 Install CocoaPods dependencies..."
 time cd ios && pod install
-
-echo "🟩 build iOS"
-flutter build ios --no-codesign
 
 exit 0
