@@ -588,7 +588,7 @@ packages:
     description:
       path: "."
       ref: main
-      resolved-ref: "468da6efb78ef7a8bedbec6c82eae97cebbf7e0d"
+      resolved-ref: "9a6498064b1d37fae0def9955a47923e348f2ddd"
       url: "https://github.com/ilteen/three_dart"
     source: git
     version: "0.0.16"
