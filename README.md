@@ -14,7 +14,16 @@
 
 ## Introduction
 
-This App is designed to control the OpenEarable device and work as an example project.
+This App is designed to control the OpenEarable device and work as an example project. It is written in [Flutter](https://flutter.dev/) and can be compiled for Android and iOS.
+
+<div style="overflow-x: scroll;">
+    <div style="display: flex; flex-direction: row;">
+        <img width="400" style="margin-right: 10px;" src="screenshots/iOS Home Screenshot.jpg">
+        <img width="400" style="margin-right: 10px;" src="screenshots/iOS Scan Screenshot.jpg">
+        <img width="400" style="margin-right: 10px;" src="screenshots/iOS Sensors Screenshot.jpg">
+        <img width="400" src="screenshots/iOS Apps Screenshot.jpg">
+    </div>
+</div>
 
 ## Features
 - Connect to OpenEarable device
