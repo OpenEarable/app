@@ -44,7 +44,6 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
   _ActuatorsTabState(this._openEarable);
   Color _selectedColor = Colors.deepPurple;
 
-  TextEditingController _imuTextController = TextEditingController(text: "0");
   TextEditingController _barometerTextController =
       TextEditingController(text: "0");
   List<String> _microphoneOptions = [
@@ -68,7 +67,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
   TextEditingController _jingleTextController =
       TextEditingController(text: jingleMap[1]);
   TextEditingController _audioFrequencyTextController =
-      TextEditingController(text: "100");
+      TextEditingController(text: "440");
   TextEditingController _audioPercentageTextController =
       TextEditingController(text: "50");
   TextEditingController _audioWaveFormTextController =
@@ -183,7 +182,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
 
   void playFrequencySound() {
     double frequency =
-        double.tryParse(_audioFrequencyTextController.text) ?? 100.0;
+        double.tryParse(_audioFrequencyTextController.text) ?? 440.0;
     int waveForm =
         getKeyFromValue(_audioWaveFormTextController.text, waveFormMap);
     double loudness =
@@ -430,7 +429,6 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                       value: currentValue,
                       onChanged: (String? newValue) {
                         setState(() {
-                          print(newValue!);
                           changeSelection(newValue!);
                           if (int.parse(newValue) != 0) {
                             changeBool(true);
@@ -465,13 +463,8 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
   }
 
   Future<void> writeSensorConfigs() async {
-    String imuText =
-        (_imuTextController.text == "") ? "0" : _imuTextController.text;
-    String barometerText = (_barometerTextController.text == "")
-        ? "0"
-        : _barometerTextController.text;
-    double? imuSamplingRate = double.tryParse(imuText);
-    double? barometerSamplingRate = double.tryParse(barometerText);
+    double? imuSamplingRate = double.tryParse(selectedImuOption);
+    double? barometerSamplingRate = double.tryParse(selectedBarometerOption);
     double? microphoneSamplingRate = double.tryParse(selectedMicrophoneOption);
     if (imuSamplingRate == null ||
         barometerSamplingRate == null ||
@@ -629,7 +622,6 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                               });
                             }
                           }, (String newValue) {
-                            print("new Value: $newValue");
                             selectedImuOption = newValue;
                           }),
                           sensorSettingRow(
@@ -816,7 +808,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                                       floatingLabelBehavior:
                                           FloatingLabelBehavior.never,
                                       border: OutlineInputBorder(),
-                                      labelText: '100',
+                                      labelText: '440',
                                       filled: true,
                                       labelStyle: TextStyle(
                                           color: connected
