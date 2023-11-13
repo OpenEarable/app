@@ -13,15 +13,14 @@ class Recorder extends StatefulWidget {
 }
 
 class _RecorderState extends State<Recorder> {
-  List<Directory> _recordingFolders = [];
+  List<File> _recordings = [];
   final OpenEarable _openEarable;
   bool _recording = false;
   StreamSubscription? _imuSubscription;
   StreamSubscription? _barometerSubscription;
   _RecorderState(this._openEarable);
-  CsvWriter? _imuCsvWriter;
-  CsvWriter? _barometerCsvWriter;
-  List<String> _imuHeader = [
+  CsvWriter? _csvWriter;
+  List<String> _csvHeader = [
     "time",
     "sensor_accX[m/s]",
     "sensor_accY[m/s]",
@@ -32,12 +31,9 @@ class _RecorderState extends State<Recorder> {
     "sensor_magX[µT]",
     "sensor_magY[µT]",
     "sensor_magZ[µT]",
-    "yaw[°]",
-    "pitch[°]",
-    "roll[°]"
-  ];
-  List<String> _barometerHeader = [
-    "time",
+    "sensor_yaw[°]",
+    "sensor_pitch[°]",
+    "sensor_roll[°]",
     "sensor_baro[kPa]",
     "sensor_temp[°C]",
   ];
@@ -48,7 +44,7 @@ class _RecorderState extends State<Recorder> {
     if (_openEarable.bleManager.connected) {
       _setupListeners();
     }
-    listSubfoldersInDocumentsDirectory();
+    listFilesInDocumentsDirectory();
   }
 
   @override
@@ -58,16 +54,18 @@ class _RecorderState extends State<Recorder> {
     _barometerSubscription?.cancel();
   }
 
-  Future<void> listSubfoldersInDocumentsDirectory() async {
+  Future<void> listFilesInDocumentsDirectory() async {
     Directory documentsDirectory = await getApplicationDocumentsDirectory();
-    List<FileSystemEntity> subfolders = documentsDirectory.listSync();
-    _recordingFolders.clear();
-    for (var subfolder in subfolders) {
-      if (subfolder is Directory) {
-        _recordingFolders.add(subfolder);
+    List<FileSystemEntity> files = documentsDirectory.listSync();
+    print("Files are:");
+    print(files);
+    _recordings.clear();
+    for (var file in files) {
+      if (file is File) {
+        _recordings.add(file);
       }
     }
-    _recordingFolders.sort((a, b) {
+    _recordings.sort((a, b) {
       return b.statSync().changed.compareTo(a.statSync().changed);
     });
 
@@ -111,9 +109,11 @@ class _RecorderState extends State<Recorder> {
         mz,
         eulerYaw,
         eulerPitch,
-        eulerRoll
+        eulerRoll,
+        "",
+        "",
       ];
-      _imuCsvWriter?.addData(imuRow);
+      _csvWriter?.addData(imuRow);
     });
 
     _barometerSubscription =
@@ -125,8 +125,24 @@ class _RecorderState extends State<Recorder> {
       String pressure = data["BARO"]["Pressure"].toString();
       String temperature = data["TEMP"]["Temperature"].toString();
 
-      List<String> barometerRow = [timestamp, pressure, temperature];
-      _barometerCsvWriter?.addData(barometerRow);
+      List<String> barometerRow = [
+        timestamp,
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        pressure,
+        temperature
+      ];
+      _csvWriter?.addData(barometerRow);
     });
   }
 
@@ -135,33 +151,27 @@ class _RecorderState extends State<Recorder> {
       setState(() {
         _recording = false;
       });
-      _imuCsvWriter?.cancelTimer();
-      _barometerCsvWriter?.cancelTimer();
+      _csvWriter?.cancelTimer();
     } else {
-      DateTime startTime = DateTime.now();
-      _imuCsvWriter =
-          CsvWriter("imu", startTime, listSubfoldersInDocumentsDirectory);
-      _imuCsvWriter?.addData(_imuHeader);
-      _barometerCsvWriter =
-          CsvWriter("baro", startTime, listSubfoldersInDocumentsDirectory);
-      _barometerCsvWriter?.addData(_barometerHeader);
+      _csvWriter = CsvWriter(listFilesInDocumentsDirectory);
+      _csvWriter?.addData(_csvHeader);
       setState(() {
         _recording = true;
       });
     }
   }
 
-  void deleteFolder(Directory folder) {
-    if (folder.existsSync()) {
+  void deleteFile(File file) {
+    if (file.existsSync()) {
       try {
-        folder.deleteSync(recursive: true);
+        file.deleteSync();
       } catch (e) {
-        print('Error deleting folder: $e');
+        print('Error deleting file: $e');
       }
     } else {
-      print('Folder does not exist.');
+      print('File does not exist.');
     }
-    listSubfoldersInDocumentsDirectory();
+    listFilesInDocumentsDirectory();
   }
 
   @override
@@ -196,23 +206,31 @@ class _RecorderState extends State<Recorder> {
             Text("Recordings", style: TextStyle(fontSize: 20.0)),
             Expanded(
               child: ListView.builder(
-                itemCount: _recordingFolders.length,
+                itemCount: _recordings.length,
                 itemBuilder: (context, index) {
                   return ListTile(
                     title: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(_recordingFolders[index].path.split("/").last),
+                        Expanded(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              _recordings[index].path.split("/").last,
+                              maxLines: 1,
+                            ),
+                          ),
+                        ),
                         IconButton(
                           icon: Icon(Icons.delete),
                           onPressed: () {
-                            deleteFolder(_recordingFolders[index]);
+                            deleteFile(_recordings[index]);
                           },
                         ),
                       ],
                     ),
                     onTap: () {
-                      OpenFile.open(_recordingFolders[index].path);
+                      OpenFile.open(_recordings[index].path);
                     },
                   );
                 },
@@ -230,15 +248,14 @@ class CsvWriter {
   File? file;
   late Timer _timer;
 
-  CsvWriter(String prefix, DateTime startTime,
-      void Function() folderCreationClosure) {
+  CsvWriter(void Function() fileCreationClosure) {
     if (file == null) {
-      _openFile(prefix, startTime, folderCreationClosure);
+      _openFile(fileCreationClosure);
     }
     _timer = Timer.periodic(Duration(milliseconds: 250), (Timer timer) {
       if (buffer.isNotEmpty) {
         if (file == null) {
-          _openFile(prefix, startTime, folderCreationClosure);
+          _openFile(fileCreationClosure);
         }
         writeBufferToFile();
       }
@@ -253,23 +270,17 @@ class CsvWriter {
     buffer.add(data);
   }
 
-  Future<void> _openFile(String prefix, DateTime startTime,
-      void Function() folderCreationClosure) async {
+  Future<void> _openFile(void Function() fileCreationClosure) async {
+    DateTime startTime = DateTime.now();
     String formattedDate =
         startTime.toUtc().toIso8601String().replaceAll(':', '_');
     formattedDate = "${formattedDate.substring(0, formattedDate.length - 4)}Z";
-    String fileName = '${prefix}_recording_$formattedDate';
+    String fileName = 'recording_$formattedDate';
     String directory = (await getApplicationDocumentsDirectory()).path;
-    String folderPath = '$directory/$formattedDate';
-    String filePath = '$folderPath/$fileName.csv';
-
-    Directory folder = Directory(folderPath);
-    if (!await folder.exists()) {
-      await folder.create(recursive: true);
-      folderCreationClosure();
-    }
-
+    String filePath = '$directory/$fileName.csv';
     file = File(filePath);
+    await file?.create();
+    fileCreationClosure();
   }
 
   void writeBufferToFile() async {
