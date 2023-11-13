@@ -570,6 +570,9 @@ class _SensorDataTabState extends State<SensorDataTab>
     _yaw = yaw;
     _pitch = pitch;
     _roll = roll - pi / 2;
+    _yaw = yaw;
+    _pitch = pitch;
+    _roll = -roll;
     if (_sceneInitialized && three3dRender.isInitialized) {
       render();
     }
