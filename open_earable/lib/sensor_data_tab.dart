@@ -482,7 +482,6 @@ class _SensorDataTabState extends State<SensorDataTab>
       children: [
         Padding(
           padding: const EdgeInsets.all(8.0),
-          // child: Text(title, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
         ),
         Expanded(
           child: charts.LineChart(
@@ -529,9 +528,6 @@ class _SensorDataTabState extends State<SensorDataTab>
 
   // Platform messages are asynchronous, so we initialize in an async method.
   Future<void> initPlatformState() async {
-    //width = screenSize!.width;
-    //height = screenSize!.height;
-
     Map<String, dynamic> options = {
       "antialias": true,
       "alpha": false,
@@ -567,29 +563,17 @@ class _SensorDataTabState extends State<SensorDataTab>
     required double pitch,
     required double roll,
   }) {
-    _yaw = yaw;
-    _pitch = pitch;
-    _roll = roll - pi / 2;
-    _yaw = yaw;
-    _pitch = pitch;
-    _roll = -roll;
+    // Signs and order of RPY angles need to be swapped to display correctly
+    _euler.x = roll;
+    _euler.y = -yaw;
+    _euler.z = -pitch;
     if (_sceneInitialized && three3dRender.isInitialized) {
       render();
     }
   }
 
   render() {
-    _euler.x = _roll;
-    _euler.y = _yaw;
-    _euler.z = _pitch;
-    _euler.order = "YZX";
-    //object.rotation = _euler;
-    //object.quaternion = three.Quaternion(0, 1, 0, 0);
     object.setRotationFromEuler(_euler);
-    //object.setRotationFromAxisAngle(axis, angle)
-    //object.rotateY(_yaw);
-    //object.rotateZ(_pitch);
-    //object.rotateX(_roll);
 
     int t = DateTime.now().millisecondsSinceEpoch;
 
@@ -653,7 +637,7 @@ class _SensorDataTabState extends State<SensorDataTab>
     camera.position.x = 50;
     camera.position.y = 50;
     camera.lookAt(three.Vector3(0, 0, 0));
-
+    _euler.order = "YZX";
     // scene
 
     scene = three.Scene();
