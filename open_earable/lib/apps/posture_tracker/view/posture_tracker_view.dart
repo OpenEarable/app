@@ -100,13 +100,13 @@ class _PostureTrackerViewState extends State<PostureTrackerView> {
         "assets/posture_tracker/Head_Front.png",
         "assets/posture_tracker/Neck_Front.png",
         Alignment.center.add(Alignment(0, 0.3)),
-        postureTrackerViewModel.attitude.roll
+        -postureTrackerViewModel.attitude.roll
       ),
       this._buildHeadView(
         "assets/posture_tracker/Head_Side.png",
         "assets/posture_tracker/Neck_Side.png",
         Alignment.center.add(Alignment(0, 0.3)),
-        postureTrackerViewModel.attitude.yaw
+        -postureTrackerViewModel.attitude.pitch
       ),
     ];
   }
