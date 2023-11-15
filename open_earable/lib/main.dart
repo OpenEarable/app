@@ -98,7 +98,7 @@ class _MyHomePageState extends State<MyHomePage> {
             label: 'Controls',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.sensors),
+            icon: Icon(Icons.monitor_heart_outlined),
             label: 'Sensor Data',
           ),
           BottomNavigationBarItem(
