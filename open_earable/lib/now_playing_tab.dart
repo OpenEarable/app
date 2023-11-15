@@ -119,6 +119,26 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
     });
   }
 
+  void showAlert(String title, String message, String dismissButtonText) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text(dismissButtonText),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void getNameAndSOC() {
     String? name = _openEarable.bleManager.connectedDevice?.name;
     earableDeviceName = name ?? "";
@@ -135,16 +155,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
   }
 
   void playButtonPressed() {
-    switch (_selectedRadio) {
-      case 0:
-        playWAV();
-        break;
-      case 1:
-        playJingle();
-        break;
-      case 2:
-        playFrequencySound();
-    }
+    _openEarable.audioPlayer.setState(AudioPlayerState.start);
   }
 
   void pauseButtonPressed() {
@@ -155,32 +166,40 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
     _openEarable.audioPlayer.setState(AudioPlayerState.stop);
   }
 
-  void resetButtonPressed() {
-    stopButtonPressed();
+  void setSourceButtonPressed() {
+    switch (_selectedRadio) {
+      case 0:
+        setWAV();
+        break;
+      case 1:
+        setJingle();
+        break;
+      case 2:
+        setFrequencySound();
+    }
   }
 
-  void playJingle() {
-    _openEarable.audioPlayer
-        .jingle(getKeyFromValue(_jingleTextController.text, jingleMap));
-    _openEarable.audioPlayer.setState(AudioPlayerState.start);
+  void setJingle() {
+    String jingle = _jingleTextController.text;
+    print("Setting source to jingle '" + jingle + "'");
+    _openEarable.audioPlayer.jingle(getKeyFromValue(jingle, jingleMap));
   }
 
-  void playWAV() {
+  void setWAV() {
+    String fileName = _filenameTextController.text;
+
+    if (fileName == "") {
+      showAlert("Empty file name", "WAV file name is empty!", "Dismiss");
+      return;
+    } else if (!fileName.endsWith('.wav')) {
+      showAlert("Missing '.wav' ending", "WAV file name is missing the '.wav' ending!", "Dismiss");
+      return;
+    }
+    print("Setting source to wav file with file name '" + fileName + "'");
     _openEarable.audioPlayer.wavFile(_filenameTextController.text);
-    _openEarable.audioPlayer.setState(AudioPlayerState.start);
   }
 
-  void stopJingle() {
-    _openEarable.audioPlayer.setState(AudioPlayerState.stop);
-  }
-
-  void setLEDColor() {
-    stopRainbowMode();
-    _openEarable.rgbLed.writeLedColor(
-        r: _selectedColor.red, g: _selectedColor.green, b: _selectedColor.blue);
-  }
-
-  void playFrequencySound() {
+  void setFrequencySound() {
     double frequency =
         double.tryParse(_audioFrequencyTextController.text) ?? 440.0;
     int waveForm =
@@ -188,8 +207,19 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
     double loudness =
         (double.tryParse(_audioPercentageTextController.text) ?? 100.0) / 100.0;
 
+    if ((frequency < 0 || frequency > 30000) || (loudness < 0 || loudness > 100)) {
+      showAlert("Invalid value(s)", "Invalid frequency range or loudness!", "Dismiss");
+      return;
+    }
+
+    print("Setting source with frequency value " + frequency.toString() + "' Hz, wave type '" + waveForm.toString() + "', and loudness '" + loudness.toString() + "'.");
     _openEarable.audioPlayer.frequency(waveForm, frequency, loudness);
-    _openEarable.audioPlayer.setState(AudioPlayerState.start);
+  }
+
+  void setLEDColor() {
+    stopRainbowMode();
+    _openEarable.rgbLed.writeLedColor(
+        r: _selectedColor.red, g: _selectedColor.green, b: _selectedColor.blue);
   }
 
   void turnLEDoff() {
@@ -721,7 +751,6 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                                       border: OutlineInputBorder(),
                                       floatingLabelBehavior:
                                           FloatingLabelBehavior.never,
-                                      labelText: 'filename.wav',
                                       labelStyle: TextStyle(
                                           color: connected
                                               ? Colors.black
@@ -916,6 +945,18 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                             mainAxisAlignment: MainAxisAlignment
                                 .spaceBetween, // Align buttons to the space between
                             children: [
+                              SizedBox(
+                                width: 120,
+                                child: ElevatedButton(
+                                  onPressed:
+                                      connected ? setSourceButtonPressed : null,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Color(0xff53515b),
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  child: Text('Set Source'),
+                                ),
+                              ),
                               ElevatedButton(
                                 onPressed: connected ? playButtonPressed : null,
                                 style: ElevatedButton.styleFrom(
@@ -940,18 +981,6 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                                   foregroundColor: Colors.black,
                                 ),
                                 child: Icon(Icons.stop_outlined),
-                              ),
-                              SizedBox(
-                                width: 100,
-                                child: ElevatedButton(
-                                  onPressed:
-                                      connected ? resetButtonPressed : null,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Color(0xff53515b),
-                                    foregroundColor: Colors.white,
-                                  ),
-                                  child: Text('Reset'),
-                                ),
                               ),
                             ],
                           ),
