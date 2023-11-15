@@ -1,6 +1,7 @@
 import "package:flutter/material.dart";
 import "package:open_earable/apps/posture_tracker/model/attitude.dart";
 import 'package:open_earable/apps/posture_tracker/model/attitude_tracker.dart';
+import "package:open_earable/apps/posture_tracker/model/bad_posture_reminder.dart";
 
 class PostureTrackerViewModel extends ChangeNotifier {
   Attitude _attitude = Attitude();
@@ -9,9 +10,12 @@ class PostureTrackerViewModel extends ChangeNotifier {
   bool get isTracking => _attitudeTracker.isTracking;
   bool get isAvailable => _attitudeTracker.isAvailable;
 
-  AttitudeTracker _attitudeTracker;
+  BadPostureSettings get badPostureSettings => _badPostureReminder.settings;
 
-  PostureTrackerViewModel(this._attitudeTracker) {
+  AttitudeTracker _attitudeTracker;
+  BadPostureReminder _badPostureReminder;
+
+  PostureTrackerViewModel(this._attitudeTracker, this._badPostureReminder) {
     _attitudeTracker.didChangeAvailability = (_) {
       notifyListeners();
     };
@@ -28,6 +32,7 @@ class PostureTrackerViewModel extends ChangeNotifier {
 
   void startTracking() {
     _attitudeTracker.start();
+    _badPostureReminder.start();
     notifyListeners();
   }
 
@@ -38,6 +43,10 @@ class PostureTrackerViewModel extends ChangeNotifier {
 
   void calibrate() {
     _attitudeTracker.calibrateToCurrentAttitude();
+  }
+
+  void setBadPostureSettings(BadPostureSettings settings) {
+    _badPostureReminder.setSettings(settings);
   }
 
   @override

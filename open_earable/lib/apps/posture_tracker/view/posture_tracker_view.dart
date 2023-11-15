@@ -2,15 +2,20 @@
 
 import 'package:flutter/material.dart';
 import 'package:open_earable/apps/posture_tracker/model/attitude_tracker.dart';
+import 'package:open_earable/apps/posture_tracker/model/bad_posture_reminder.dart';
 import 'package:open_earable/apps/posture_tracker/view/posture_roll_view.dart';
 import 'package:open_earable/apps/posture_tracker/view/settings_view.dart';
 import 'package:open_earable/apps/posture_tracker/view_model/posture_tracker_view_model.dart';
 import 'package:provider/provider.dart';
 
+import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+
+
 class PostureTrackerView extends StatefulWidget {
   final AttitudeTracker _tracker;
+  final OpenEarable _openEarable;
 
-  PostureTrackerView(this._tracker);
+  PostureTrackerView(this._tracker, this._openEarable);
 
   @override
   State<PostureTrackerView> createState() => _PostureTrackerViewState();
@@ -22,7 +27,7 @@ class _PostureTrackerViewState extends State<PostureTrackerView> {
   @override
   void initState() {
     super.initState();
-    this._viewModel = PostureTrackerViewModel(widget._tracker);
+    this._viewModel = PostureTrackerViewModel(widget._tracker, BadPostureReminder(widget._openEarable, widget._tracker));
   }
 
   @override
