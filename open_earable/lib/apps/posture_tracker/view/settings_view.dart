@@ -59,101 +59,118 @@ class _SettingsViewState extends State<SettingsView> {
           color: Theme.of(context).colorScheme.primary,
           child: Column(
             children: [
-              ListTile(
-                title: Text("Roll Angle Threshold (in degrees)"),
-                trailing: SizedBox(
-                  height: 37.0,
-                  width: 52,
-                  child: TextField(
-                    controller: _rollAngleThresholdController,
-                    textAlign: TextAlign.end,
-                    style: TextStyle(color: Colors.black),
-                    decoration: InputDecoration(
-                      contentPadding: EdgeInsets.all(10),
-                      floatingLabelBehavior:
-                          FloatingLabelBehavior.never,
-                      border: OutlineInputBorder(),
-                      labelText: 'Roll',
-                      filled: true,
-                      labelStyle: TextStyle(color: Colors.black),
-                      fillColor: Colors.white
-                    ),
-                    keyboardType: TextInputType.number,
-                    onChanged: (_) { _updatePostureSettings(); },
-                  ),
-                ),
+              // add a switch to control the `isActive` property of the `BadPostureSettings`
+              SwitchListTile(
+                title: Text("Bad Posture Reminder"),
+                value: _viewModel.badPostureSettings.isActive,
+                onChanged: (value) {
+                  BadPostureSettings settings = _viewModel.badPostureSettings;
+                  settings.isActive = value;
+                  _viewModel.setBadPostureSettings(settings);
+                },
               ),
-              ListTile(
-                title: Text("Pitch Angle Threshold (in degrees)"),
-                trailing: SizedBox(
-                  height: 37.0,
-                  width: 52,
-                  child: TextField(
-                    controller: _pitchAngleThresholdController,
-                    textAlign: TextAlign.end,
-                    style: TextStyle(color: Colors.black),
-                    decoration: InputDecoration(
-                      contentPadding: EdgeInsets.all(10),
-                      floatingLabelBehavior:
-                          FloatingLabelBehavior.never,
-                      border: OutlineInputBorder(),
-                      labelText: 'Pitch',
-                      filled: true,
-                      labelStyle: TextStyle(color: Colors.black),
-                      fillColor: Colors.white
+              Visibility(
+                child: Column(
+                  children: [
+                    ListTile(
+                      title: Text("Roll Angle Threshold (in degrees)"),
+                      trailing: SizedBox(
+                        height: 37.0,
+                        width: 52,
+                        child: TextField(
+                          controller: _rollAngleThresholdController,
+                          textAlign: TextAlign.end,
+                          style: TextStyle(color: Colors.black),
+                          decoration: InputDecoration(
+                            contentPadding: EdgeInsets.all(10),
+                            floatingLabelBehavior:
+                                FloatingLabelBehavior.never,
+                            border: OutlineInputBorder(),
+                            labelText: 'Roll',
+                            filled: true,
+                            labelStyle: TextStyle(color: Colors.black),
+                            fillColor: Colors.white
+                          ),
+                          keyboardType: TextInputType.number,
+                          onChanged: (_) { _updatePostureSettings(); },
+                        ),
+                      ),
                     ),
-                    keyboardType: TextInputType.number,
-                    onChanged: (_) { _updatePostureSettings(); },
-                  ),
-                ),
-              ),
-              ListTile(
-                title: Text("Bad Posture Time Threshold (in seconds)"),
-                trailing: SizedBox(
-                  height: 37.0,
-                  width: 52,
-                  child: TextField(
-                    controller: _badPostureTimeThresholdController,
-                    textAlign: TextAlign.end,
-                    style: TextStyle(color: Colors.black),
-                    decoration: InputDecoration(
-                      contentPadding: EdgeInsets.all(10),
-                      floatingLabelBehavior:
-                          FloatingLabelBehavior.never,
-                      border: OutlineInputBorder(),
-                      labelText: 'Seconds',
-                      filled: true,
-                      labelStyle: TextStyle(color: Colors.black),
-                      fillColor: Colors.white
+                    ListTile(
+                      title: Text("Pitch Angle Threshold (in degrees)"),
+                      trailing: SizedBox(
+                        height: 37.0,
+                        width: 52,
+                        child: TextField(
+                          controller: _pitchAngleThresholdController,
+                          textAlign: TextAlign.end,
+                          style: TextStyle(color: Colors.black),
+                          decoration: InputDecoration(
+                            contentPadding: EdgeInsets.all(10),
+                            floatingLabelBehavior:
+                                FloatingLabelBehavior.never,
+                            border: OutlineInputBorder(),
+                            labelText: 'Pitch',
+                            filled: true,
+                            labelStyle: TextStyle(color: Colors.black),
+                            fillColor: Colors.white
+                          ),
+                          keyboardType: TextInputType.number,
+                          onChanged: (_) { _updatePostureSettings(); },
+                        ),
+                      ),
                     ),
-                    keyboardType: TextInputType.number,
-                    onChanged: (_) { _updatePostureSettings(); },
-                  ),
-                ),
-              ),
-              ListTile(
-                title: Text("Good Posture Time Threshold (in seconds)"),
-                trailing: SizedBox(
-                  height: 37.0,
-                  width: 52,
-                  child: TextField(
-                    controller: _goodPostureTimeThresholdController,
-                    textAlign: TextAlign.end,
-                    style: TextStyle(color: Colors.black),
-                    decoration: InputDecoration(
-                      contentPadding: EdgeInsets.all(10),
-                      floatingLabelBehavior:
-                          FloatingLabelBehavior.never,
-                      border: OutlineInputBorder(),
-                      labelText: 'Seconds',
-                      filled: true,
-                      labelStyle: TextStyle(color: Colors.black),
-                      fillColor: Colors.white
+                    ListTile(
+                      title: Text("Bad Posture Time Threshold (in seconds)"),
+                      trailing: SizedBox(
+                        height: 37.0,
+                        width: 52,
+                        child: TextField(
+                          controller: _badPostureTimeThresholdController,
+                          textAlign: TextAlign.end,
+                          style: TextStyle(color: Colors.black),
+                          decoration: InputDecoration(
+                            contentPadding: EdgeInsets.all(10),
+                            floatingLabelBehavior:
+                                FloatingLabelBehavior.never,
+                            border: OutlineInputBorder(),
+                            labelText: 'Seconds',
+                            filled: true,
+                            labelStyle: TextStyle(color: Colors.black),
+                            fillColor: Colors.white
+                          ),
+                          keyboardType: TextInputType.number,
+                          onChanged: (_) { _updatePostureSettings(); },
+                        ),
+                      ),
                     ),
-                    keyboardType: TextInputType.number,
-                    onChanged: (_) { _updatePostureSettings(); },
-                  ),
+                    ListTile(
+                      title: Text("Good Posture Time Threshold (in seconds)"),
+                      trailing: SizedBox(
+                        height: 37.0,
+                        width: 52,
+                        child: TextField(
+                          controller: _goodPostureTimeThresholdController,
+                          textAlign: TextAlign.end,
+                          style: TextStyle(color: Colors.black),
+                          decoration: InputDecoration(
+                            contentPadding: EdgeInsets.all(10),
+                            floatingLabelBehavior:
+                                FloatingLabelBehavior.never,
+                            border: OutlineInputBorder(),
+                            labelText: 'Seconds',
+                            filled: true,
+                            labelStyle: TextStyle(color: Colors.black),
+                            fillColor: Colors.white
+                          ),
+                          keyboardType: TextInputType.number,
+                          onChanged: (_) { _updatePostureSettings(); },
+                        ),
+                      ),
+                    ),
+                  ]
                 ),
+                visible: _viewModel.badPostureSettings.isActive
               ),
             ]
           )
@@ -181,7 +198,7 @@ class _SettingsViewState extends State<SettingsView> {
                     : () => _viewModel.startTracking(),
                   child: Text(
                     _viewModel.isTracking
-                    ? "Set as default"
+                    ? "Calibrate as Main Posture"
                     : "Start Calibration"
                   ),
                 ),
