@@ -8,7 +8,7 @@ import 'attitude.dart';
 
 /// An abstract class for attitude trackers.
 abstract class AttitudeTracker {
-  StreamController<Attitude> _attitudeStreamController = StreamController<Attitude>();
+  StreamController<Attitude> _attitudeStreamController = StreamController<Attitude>.broadcast();
 
   Attitude _rawAttitude = Attitude();
   Attitude get rawAttitude => _rawAttitude;

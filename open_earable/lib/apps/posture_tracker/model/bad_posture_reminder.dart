@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:open_earable/apps/posture_tracker/model/attitude.dart';
 import 'package:open_earable/apps/posture_tracker/model/attitude_tracker.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
@@ -78,9 +80,7 @@ class BadPostureReminder {
         }
         // Reset the last good state time
         _timestamps.lastGoodPosture = null;
-      }
-      // If the value is not in the bad state
-      else {
+      } else {
         // If this is the first time the program enters the good state, store the current time
         if (_timestamps.lastGoodPosture == null) {
           _timestamps.lastGoodPosture = now;
@@ -103,10 +103,11 @@ class BadPostureReminder {
   }
 
   bool _isBadPosture(Attitude attitude) {
-    return attitude.roll.abs() > _settings.rollAngleThreshold || attitude.pitch.abs() > _settings.pitchAngleThreshold;
+    return attitude.roll.abs() * (360 / (2 * pi)) > _settings.rollAngleThreshold || attitude.pitch.abs() * (360 / (2 * pi)) > _settings.pitchAngleThreshold;
   }
 
   void alarm() {
+    print("playing jingle to alert of bad posture");
     // play jingle
     _openEarable.audioPlayer.jingle(4);
   }
