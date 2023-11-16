@@ -45,57 +45,37 @@ class _PostureTrackerViewState extends State<PostureTrackerView> {
                 ),
               ],
             ),
-            body: _buildContentView(postureTrackerViewModel)
+            body: Center(
+              child: this._buildContentView(postureTrackerViewModel),
+            ),
           )
         )
       );
   }
 
   Widget _buildContentView(PostureTrackerViewModel postureTrackerViewModel) {
-    var orientation = MediaQuery.of(context).orientation;
-    switch (orientation) {
-      case Orientation.landscape:
-        return Center(child: LayoutBuilder(
-          builder: (context, constraints) => SizedBox(
-            width: constraints.maxWidth / 2,
-            child: Column(
-              children: [
-                Row(
-                  children: this._createHeadViews(postureTrackerViewModel)
-                ),
-                this._buildTrackingButton(postureTrackerViewModel),
-              ]
-            )
-          )
-        ));
-
-      case Orientation.portrait:
-        var headViews = this._createHeadViews(postureTrackerViewModel);
-        return Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: headViews
-            ),
-            this._buildTrackingButton(postureTrackerViewModel),
-          ]
-        );
-    }
+    var headViews = this._createHeadViews(postureTrackerViewModel);
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        ...headViews.map((e) => FractionallySizedBox(
+          widthFactor: .7,
+          child: e,
+        )),
+        this._buildTrackingButton(postureTrackerViewModel),
+      ]
+    );
   }
 
   Widget _buildHeadView(String headAssetPath, String neckAssetPath, AlignmentGeometry headAlignment, double roll) {
-    return Flexible(
-      fit: FlexFit.loose,
-      child: Padding(
-        padding: const EdgeInsets.all(5),
-        child: PostureRollView(
-          roll: roll,
-          headAssetPath: headAssetPath,
-          neckAssetPath: neckAssetPath,
-          headAlignment: headAlignment,
-        ),
-      )
+    return Padding(
+      padding: const EdgeInsets.all(5),
+      child: PostureRollView(
+        roll: roll,
+        headAssetPath: headAssetPath,
+        neckAssetPath: neckAssetPath,
+        headAlignment: headAlignment,
+      ),
     );
   }
 
