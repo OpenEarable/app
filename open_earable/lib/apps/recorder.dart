@@ -36,8 +36,20 @@ class _RecorderState extends State<Recorder> {
     "sensor_roll[°]",
     "sensor_baro[kPa]",
     "sensor_temp[°C]",
+    "label_OpenEarable_No Label",
   ];
-
+  List<String> _labels = [
+    "No Label",
+    "Label 1",
+    "Label 2",
+    "Label 3",
+    "Label 4",
+    "Label 5",
+    "Label 6",
+    "Label 7",
+    "Label 8",
+  ];
+  String _selectedLabel = "No Label";
   @override
   void initState() {
     super.initState();
@@ -57,8 +69,6 @@ class _RecorderState extends State<Recorder> {
   Future<void> listFilesInDocumentsDirectory() async {
     Directory documentsDirectory = await getApplicationDocumentsDirectory();
     List<FileSystemEntity> files = documentsDirectory.listSync();
-    print("Files are:");
-    print(files);
     _recordings.clear();
     for (var file in files) {
       if (file is File) {
@@ -112,6 +122,7 @@ class _RecorderState extends State<Recorder> {
         eulerRoll,
         "",
         "",
+        "x",
       ];
       _csvWriter?.addData(imuRow);
     });
@@ -140,7 +151,8 @@ class _RecorderState extends State<Recorder> {
         "",
         "",
         pressure,
-        temperature
+        temperature,
+        "x",
       ];
       _csvWriter?.addData(barometerRow);
     });
@@ -154,6 +166,11 @@ class _RecorderState extends State<Recorder> {
       _csvWriter?.cancelTimer();
     } else {
       _csvWriter = CsvWriter(listFilesInDocumentsDirectory);
+      if (_selectedLabel == "No Label") {
+        _csvHeader[_csvHeader.length - 1] = "label_OpenEarable_No Label";
+      } else {
+        _csvHeader[_csvHeader.length - 1] = "label_OpenEarable_$_selectedLabel";
+      }
       _csvWriter?.addData(_csvHeader);
       setState(() {
         _recording = true;
@@ -185,20 +202,40 @@ class _RecorderState extends State<Recorder> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              'Record',
-              style: TextStyle(fontSize: 20.0),
-            ),
-            ElevatedButton(
-              onPressed: startStopRecording,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _recording
-                    ? Color(0xfff27777)
-                    : Theme.of(context).colorScheme.secondary,
-                foregroundColor: Colors.black,
-              ),
-              child: Icon(
-                  _recording ? Icons.stop_outlined : Icons.play_arrow_outlined),
+            Row(
+              children: [
+                Padding(
+                  padding: EdgeInsets.all(16),
+                  child: ElevatedButton(
+                    onPressed: startStopRecording,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _recording
+                          ? Color(0xfff27777)
+                          : Theme.of(context).colorScheme.secondary,
+                      foregroundColor: Colors.black,
+                    ),
+                    child: Text(
+                      _recording ? "Stop Recording" : "Start Recording",
+                      style: TextStyle(fontSize: 20),
+                    ),
+                  ),
+                ),
+                DropdownButton<String>(
+                  value: _selectedLabel,
+                  icon: const Icon(Icons.arrow_drop_down),
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      _selectedLabel = newValue!;
+                    });
+                  },
+                  items: _labels.map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                ),
+              ],
             ),
             Divider(
               thickness: 2,
