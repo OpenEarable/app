@@ -77,7 +77,7 @@ class _SensorDataTabState extends State<SensorDataTab>
       kalmanMX,
       kalmanMY,
       kalmanMZ;
-  int _numDatapoints = 100;
+  int _numDatapoints = 200;
   List<XYZValue> accelerometerData = [];
   List<XYZValue> gyroscopeData = [];
   List<XYZValue> magnetometerData = [];
@@ -266,12 +266,11 @@ class _SensorDataTabState extends State<SensorDataTab>
 
   @override
   void dispose() {
-    three3dRender.dispose();
+    super.dispose();
     _imuSubscription?.cancel();
     _barometerSubscription?.cancel();
     _buttonStateSubscription?.cancel();
     _batteryLevelSubscription?.cancel();
-    super.dispose();
   }
 
   @override

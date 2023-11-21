@@ -156,7 +156,7 @@ class _BLEPageState extends State<BLEPage> {
       discoveredDevices.add(_openEarable.bleManager.connectedDevice);
     }
     setState(() {}); // Update UI
-    _openEarable.bleManager.startScan();
+    await _openEarable.bleManager.startScan();
     _scanSubscription?.cancel();
     _scanSubscription =
         _openEarable.bleManager.scanStream.listen((incomingDevice) {
