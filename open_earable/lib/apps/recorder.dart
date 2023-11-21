@@ -20,39 +20,43 @@ class _RecorderState extends State<Recorder> {
   StreamSubscription? _barometerSubscription;
   _RecorderState(this._openEarable);
   CsvWriter? _csvWriter;
-  List<String> _csvHeader = [
-    "time",
-    "sensor_accX[m/s]",
-    "sensor_accY[m/s]",
-    "sensor_accZ[m/s]",
-    "sensor_gyroX[°/s]",
-    "sensor_gyroY[°/s]",
-    "sensor_gyroZ[°/s]",
-    "sensor_magX[µT]",
-    "sensor_magY[µT]",
-    "sensor_magZ[µT]",
-    "sensor_yaw[°]",
-    "sensor_pitch[°]",
-    "sensor_roll[°]",
-    "sensor_baro[kPa]",
-    "sensor_temp[°C]",
-    "label_OpenEarable_No Label",
-  ];
-  List<String> _labels = [
-    "No Label",
-    "Label 1",
-    "Label 2",
-    "Label 3",
-    "Label 4",
-    "Label 5",
-    "Label 6",
-    "Label 7",
-    "Label 8",
-  ];
-  String _selectedLabel = "No Label";
+  late List<String> _csvHeader;
+  late List<String> _labels;
+  late String _selectedLabel;
   @override
   void initState() {
     super.initState();
+    _labels = [
+      "No Label",
+      "Label 1",
+      "Label 2",
+      "Label 3",
+      "Label 4",
+      "Label 5",
+      "Label 6",
+      "Label 7",
+      "Label 8",
+    ];
+    _selectedLabel = "No Label";
+    _csvHeader = [
+      "time",
+      "sensor_accX[m/s]",
+      "sensor_accY[m/s]",
+      "sensor_accZ[m/s]",
+      "sensor_gyroX[°/s]",
+      "sensor_gyroY[°/s]",
+      "sensor_gyroZ[°/s]",
+      "sensor_magX[µT]",
+      "sensor_magY[µT]",
+      "sensor_magZ[µT]",
+      "sensor_yaw[°]",
+      "sensor_pitch[°]",
+      "sensor_roll[°]",
+      "sensor_baro[kPa]",
+      "sensor_temp[°C]",
+    ];
+    _csvHeader.addAll(
+        _labels.sublist(1).map((label) => "label_OpenEarable_${label}"));
     if (_openEarable.bleManager.connected) {
       _setupListeners();
     }
@@ -122,8 +126,8 @@ class _RecorderState extends State<Recorder> {
         eulerRoll,
         "",
         "",
-        "x",
       ];
+      imuRow.addAll(_getLabels());
       _csvWriter?.addData(imuRow);
     });
 
@@ -152,10 +156,20 @@ class _RecorderState extends State<Recorder> {
         "",
         pressure,
         temperature,
-        "x",
       ];
+      barometerRow.addAll(_getLabels());
       _csvWriter?.addData(barometerRow);
     });
+  }
+
+  List<String> _getLabels() {
+    List<String> markedLabels = List<String>.filled(_labels.length - 1, "");
+    int selectedLabelIndex = _labels.indexOf(_selectedLabel);
+    if (_selectedLabel == "No Label" || selectedLabelIndex == -1) {
+      return markedLabels;
+    }
+    markedLabels[selectedLabelIndex - 1] = "x";
+    return markedLabels;
   }
 
   void startStopRecording() async {
@@ -166,11 +180,6 @@ class _RecorderState extends State<Recorder> {
       _csvWriter?.cancelTimer();
     } else {
       _csvWriter = CsvWriter(listFilesInDocumentsDirectory);
-      if (_selectedLabel == "No Label") {
-        _csvHeader[_csvHeader.length - 1] = "label_OpenEarable_No Label";
-      } else {
-        _csvHeader[_csvHeader.length - 1] = "label_OpenEarable_$_selectedLabel";
-      }
       _csvWriter?.addData(_csvHeader);
       setState(() {
         _recording = true;
@@ -237,41 +246,70 @@ class _RecorderState extends State<Recorder> {
                 ),
               ],
             ),
+            Text("Recordings", style: TextStyle(fontSize: 20.0)),
             Divider(
               thickness: 2,
             ),
-            Text("Recordings", style: TextStyle(fontSize: 20.0)),
             Expanded(
-              child: ListView.builder(
-                itemCount: _recordings.length,
-                itemBuilder: (context, index) {
-                  return ListTile(
-                    title: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: _recordings.isEmpty
+                  ? Stack(
+                      fit: StackFit.expand,
                       children: [
-                        Expanded(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              _recordings[index].path.split("/").last,
-                              maxLines: 1,
-                            ),
+                        Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.warning,
+                                size: 48,
+                                color: Colors.red,
+                              ),
+                              SizedBox(height: 16),
+                              Center(
+                                child: Text(
+                                  "No recordings found",
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        IconButton(
-                          icon: Icon(Icons.delete),
-                          onPressed: () {
-                            deleteFile(_recordings[index]);
-                          },
-                        ),
                       ],
+                    )
+                  : ListView.builder(
+                      itemCount: _recordings.length,
+                      itemBuilder: (context, index) {
+                        return ListTile(
+                          title: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    _recordings[index].path.split("/").last,
+                                    maxLines: 1,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.delete),
+                                onPressed: () {
+                                  deleteFile(_recordings[index]);
+                                },
+                              ),
+                            ],
+                          ),
+                          onTap: () {
+                            OpenFile.open(_recordings[index].path);
+                          },
+                        );
+                      },
                     ),
-                    onTap: () {
-                      OpenFile.open(_recordings[index].path);
-                    },
-                  );
-                },
-              ),
             )
           ],
         ),
