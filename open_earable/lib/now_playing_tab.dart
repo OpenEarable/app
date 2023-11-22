@@ -44,8 +44,6 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
   _ActuatorsTabState(this._openEarable);
   Color _selectedColor = Colors.deepPurple;
 
-  TextEditingController _barometerTextController =
-      TextEditingController(text: "0");
   List<String> _microphoneOptions = [
     "0",
     "16000",
@@ -192,7 +190,8 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
       showAlert("Empty file name", "WAV file name is empty!", "Dismiss");
       return;
     } else if (!fileName.endsWith('.wav')) {
-      showAlert("Missing '.wav' ending", "WAV file name is missing the '.wav' ending!", "Dismiss");
+      showAlert("Missing '.wav' ending",
+          "WAV file name is missing the '.wav' ending!", "Dismiss");
       return;
     }
     print("Setting source to wav file with file name '" + fileName + "'");
@@ -207,12 +206,20 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
     double loudness =
         (double.tryParse(_audioPercentageTextController.text) ?? 100.0) / 100.0;
 
-    if ((frequency < 0 || frequency > 30000) || (loudness < 0 || loudness > 100)) {
-      showAlert("Invalid value(s)", "Invalid frequency range or loudness!", "Dismiss");
+    if ((frequency < 0 || frequency > 30000) ||
+        (loudness < 0 || loudness > 100)) {
+      showAlert("Invalid value(s)", "Invalid frequency range or loudness!",
+          "Dismiss");
       return;
     }
 
-    print("Setting source with frequency value " + frequency.toString() + "' Hz, wave type '" + waveForm.toString() + "', and loudness '" + loudness.toString() + "'.");
+    print("Setting source with frequency value " +
+        frequency.toString() +
+        "' Hz, wave type '" +
+        waveForm.toString() +
+        "', and loudness '" +
+        loudness.toString() +
+        "'.");
     _openEarable.audioPlayer.frequency(waveForm, frequency, loudness);
   }
 
