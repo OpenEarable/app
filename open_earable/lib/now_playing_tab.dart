@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'control_cards/sensor_control.dart';
+import 'control_cards/connect.dart';
 import 'ble.dart';
 import 'dart:async';
 
@@ -58,10 +59,9 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
   StreamSubscription<bool>? _connectionStateSubscription;
   StreamSubscription<dynamic>? _batteryLevelSubscription;
   bool connected = false;
-  String earableDeviceName = "OpenEarable";
   int earableSOC = 0;
   bool earableCharging = false;
-  String earableFirmware = "0.0.0";
+
   int _selectedRadio = 0;
 
   Timer? rainbowTimer;
@@ -116,11 +116,6 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
   }
 
   void getNameAndSOC() {
-    String? name = _openEarable.bleManager.connectedDevice?.name;
-    earableDeviceName = name ?? "";
-
-    earableFirmware = _openEarable.deviceFirmwareVersion ?? "0.0.0";
-
     _batteryLevelSubscription = _openEarable.sensorManager
         .getBatteryLevelStream()
         .listen((batteryLevel) {
@@ -387,96 +382,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                 SizedBox(
                   height: 5,
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 5.0),
-                  child: Card(
-                    color: Color(0xff161618),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Device',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18.0,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(height: 5),
-                          Row(
-                            children: [
-                              if (connected)
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      "$earableDeviceName ($earableSOC%)",
-                                      style: TextStyle(
-                                        color:
-                                            Color.fromRGBO(168, 168, 172, 1.0),
-                                        fontSize: 15.0,
-                                      ),
-                                    ),
-                                    Text(
-                                      "Firmware $earableFirmware",
-                                      style: TextStyle(
-                                        color:
-                                            Color.fromRGBO(168, 168, 172, 1.0),
-                                        fontSize: 15.0,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              if (!connected)
-                                Text(
-                                  "OpenEarable not connected.",
-                                  style: TextStyle(
-                                    color: Color.fromRGBO(168, 168, 172, 1.0),
-                                    fontSize: 15.0,
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                                ),
-                            ],
-                          ),
-                          Visibility(
-                            visible: !connected,
-                            child: Column(
-                              children: [
-                                SizedBox(height: 10),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: SizedBox(
-                                        height: 37.0,
-                                        child: ElevatedButton(
-                                          onPressed: () {
-                                            Navigator.of(context).push(
-                                                MaterialPageRoute(
-                                                    builder: (context) =>
-                                                        BLEPage(_openEarable)));
-                                          },
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: !connected
-                                                ? Color(0xff77F2A1)
-                                                : Color(0xfff27777),
-                                            foregroundColor: Colors.black,
-                                          ),
-                                          child: Text("Connect"),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          )
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+                ConnectCard(_openEarable, earableSOC),
                 SensorControlCard(_openEarable),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 5.0),
