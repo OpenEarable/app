@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:open_earable/open_earable_icon_icons.dart';
 import 'now_playing_tab.dart';
 import 'sensor_data_tab.dart';
 import 'ble.dart';
@@ -94,7 +95,13 @@ class _MyHomePageState extends State<MyHomePage> {
         backgroundColor: Theme.of(context).colorScheme.primary,
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
-            icon: Icon(Icons.tune),
+            icon: Padding(
+  padding: EdgeInsets.only(bottom: 3.0), // Adjust the bottom padding to your desired value
+  child: Icon(
+    OpenEarableIcon.icon,
+    size: 20.0, // Change the size to your desired value
+  ),
+),
             label: 'Controls',
           ),
           BottomNavigationBarItem(
