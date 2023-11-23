@@ -14,6 +14,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: '🦻 OpenEarable',
       theme: ThemeData(
+          useMaterial3: false,
           colorScheme: ColorScheme(
               brightness: Brightness.dark,
               primary: Color.fromARGB(255, 22, 22, 24),
@@ -96,12 +97,14 @@ class _MyHomePageState extends State<MyHomePage> {
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: Padding(
-  padding: EdgeInsets.only(bottom: 3.0), // Adjust the bottom padding to your desired value
-  child: Icon(
-    OpenEarableIcon.icon,
-    size: 20.0, // Change the size to your desired value
-  ),
-),
+              padding: EdgeInsets.only(
+                  bottom:
+                      3.0), // Adjust the bottom padding to your desired value
+              child: Icon(
+                OpenEarableIcon.icon,
+                size: 20.0, // Change the size to your desired value
+              ),
+            ),
             label: 'Controls',
           ),
           BottomNavigationBarItem(
