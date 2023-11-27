@@ -5,7 +5,6 @@ import 'package:charts_flutter/flutter.dart' as charts;
 import 'dart:math';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:simple_kalman/simple_kalman.dart';
-import '../utils/madgwick_ahrs.dart';
 import 'package:three_dart/three_dart.dart' as three;
 import 'package:three_dart_jsm/three_dart_jsm.dart' as three_jsm;
 import 'package:flutter_gl/flutter_gl.dart';
@@ -63,7 +62,6 @@ class _SensorDataTabState extends State<SensorDataTab>
   StreamSubscription? _barometerSubscription;
   StreamSubscription? _batteryLevelSubscription;
   StreamSubscription? _buttonStateSubscription;
-  late MadgwickAHRS madgwickAHRS;
   final double errorMeasureAcc = 5;
   final double errorMeasureGyro = 10;
   final double errorMeasureMag = 25;
@@ -128,7 +126,6 @@ class _SensorDataTabState extends State<SensorDataTab>
     if (_openEarable.bleManager.connected) {
       _setupListeners();
     }
-    madgwickAHRS = MadgwickAHRS();
     kalmanAX = SimpleKalman(
         errorMeasure: errorMeasureAcc, errorEstimate: errorMeasureAcc, q: 0.9);
     kalmanAY = SimpleKalman(
