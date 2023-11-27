@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
-class SensorControlCard extends StatefulWidget {
+class SensorConfigurationCard extends StatefulWidget {
   final OpenEarable _openEarable;
-  SensorControlCard(this._openEarable);
+  SensorConfigurationCard(this._openEarable);
 
   @override
-  _SensorControlCardState createState() =>
-      _SensorControlCardState(_openEarable);
+  _SensorConfigurationCardState createState() =>
+      _SensorConfigurationCardState(_openEarable);
 }
 
-class _SensorControlCardState extends State<SensorControlCard> {
+class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
   final OpenEarable _openEarable;
-  _SensorControlCardState(this._openEarable);
+  _SensorConfigurationCardState(this._openEarable);
   bool _imuSettingSelected = false;
   bool _barometerSettingSelected = false;
   bool _microphoneSettingSelected = false;
@@ -29,15 +29,15 @@ class _SensorControlCardState extends State<SensorControlCard> {
     "62500"
   ];
   List<String> _imuAndBarometerOptions = ["0", "10", "20", "30"];
-  late String selectedImuOption;
-  late String selectedBarometerOption;
-  late String selectedMicrophoneOption;
+  late String _selectedImuOption;
+  late String _selectedBarometerOption;
+  late String _selectedMicrophoneOption;
 
   void initState() {
     super.initState();
-    selectedMicrophoneOption = _microphoneOptions[0];
-    selectedImuOption = _imuAndBarometerOptions[0];
-    selectedBarometerOption = _imuAndBarometerOptions[0];
+    _selectedMicrophoneOption = _microphoneOptions[0];
+    _selectedImuOption = _imuAndBarometerOptions[0];
+    _selectedBarometerOption = _imuAndBarometerOptions[0];
   }
 
   Color _getCheckboxColor(Set<MaterialState> states) {
@@ -53,7 +53,7 @@ class _SensorControlCardState extends State<SensorControlCard> {
     return Theme.of(context).colorScheme.primary;
   }
 
-  void showErrorDialog(BuildContext context) {
+  void _showErrorDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -74,10 +74,10 @@ class _SensorControlCardState extends State<SensorControlCard> {
     );
   }
 
-  Future<void> writeSensorConfigs() async {
-    double? imuSamplingRate = double.tryParse(selectedImuOption);
-    double? barometerSamplingRate = double.tryParse(selectedBarometerOption);
-    double? microphoneSamplingRate = double.tryParse(selectedMicrophoneOption);
+  Future<void> _writeSensorConfigs() async {
+    double? imuSamplingRate = double.tryParse(_selectedImuOption);
+    double? barometerSamplingRate = double.tryParse(_selectedBarometerOption);
+    double? microphoneSamplingRate = double.tryParse(_selectedMicrophoneOption);
     if (imuSamplingRate == null ||
         barometerSamplingRate == null ||
         microphoneSamplingRate == null ||
@@ -85,7 +85,7 @@ class _SensorControlCardState extends State<SensorControlCard> {
         imuSamplingRate < 0 ||
         barometerSamplingRate > 30 ||
         barometerSamplingRate < 0) {
-      showErrorDialog(context);
+      _showErrorDialog(context);
     }
     OpenEarableSensorConfig imuConfig = OpenEarableSensorConfig(
         sensorId: 0,
@@ -104,7 +104,91 @@ class _SensorControlCardState extends State<SensorControlCard> {
     await _openEarable.sensorManager.writeSensorConfig(microphoneConfig);
   }
 
-  Widget sensorSettingRow(
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 5.0),
+      child: Card(
+        //Audio Player Card
+        color: Color(0xff161618),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Sensor Configuration',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18.0,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              _sensorConfigurationRow("IMU", _imuAndBarometerOptions,
+                  _imuSettingSelected, _selectedImuOption, (bool? newValue) {
+                if (newValue != null) {
+                  setState(() {
+                    _imuSettingSelected = newValue;
+                  });
+                }
+              }, (String newValue) {
+                _selectedImuOption = newValue;
+              }),
+              _sensorConfigurationRow(
+                  "Barometer",
+                  _imuAndBarometerOptions,
+                  _barometerSettingSelected,
+                  _selectedBarometerOption, (bool? newValue) {
+                if (newValue != null) {
+                  setState(() {
+                    _barometerSettingSelected = newValue;
+                  });
+                }
+              }, (String newValue) {
+                _selectedBarometerOption = newValue;
+              }),
+              _sensorConfigurationRow(
+                  "Microphone",
+                  _microphoneOptions,
+                  _microphoneSettingSelected,
+                  _selectedMicrophoneOption, (bool? newValue) {
+                setState(() {
+                  _microphoneSettingSelected = newValue!;
+                });
+              }, (String newValue) {
+                _selectedMicrophoneOption = newValue;
+              }),
+              SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 37.0,
+                      child: ElevatedButton(
+                        onPressed: _openEarable.bleManager.connected
+                            ? _writeSensorConfigs
+                            : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _openEarable.bleManager.connected
+                              ? Theme.of(context).colorScheme.secondary
+                              : Colors.grey,
+                          foregroundColor: Colors.black,
+                          enableFeedback: _openEarable.bleManager.connected,
+                        ),
+                        child: Text("Set Configuration"),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _sensorConfigurationRow(
       String sensorName,
       List<String> options,
       bool settingSelected,
@@ -175,90 +259,6 @@ class _SensorControlCardState extends State<SensorControlCard> {
         SizedBox(width: 8),
         Text("Hz"),
       ],
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 5.0),
-      child: Card(
-        //Audio Player Card
-        color: Color(0xff161618),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Sensor Control',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18.0,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              sensorSettingRow("IMU", _imuAndBarometerOptions,
-                  _imuSettingSelected, selectedImuOption, (bool? newValue) {
-                if (newValue != null) {
-                  setState(() {
-                    _imuSettingSelected = newValue;
-                  });
-                }
-              }, (String newValue) {
-                selectedImuOption = newValue;
-              }),
-              sensorSettingRow(
-                  "Barometer",
-                  _imuAndBarometerOptions,
-                  _barometerSettingSelected,
-                  selectedBarometerOption, (bool? newValue) {
-                if (newValue != null) {
-                  setState(() {
-                    _barometerSettingSelected = newValue;
-                  });
-                }
-              }, (String newValue) {
-                selectedBarometerOption = newValue;
-              }),
-              sensorSettingRow(
-                  "Microphone",
-                  _microphoneOptions,
-                  _microphoneSettingSelected,
-                  selectedMicrophoneOption, (bool? newValue) {
-                setState(() {
-                  _microphoneSettingSelected = newValue!;
-                });
-              }, (String newValue) {
-                selectedMicrophoneOption = newValue;
-              }),
-              SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 37.0,
-                      child: ElevatedButton(
-                        onPressed: _openEarable.bleManager.connected
-                            ? writeSensorConfigs
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _openEarable.bleManager.connected
-                              ? Theme.of(context).colorScheme.secondary
-                              : Colors.grey,
-                          foregroundColor: Colors.black,
-                          enableFeedback: _openEarable.bleManager.connected,
-                        ),
-                        child: Text("Set Configuration"),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

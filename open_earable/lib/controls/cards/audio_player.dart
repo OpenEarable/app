@@ -47,45 +47,45 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     _audioWaveFormTextController = TextEditingController(text: _waveFormMap[1]);
   }
 
-  void playButtonPressed() {
+  void _playButtonPressed() {
     _openEarable.audioPlayer.setState(AudioPlayerState.start);
   }
 
-  void pauseButtonPressed() {
+  void _pauseButtonPressed() {
     _openEarable.audioPlayer.setState(AudioPlayerState.pause);
   }
 
-  void stopButtonPressed() {
+  void _stopButtonPressed() {
     _openEarable.audioPlayer.setState(AudioPlayerState.stop);
   }
 
-  void setSourceButtonPressed() {
+  void _setSourceButtonPressed() {
     switch (_selectedRadio) {
       case 0:
-        setWAV();
+        _setWAV();
         break;
       case 1:
-        setJingle();
+        _setJingle();
         break;
       case 2:
-        setFrequencySound();
+        _setFrequencySound();
     }
   }
 
-  void setJingle() {
+  void _setJingle() {
     String jingle = _jingleTextController.text;
     print("Setting source to jingle '" + jingle + "'");
-    _openEarable.audioPlayer.jingle(getKeyFromValue(jingle, _jingleMap));
+    _openEarable.audioPlayer.jingle(_getKeyFromValue(jingle, _jingleMap));
   }
 
-  void setWAV() {
+  void _setWAV() {
     String fileName = _filenameTextController.text;
 
     if (fileName == "") {
-      showAlert("Empty file name", "WAV file name is empty!", "Dismiss");
+      _showAlert("Empty file name", "WAV file name is empty!", "Dismiss");
       return;
     } else if (!fileName.endsWith('.wav')) {
-      showAlert("Missing '.wav' ending",
+      _showAlert("Missing '.wav' ending",
           "WAV file name is missing the '.wav' ending!", "Dismiss");
       return;
     }
@@ -93,17 +93,17 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     _openEarable.audioPlayer.wavFile(_filenameTextController.text);
   }
 
-  void setFrequencySound() {
+  void _setFrequencySound() {
     double frequency =
         double.tryParse(_audioFrequencyTextController.text) ?? 440.0;
     int waveForm =
-        getKeyFromValue(_audioWaveFormTextController.text, _waveFormMap);
+        _getKeyFromValue(_audioWaveFormTextController.text, _waveFormMap);
     double loudness =
         (double.tryParse(_audioPercentageTextController.text) ?? 100.0) / 100.0;
 
     if ((frequency < 0 || frequency > 30000) ||
         (loudness < 0 || loudness > 100)) {
-      showAlert("Invalid value(s)", "Invalid frequency range or loudness!",
+      _showAlert("Invalid value(s)", "Invalid frequency range or loudness!",
           "Dismiss");
       return;
     }
@@ -118,7 +118,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     _openEarable.audioPlayer.frequency(waveForm, frequency, loudness);
   }
 
-  int getKeyFromValue(String value, Map<int, String> map) {
+  int _getKeyFromValue(String value, Map<int, String> map) {
     for (var entry in map.entries) {
       if (entry.value == value) {
         return entry.key;
@@ -127,7 +127,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     return 1;
   }
 
-  void showAlert(String title, String message, String dismissButtonText) {
+  void _showAlert(String title, String message, String dismissButtonText) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -434,7 +434,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
           width: 120,
           child: ElevatedButton(
             onPressed: _openEarable.bleManager.connected
-                ? setSourceButtonPressed
+                ? _setSourceButtonPressed
                 : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: Color(0xff53515b),
@@ -445,7 +445,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
         ),
         ElevatedButton(
           onPressed:
-              _openEarable.bleManager.connected ? playButtonPressed : null,
+              _openEarable.bleManager.connected ? _playButtonPressed : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: Color(0xff77F2A1),
             foregroundColor: Colors.black,
@@ -454,7 +454,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
         ),
         ElevatedButton(
           onPressed:
-              _openEarable.bleManager.connected ? pauseButtonPressed : null,
+              _openEarable.bleManager.connected ? _pauseButtonPressed : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: Color(0xffe0f277),
             foregroundColor: Colors.black,
@@ -463,7 +463,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
         ),
         ElevatedButton(
           onPressed:
-              _openEarable.bleManager.connected ? stopButtonPressed : null,
+              _openEarable.bleManager.connected ? _stopButtonPressed : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: Color(0xfff27777),
             foregroundColor: Colors.black,

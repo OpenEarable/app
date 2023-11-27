@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
-import 'cards/sensor_control.dart';
+import 'cards/sensor_configuration.dart';
 import 'cards/connect.dart';
 import 'cards/led_color.dart';
 import 'cards/audio_player.dart';
@@ -73,7 +73,7 @@ class _ActuatorsTabState extends State<ActuatorsTab> {
                   height: 5,
                 ),
                 ConnectCard(_openEarable, earableSOC),
-                SensorControlCard(_openEarable),
+                SensorConfigurationCard(_openEarable),
                 AudioPlayerCard(_openEarable),
                 LEDColorCard(_openEarable),
               ],

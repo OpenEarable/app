@@ -22,18 +22,18 @@ class _LEDColorCardState extends State<LEDColorCard> {
     super.initState();
   }
 
-  void setLEDColor() {
-    stopRainbowMode();
+  void _setLEDColor() {
+    _stopRainbowMode();
     _openEarable.rgbLed.writeLedColor(
         r: _selectedColor.red, g: _selectedColor.green, b: _selectedColor.blue);
   }
 
-  void turnLEDoff() {
-    stopRainbowMode();
+  void _turnLEDoff() {
+    _stopRainbowMode();
     _openEarable.rgbLed.writeLedColor(r: 0, g: 0, b: 0);
   }
 
-  void startRainbowMode() {
+  void _startRainbowMode() {
     if (rainbowModeActive) return;
 
     rainbowModeActive = true;
@@ -42,7 +42,7 @@ class _LEDColorCardState extends State<LEDColorCard> {
     const double increment = 0.01;
 
     rainbowTimer = Timer.periodic(Duration(milliseconds: 300), (Timer timer) {
-      Map<String, int> rgbValue = hslToRgb(h, 1, 0.5);
+      Map<String, int> rgbValue = _hslToRgb(h, 1, 0.5);
       _openEarable.rgbLed.writeLedColor(
           r: rgbValue['r']!, g: rgbValue['g']!, b: rgbValue['b']!);
 
@@ -51,7 +51,7 @@ class _LEDColorCardState extends State<LEDColorCard> {
     });
   }
 
-  void stopRainbowMode() {
+  void _stopRainbowMode() {
     rainbowModeActive = false;
     if (rainbowTimer == null) {
       return;
@@ -61,7 +61,8 @@ class _LEDColorCardState extends State<LEDColorCard> {
     }
   }
 
-  Map<String, int> hexToRgb(String hex) {
+  /*
+  Map<String, int> _hexToRgb(String hex) {
     hex = hex.startsWith('#') ? hex.substring(1) : hex;
 
     int bigint = int.parse(hex, radix: 16);
@@ -71,8 +72,9 @@ class _LEDColorCardState extends State<LEDColorCard> {
 
     return {'r': r, 'g': g, 'b': b};
   }
+  */
 
-  Map<String, int> hslToRgb(double h, double s, double l) {
+  Map<String, int> _hslToRgb(double h, double s, double l) {
     double r, g, b;
 
     if (s == 0) {
@@ -101,9 +103,11 @@ class _LEDColorCardState extends State<LEDColorCard> {
     };
   }
 
-  bool isValidHex(String hex) {
+  /*
+  bool _isValidHex(String hex) {
     return RegExp(r'^#[0-9A-Fa-f]{6}$').hasMatch(hex);
   }
+  */
 
   void _openColorPicker() {
     showDialog(
@@ -177,7 +181,7 @@ class _LEDColorCardState extends State<LEDColorCard> {
                       width: 66,
                       child: ElevatedButton(
                         onPressed: _openEarable.bleManager.connected
-                            ? setLEDColor
+                            ? _setLEDColor
                             : null,
                         style: ElevatedButton.styleFrom(
                             backgroundColor: Color(
@@ -189,7 +193,7 @@ class _LEDColorCardState extends State<LEDColorCard> {
                     SizedBox(width: 5),
                     ElevatedButton(
                       onPressed: _openEarable.bleManager.connected
-                          ? startRainbowMode
+                          ? _startRainbowMode
                           : null,
                       style: ElevatedButton.styleFrom(
                           backgroundColor: Color(
@@ -199,8 +203,9 @@ class _LEDColorCardState extends State<LEDColorCard> {
                     ),
                     Spacer(),
                     ElevatedButton(
-                      onPressed:
-                          _openEarable.bleManager.connected ? turnLEDoff : null,
+                      onPressed: _openEarable.bleManager.connected
+                          ? _turnLEDoff
+                          : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color(0xfff27777),
                         foregroundColor: Colors.black,
