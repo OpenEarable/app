@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
-import '../ble.dart';
+import '../../ble.dart';
 
 class ConnectCard extends StatelessWidget {
   final OpenEarable _openEarable;
