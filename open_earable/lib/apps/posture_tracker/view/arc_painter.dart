@@ -7,8 +7,9 @@ import 'package:flutter/material.dart';
 class ArcPainter extends CustomPainter {
   /// the angle of rotation
   final double angle;
+  final double angleThreshold;
 
-  ArcPainter({required this.angle});
+  ArcPainter({required this.angle, this.angleThreshold = 0});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -22,14 +23,14 @@ class ArcPainter extends CustomPainter {
     canvas.drawPath(circlePath, circlePaint);
 
     // Create a paint object with purple color and stroke style
-    Paint paint = Paint()
+    Paint anglePaint = Paint()
       ..color = Colors.purpleAccent
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeWidth = 5.0;
 
     // Create a path object to draw the arc
-    Path path = Path();
+    Path anglePath = Path();
 
     // Calculate the center and radius of the circle
     Offset center = Offset(size.width / 2, size.height / 2);
@@ -37,17 +38,32 @@ class ArcPainter extends CustomPainter {
 
     // Calculate the start and end angles of the arc
     double startAngle = -pi / 2; // start from the top of the circle
-    double endAngle = angle; // end at the bottom of the circle
+    double endAngle = angle;
 
     // Add an arc to the path
-    path.addArc(
+    anglePath.addArc(
       Rect.fromCircle(center: center, radius: radius), // create a rectangle from the center and radius
       startAngle, // start angle
       endAngle, // sweep angle
     );
 
+    Path thresholdPath = Path();
+    thresholdPath.addArc(
+      Rect.fromCircle(center: center, radius: radius), // create a rectangle from the center and radius
+      startAngle - angleThreshold, // start angle
+      2 * angleThreshold, // sweep angle
+    );
+
+    Paint thresholdPaint = Paint()
+      ..color = Colors.purpleAccent[100]!
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 5.0;
+
+
     // Draw the path on the canvas
-    canvas.drawPath(path, paint);
+    canvas.drawPath(thresholdPath, thresholdPaint);
+    canvas.drawPath(anglePath, anglePaint);
   }
 
   @override

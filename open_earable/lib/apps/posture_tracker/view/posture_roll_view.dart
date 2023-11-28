@@ -6,6 +6,7 @@ import 'package:open_earable/apps/posture_tracker/view/arc_painter.dart';
 /// A widget that displays the roll of the head and neck.
 class PostureRollView extends StatelessWidget {
   final double roll;
+  final double angleThreshold;
 
   final String headAssetPath;
   final String neckAssetPath;
@@ -13,6 +14,7 @@ class PostureRollView extends StatelessWidget {
 
   const PostureRollView({Key? key,
                          required this.roll,
+                         this.angleThreshold = 0,
                          required this.headAssetPath,
                          required this.neckAssetPath,
                          this.headAlignment = Alignment.center}) : super(key: key);
@@ -30,7 +32,7 @@ class PostureRollView extends StatelessWidget {
         )
       ),
       CustomPaint(
-        painter: ArcPainter(angle: this.roll),
+        painter: ArcPainter(angle: this.roll, angleThreshold: this.angleThreshold),
         child: Padding(
         padding: EdgeInsets.all(10),
           child: ClipOval(

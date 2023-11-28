@@ -67,11 +67,12 @@ class _PostureTrackerViewState extends State<PostureTrackerView> {
     );
   }
 
-  Widget _buildHeadView(String headAssetPath, String neckAssetPath, AlignmentGeometry headAlignment, double roll) {
+  Widget _buildHeadView(String headAssetPath, String neckAssetPath, AlignmentGeometry headAlignment, double roll, double angleThreshold) {
     return Padding(
       padding: const EdgeInsets.all(5),
       child: PostureRollView(
         roll: roll,
+        angleThreshold: angleThreshold * 3.14 / 180,
         headAssetPath: headAssetPath,
         neckAssetPath: neckAssetPath,
         headAlignment: headAlignment,
@@ -85,13 +86,15 @@ class _PostureTrackerViewState extends State<PostureTrackerView> {
         "assets/posture_tracker/Head_Front.png",
         "assets/posture_tracker/Neck_Front.png",
         Alignment.center.add(Alignment(0, 0.3)),
-        postureTrackerViewModel.attitude.roll
+        postureTrackerViewModel.attitude.roll,
+        postureTrackerViewModel.badPostureSettings.rollAngleThreshold.toDouble()
       ),
       this._buildHeadView(
         "assets/posture_tracker/Head_Side.png",
         "assets/posture_tracker/Neck_Side.png",
         Alignment.center.add(Alignment(0, 0.3)),
-        -postureTrackerViewModel.attitude.pitch
+        -postureTrackerViewModel.attitude.pitch,
+        postureTrackerViewModel.badPostureSettings.pitchAngleThreshold.toDouble()
       ),
     ];
   }
