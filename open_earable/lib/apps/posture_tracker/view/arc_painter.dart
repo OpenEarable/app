@@ -47,6 +47,19 @@ class ArcPainter extends CustomPainter {
       endAngle, // sweep angle
     );
 
+    Path angleOvershootPath = Path();
+    angleOvershootPath.addArc(
+      Rect.fromCircle(center: center, radius: radius), // create a rectangle from the center and radius
+      startAngle + angle.sign * angleThreshold, // start angle
+      angle.sign * (angle.abs() - angleThreshold), // sweep angle
+    );
+
+    Paint angleOvershootPaint = Paint()
+      ..color = Colors.red
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 5.0;
+
     Path thresholdPath = Path();
     thresholdPath.addArc(
       Rect.fromCircle(center: center, radius: radius), // create a rectangle from the center and radius
@@ -64,6 +77,9 @@ class ArcPainter extends CustomPainter {
     // Draw the path on the canvas
     canvas.drawPath(thresholdPath, thresholdPaint);
     canvas.drawPath(anglePath, anglePaint);
+    if (angle.abs() > angleThreshold.abs()) {
+      canvas.drawPath(angleOvershootPath, angleOvershootPaint);
+    }
   }
 
   @override
