@@ -6,16 +6,16 @@ import 'cards/led_color.dart';
 import 'cards/audio_player.dart';
 import 'dart:async';
 
-class ActuatorsTab extends StatefulWidget {
+class ControlTab extends StatefulWidget {
   final OpenEarable _openEarable;
-  ActuatorsTab(this._openEarable);
+  ControlTab(this._openEarable);
   @override
-  _ActuatorsTabState createState() => _ActuatorsTabState(_openEarable);
+  _ControlTabState createState() => _ControlTabState(_openEarable);
 }
 
-class _ActuatorsTabState extends State<ActuatorsTab> {
+class _ControlTabState extends State<ControlTab> {
   final OpenEarable _openEarable;
-  _ActuatorsTabState(this._openEarable);
+  _ControlTabState(this._openEarable);
 
   StreamSubscription<bool>? _connectionStateSubscription;
   StreamSubscription<dynamic>? _batteryLevelSubscription;
