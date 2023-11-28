@@ -4,9 +4,9 @@ import '../../ble.dart';
 
 class ConnectCard extends StatelessWidget {
   final OpenEarable _openEarable;
-  final int earableSOC;
+  final int _earableSOC;
 
-  ConnectCard(this._openEarable, this.earableSOC);
+  ConnectCard(this._openEarable, this._earableSOC);
 
   @override
   Widget build(BuildContext context) {
@@ -28,8 +28,8 @@ class ConnectCard extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 5),
-              earableInfo(),
-              connectButton(context),
+              _getEarableInfo(),
+              _getConnectButton(context),
             ],
           ),
         ),
@@ -37,7 +37,7 @@ class ConnectCard extends StatelessWidget {
     );
   }
 
-  Widget earableInfo() {
+  Widget _getEarableInfo() {
     return Row(
       children: [
         if (_openEarable.bleManager.connected)
@@ -45,7 +45,7 @@ class ConnectCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "${_openEarable.bleManager.connectedDevice?.name ?? ""} (${earableSOC}%)",
+                "${_openEarable.bleManager.connectedDevice?.name ?? ""} (${_earableSOC}%)",
                 style: TextStyle(
                   color: Color.fromRGBO(168, 168, 172, 1.0),
                   fontSize: 15.0,
@@ -73,7 +73,7 @@ class ConnectCard extends StatelessWidget {
     );
   }
 
-  Widget connectButton(BuildContext context) {
+  Widget _getConnectButton(BuildContext context) {
     return Visibility(
       visible: !_openEarable.bleManager.connected,
       child: Column(
