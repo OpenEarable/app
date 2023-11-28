@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'now_playing_tab.dart';
-import 'sensor_data_tab.dart';
+import 'package:open_earable/open_earable_icon_icons.dart';
+import 'controls/controls.dart';
+import 'sensor_data/sensor_data.dart';
 import 'ble.dart';
 import 'apps_tab.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
@@ -13,6 +14,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: '🦻 OpenEarable',
       theme: ThemeData(
+          useMaterial3: false,
           colorScheme: ColorScheme(
               brightness: Brightness.dark,
               primary: Color.fromARGB(255, 22, 22, 24),
@@ -94,7 +96,15 @@ class _MyHomePageState extends State<MyHomePage> {
         backgroundColor: Theme.of(context).colorScheme.primary,
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
-            icon: Icon(Icons.tune),
+            icon: Padding(
+              padding: EdgeInsets.only(
+                  bottom:
+                      3.0), // Adjust the bottom padding to your desired value
+              child: Icon(
+                OpenEarableIcon.icon,
+                size: 20.0, // Change the size to your desired value
+              ),
+            ),
             label: 'Controls',
           ),
           BottomNavigationBarItem(

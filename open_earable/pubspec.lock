@@ -223,6 +223,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.9.3"
+  flutter_native_splash:
+    dependency: "direct main"
+    description:
+      name: flutter_native_splash
+      sha256: "6777a3abb974021a39b5fdd2d46a03ca390e03903b6351f21d10e7ecc969f12d"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.2.16"
   flutter_reactive_ble:
     dependency: transitive
     description:
@@ -342,7 +350,7 @@ packages:
     description:
       path: "."
       ref: HEAD
-      resolved-ref: "81cf0ec5b05f7a0e6bfae12ded21319c30f28216"
+      resolved-ref: eaf50163a03f24822f087a822c767c284f5b3637
       url: "https://github.com/OpenEarable/open_earable_flutter.git"
     source: git
     version: "0.0.1"
