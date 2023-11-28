@@ -1,10 +1,15 @@
 // ignore_for_file: unnecessary_this
 
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:open_earable/apps/posture_tracker/view/arc_painter.dart';
 
 /// A widget that displays the roll of the head and neck.
 class PostureRollView extends StatelessWidget {
+  static final double _MAX_ROLL = pi / 2;
+
+  /// The roll of the head and neck in radians.
   final double roll;
   final double angleThreshold;
 
@@ -36,14 +41,17 @@ class PostureRollView extends StatelessWidget {
         child: Padding(
         padding: EdgeInsets.all(10),
           child: ClipOval(
-            child: Stack(children: [
-              Image.asset(this.neckAssetPath),
-              Transform.rotate(
-                angle: this.roll.isFinite ? this.roll : 0,
-                alignment: this.headAlignment,
-                child: Image.asset(this.headAssetPath)
-              ),
-            ])
+            child: Container(
+              color: roll.abs() > _MAX_ROLL ? Colors.red.withOpacity(0.5) : Colors.transparent,
+              child: Stack(children: [
+                Image.asset(this.neckAssetPath),
+                Transform.rotate(
+                  angle: this.roll.isFinite ? roll.abs() < _MAX_ROLL ? this.roll : roll.sign * _MAX_ROLL : 0,
+                  alignment: this.headAlignment,
+                  child: Image.asset(this.headAssetPath)
+                ),
+              ])
+            )
           )
         )
       ),
