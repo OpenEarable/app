@@ -49,7 +49,7 @@ class _MyHomePageState extends State<MyHomePage> {
     super.initState();
     _openEarable = OpenEarable();
     _widgetOptions = <Widget>[
-      ActuatorsTab(_openEarable),
+      ControlTab(_openEarable),
       SensorDataTab(_openEarable),
       AppsTab(_openEarable),
     ];
