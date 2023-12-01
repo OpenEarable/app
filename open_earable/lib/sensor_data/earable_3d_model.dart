@@ -11,12 +11,12 @@ class Earable3DModel extends StatefulWidget {
   final OpenEarable _openEarable;
   Earable3DModel(this._openEarable);
   @override
-  _Earable3DModel createState() => _Earable3DModel(_openEarable);
+  _Earable3DModelState createState() => _Earable3DModelState(_openEarable);
 }
 
-class _Earable3DModel extends State<Earable3DModel> {
+class _Earable3DModelState extends State<Earable3DModel> {
   final OpenEarable _openEarable;
-  _Earable3DModel(this._openEarable);
+  _Earable3DModelState(this._openEarable);
   StreamSubscription? _imuSubscription;
   double _pitch = 0;
   double _yaw = 0;
@@ -173,6 +173,7 @@ class _Earable3DModel extends State<Earable3DModel> {
     required double pitch,
     required double roll,
   }) {
+    setState(() {});
     // Signs and order of RPY angles need to be swapped to display correctly
     _euler.x = roll;
     _euler.y = -yaw;
