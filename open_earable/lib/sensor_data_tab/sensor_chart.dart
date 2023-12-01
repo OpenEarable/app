@@ -4,6 +4,9 @@ import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:charts_flutter/flutter.dart' as charts;
 import 'package:simple_kalman/simple_kalman.dart';
+import 'package:collection/collection.dart';
+import 'dart:math';
+import 'dart:core';
 
 class EarableDataChart extends StatefulWidget {
   final OpenEarable _openEarable;
@@ -24,8 +27,8 @@ class _EarableDataChartState extends State<EarableDataChart> {
   late int _maxX = 0;
   late List<String> colors;
   List<charts.Series<dynamic, num>> seriesList = [];
-  late int minY;
-  late int maxY;
+  late double _minY;
+  late double _maxY;
   final errorMeasure = {"ACC": 5.0, "GYRO": 10.0, "MAG": 25.0};
   late SimpleKalman kalmanX, kalmanY, kalmanZ;
   late String _sensorName;
@@ -43,12 +46,7 @@ class _EarableDataChartState extends State<EarableDataChart> {
             pressure: data["BARO"]["Pressure"],
             temperature: data["TEMP"]["Temperature"],
             units: units);
-        setState(() {
-          _data.add(barometerValue);
-          _checkLength(_data);
-          _maxX = barometerValue.timestamp;
-          _minX = _data[0].timestamp;
-        });
+        _updateData(barometerValue);
       });
     } else {
       kalmanX = SimpleKalman(
@@ -86,21 +84,35 @@ class _EarableDataChartState extends State<EarableDataChart> {
             z: data["MAG"]["Z"],
             units: data["MAG"]["units"]);
         */
-        XYZValue dataValue = XYZValue(
+        XYZValue xyzValue = XYZValue(
             timestamp: timestamp,
             z: kalmanZ.filtered(data[_sensorName]["Z"]),
             x: kalmanX.filtered(data[_sensorName]["X"]),
             y: kalmanY.filtered(data[_sensorName]["Y"]),
             units: data["ACC"]["units"]);
 
-        setState(() {
-          _data.add(dataValue);
-          _checkLength(_data);
-          _maxX = dataValue.timestamp;
-          _minX = _data[0].timestamp;
-        });
+        _updateData(xyzValue);
       });
     }
+  }
+
+  _updateData(DataValue value) {
+    setState(() {
+      _data.add(value);
+      _checkLength(_data);
+      DataValue? maxXYZValue = maxBy(_data, (DataValue b) => b.getMax());
+      DataValue? minXYZValue = minBy(_data, (DataValue b) => b.getMin());
+      if (maxXYZValue == null || minXYZValue == null) {
+        return;
+      }
+      double maxAbsValue =
+          max(maxXYZValue.getMax().abs(), minXYZValue.getMin().abs());
+      _maxY = maxAbsValue;
+
+      _minY = -maxAbsValue;
+      _maxX = value.timestamp;
+      _minX = _data[0].timestamp;
+    });
   }
 
   _getColor(String title) {
@@ -131,14 +143,14 @@ class _EarableDataChartState extends State<EarableDataChart> {
     }
     colors = _getColor(_title);
     if (_title == 'Pressure Data') {
-      minY = 0;
-      maxY = 130;
+      _minY = 0;
+      _maxY = 130;
     } else if (_title == "Magnetometer Data") {
-      minY = -200;
-      maxY = 200;
+      _minY = -200;
+      _maxY = 200;
     } else {
-      minY = -25;
-      maxY = 25;
+      _minY = -25;
+      _maxY = 25;
     }
     _setupListeners();
   }
@@ -234,7 +246,7 @@ class _EarableDataChartState extends State<EarableDataChart> {
                   color: charts.MaterialPalette.white, // Set the color here
                 ),
               ),
-              viewport: charts.NumericExtents(minY, maxY),
+              viewport: charts.NumericExtents(_minY, _maxY),
             ),
             domainAxis: charts.NumericAxisSpec(
                 renderSpec: charts.GridlineRendererSpec(
@@ -254,6 +266,8 @@ class _EarableDataChartState extends State<EarableDataChart> {
 abstract class DataValue {
   final int timestamp;
   final Map<dynamic, dynamic> units;
+  double getMin();
+  double getMax();
   DataValue({required this.timestamp, required this.units});
 }
 
@@ -269,6 +283,17 @@ class XYZValue extends DataValue {
       required this.z,
       required units})
       : super(timestamp: timestamp, units: units);
+
+  @override
+  double getMax() {
+    return max(x, max(y, z));
+  }
+
+  @override
+  double getMin() {
+    return min(x, min(y, z));
+  }
+
   @override
   String toString() {
     return "timestamp: $timestamp\nx: $x, y: $y, z: $z";
@@ -285,6 +310,17 @@ class BarometerValue extends DataValue {
       required this.temperature,
       required units})
       : super(timestamp: timestamp, units: units);
+
+  @override
+  double getMin() {
+    return min(pressure / 1000, temperature);
+  }
+
+  @override
+  double getMax() {
+    return max(pressure / 1000, temperature);
+  }
+
   @override
   String toString() {
     return "timestamp: $timestamp\npressure: $pressure, temperature:$temperature";
