@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:open_earable/open_earable_icon_icons.dart';
-import 'controls/control_tab.dart';
-import 'sensor_data/sensor_data_tab.dart';
+import 'controls_tab/controls_tab.dart';
+import 'sensor_data_tab/sensor_data_tab.dart';
 import 'ble.dart';
 import 'apps_tab.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
