@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
-import 'cards/sensor_configuration.dart';
-import 'cards/connect.dart';
-import 'cards/led_color.dart';
-import 'cards/audio_player.dart';
+import 'views/sensor_configuration.dart';
+import 'views/connect.dart';
+import 'views/led_color.dart';
+import 'views/audio_player.dart';
 import 'dart:async';
+import 'models/open_earable_settings.dart';
 
 class ControlTab extends StatefulWidget {
   final OpenEarable _openEarable;
@@ -31,9 +32,11 @@ class _ControlTabState extends State<ControlTab> {
   }
 
   @override
-  void initState() {
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     _connectionStateSubscription =
         _openEarable.bleManager.connectionStateStream.listen((connected) {
+      OpenEarableSettings().resetState();
       setState(() {
         this.connected = connected;
 
@@ -42,13 +45,15 @@ class _ControlTabState extends State<ControlTab> {
         }
       });
     });
-    setState(() {
-      connected = _openEarable.bleManager.connected;
-      if (connected) {
-        getNameAndSOC();
-      }
-      super.initState();
-    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    connected = _openEarable.bleManager.connected;
+    if (connected) {
+      getNameAndSOC();
+    }
   }
 
   void getNameAndSOC() {

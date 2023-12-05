@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:open_earable/controls_tab/models/open_earable_settings.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'dart:async';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
@@ -14,9 +15,9 @@ class LEDColorCard extends StatefulWidget {
 class _LEDColorCardState extends State<LEDColorCard> {
   final OpenEarable _openEarable;
   _LEDColorCardState(this._openEarable);
-  Color _selectedColor = Colors.deepPurple;
+
   Timer? rainbowTimer;
-  late bool rainbowModeActive;
+
   @override
   void initState() {
     super.initState();
@@ -25,7 +26,9 @@ class _LEDColorCardState extends State<LEDColorCard> {
   void _setLEDColor() {
     _stopRainbowMode();
     _openEarable.rgbLed.writeLedColor(
-        r: _selectedColor.red, g: _selectedColor.green, b: _selectedColor.blue);
+        r: OpenEarableSettings().selectedColor.red,
+        g: OpenEarableSettings().selectedColor.green,
+        b: OpenEarableSettings().selectedColor.blue);
   }
 
   void _turnLEDoff() {
@@ -34,9 +37,9 @@ class _LEDColorCardState extends State<LEDColorCard> {
   }
 
   void _startRainbowMode() {
-    if (rainbowModeActive) return;
+    if (OpenEarableSettings().rainbowModeActive) return;
 
-    rainbowModeActive = true;
+    OpenEarableSettings().rainbowModeActive = true;
 
     double h = 0;
     const double increment = 0.01;
@@ -52,7 +55,7 @@ class _LEDColorCardState extends State<LEDColorCard> {
   }
 
   void _stopRainbowMode() {
-    rainbowModeActive = false;
+    OpenEarableSettings().rainbowModeActive = false;
     if (rainbowTimer == null) {
       return;
     }
@@ -117,10 +120,10 @@ class _LEDColorCardState extends State<LEDColorCard> {
           title: const Text('Pick a color for the RGB LED'),
           content: SingleChildScrollView(
             child: ColorPicker(
-              pickerColor: _selectedColor,
+              pickerColor: OpenEarableSettings().selectedColor,
               onColorChanged: (color) {
                 setState(() {
-                  _selectedColor = color;
+                  OpenEarableSettings().selectedColor = color;
                 });
               },
               showLabel: true,
@@ -171,7 +174,7 @@ class _LEDColorCardState extends State<LEDColorCard> {
                         width: 66,
                         height: 36,
                         decoration: BoxDecoration(
-                          color: _selectedColor,
+                          color: OpenEarableSettings().selectedColor,
                           borderRadius: BorderRadius.circular(5),
                         ),
                       ),

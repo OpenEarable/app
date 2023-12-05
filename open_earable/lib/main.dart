@@ -1,3 +1,4 @@
+import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
 import 'package:open_earable/open_earable_icon_icons.dart';
 import 'controls_tab/controls_tab.dart';
@@ -6,6 +7,7 @@ import 'ble.dart';
 import 'apps_tab.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:open_earable/controls_tab/models/open_earable_settings.dart';
 
 void main() => runApp(MyApp());
 
