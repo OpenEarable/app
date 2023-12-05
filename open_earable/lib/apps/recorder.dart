@@ -52,7 +52,7 @@ class _RecorderState extends State<Recorder> {
       "sensor_yaw[°]",
       "sensor_pitch[°]",
       "sensor_roll[°]",
-      "sensor_baro[kPa]",
+      "sensor_baro[Pa]",
       "sensor_temp[°C]",
     ];
     _csvHeader.addAll(
