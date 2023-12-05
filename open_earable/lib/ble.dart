@@ -30,6 +30,7 @@ class _BLEPageState extends State<BLEPage> {
   void initState() {
     super.initState();
     _openEarable = widget.openEarable;
+
     _startScanning();
     _setupListeners();
   }
