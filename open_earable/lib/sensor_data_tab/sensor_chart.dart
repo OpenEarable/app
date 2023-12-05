@@ -38,7 +38,10 @@ class _EarableDataChartState extends State<EarableDataChart> {
       _dataSubscription =
           _openEarable.sensorManager.subscribeToSensorData(1).listen((data) {
         Map<dynamic, dynamic> units = {};
-        units.addAll(data["BARO"]["units"]);
+        var baroUnits = data["BARO"]["units"];
+        baroUnits["Pressure"] =
+            "k${baroUnits["Pressure"]}"; //Use kPA instead of Pa for chart
+        units.addAll(baroUnits);
         units.addAll(data["TEMP"]["units"]);
         int timestamp = data["timestamp"];
         BarometerValue barometerValue = BarometerValue(
@@ -89,7 +92,7 @@ class _EarableDataChartState extends State<EarableDataChart> {
             z: kalmanZ.filtered(data[_sensorName]["Z"]),
             x: kalmanX.filtered(data[_sensorName]["X"]),
             y: kalmanY.filtered(data[_sensorName]["Y"]),
-            units: data["ACC"]["units"]);
+            units: data[_sensorName]["units"]);
 
         _updateData(xyzValue);
       });
