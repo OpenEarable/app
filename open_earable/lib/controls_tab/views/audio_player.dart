@@ -35,12 +35,6 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
         TextEditingController(text: OpenEarableSettings().selectedWaveForm);
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-    updateText();
-  }
-
   void updateText() {
     if (_openEarable.bleManager.connected) {
       OpenEarableSettings().selectedFilename = _filenameTextController.text;
@@ -186,8 +180,6 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
   @override
   Widget build(BuildContext context) {
     updateText();
-    print(
-        "BUILD ${_openEarable.bleManager.connected}, ${_filenameTextController.text}");
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 5.0),
       child: Card(
