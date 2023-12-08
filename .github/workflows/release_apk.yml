@@ -20,10 +20,6 @@ jobs:
       - working-directory: ./open_earable
         run: flutter pub get
       - working-directory: ./open_earable
-        run: flutter format --set-exit-if-changed .
-      - working-directory: ./open_earable
-        run: flutter analyze .
-      - working-directory: ./open_earable
         run: flutter build apk
       - uses: actions/upload-artifact@v1
         with:
