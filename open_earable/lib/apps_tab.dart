@@ -47,9 +47,9 @@ class AppsTab extends StatelessWidget {
                     builder: (context) => Recorder(_openEarable)));
           }),
       AppInfo(
-          iconData: Icons.fiber_smart_record,
+          iconData: Icons.self_improvement,
           title: "Guided neck relaxation",
-          description: "Use the OpenEarable to get a guided neck relaxation",
+          description: "Relax your neck using the OpenEarble.",
           onTap: () {
             Navigator.push(
                 context,

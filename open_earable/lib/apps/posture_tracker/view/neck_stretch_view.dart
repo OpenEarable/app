@@ -101,7 +101,7 @@ class _NeckStretchViewState extends State<NeckStretchView> {
           backgroundColor: !postureTrackerViewModel.isTracking ? Color(0xff77F2A1) : Color(0xfff27777),
           foregroundColor: Colors.black,
         ),
-        child: postureTrackerViewModel.isTracking ? const Text("Stop Tracking") : const Text("Start Tracking"),
+        child: postureTrackerViewModel.isTracking ? const Text("Stop Meditation") : const Text("Start Meditation"),
       ),
       Visibility(
         visible: !postureTrackerViewModel.isAvailable,
