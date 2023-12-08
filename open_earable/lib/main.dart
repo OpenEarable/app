@@ -1,3 +1,4 @@
+import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
 import 'package:open_earable/open_earable_icon_icons.dart';
 import 'controls_tab/controls_tab.dart';
@@ -5,6 +6,8 @@ import 'sensor_data_tab/sensor_data_tab.dart';
 import 'ble.dart';
 import 'apps_tab.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:open_earable/controls_tab/models/open_earable_settings.dart';
 
 void main() => runApp(MyApp());
 
@@ -47,12 +50,22 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
+    _checkBLEPermission();
     _openEarable = OpenEarable();
     _widgetOptions = <Widget>[
       ControlTab(_openEarable),
       SensorDataTab(_openEarable),
       AppsTab(_openEarable),
     ];
+  }
+
+  Future<void> _checkBLEPermission() async {
+    PermissionStatus status = await Permission.bluetoothConnect.request();
+    PermissionStatus status2 = await Permission.location.request();
+    PermissionStatus status3 = await Permission.bluetoothScan.request();
+    if (status.isGranted) {
+      print("BLE is working");
+    }
   }
 
   void _onItemTapped(int index) {

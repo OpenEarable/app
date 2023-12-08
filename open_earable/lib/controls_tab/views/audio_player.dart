@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import '../models/open_earable_settings.dart';
 
 class AudioPlayerCard extends StatefulWidget {
   final OpenEarable _openEarable;
@@ -12,39 +13,44 @@ class AudioPlayerCard extends StatefulWidget {
 class _AudioPlayerCardState extends State<AudioPlayerCard> {
   final OpenEarable _openEarable;
   _AudioPlayerCardState(this._openEarable);
-  int _selectedRadio = 0;
+
   late TextEditingController _filenameTextController;
   late TextEditingController _jingleTextController;
-  late TextEditingController _audioFrequencyTextController;
-  late TextEditingController _audioPercentageTextController;
-  late TextEditingController _audioWaveFormTextController;
-
-  final Map<int, String> _jingleMap = {
-    0: 'IDLE',
-    1: 'NOTIFICATION',
-    2: 'SUCCESS',
-    3: 'ERROR',
-    4: 'ALARM',
-    5: 'PING',
-    6: 'OPEN',
-    7: 'CLOSE',
-    8: 'CLICK',
-  };
-  final Map<int, String> _waveFormMap = {
-    1: 'SINE',
-    2: 'SQUARE',
-    3: 'TRIANGLE',
-    4: 'SAW',
-  };
+  late TextEditingController _frequencyTextController;
+  late TextEditingController _frequencyVolumeTextController;
+  late TextEditingController _waveFormTextController;
 
   @override
   void initState() {
     super.initState();
-    _filenameTextController = TextEditingController(text: "filename.wav");
-    _jingleTextController = TextEditingController(text: _jingleMap[1]);
-    _audioFrequencyTextController = TextEditingController(text: "440");
-    _audioPercentageTextController = TextEditingController(text: "50");
-    _audioWaveFormTextController = TextEditingController(text: _waveFormMap[1]);
+    _filenameTextController = TextEditingController(
+        text: "${OpenEarableSettings().selectedFilename}");
+    _jingleTextController =
+        TextEditingController(text: OpenEarableSettings().selectedJingle);
+    _frequencyTextController = TextEditingController(
+        text: "${OpenEarableSettings().selectedFrequency}");
+    _frequencyVolumeTextController = TextEditingController(
+        text: "${OpenEarableSettings().selectedFrequencyVolume}");
+    _waveFormTextController =
+        TextEditingController(text: OpenEarableSettings().selectedWaveForm);
+  }
+
+  void updateText() {
+    if (_openEarable.bleManager.connected) {
+      OpenEarableSettings().selectedFilename = _filenameTextController.text;
+      OpenEarableSettings().selectedJingle = _jingleTextController.text;
+      OpenEarableSettings().selectedFrequency = _frequencyTextController.text;
+      OpenEarableSettings().selectedFrequencyVolume =
+          _frequencyVolumeTextController.text;
+      OpenEarableSettings().selectedWaveForm = _waveFormTextController.text;
+    } else {
+      _filenameTextController.text = OpenEarableSettings().selectedFilename;
+      _jingleTextController.text = OpenEarableSettings().selectedJingle;
+      _frequencyTextController.text = OpenEarableSettings().selectedFrequency;
+      _frequencyVolumeTextController.text =
+          OpenEarableSettings().selectedFrequencyVolume;
+      _waveFormTextController.text = OpenEarableSettings().selectedWaveForm;
+    }
   }
 
   void _playButtonPressed() {
@@ -60,7 +66,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
   }
 
   void _setSourceButtonPressed() {
-    switch (_selectedRadio) {
+    switch (OpenEarableSettings().selectedAudioPlayerRadio) {
       case 0:
         _setWAV();
         break;
@@ -73,9 +79,12 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
   }
 
   void _setJingle() {
-    String jingle = _jingleTextController.text;
-    print("Setting source to jingle '" + jingle + "'");
-    _openEarable.audioPlayer.jingle(_getKeyFromValue(jingle, _jingleMap));
+    int jingleIndex =
+        OpenEarableSettings().getJingleIndex(_jingleTextController.text);
+    print("Setting source to jingle '" +
+        _jingleTextController.text +
+        "' with index $jingleIndex");
+    _openEarable.audioPlayer.jingle(jingleIndex);
   }
 
   void _setWAV() {
@@ -94,12 +103,11 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
   }
 
   void _setFrequencySound() {
-    double frequency =
-        double.tryParse(_audioFrequencyTextController.text) ?? 440.0;
+    double frequency = double.tryParse(_frequencyTextController.text) ?? 440.0;
     int waveForm =
-        _getKeyFromValue(_audioWaveFormTextController.text, _waveFormMap);
+        OpenEarableSettings().getWaveFormIndex(_waveFormTextController.text);
     double loudness =
-        (double.tryParse(_audioPercentageTextController.text) ?? 100.0) / 100.0;
+        (double.tryParse(_frequencyVolumeTextController.text) ?? 100.0) / 100.0;
 
     if ((frequency < 0 || frequency > 30000) ||
         (loudness < 0 || loudness > 100)) {
@@ -116,15 +124,6 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
         loudness.toString() +
         "'.");
     _openEarable.audioPlayer.frequency(waveForm, frequency, loudness);
-  }
-
-  int _getKeyFromValue(String value, Map<int, String> map) {
-    for (var entry in map.entries) {
-      if (entry.value == value) {
-        return entry.key;
-      }
-    }
-    return 1;
   }
 
   void _showAlert(String title, String message, String dismissButtonText) {
@@ -180,6 +179,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
 
   @override
   Widget build(BuildContext context) {
+    updateText();
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 5.0),
       child: Card(
@@ -214,10 +214,10 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
       children: [
         Radio(
           value: 0,
-          groupValue: _selectedRadio,
+          groupValue: OpenEarableSettings().selectedAudioPlayerRadio,
           onChanged: (int? value) {
             setState(() {
-              _selectedRadio = value ?? 0;
+              OpenEarableSettings().selectedAudioPlayerRadio = value ?? 0;
             });
           },
         ),
@@ -257,10 +257,10 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
       children: [
         Radio(
           value: 1,
-          groupValue: _selectedRadio,
+          groupValue: OpenEarableSettings().selectedAudioPlayerRadio,
           onChanged: (int? value) {
             setState(() {
-              _selectedRadio = value ?? 0;
+              OpenEarableSettings().selectedAudioPlayerRadio = value ?? 0;
             });
           },
         ),
@@ -270,8 +270,8 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
             child: InkWell(
               onTap: _openEarable.bleManager.connected
                   ? () {
-                      _showSoundPicker(
-                          context, _jingleMap, _jingleTextController);
+                      _showSoundPicker(context, OpenEarableSettings().jingleMap,
+                          _jingleTextController);
                     }
                   : null,
               child: Container(
@@ -302,10 +302,10 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
       children: [
         Radio(
           value: 2,
-          groupValue: _selectedRadio,
+          groupValue: OpenEarableSettings().selectedAudioPlayerRadio,
           onChanged: (int? value) {
             setState(() {
-              _selectedRadio = value ?? 0;
+              OpenEarableSettings().selectedAudioPlayerRadio = value ?? 0;
             });
           },
         ),
@@ -315,7 +315,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 0),
             child: TextField(
-              controller: _audioFrequencyTextController,
+              controller: _frequencyTextController,
               textAlign: TextAlign.end,
               style: TextStyle(
                   color: _openEarable.bleManager.connected
@@ -354,7 +354,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
           height: 37.0,
           width: 52,
           child: TextField(
-            controller: _audioPercentageTextController,
+            controller: _frequencyVolumeTextController,
             textAlign: TextAlign.end,
             autofocus: false,
             style: TextStyle(
@@ -399,8 +399,8 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
           child: InkWell(
             onTap: _openEarable.bleManager.connected
                 ? () {
-                    _showSoundPicker(
-                        context, _waveFormMap, _audioWaveFormTextController);
+                    _showSoundPicker(context, OpenEarableSettings().waveFormMap,
+                        _waveFormTextController);
                   }
                 : null,
             child: Container(
@@ -412,7 +412,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    _audioWaveFormTextController.text,
+                    _waveFormTextController.text,
                     style: TextStyle(fontSize: 16.0),
                   ),
                   Icon(Icons.arrow_drop_down),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import '../models/open_earable_settings.dart';
 
 class SensorConfigurationCard extends StatefulWidget {
   final OpenEarable _openEarable;
@@ -13,31 +14,9 @@ class SensorConfigurationCard extends StatefulWidget {
 class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
   final OpenEarable _openEarable;
   _SensorConfigurationCardState(this._openEarable);
-  bool _imuSettingSelected = false;
-  bool _barometerSettingSelected = false;
-  bool _microphoneSettingSelected = false;
-  List<String> _microphoneOptions = [
-    "0",
-    "16000",
-    "20000",
-    "25000",
-    "31250",
-    "33333",
-    "40000",
-    "41667",
-    "50000",
-    "62500"
-  ];
-  List<String> _imuAndBarometerOptions = ["0", "10", "20", "30"];
-  late String _selectedImuOption;
-  late String _selectedBarometerOption;
-  late String _selectedMicrophoneOption;
 
   void initState() {
     super.initState();
-    _selectedMicrophoneOption = _microphoneOptions[0];
-    _selectedImuOption = _imuAndBarometerOptions[0];
-    _selectedBarometerOption = _imuAndBarometerOptions[0];
   }
 
   Color _getCheckboxColor(Set<MaterialState> states) {
@@ -75,9 +54,12 @@ class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
   }
 
   Future<void> _writeSensorConfigs() async {
-    double? imuSamplingRate = double.tryParse(_selectedImuOption);
-    double? barometerSamplingRate = double.tryParse(_selectedBarometerOption);
-    double? microphoneSamplingRate = double.tryParse(_selectedMicrophoneOption);
+    double? imuSamplingRate =
+        double.tryParse(OpenEarableSettings().selectedImuOption);
+    double? barometerSamplingRate =
+        double.tryParse(OpenEarableSettings().selectedBarometerOption);
+    double? microphoneSamplingRate =
+        double.tryParse(OpenEarableSettings().selectedMicrophoneOption);
     if (imuSamplingRate == null ||
         barometerSamplingRate == null ||
         microphoneSamplingRate == null ||
@@ -89,15 +71,20 @@ class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
     }
     OpenEarableSensorConfig imuConfig = OpenEarableSensorConfig(
         sensorId: 0,
-        samplingRate: _imuSettingSelected ? imuSamplingRate! : 0,
+        samplingRate:
+            OpenEarableSettings().imuSettingSelected ? imuSamplingRate! : 0,
         latency: 0);
     OpenEarableSensorConfig barometerConfig = OpenEarableSensorConfig(
         sensorId: 1,
-        samplingRate: _barometerSettingSelected ? barometerSamplingRate! : 0,
+        samplingRate: OpenEarableSettings().barometerSettingSelected
+            ? barometerSamplingRate!
+            : 0,
         latency: 0);
     OpenEarableSensorConfig microphoneConfig = OpenEarableSensorConfig(
         sensorId: 2,
-        samplingRate: _microphoneSettingSelected ? microphoneSamplingRate! : 0,
+        samplingRate: OpenEarableSettings().microphoneSettingSelected
+            ? microphoneSamplingRate!
+            : 0,
         latency: 0);
     await _openEarable.sensorManager.writeSensorConfig(imuConfig);
     await _openEarable.sensorManager.writeSensorConfig(barometerConfig);
@@ -124,39 +111,46 @@ class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              _sensorConfigurationRow("IMU", _imuAndBarometerOptions,
-                  _imuSettingSelected, _selectedImuOption, (bool? newValue) {
+              _sensorConfigurationRow(
+                  "IMU",
+                  OpenEarableSettings().imuAndBarometerOptions,
+                  OpenEarableSettings().imuSettingSelected,
+                  OpenEarableSettings().selectedImuOption, (bool? newValue) {
                 if (newValue != null) {
                   setState(() {
-                    _imuSettingSelected = newValue;
+                    OpenEarableSettings().imuSettingSelected = newValue;
                   });
                 }
               }, (String newValue) {
-                _selectedImuOption = newValue;
+                OpenEarableSettings().selectedImuOption = newValue;
               }),
               _sensorConfigurationRow(
                   "Barometer",
-                  _imuAndBarometerOptions,
-                  _barometerSettingSelected,
-                  _selectedBarometerOption, (bool? newValue) {
+                  OpenEarableSettings().imuAndBarometerOptions,
+                  OpenEarableSettings().barometerSettingSelected,
+                  OpenEarableSettings().selectedBarometerOption,
+                  (bool? newValue) {
                 if (newValue != null) {
                   setState(() {
-                    _barometerSettingSelected = newValue;
+                    print("SELECTED $newValue");
+                    OpenEarableSettings().barometerSettingSelected = newValue;
+                    print(OpenEarableSettings().barometerSettingSelected);
                   });
                 }
               }, (String newValue) {
-                _selectedBarometerOption = newValue;
+                OpenEarableSettings().selectedBarometerOption = newValue;
               }),
               _sensorConfigurationRow(
                   "Microphone",
-                  _microphoneOptions,
-                  _microphoneSettingSelected,
-                  _selectedMicrophoneOption, (bool? newValue) {
+                  OpenEarableSettings().microphoneOptions,
+                  OpenEarableSettings().microphoneSettingSelected,
+                  OpenEarableSettings().selectedMicrophoneOption,
+                  (bool? newValue) {
                 setState(() {
-                  _microphoneSettingSelected = newValue!;
+                  OpenEarableSettings().microphoneSettingSelected = newValue!;
                 });
               }, (String newValue) {
-                _selectedMicrophoneOption = newValue;
+                OpenEarableSettings().selectedMicrophoneOption = newValue;
               }),
               SizedBox(height: 8),
               Row(
