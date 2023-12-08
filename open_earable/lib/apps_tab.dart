@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:open_earable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_earable/apps/posture_tracker/view/posture_tracker_view.dart';
 import 'package:open_earable/apps/recorder.dart';
+import 'package:open_earable/apps/posture_tracker/view/neck_stretch_view.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
 class AppInfo {
@@ -44,6 +45,17 @@ class AppsTab extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                     builder: (context) => Recorder(_openEarable)));
+          }),
+      AppInfo(
+          iconData: Icons.fiber_smart_record,
+          title: "Guided neck relaxation",
+          description: "Use the OpenEarable to get a guided neck relaxation",
+          onTap: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => NeckStretchView(
+                      EarableAttitudeTracker(_openEarable), _openEarable)));
           }),
       // ... similarly for other apps
     ];
