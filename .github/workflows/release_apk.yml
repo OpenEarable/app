@@ -46,7 +46,7 @@ jobs:
           draft: false
           prerelease: false
           release_name: ${{ steps.version.outputs.version }}
-          tag_name: ${{ github.ref }}
+          tag_name: ${{ github.sha }}
 
       - name: Upload APK as Release Asset
         uses: actions/upload-release-asset@v1
