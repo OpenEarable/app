@@ -8,6 +8,22 @@ import 'package:provider/provider.dart';
 
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
+enum MeditationState { mainNeckStretch, leftNeckStretch, rightNeckStretch }
+
+extension MeditationStateExtension on MeditationState {
+  String get display {
+    switch (this) {
+      case MeditationState.mainNeckStretch:
+        return 'Main neck area';
+      case MeditationState.leftNeckStretch:
+        return 'Right neck area';
+      case MeditationState.rightNeckStretch:
+        return 'Left neck area';
+      default:
+        return 'Invalid State';
+    }
+  }
+}
 
 class NeckStretchView extends StatefulWidget {
   final AttitudeTracker _tracker;
@@ -21,6 +37,7 @@ class NeckStretchView extends StatefulWidget {
 
 class _NeckStretchViewState extends State<NeckStretchView> {
   late final NeckStretchViewModel _viewModel;
+  var _stretchState = MeditationState.mainNeckStretch;
 
   @override
   void initState() {
@@ -34,32 +51,35 @@ class _NeckStretchViewState extends State<NeckStretchView> {
         value: _viewModel,
         builder: (context, child) => Consumer<NeckStretchViewModel>(
             builder: (context, neckStretchViewModel, child) => Scaffold(
-              appBar: AppBar(
-                title: const Text("Guided Neck Relaxation"),
-              ),
-              body: Center(
-                child: this._buildContentView(neckStretchViewModel),
-              ),
-            )
-        )
-    );
+                  appBar: AppBar(
+                    title: const Text("Guided Neck Relaxation"),
+                  ),
+                  body: Center(
+                    child: this._buildContentView(neckStretchViewModel),
+                  ),
+                )));
   }
 
   Widget _buildContentView(NeckStretchViewModel neckStretchViewModel) {
     var headViews = this._createHeadViews(neckStretchViewModel);
-    return Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          ...headViews.map((e) => FractionallySizedBox(
+    var stretchString = this._stretchState.display;
+    return Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+      Padding(
+        padding: EdgeInsets.all(2),
+        child: Text(
+          "Currently stretching: $stretchString",
+        ),
+      ),
+      ...headViews.map((e) => FractionallySizedBox(
             widthFactor: .7,
             child: e,
           )),
-          this._buildTrackingButton(neckStretchViewModel),
-        ]
-    );
+      this._buildTrackingButton(neckStretchViewModel),
+    ]);
   }
 
-  Widget _buildHeadView(String headAssetPath, String neckAssetPath, AlignmentGeometry headAlignment, double roll, double angleThreshold) {
+  Widget _buildHeadView(String headAssetPath, String neckAssetPath,
+      AlignmentGeometry headAlignment, double roll, double angleThreshold) {
     return Padding(
       padding: const EdgeInsets.all(5),
       child: PostureRollView(
@@ -74,19 +94,43 @@ class _NeckStretchViewState extends State<NeckStretchView> {
 
   List<Widget> _createHeadViews(neckStretchViewModel) {
     return [
-      this._buildHeadView(
-          "assets/posture_tracker/Head_Front.png",
-          "assets/posture_tracker/Neck_Front.png",
-          Alignment.center.add(Alignment(0, 0.3)),
-          neckStretchViewModel.attitude.roll,
-          4.0
+      // Visible Widgets for the main stretch
+      Visibility(
+        visible: _stretchState == MeditationState.mainNeckStretch,
+        child: this._buildHeadView(
+            "assets/posture_tracker/Head_Front.png",
+            "assets/neck_stretch/Neck_Side_Stretch.png",
+            Alignment.center.add(Alignment(0, 0.3)),
+            neckStretchViewModel.attitude.roll,
+            4.0),
       ),
-      this._buildHeadView(
-          "assets/posture_tracker/Head_Side.png",
-          "assets/posture_tracker/Neck_Side.png",
-          Alignment.center.add(Alignment(0, 0.3)),
-          -neckStretchViewModel.attitude.pitch,
-          16.0
+      Visibility(
+        visible: _stretchState == MeditationState.mainNeckStretch,
+        child: this._buildHeadView(
+            "assets/posture_tracker/Head_Side.png",
+            "assets/neck_stretch/Neck_Main_Stretch.png",
+            Alignment.center.add(Alignment(0, 0.3)),
+            -neckStretchViewModel.attitude.pitch,
+            16.0),
+      ),
+      // Visible Widgets for the side stretch
+      Visibility(
+        visible: _stretchState != MeditationState.mainNeckStretch,
+        child: this._buildHeadView(
+            "assets/posture_tracker/Head_Front.png",
+            "assets/neck_stretch/Neck_Side_Stretch.png",
+            Alignment.center.add(Alignment(0, 0.3)),
+            neckStretchViewModel.attitude.roll,
+            4.0),
+      ),
+      Visibility(
+        visible: _stretchState != MeditationState.mainNeckStretch,
+        child: this._buildHeadView(
+            "assets/posture_tracker/Head_Side.png",
+            "assets/neck_stretch/Neck_Main_Stretch.png",
+            Alignment.center.add(Alignment(0, 0.3)),
+            -neckStretchViewModel.attitude.pitch,
+            16.0),
       ),
     ];
   }
@@ -95,13 +139,21 @@ class _NeckStretchViewState extends State<NeckStretchView> {
     return Column(children: [
       ElevatedButton(
         onPressed: postureTrackerViewModel.isAvailable
-            ? () { postureTrackerViewModel.isTracking ? this._viewModel.stopTracking() : this._viewModel.startTracking(); }
+            ? () {
+                postureTrackerViewModel.isTracking
+                    ? this._viewModel.stopTracking()
+                    : this._viewModel.startTracking();
+              }
             : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: !postureTrackerViewModel.isTracking ? Color(0xff77F2A1) : Color(0xfff27777),
+          backgroundColor: !postureTrackerViewModel.isTracking
+              ? Color(0xff77F2A1)
+              : Color(0xfff27777),
           foregroundColor: Colors.black,
         ),
-        child: postureTrackerViewModel.isTracking ? const Text("Stop Meditation") : const Text("Start Meditation"),
+        child: postureTrackerViewModel.isTracking
+            ? const Text("Stop Meditation")
+            : const Text("Start Meditation"),
       ),
       Visibility(
         visible: !postureTrackerViewModel.isAvailable,
