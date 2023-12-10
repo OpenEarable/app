@@ -37,6 +37,9 @@ jobs:
           name: release-apk
           path: ${{ github.workspace }}/release-apk
 
+      - name: Get short SHA
+        run: echo "SHORT_SHA=$("${{ github.sha }}".SubString(0, 8))" >> $env:GITHUB_ENV
+
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -46,7 +49,7 @@ jobs:
           draft: false
           prerelease: false
           release_name: Release ${{ github.event.head_commit.message }}
-          tag_name: ${{ github.sha }}
+          tag_name: ${{ env.SHORT_SHA }}
 
       - name: Upload APK as Release Asset
         uses: actions/upload-release-asset@v1
