@@ -123,6 +123,7 @@ flutter:
   assets:
     - assets/
     - assets/posture_tracker/
+    - assets/neck_stretch/
 
   fonts:
     - family:  OpenEarableIcon

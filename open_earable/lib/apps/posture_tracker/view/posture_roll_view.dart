@@ -4,7 +4,6 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:open_earable/apps/posture_tracker/view/arc_painter.dart';
-import 'package:open_earable/apps/posture_tracker/model/meditation_state.dart';
 
 /// A widget that displays the roll of the head and neck.
 class PostureRollView extends StatelessWidget {
@@ -18,16 +17,12 @@ class PostureRollView extends StatelessWidget {
   final String neckAssetPath;
   final AlignmentGeometry headAlignment;
 
-  // Checks whether the arc has different properties due to meditation state
-  final MeditationState meditation;
-
   const PostureRollView({Key? key,
     required this.roll,
     this.angleThreshold = 0,
     required this.headAssetPath,
     required this.neckAssetPath,
-    this.headAlignment = Alignment.center,
-    this.meditation = MeditationState.noStretch}) : super(key: key);
+    this.headAlignment = Alignment.center}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

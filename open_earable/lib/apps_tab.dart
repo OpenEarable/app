@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:open_earable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_earable/apps/posture_tracker/view/posture_tracker_view.dart';
 import 'package:open_earable/apps/recorder.dart';
-import 'package:open_earable/apps/posture_tracker/view/neck_stretch_view.dart';
+import 'package:open_earable/apps/posture_tracker/view/meditation_tracker_view.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
 class AppInfo {
@@ -54,7 +54,7 @@ class AppsTab extends StatelessWidget {
             Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (context) => NeckStretchView(
+                    builder: (context) => MeditationTrackerView(
                       EarableAttitudeTracker(_openEarable), _openEarable)));
           }),
       // ... similarly for other apps

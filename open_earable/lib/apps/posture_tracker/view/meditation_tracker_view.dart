@@ -2,26 +2,26 @@
 
 import 'package:flutter/material.dart';
 import 'package:open_earable/apps/posture_tracker/model/attitude_tracker.dart';
-import 'package:open_earable/apps/posture_tracker/view/posture_roll_view.dart';
+import 'package:open_earable/apps/posture_tracker/view/meditation_roll_view.dart';
 import 'package:open_earable/apps/posture_tracker/view_model/neck_stretch_view_model.dart';
 import 'package:provider/provider.dart';
 import 'package:open_earable/apps/posture_tracker/model/meditation_state.dart';
 
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
-class NeckStretchView extends StatefulWidget {
+class MeditationTrackerView extends StatefulWidget {
   final AttitudeTracker _tracker;
   final OpenEarable _openEarable;
 
-  NeckStretchView(this._tracker, this._openEarable);
+  MeditationTrackerView(this._tracker, this._openEarable);
 
   @override
-  State<NeckStretchView> createState() => _NeckStretchViewState();
+  State<MeditationTrackerView> createState() => _MeditationTrackerViewState();
 }
 
-class _NeckStretchViewState extends State<NeckStretchView> {
+class _MeditationTrackerViewState extends State<MeditationTrackerView> {
   late final NeckStretchViewModel _viewModel;
-  var _stretchState = MeditationState.mainNeckStretch;
+  var _stretchState = MeditationState.noStretch;
 
   @override
   void initState() {
@@ -52,6 +52,9 @@ class _NeckStretchViewState extends State<NeckStretchView> {
         Padding(
           padding: EdgeInsets.all(5),
           child: Visibility(
+            maintainSize: true,
+            maintainState: true,
+            maintainAnimation: true,
             visible: _stretchState != MeditationState.noStretch,
             child: RichText(
               textAlign: TextAlign.center,
@@ -89,16 +92,22 @@ class _NeckStretchViewState extends State<NeckStretchView> {
   }
 
   /// Builds the actual head views using the PostureRollView
-  Widget _buildHeadView(String headAssetPath, String neckAssetPath,
-      AlignmentGeometry headAlignment, double roll, double angleThreshold) {
+  Widget _buildHeadView(
+      String headAssetPath,
+      String neckAssetPath,
+      AlignmentGeometry headAlignment,
+      double roll,
+      double angleThreshold,
+      MeditationState state) {
     return Padding(
       padding: const EdgeInsets.all(5),
-      child: PostureRollView(
+      child: MeditationRollView(
         roll: roll,
         angleThreshold: angleThreshold * 3.14 / 180,
         headAssetPath: headAssetPath,
         neckAssetPath: neckAssetPath,
         headAlignment: headAlignment,
+        meditationState: state,
       ),
     );
   }
@@ -106,6 +115,28 @@ class _NeckStretchViewState extends State<NeckStretchView> {
   /// Creates the Head Views that display depending on the MeditationState.
   List<Widget> _createHeadViews(neckStretchViewModel) {
     return [
+      // Visible Head-Displays when not stretching
+      Visibility(
+        visible: _stretchState == MeditationState.noStretch,
+        child: this._buildHeadView(
+            "assets/posture_tracker/Head_Front.png",
+            "assets/posture_tracker/Neck_Front.png",
+            Alignment.center.add(Alignment(0, 0.3)),
+            neckStretchViewModel.attitude.roll,
+            0,
+            MeditationState.mainNeckStretch),
+      ),
+      Visibility(
+        visible: _stretchState == MeditationState.noStretch,
+        child: this._buildHeadView(
+            "assets/posture_tracker/Head_Side.png",
+            "assets/posture_tracker/Neck_Side.png",
+            Alignment.center.add(Alignment(0, 0.3)),
+            -neckStretchViewModel.attitude.pitch,
+            0,
+            MeditationState.mainNeckStretch),
+      ),
+
       /// Visible Widgets for the main stretch
       Visibility(
         visible: _stretchState == MeditationState.mainNeckStretch,
@@ -114,7 +145,8 @@ class _NeckStretchViewState extends State<NeckStretchView> {
             "assets/posture_tracker/Neck_Front.png",
             Alignment.center.add(Alignment(0, 0.3)),
             neckStretchViewModel.attitude.roll,
-            4.0),
+            7.0,
+            MeditationState.mainNeckStretch),
       ),
       Visibility(
         visible: _stretchState == MeditationState.mainNeckStretch,
@@ -123,7 +155,8 @@ class _NeckStretchViewState extends State<NeckStretchView> {
             "assets/neck_stretch/Neck_Main_Stretch.png",
             Alignment.center.add(Alignment(0, 0.3)),
             -neckStretchViewModel.attitude.pitch,
-            16.0),
+            50.0,
+            MeditationState.mainNeckStretch),
       ),
 
       /// Visible Widgets for the left stretch
@@ -131,10 +164,11 @@ class _NeckStretchViewState extends State<NeckStretchView> {
         visible: _stretchState == MeditationState.leftNeckStretch,
         child: this._buildHeadView(
             "assets/posture_tracker/Head_Front.png",
-            "assets/neck_stretch/Neck_Side_Stretch.png",
+            "assets/neck_stretch/Neck_Left_Stretch.png",
             Alignment.center.add(Alignment(0, 0.3)),
             neckStretchViewModel.attitude.roll,
-            4.0),
+            30.0,
+            MeditationState.leftNeckStretch),
       ),
       Visibility(
         visible: _stretchState == MeditationState.leftNeckStretch,
@@ -143,7 +177,8 @@ class _NeckStretchViewState extends State<NeckStretchView> {
             "assets/posture_tracker/Neck_Side.png",
             Alignment.center.add(Alignment(0, 0.3)),
             -neckStretchViewModel.attitude.pitch,
-            16.0),
+            15.0,
+            MeditationState.leftNeckStretch),
       ),
 
       /// Visible Widgets for the right stretch
@@ -151,10 +186,11 @@ class _NeckStretchViewState extends State<NeckStretchView> {
         visible: _stretchState == MeditationState.rightNeckStretch,
         child: this._buildHeadView(
             "assets/posture_tracker/Head_Front.png",
-            "assets/neck_stretch/Neck_Side_Stretch.png",
+            "assets/neck_stretch/Neck_Right_Stretch.png",
             Alignment.center.add(Alignment(0, 0.3)),
             neckStretchViewModel.attitude.roll,
-            4.0),
+            30.0,
+            MeditationState.rightNeckStretch),
       ),
       Visibility(
         visible: _stretchState == MeditationState.rightNeckStretch,
@@ -163,7 +199,8 @@ class _NeckStretchViewState extends State<NeckStretchView> {
             "assets/posture_tracker/Neck_Side.png",
             Alignment.center.add(Alignment(0, 0.3)),
             -neckStretchViewModel.attitude.pitch,
-            16.0),
+            15.0,
+            MeditationState.rightNeckStretch),
       ),
     ];
   }
