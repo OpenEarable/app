@@ -41,6 +41,7 @@ class EarableAttitudeTracker extends AttitudeTracker {
 
   @override
   void stop() {
+    _openEarable.rgbLed.writeLedColor(r: 0, g: 0, b: 0);
     _subscription?.pause();
   }
 

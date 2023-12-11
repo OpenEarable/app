@@ -50,6 +50,8 @@ class BadPostureReminder {
 
   BadPostureReminder(this._openEarable, this._attitudeTracker);
 
+  bool? _lastPostureWasBad = null;
+
   void start() {
     _timestamps.lastReset = DateTime.now();
     _timestamps.lastBadPosture = null;
@@ -64,6 +66,10 @@ class BadPostureReminder {
 
       DateTime now = DateTime.now();
       if (_isBadPosture(attitude)) {
+        if (!(_lastPostureWasBad ?? false)) {
+          _openEarable.rgbLed.writeLedColor(r: 255, g: 0, b: 0);
+        }
+
         // If this is the first time the program enters the bad state, store the current time
         if (_timestamps.lastBadPosture == null) {
           _timestamps.lastBadPosture = now;
@@ -81,6 +87,10 @@ class BadPostureReminder {
         // Reset the last good state time
         _timestamps.lastGoodPosture = null;
       } else {
+        if (_lastPostureWasBad ?? false) {
+          _openEarable.rgbLed.writeLedColor(r: 0, g: 255, b: 0);
+        }
+
         // If this is the first time the program enters the good state, store the current time
         if (_timestamps.lastGoodPosture == null) {
           _timestamps.lastGoodPosture = now;
@@ -95,6 +105,7 @@ class BadPostureReminder {
           }
         }
       }
+      _lastPostureWasBad = _isBadPosture(attitude);
     });
   }
   
