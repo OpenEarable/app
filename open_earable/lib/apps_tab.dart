@@ -5,6 +5,8 @@ import 'package:open_earable/apps/posture_tracker/view/posture_tracker_view.dart
 import 'package:open_earable/apps/recorder.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
+import 'apps/driving_assistant/model/driving_attitude_tracker.dart';
+
 class AppInfo {
   final IconData iconData;
   final String title;
@@ -54,7 +56,7 @@ class AppsTab extends StatelessWidget {
             Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (context) => DrivingAssistantView(EarableAttitudeTracker(_openEarable), _openEarable)));
+                    builder: (context) => DrivingAssistantView(DrivingAttitudeTracker(_openEarable), _openEarable)));
           }),
       // ... similarly for other apps
     ];

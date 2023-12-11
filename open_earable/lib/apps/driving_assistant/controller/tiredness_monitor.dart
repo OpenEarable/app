@@ -5,78 +5,77 @@ import 'package:open_earable/apps/driving_assistant/controller/search_pattern.da
 import 'package:open_earable/apps/driving_assistant/controller/subject.dart';
 import 'package:open_earable/apps/driving_assistant/view/driving_assistant_view.dart';
 import 'package:open_earable/apps/driving_assistant/view/observer.dart';
-import 'package:open_earable/apps/posture_tracker/model/attitude.dart';
-import 'package:open_earable/apps/posture_tracker/model/attitude_tracker.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+
+import '../model/base_attitude_tracker.dart';
 
 
 class TrackingSettings {
   int timeBetweenDataPoints;
   int numberOfDataPoints;
-  int pitchAngleThreshold;
+  int gyroYThreshold;
 
   TrackingSettings({
     required this.timeBetweenDataPoints,
     required this.numberOfDataPoints,
-    required this.pitchAngleThreshold,
+    required this.gyroYThreshold,
   });
 }
 
 class TirednessMonitor implements Subject {
+  //final DrivingAssistantView _view;
   final OpenEarable _openEarable;
-  final AttitudeTracker _attitudeTracker;
+  final BaseAttitudeTracker _attitudeTracker;
   final LinkedList<DataPoint> _allDataPoints = new LinkedList<DataPoint>();
   List<Observer> _observerList = new List<Observer>.empty(growable: true);
+  late TrackingSettings _settings;
+
+  TrackingSettings get settings => _settings;
 
   TirednessMonitor(this._openEarable, this._attitudeTracker);
 
   void start() {
-    TrackingSettings _settings = TrackingSettings(
-      timeBetweenDataPoints: 100,
+    _settings = TrackingSettings(
+      timeBetweenDataPoints: 2,
       numberOfDataPoints: 30,
-      pitchAngleThreshold: 15,
+      gyroYThreshold: 9,
     );
+
+    print("test");
 
     int _tirednessCounter = 0;
     DateTime lastReading = DateTime.now();
-
+    notifyObservers(_tirednessCounter);
     _attitudeTracker.listen((attitude) {
-      if (DateTime.now().difference(lastReading).inMilliseconds >=
+      if (DateTime.now().difference(lastReading).inSeconds >=
           _settings.timeBetweenDataPoints) {
         //Update linked list with DataPoints
-        lastReading = DateTime.now();
-        if(_allDataPoints.length >= _settings.numberOfDataPoints){
-          _allDataPoints.remove(_allDataPoints.first);
+        notifyObservers(_tirednessCounter);
+        //print("gyroY: " + attitude.gyroY.toString());
+        if(SearchPattern.tirednessCheck(attitude.gyroY, _settings)){
+          lastReading = DateTime.now();
+          print("SUCCESS: " + attitude.gyroY.toString());
+          alarm();
+          _tirednessCounter++;
+          print(_tirednessCounter.toString());
+          notifyObservers(_tirednessCounter);
         }
-        _allDataPoints.add(_createDataPoint(attitude, _allDataPoints.last));
-
-        //Check for pattern in current list of DataPoints
-        for(DataPoint point in _allDataPoints){
-          if(point.alerted == false && SearchPattern.tirednessCheck(point)){
-            point.alerted = true;
-            alarm();
-            _tirednessCounter++;
-            notifyObservers(_tirednessCounter);
-          }
-        }
-
       }
     });
   }
 
-  DataPoint _createDataPoint(attitude, DataPoint previous){
+  DataPoint _createDataPoint(attitude){
     return DataPoint(
         false,
         attitude.yaw.abs(),
         attitude.pitch.abs(),
-        attitude.roll.abs(),
-        previous
+        attitude.roll.abs()
     );
   }
 
   void alarm() {
     print("playing jingle to alert of tiredness");
-    _openEarable.audioPlayer.jingle(4);
+    _openEarable.audioPlayer.jingle(1);
   }
 
   @override
@@ -94,5 +93,9 @@ class TirednessMonitor implements Subject {
   @override
   void removeObserver(Observer observer) {
     _observerList.remove(observer);
+  }
+
+  void setSettings(TrackingSettings settings) {
+    _settings = settings;
   }
 }

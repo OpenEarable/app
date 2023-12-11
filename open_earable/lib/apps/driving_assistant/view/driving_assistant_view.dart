@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:open_earable/apps/driving_assistant/controller/tiredness_monitor.dart';
 import 'package:open_earable/apps/driving_assistant/view/observer.dart';
+import 'package:open_earable/apps/driving_assistant/view/driving_settings_view.dart';
 import 'package:open_earable/apps/posture_tracker/model/attitude_tracker.dart';
 import 'package:provider/provider.dart';
 import 'package:open_earable/apps/driving_assistant/driving_assistant_notifier.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
+import '../model/base_attitude_tracker.dart';
+
 
 class DrivingAssistantView extends StatefulWidget implements Observer {
 
-  final AttitudeTracker _tracker;
+  final BaseAttitudeTracker _tracker;
   final OpenEarable _openEarable;
   Color mugColor = Colors.white;
 
@@ -46,12 +49,18 @@ class _DrivingAssistantViewState extends State<DrivingAssistantView> {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<DrivingAssistantNotifier>(
-        create: (_) => _drivingNotifier,
+    return ChangeNotifierProvider<DrivingAssistantNotifier>.value(
+        value: _drivingNotifier,
         builder: (context, child) => Consumer<DrivingAssistantNotifier>(
             builder: (context, drivingAssistantNotifier, child) => Scaffold(
               appBar: AppBar(
                 title: const Text("Driving Assistant"),
+                actions: [
+                  IconButton(
+                      onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => DrivingSettingsView(this._drivingNotifier, widget))),
+                      icon: Icon(Icons.settings)
+                  ),
+                ],
               ),
               body: Center(
                 child: this._buildContentView(drivingAssistantNotifier),
@@ -93,7 +102,14 @@ class _DrivingAssistantViewState extends State<DrivingAssistantView> {
             fontSize: 12,
           ),
         ),
-      )
+      ),
+      Text(
+        drivingAssistantNotifier.attitude.gyroY.toString(),
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 12,
+        ),
+      ),
     ]);
   }
 
