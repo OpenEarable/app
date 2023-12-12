@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:open_earable/apps/posture_tracker/model/meditation_state.dart';
+import 'package:open_earable/apps/neck_meditation/model/meditation_state.dart';
 import 'package:open_earable/apps/posture_tracker/view/arc_painter.dart';
 
 class MeditationArcPainter extends CustomPainter {

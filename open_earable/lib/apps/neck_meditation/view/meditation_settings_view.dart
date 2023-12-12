@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:open_earable/apps/posture_tracker/model/meditation_state.dart';
-import 'package:open_earable/apps/posture_tracker/view_model/meditation_view_model.dart';
+import 'package:open_earable/apps/neck_meditation/model/meditation_state.dart';
+import 'package:open_earable/apps/neck_meditation/view_model/meditation_view_model.dart';
 import 'package:provider/provider.dart';
 
 class SettingsView extends StatefulWidget {

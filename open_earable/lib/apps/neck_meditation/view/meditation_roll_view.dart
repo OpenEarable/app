@@ -1,8 +1,8 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:open_earable/apps/posture_tracker/model/meditation_state.dart';
-import 'package:open_earable/apps/posture_tracker/view/meditation_arc_painter.dart';
+import 'package:open_earable/apps/neck_meditation/model/meditation_state.dart';
+import 'package:open_earable/apps/neck_meditation/view/meditation_arc_painter.dart';
 
 /// A widget that displays the roll of the head and neck for the meditation.
 class MeditationRollView extends StatelessWidget {
