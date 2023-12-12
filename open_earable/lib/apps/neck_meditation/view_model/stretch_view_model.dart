@@ -1,11 +1,11 @@
 import "package:flutter/material.dart";
 import "package:open_earable/apps/posture_tracker/model/attitude.dart";
 import "package:open_earable/apps/posture_tracker/model/attitude_tracker.dart";
-import 'package:open_earable/apps/neck_meditation/model/meditation_state.dart';
+import 'package:open_earable/apps/neck_meditation/model/stretch_state.dart';
 
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
-class MeditationViewModel extends ChangeNotifier {
+class StretchViewModel extends ChangeNotifier {
   Attitude _attitude = Attitude();
 
   Attitude get attitude => _attitude;
@@ -16,15 +16,15 @@ class MeditationViewModel extends ChangeNotifier {
 
   NeckMeditation get meditation => _meditation;
 
-  MeditationSettings get meditationSettings => _meditation.settings;
+  StretchSettings get meditationSettings => _meditation.settings;
 
-  MeditationState get meditationState => this._meditation.settings.state;
+  NeckStretchState get meditationState => this._meditation.settings.state;
 
   AttitudeTracker _attitudeTracker;
   OpenEarable _openEarable;
   late NeckMeditation _meditation;
 
-  MeditationViewModel(this._attitudeTracker, this._openEarable) {
+  StretchViewModel(this._attitudeTracker, this._openEarable) {
     _attitudeTracker.didChangeAvailability = (_) {
       notifyListeners();
     };
@@ -60,7 +60,7 @@ class MeditationViewModel extends ChangeNotifier {
   }
 
   /// Used to set the Duration Settings for Meditation
-  void setMeditationSettings(MeditationSettings settings) {
+  void setMeditationSettings(StretchSettings settings) {
     _meditation.setSettings(settings);
   }
 

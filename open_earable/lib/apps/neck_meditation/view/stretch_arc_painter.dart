@@ -1,16 +1,17 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:open_earable/apps/neck_meditation/model/meditation_state.dart';
+import 'package:open_earable/apps/neck_meditation/model/stretch_state.dart';
 import 'package:open_earable/apps/posture_tracker/view/arc_painter.dart';
 
-class MeditationArcPainter extends CustomPainter {
+class StretchArcPainter extends CustomPainter {
   /// the angle of rotation
   final double angle;
   final double angleThreshold;
-  final MeditationState meditationState;
+  final NeckStretchState stretchState;
+  final bool isFront;
 
-  MeditationArcPainter({required this.angle, this.angleThreshold = 0, this.meditationState = MeditationState.noStretch});
+  StretchArcPainter({required this.angle, this.angleThreshold = 0, this.stretchState = NeckStretchState.noStretch, required this.isFront});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -56,7 +57,7 @@ class MeditationArcPainter extends CustomPainter {
     );
 
     Paint angleOvershootPaint = Paint()
-      ..color = this.meditationState == MeditationState.noStretch ? Colors.red : Color.fromARGB(255, 0, 186, 255)
+      ..color = Color.fromARGB(255, 0, 186, 255)
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeWidth = 5.0;
@@ -64,22 +65,58 @@ class MeditationArcPainter extends CustomPainter {
     Path thresholdPath = Path();
     thresholdPath.addArc(
       Rect.fromCircle(center: center, radius: radius), // create a rectangle from the center and radius
-      startAngle - angleThreshold, // start angle
-      2 * angleThreshold, // sweep angle
+      getStartAngle(startAngle, angleThreshold), // start angle
+      getThreshold(angleThreshold), // sweep angle
     );
 
     Paint thresholdPaint = Paint()
-      ..color = this.meditationState == MeditationState.noStretch ? Colors.purpleAccent[100]! : Colors.redAccent[100]!
+      ..color = Colors.redAccent[100]!
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeWidth = 5.0;
-
 
     // Draw the path on the canvas
     canvas.drawPath(thresholdPath, thresholdPaint);
     canvas.drawPath(anglePath, anglePaint);
     if (angle.abs() > angleThreshold.abs()) {
       canvas.drawPath(angleOvershootPath, angleOvershootPaint);
+    }
+  }
+
+  /// Gets the right start angle depending on stretch state
+  double getStartAngle(double startAngle, double threshold) {
+    if (!this.isFront)
+      return startAngle - threshold;
+
+    switch(this.stretchState) {
+      case NeckStretchState.leftNeckStretch:
+        return startAngle - threshold;
+      case NeckStretchState.rightNeckStretch:
+        return startAngle - threshold - pi/2 - 2/18 * pi;
+      default:
+        return startAngle - threshold;
+    }
+  }
+
+  /// Gets the right threshold depending on stretch state
+  double getThreshold(double threshold) {
+    if (this.isFront) {
+      switch(this.stretchState) {
+        case NeckStretchState.rightNeckStretch:
+        case NeckStretchState.leftNeckStretch:
+          return 2 * threshold + pi/2 + 2/18 * pi;
+        default:
+          return 2 * threshold;
+      }
+    }
+
+    switch(this.stretchState) {
+      case NeckStretchState.mainNeckStretch:
+        return 2 * threshold + pi/2 + 1/36 * pi;
+      case NeckStretchState.rightNeckStretch:
+        return 2 * threshold + pi/2;
+      default:
+        return 2 * threshold;
     }
   }
 

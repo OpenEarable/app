@@ -1,30 +1,30 @@
 import 'package:flutter/material.dart';
-import 'package:open_earable/apps/posture_tracker/model/attitude_tracker.dart';
-import 'package:open_earable/apps/neck_meditation/view/meditation_roll_view.dart';
-import 'package:open_earable/apps/neck_meditation/view_model/meditation_view_model.dart';
 import 'package:provider/provider.dart';
-import 'package:open_earable/apps/neck_meditation/model/meditation_state.dart';
-import 'package:open_earable/apps/neck_meditation/view/meditation_settings_view.dart';
+import 'package:open_earable/apps/posture_tracker/model/attitude_tracker.dart';
+import 'package:open_earable/apps/neck_meditation/view/stretch_roll_view.dart';
+import 'package:open_earable/apps/neck_meditation/view_model/stretch_view_model.dart';
+import 'package:open_earable/apps/neck_meditation/model/stretch_state.dart';
+import 'package:open_earable/apps/neck_meditation/view/stretch_settings_view.dart';
 
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
-class MeditationTrackerView extends StatefulWidget {
+class StretchTrackerView extends StatefulWidget {
   final AttitudeTracker _tracker;
   final OpenEarable _openEarable;
 
-  MeditationTrackerView(this._tracker, this._openEarable);
+  StretchTrackerView(this._tracker, this._openEarable);
 
   @override
-  State<MeditationTrackerView> createState() => _MeditationTrackerViewState();
+  State<StretchTrackerView> createState() => _StretchTrackerViewState();
 }
 
-class _MeditationTrackerViewState extends State<MeditationTrackerView> {
-  late final MeditationViewModel _viewModel;
+class _StretchTrackerViewState extends State<StretchTrackerView> {
+  late final StretchViewModel _viewModel;
 
   @override
   void initState() {
     super.initState();
-    this._viewModel = MeditationViewModel(widget._tracker, widget._openEarable);
+    this._viewModel = StretchViewModel(widget._tracker, widget._openEarable);
   }
 
   /// Used to start the meditation via the button
@@ -49,10 +49,10 @@ class _MeditationTrackerViewState extends State<MeditationTrackerView> {
         ),
       );
 
-    if (_viewModel.meditationState == MeditationState.noStretch)
+    if (_viewModel.meditationState == NeckStretchState.noStretch)
       return TextSpan(text: "Click the Button below\n to start Meditating!");
 
-    if (_viewModel.meditationState == MeditationState.doneStretching)
+    if (_viewModel.meditationState == NeckStretchState.doneStretching)
       return TextSpan(children: <TextSpan>[
         TextSpan(text: "You are done stretching.\n"),
         TextSpan(
@@ -82,8 +82,8 @@ class _MeditationTrackerViewState extends State<MeditationTrackerView> {
   Text _getButtonText() {
     if (!_viewModel.isTracking) return Text('Start Meditation');
 
-    if (_viewModel.meditationState == MeditationState.doneStretching ||
-        _viewModel.meditationState == MeditationState.noStretch)
+    if (_viewModel.meditationState == NeckStretchState.doneStretching ||
+        _viewModel.meditationState == NeckStretchState.noStretch)
       return Text('Stop Meditation');
 
     return Text(_viewModel.getRestDuration().toString().substring(2, 7));
@@ -91,18 +91,18 @@ class _MeditationTrackerViewState extends State<MeditationTrackerView> {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<MeditationViewModel>.value(
+    return ChangeNotifierProvider<StretchViewModel>.value(
         value: _viewModel,
-        builder: (context, child) => Consumer<MeditationViewModel>(
+        builder: (context, child) => Consumer<StretchViewModel>(
             builder: (context, neckStretchViewModel, child) => Scaffold(
                   appBar: AppBar(
                     title: const Text("Guided Neck Relaxation"),
                     actions: [
                       IconButton(
                           onPressed: (this._viewModel.meditationState ==
-                                      MeditationState.noStretch ||
+                                      NeckStretchState.noStretch ||
                                   this._viewModel.meditationState ==
-                                      MeditationState.doneStretching)
+                                      NeckStretchState.doneStretching)
                               ? () => Navigator.of(context).push(
                                   MaterialPageRoute(
                                       builder: (context) =>
@@ -117,7 +117,7 @@ class _MeditationTrackerViewState extends State<MeditationTrackerView> {
                 )));
   }
 
-  Widget _buildContentView(MeditationViewModel neckStretchViewModel) {
+  Widget _buildContentView(StretchViewModel neckStretchViewModel) {
     var headViews = this._createHeadViews(neckStretchViewModel);
     return Column(
       children: [
@@ -157,16 +157,16 @@ class _MeditationTrackerViewState extends State<MeditationTrackerView> {
       AlignmentGeometry headAlignment,
       double roll,
       double angleThreshold,
-      MeditationState state) {
+      NeckStretchState state) {
     return Padding(
       padding: const EdgeInsets.all(5),
-      child: MeditationRollView(
+      child: StretchRollView(
         roll: roll,
         angleThreshold: angleThreshold * 3.14 / 180,
         headAssetPath: headAssetPath,
         neckAssetPath: neckAssetPath,
         headAlignment: headAlignment,
-        meditationState: state,
+        stretchState: state,
       ),
     );
   }
@@ -176,104 +176,104 @@ class _MeditationTrackerViewState extends State<MeditationTrackerView> {
     return [
       // Visible Head-Displays when not stretching
       Visibility(
-        visible: this._viewModel.meditationState == MeditationState.noStretch ||
-            this._viewModel.meditationState == MeditationState.doneStretching,
+        visible: this._viewModel.meditationState == NeckStretchState.noStretch ||
+            this._viewModel.meditationState == NeckStretchState.doneStretching,
         child: this._buildHeadView(
             "assets/posture_tracker/Head_Front.png",
             "assets/posture_tracker/Neck_Front.png",
             Alignment.center.add(Alignment(0, 0.3)),
             neckStretchViewModel.attitude.roll,
             0,
-            MeditationState.mainNeckStretch),
+            NeckStretchState.noStretch),
       ),
       Visibility(
-        visible: this._viewModel.meditationState == MeditationState.noStretch ||
-            this._viewModel.meditationState == MeditationState.doneStretching,
+        visible: this._viewModel.meditationState == NeckStretchState.noStretch ||
+            this._viewModel.meditationState == NeckStretchState.doneStretching,
         child: this._buildHeadView(
             "assets/posture_tracker/Head_Side.png",
             "assets/posture_tracker/Neck_Side.png",
             Alignment.center.add(Alignment(0, 0.3)),
             -neckStretchViewModel.attitude.pitch,
             0,
-            MeditationState.mainNeckStretch),
+            NeckStretchState.noStretch),
       ),
 
       /// Visible Widgets for the main stretch
       Visibility(
         visible:
-            this._viewModel.meditationState == MeditationState.mainNeckStretch,
+            this._viewModel.meditationState == NeckStretchState.mainNeckStretch,
         child: this._buildHeadView(
             "assets/posture_tracker/Head_Front.png",
             "assets/posture_tracker/Neck_Front.png",
             Alignment.center.add(Alignment(0, 0.3)),
             neckStretchViewModel.attitude.roll,
             7.0,
-            MeditationState.mainNeckStretch),
+            NeckStretchState.mainNeckStretch),
       ),
       Visibility(
         visible:
-            this._viewModel.meditationState == MeditationState.mainNeckStretch,
+            this._viewModel.meditationState == NeckStretchState.mainNeckStretch,
         child: this._buildHeadView(
             "assets/posture_tracker/Head_Side.png",
             "assets/neck_stretch/Neck_Main_Stretch.png",
             Alignment.center.add(Alignment(0, 0.3)),
             -neckStretchViewModel.attitude.pitch,
             50.0,
-            MeditationState.mainNeckStretch),
-      ),
-
-      /// Visible Widgets for the left stretch
-      Visibility(
-        visible:
-            this._viewModel.meditationState == MeditationState.leftNeckStretch,
-        child: this._buildHeadView(
-            "assets/posture_tracker/Head_Front.png",
-            "assets/neck_stretch/Neck_Left_Stretch.png",
-            Alignment.center.add(Alignment(0, 0.3)),
-            neckStretchViewModel.attitude.roll,
-            30.0,
-            MeditationState.leftNeckStretch),
-      ),
-      Visibility(
-        visible:
-            this._viewModel.meditationState == MeditationState.leftNeckStretch,
-        child: this._buildHeadView(
-            "assets/posture_tracker/Head_Side.png",
-            "assets/posture_tracker/Neck_Side.png",
-            Alignment.center.add(Alignment(0, 0.3)),
-            -neckStretchViewModel.attitude.pitch,
-            15.0,
-            MeditationState.leftNeckStretch),
+            NeckStretchState.mainNeckStretch),
       ),
 
       /// Visible Widgets for the right stretch
       Visibility(
         visible:
-            this._viewModel.meditationState == MeditationState.rightNeckStretch,
+        this._viewModel.meditationState == NeckStretchState.rightNeckStretch,
         child: this._buildHeadView(
             "assets/posture_tracker/Head_Front.png",
             "assets/neck_stretch/Neck_Right_Stretch.png",
             Alignment.center.add(Alignment(0, 0.3)),
             neckStretchViewModel.attitude.roll,
             30.0,
-            MeditationState.rightNeckStretch),
+            NeckStretchState.rightNeckStretch),
       ),
       Visibility(
         visible:
-            this._viewModel.meditationState == MeditationState.rightNeckStretch,
+        this._viewModel.meditationState == NeckStretchState.rightNeckStretch,
         child: this._buildHeadView(
             "assets/posture_tracker/Head_Side.png",
             "assets/posture_tracker/Neck_Side.png",
             Alignment.center.add(Alignment(0, 0.3)),
             -neckStretchViewModel.attitude.pitch,
             15.0,
-            MeditationState.rightNeckStretch),
+            NeckStretchState.rightNeckStretch),
+      ),
+
+      /// Visible Widgets for the left stretch
+      Visibility(
+        visible:
+            this._viewModel.meditationState == NeckStretchState.leftNeckStretch,
+        child: this._buildHeadView(
+            "assets/posture_tracker/Head_Front.png",
+            "assets/neck_stretch/Neck_Left_Stretch.png",
+            Alignment.center.add(Alignment(0, 0.3)),
+            neckStretchViewModel.attitude.roll,
+            30.0,
+            NeckStretchState.leftNeckStretch),
+      ),
+      Visibility(
+        visible:
+            this._viewModel.meditationState == NeckStretchState.leftNeckStretch,
+        child: this._buildHeadView(
+            "assets/posture_tracker/Head_Side.png",
+            "assets/posture_tracker/Neck_Side.png",
+            Alignment.center.add(Alignment(0, 0.3)),
+            -neckStretchViewModel.attitude.pitch,
+            15.0,
+            NeckStretchState.leftNeckStretch),
       ),
     ];
   }
 
   // Creates the Button used to start the meditation
-  Widget _buildMeditationButton(MeditationViewModel neckStretchViewModel) {
+  Widget _buildMeditationButton(StretchViewModel neckStretchViewModel) {
     return Padding(
       padding: EdgeInsets.all(5),
       child: Column(children: [

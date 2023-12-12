@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:open_earable/apps/neck_meditation/model/meditation_state.dart';
-import 'package:open_earable/apps/neck_meditation/view_model/meditation_view_model.dart';
+import 'package:open_earable/apps/neck_meditation/model/stretch_state.dart';
+import 'package:open_earable/apps/neck_meditation/view_model/stretch_view_model.dart';
 import 'package:provider/provider.dart';
 
 class SettingsView extends StatefulWidget {
-  final MeditationViewModel _viewModel;
+  final StretchViewModel _viewModel;
 
   SettingsView(this._viewModel);
 
@@ -17,7 +17,7 @@ class _SettingsViewState extends State<SettingsView> {
   late final TextEditingController _leftNeckDuration;
   late final TextEditingController _rightNeckDuration;
 
-  late final MeditationViewModel _viewModel;
+  late final StretchViewModel _viewModel;
 
   @override
   void initState() {
@@ -38,9 +38,9 @@ class _SettingsViewState extends State<SettingsView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Guided Neck Meditation Settings")),
-      body: ChangeNotifierProvider<MeditationViewModel>.value(
+      body: ChangeNotifierProvider<StretchViewModel>.value(
           value: _viewModel,
-          builder: (context, child) => Consumer<MeditationViewModel>(
+          builder: (context, child) => Consumer<StretchViewModel>(
                 builder: (context, postureTrackerViewModel, child) =>
                     _buildSettingsView(),
               )),
@@ -158,7 +158,7 @@ class _SettingsViewState extends State<SettingsView> {
                 onPressed: _viewModel.isTracking
                     ? () {
                         _viewModel.calibrate();
-                        Navigator.of(context).pop();
+                        _viewModel.stopTracking();
                       }
                     : () => _viewModel.startTracking(),
                 child: Text(_viewModel.isTracking
@@ -183,7 +183,7 @@ class _SettingsViewState extends State<SettingsView> {
 
   /// Update the Meditation Settings according to values, if field is empty set that timer Duration to 0
   void _updateMeditationSettings() {
-    MeditationSettings settings = _viewModel.meditationSettings;
+    StretchSettings settings = _viewModel.meditationSettings;
     settings.mainNeckRelaxation =
         getNewDuration(settings.mainNeckRelaxation, _mainNeckDuration.text);
     settings.rightNeckRelaxation =
