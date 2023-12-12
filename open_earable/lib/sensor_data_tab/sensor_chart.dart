@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/scheduler.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:charts_flutter/flutter.dart' as charts;
@@ -20,7 +21,7 @@ class EarableDataChart extends StatefulWidget {
 class _EarableDataChartState extends State<EarableDataChart> {
   final OpenEarable _openEarable;
   final String _title;
-  late List<DataValue> _data;
+  late List<SensorData> _data;
   StreamSubscription? _dataSubscription;
   _EarableDataChartState(this._openEarable, this._title);
   late int _minX = 0;
@@ -34,22 +35,18 @@ class _EarableDataChartState extends State<EarableDataChart> {
   late String _sensorName;
   int _numDatapoints = 200;
   _setupListeners() {
-    if (_title == "Pressure Data") {
+    if (_title == "Pressure" || _title == "Temperature") {
       _dataSubscription =
           _openEarable.sensorManager.subscribeToSensorData(1).listen((data) {
-        Map<dynamic, dynamic> units = {};
-        var baroUnits = data["BARO"]["units"];
-        baroUnits["Pressure"] =
-            "k${baroUnits["Pressure"]}"; //Use kPA instead of Pa for chart
-        units.addAll(baroUnits);
-        units.addAll(data["TEMP"]["units"]);
+        //units.addAll(data["TEMP"]["units"]);
         int timestamp = data["timestamp"];
-        BarometerValue barometerValue = BarometerValue(
+        SensorData sensorData = SensorData(
+            name: _sensorName,
             timestamp: timestamp,
-            pressure: data["BARO"]["Pressure"],
-            temperature: data["TEMP"]["Temperature"],
-            units: units);
-        _updateData(barometerValue);
+            values: [data[_sensorName][_title]],
+            //temperature: data["TEMP"]["Temperature"],
+            units: data[_sensorName]["units"]);
+        _updateData(sensorData);
       });
     } else {
       kalmanX = SimpleKalman(
@@ -67,31 +64,14 @@ class _EarableDataChartState extends State<EarableDataChart> {
       _dataSubscription =
           _openEarable.sensorManager.subscribeToSensorData(0).listen((data) {
         int timestamp = data["timestamp"];
-        /*
-        XYZValue accelerometerValue = XYZValue(
+        SensorData xyzValue = SensorData(
+            name: _title,
             timestamp: timestamp,
-            x: data["ACC"]["X"],
-            y: data["ACC"]["Y"],
-            z: data["ACC"]["Z"],
-            units: data["ACC"]["units"]);
-        XYZValue gyroscopeValue = XYZValue(
-            timestamp: timestamp,
-            x: data["GYRO"]["X"],
-            y: data["GYRO"]["Y"],
-            z: data["GYRO"]["Z"],
-            units: data["GYRO"]["units"]);
-        XYZValue magnetometerValue = XYZValue(
-            timestamp: timestamp,
-            x: data["MAG"]["X"],
-            y: data["MAG"]["Y"],
-            z: data["MAG"]["Z"],
-            units: data["MAG"]["units"]);
-        */
-        XYZValue xyzValue = XYZValue(
-            timestamp: timestamp,
-            z: kalmanZ.filtered(data[_sensorName]["Z"]),
-            x: kalmanX.filtered(data[_sensorName]["X"]),
-            y: kalmanY.filtered(data[_sensorName]["Y"]),
+            values: [
+              kalmanX.filtered(data[_sensorName]["X"]),
+              kalmanY.filtered(data[_sensorName]["Y"]),
+              kalmanZ.filtered(data[_sensorName]["Z"]),
+            ],
             units: data[_sensorName]["units"]);
 
         _updateData(xyzValue);
@@ -99,34 +79,40 @@ class _EarableDataChartState extends State<EarableDataChart> {
     }
   }
 
-  _updateData(DataValue value) {
+  _updateData(SensorData value) {
     setState(() {
       _data.add(value);
       _checkLength(_data);
-      DataValue? maxXYZValue = maxBy(_data, (DataValue b) => b.getMax());
-      DataValue? minXYZValue = minBy(_data, (DataValue b) => b.getMin());
+      SensorData? maxXYZValue = maxBy(_data, (SensorData b) => b.getMax());
+      SensorData? minXYZValue = minBy(_data, (SensorData b) => b.getMin());
       if (maxXYZValue == null || minXYZValue == null) {
         return;
       }
       double maxAbsValue =
           max(maxXYZValue.getMax().abs(), minXYZValue.getMin().abs());
-      _maxY = maxAbsValue;
+      _maxY = (_title == "Pressure" || _title == "Temperature")
+          ? max(0, maxXYZValue.getMax())
+          : maxAbsValue;
 
-      _minY = -maxAbsValue;
+      _minY = (_title == "Pressure" || _title == "Temperature")
+          ? min(0, minXYZValue.getMin())
+          : -maxAbsValue;
       _maxX = value.timestamp;
       _minX = _data[0].timestamp;
     });
   }
 
   _getColor(String title) {
-    if (title == "Accelerometer Data") {
+    if (title == "Accelerometer") {
       return ['#FF6347', '#3CB371', '#1E90FF'];
-    } else if (title == "Gyroscope Data") {
+    } else if (title == "Gyroscope") {
       return ['#FFD700', '#FF4500', '#D8BFD8'];
-    } else if (title == "Magnetometer Data") {
+    } else if (title == "Magnetometer") {
       return ['#F08080', '#98FB98', '#ADD8E6'];
-    } else if (title == "Pressure Data") {
-      return ['#32CD32', '#FFA07A'];
+    } else if (title == "Pressure") {
+      return ['#32CD32'];
+    } else if (title == "Temperature") {
+      return ['#FFA07A'];
     }
   }
 
@@ -135,20 +121,25 @@ class _EarableDataChartState extends State<EarableDataChart> {
     super.initState();
     _data = [];
     switch (_title) {
-      case 'Pressure Data':
+      case 'Pressure':
         _sensorName = 'BARO';
-      case 'Accelerometer Data':
+      case 'Temperature':
+        _sensorName = 'TEMP';
+      case 'Accelerometer':
         _sensorName = 'ACC';
-      case 'Gyroscope Data':
+      case 'Gyroscope':
         _sensorName = 'GYRO';
-      case 'Magnetometer Data':
+      case 'Magnetometer':
         _sensorName = 'MAG';
     }
     colors = _getColor(_title);
-    if (_title == 'Pressure Data') {
+    if (_title == 'Temperature') {
       _minY = 0;
-      _maxY = 130;
-    } else if (_title == "Magnetometer Data") {
+      _maxY = 30;
+    } else if (_title == 'Pressure') {
+      _minY = 0;
+      _maxY = 130000;
+    } else if (_title == "Magnetometer") {
       _minY = -200;
       _maxY = 200;
     } else {
@@ -172,46 +163,37 @@ class _EarableDataChartState extends State<EarableDataChart> {
 
   @override
   Widget build(BuildContext context) {
-    if (_title == 'Pressure Data') {
+    if (_title == 'Pressure' || _title == 'Temperature') {
       seriesList = [
-        charts.Series<DataValue, int>(
-          id: 'Pressure${_data.isNotEmpty ? " (${_data[0].units['Pressure']})" : ""}',
+        charts.Series<SensorData, int>(
+          id: '$_title${_data.isNotEmpty ? " (${_data[0].units[_title]})" : ""}',
           colorFn: (_, __) => charts.Color.fromHex(code: colors[0]),
-          domainFn: (DataValue data, _) => data.timestamp,
-          measureFn: (DataValue data, _) =>
-              (data as BarometerValue).pressure / 1000,
-          data: _data,
-        ),
-        charts.Series<DataValue, int>(
-          id: 'Temperature${_data.isNotEmpty ? " (${_data[0].units['Temperature']})" : ""}',
-          colorFn: (_, __) => charts.Color.fromHex(code: colors[1]),
-          domainFn: (DataValue data, _) => data.timestamp,
-          measureFn: (DataValue data, _) =>
-              (data as BarometerValue).temperature,
+          domainFn: (SensorData data, _) => data.timestamp,
+          measureFn: (SensorData data, _) => data.values[0],
           data: _data,
         ),
       ];
     } else {
       seriesList = [
-        charts.Series<DataValue, int>(
+        charts.Series<SensorData, int>(
           id: 'X${_data.isNotEmpty ? " (${_data[0].units['X']})" : ""}',
           colorFn: (_, __) => charts.Color.fromHex(code: colors[0]),
-          domainFn: (DataValue data, _) => data.timestamp,
-          measureFn: (DataValue data, _) => (data as XYZValue).x,
+          domainFn: (SensorData data, _) => data.timestamp,
+          measureFn: (SensorData data, _) => data.values[0],
           data: _data,
         ),
-        charts.Series<DataValue, int>(
+        charts.Series<SensorData, int>(
           id: 'Y${_data.isNotEmpty ? " (${_data[0].units['Y']})" : ""}',
           colorFn: (_, __) => charts.Color.fromHex(code: colors[1]),
-          domainFn: (DataValue data, _) => data.timestamp,
-          measureFn: (DataValue data, _) => (data as XYZValue).y,
+          domainFn: (SensorData data, _) => data.timestamp,
+          measureFn: (SensorData data, _) => data.values[1],
           data: _data,
         ),
-        charts.Series<DataValue, int>(
+        charts.Series<SensorData, int>(
           id: 'Z${_data.isNotEmpty ? " (${_data[0].units['Z']})" : ""}',
           colorFn: (_, __) => charts.Color.fromHex(code: colors[2]),
-          domainFn: (DataValue data, _) => data.timestamp,
-          measureFn: (DataValue data, _) => (data as XYZValue).z,
+          domainFn: (SensorData data, _) => data.timestamp,
+          measureFn: (SensorData data, _) => data.values[2],
           data: _data,
         ),
       ];
@@ -243,6 +225,8 @@ class _EarableDataChartState extends State<EarableDataChart> {
               )
             ],
             primaryMeasureAxis: charts.NumericAxisSpec(
+              tickProviderSpec:
+                  charts.BasicNumericTickProviderSpec(desiredTickCount: 7),
               renderSpec: charts.GridlineRendererSpec(
                 labelStyle: charts.TextStyleSpec(
                   fontSize: 14,
@@ -266,66 +250,30 @@ class _EarableDataChartState extends State<EarableDataChart> {
   }
 }
 
-abstract class DataValue {
+class SensorData {
+  final String name;
   final int timestamp;
+  final List<double> values;
   final Map<dynamic, dynamic> units;
-  double getMin();
-  double getMax();
-  DataValue({required this.timestamp, required this.units});
-}
 
-class XYZValue extends DataValue {
-  final double x;
-  final double y;
-  final double z;
+  SensorData(
+      {required this.name,
+      required this.timestamp,
+      required this.values,
+      required this.units});
 
-  XYZValue(
-      {required timestamp,
-      required this.x,
-      required this.y,
-      required this.z,
-      required units})
-      : super(timestamp: timestamp, units: units);
-
-  @override
   double getMax() {
-    return max(x, max(y, z));
+    return values.reduce(
+        (currentMax, element) => element > currentMax ? element : currentMax);
   }
 
-  @override
   double getMin() {
-    return min(x, min(y, z));
+    return values.reduce(
+        (currentMin, element) => element < currentMin ? element : currentMin);
   }
 
   @override
   String toString() {
-    return "timestamp: $timestamp\nx: $x, y: $y, z: $z";
-  }
-}
-
-class BarometerValue extends DataValue {
-  final double pressure;
-  final double temperature;
-
-  BarometerValue(
-      {required timestamp,
-      required this.pressure,
-      required this.temperature,
-      required units})
-      : super(timestamp: timestamp, units: units);
-
-  @override
-  double getMin() {
-    return min(pressure / 1000, temperature);
-  }
-
-  @override
-  double getMax() {
-    return max(pressure / 1000, temperature);
-  }
-
-  @override
-  String toString() {
-    return "timestamp: $timestamp\npressure: $pressure, temperature:$temperature";
+    return "sensor name: $name\ntimestamp: $timestamp\nvalues: ${values.join(", ")}";
   }
 }

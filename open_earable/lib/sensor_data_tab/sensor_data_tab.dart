@@ -20,17 +20,17 @@ class _SensorDataTabState extends State<SensorDataTab>
 
   StreamSubscription? _batteryLevelSubscription;
   StreamSubscription? _buttonStateSubscription;
-  List<XYZValue> accelerometerData = [];
-  List<XYZValue> gyroscopeData = [];
-  List<XYZValue> magnetometerData = [];
-  List<BarometerValue> barometerData = [];
+  List<SensorData> accelerometerData = [];
+  List<SensorData> gyroscopeData = [];
+  List<SensorData> magnetometerData = [];
+  List<SensorData> barometerData = [];
 
   _SensorDataTabState(this._openEarable);
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(vsync: this, length: 5);
+    _tabController = TabController(vsync: this, length: 6);
     if (_openEarable.bleManager.connected) {
       _setupListeners();
     }
@@ -108,8 +108,9 @@ class _SensorDataTabState extends State<SensorDataTab>
           tabs: [
             Tab(text: 'Accel.'),
             Tab(text: 'Gyro.'),
-            Tab(text: 'Magnet.'),
-            Tab(text: 'Pressure'),
+            Tab(text: 'Mag.'),
+            Tab(text: 'Baro.'),
+            Tab(text: 'Temp.'),
             Tab(text: '3D'),
           ],
         ),
@@ -117,10 +118,11 @@ class _SensorDataTabState extends State<SensorDataTab>
       body: TabBarView(
         controller: _tabController,
         children: [
-          EarableDataChart(_openEarable, 'Accelerometer Data'),
-          EarableDataChart(_openEarable, 'Gyroscope Data'),
-          EarableDataChart(_openEarable, 'Magnetometer Data'),
-          EarableDataChart(_openEarable, 'Pressure Data'),
+          EarableDataChart(_openEarable, 'Accelerometer'),
+          EarableDataChart(_openEarable, 'Gyroscope'),
+          EarableDataChart(_openEarable, 'Magnetometer'),
+          EarableDataChart(_openEarable, 'Pressure'),
+          EarableDataChart(_openEarable, 'Temperature'),
           Earable3DModel(_openEarable),
         ],
       ),
