@@ -1,17 +1,21 @@
 import "package:flutter/material.dart";
 import "package:open_earable/apps/posture_tracker/model/attitude.dart";
-import 'package:open_earable/apps/posture_tracker/model/attitude_tracker.dart';
+import "package:open_earable/apps/posture_tracker/model/attitude_tracker.dart";
+import "package:open_earable/apps/posture_tracker/model/meditation_state.dart";
 
-class NeckStretchViewModel extends ChangeNotifier {
+class MeditationViewModel extends ChangeNotifier {
   Attitude _attitude = Attitude();
   Attitude get attitude => _attitude;
 
   bool get isTracking => _attitudeTracker.isTracking;
   bool get isAvailable => _attitudeTracker.isAvailable;
+  NeckMeditation get meditation => _meditation;
+  MeditationSettings get meditationSettings => _meditation.settings;
 
   AttitudeTracker _attitudeTracker;
+  NeckMeditation _meditation;
 
-  NeckStretchViewModel(this._attitudeTracker) {
+  MeditationViewModel(this._attitudeTracker, this._meditation) {
     _attitudeTracker.didChangeAvailability = (_) {
       notifyListeners();
     };
@@ -38,6 +42,10 @@ class NeckStretchViewModel extends ChangeNotifier {
 
   void calibrate() {
     _attitudeTracker.calibrateToCurrentAttitude();
+  }
+
+  void setMeditationSettings(MeditationSettings settings) {
+    _meditation.setSettings(settings);
   }
 
   @override
