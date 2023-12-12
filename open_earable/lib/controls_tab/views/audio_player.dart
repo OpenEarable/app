@@ -311,7 +311,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
         ),
         SizedBox(
           height: 37.0,
-          width: 80,
+          width: 75,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 0),
             child: TextField(
@@ -411,9 +411,13 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    _waveFormTextController.text,
-                    style: TextStyle(fontSize: 16.0),
+                  Expanded(
+                    child: Text(
+                      _waveFormTextController.text,
+                      style: TextStyle(fontSize: 16.0),
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: false,
+                    ),
                   ),
                   Icon(Icons.arrow_drop_down),
                 ],
