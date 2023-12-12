@@ -22,25 +22,17 @@ class PostureTrackerView extends StatefulWidget {
 }
 
 class _PostureTrackerViewState extends State<PostureTrackerView> {
-  late final PostureTrackerViewModel _viewModel;
-
-  @override
-  void initState() {
-    super.initState();
-    this._viewModel = PostureTrackerViewModel(widget._tracker, BadPostureReminder(widget._openEarable, widget._tracker));
-  }
-
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<PostureTrackerViewModel>.value(
-        value: _viewModel,
+    return ChangeNotifierProvider<PostureTrackerViewModel>(
+        create: (context) => PostureTrackerViewModel(widget._tracker, BadPostureReminder(widget._openEarable, widget._tracker)),
         builder: (context, child) => Consumer<PostureTrackerViewModel>(
           builder: (context, postureTrackerViewModel, child) => Scaffold(
             appBar: AppBar(
               title: const Text("Posture Tracker"),
               actions: [
                 IconButton(
-                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => SettingsView(this._viewModel))),
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => SettingsView(postureTrackerViewModel))),
                   icon: Icon(Icons.settings)
                 ),
               ],
@@ -103,7 +95,7 @@ class _PostureTrackerViewState extends State<PostureTrackerView> {
     return Column(children: [
       ElevatedButton(
         onPressed: postureTrackerViewModel.isAvailable
-          ? () { postureTrackerViewModel.isTracking ? this._viewModel.stopTracking() : this._viewModel.startTracking(); }
+          ? () { postureTrackerViewModel.isTracking ? postureTrackerViewModel.stopTracking() : postureTrackerViewModel.startTracking(); }
           : null,
         style: ElevatedButton.styleFrom(
             backgroundColor: !postureTrackerViewModel.isTracking ? Color(0xff77F2A1) : Color(0xfff27777),

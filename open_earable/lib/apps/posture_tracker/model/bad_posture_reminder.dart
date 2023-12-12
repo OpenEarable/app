@@ -108,6 +108,13 @@ class BadPostureReminder {
       _lastPostureWasBad = _isBadPosture(attitude);
     });
   }
+
+  void stop() {
+    _timestamps.lastBadPosture = null;
+    _timestamps.lastGoodPosture = null;
+    _openEarable.rgbLed.writeLedColor(r: 0, g: 0, b: 0);
+    _attitudeTracker.stop();
+  }
   
   void setSettings(BadPostureSettings settings) {
     _settings = settings;
