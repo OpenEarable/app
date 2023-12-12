@@ -37,8 +37,8 @@ class PostureTimestamps {
 
 class BadPostureReminder {
   BadPostureSettings _settings = BadPostureSettings(
-    rollAngleThreshold: 7,
-    pitchAngleThreshold: 15,
+    rollAngleThreshold: 20,
+    pitchAngleThreshold: 20,
     timeThreshold: 10,
     resetTimeThreshold: 2
   );
