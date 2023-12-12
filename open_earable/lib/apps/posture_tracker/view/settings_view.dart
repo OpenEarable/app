@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 
 class SettingsView extends StatefulWidget {
   final PostureTrackerViewModel _viewModel;
-  
+
   SettingsView(this._viewModel);
 
   @override
@@ -24,24 +24,27 @@ class _SettingsViewState extends State<SettingsView> {
   void initState() {
     super.initState();
     _viewModel = widget._viewModel;
-    _rollAngleThresholdController = TextEditingController(text: _viewModel.badPostureSettings.rollAngleThreshold.toString());
-    _pitchAngleThresholdController = TextEditingController(text: _viewModel.badPostureSettings.pitchAngleThreshold.toString());
-    _badPostureTimeThresholdController = TextEditingController(text: _viewModel.badPostureSettings.timeThreshold.toString());
-    _goodPostureTimeThresholdController = TextEditingController(text: _viewModel.badPostureSettings.resetTimeThreshold.toString());
+    _rollAngleThresholdController = TextEditingController(
+        text: _viewModel.badPostureSettings.rollAngleThreshold.toString());
+    _pitchAngleThresholdController = TextEditingController(
+        text: _viewModel.badPostureSettings.pitchAngleThreshold.toString());
+    _badPostureTimeThresholdController = TextEditingController(
+        text: _viewModel.badPostureSettings.timeThreshold.toString());
+    _goodPostureTimeThresholdController = TextEditingController(
+        text: _viewModel.badPostureSettings.resetTimeThreshold.toString());
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Posture Tracker Settings")
-      ),
+      appBar: AppBar(title: const Text("Posture Tracker Settings")),
       body: ChangeNotifierProvider<PostureTrackerViewModel>.value(
-        value: _viewModel,
-        builder: (context, child) => Consumer<PostureTrackerViewModel>(
-          builder: (context, postureTrackerViewModel, child) => _buildSettingsView(),
-        )
-      ),
+          value: _viewModel,
+          builder: (context, child) => Consumer<PostureTrackerViewModel>(
+                builder: (context, postureTrackerViewModel, child) =>
+                    _buildSettingsView(),
+              )),
+      backgroundColor: Theme.of(context).colorScheme.background,
     );
   }
 
@@ -52,13 +55,16 @@ class _SettingsViewState extends State<SettingsView> {
           color: Theme.of(context).colorScheme.primary,
           child: ListTile(
             title: Text("Status"),
-            trailing: Text(_viewModel.isTracking ? "Tracking" : _viewModel.isAvailable ? "Available" : "Unavailable"),
+            trailing: Text(_viewModel.isTracking
+                ? "Tracking"
+                : _viewModel.isAvailable
+                    ? "Available"
+                    : "Unavailable"),
           ),
         ),
         Card(
-          color: Theme.of(context).colorScheme.primary,
-          child: Column(
-            children: [
+            color: Theme.of(context).colorScheme.primary,
+            child: Column(children: [
               // add a switch to control the `isActive` property of the `BadPostureSettings`
               SwitchListTile(
                 title: Text("Bad Posture Reminder"),
@@ -70,8 +76,7 @@ class _SettingsViewState extends State<SettingsView> {
                 },
               ),
               Visibility(
-                child: Column(
-                  children: [
+                  child: Column(children: [
                     ListTile(
                       title: Text("Roll Angle Threshold (in degrees)"),
                       trailing: SizedBox(
@@ -82,17 +87,18 @@ class _SettingsViewState extends State<SettingsView> {
                           textAlign: TextAlign.end,
                           style: TextStyle(color: Colors.black),
                           decoration: InputDecoration(
-                            contentPadding: EdgeInsets.all(10),
-                            floatingLabelBehavior:
-                                FloatingLabelBehavior.never,
-                            border: OutlineInputBorder(),
-                            labelText: 'Roll',
-                            filled: true,
-                            labelStyle: TextStyle(color: Colors.black),
-                            fillColor: Colors.white
-                          ),
+                              contentPadding: EdgeInsets.all(10),
+                              floatingLabelBehavior:
+                                  FloatingLabelBehavior.never,
+                              border: OutlineInputBorder(),
+                              labelText: 'Roll',
+                              filled: true,
+                              labelStyle: TextStyle(color: Colors.black),
+                              fillColor: Colors.white),
                           keyboardType: TextInputType.number,
-                          onChanged: (_) { _updatePostureSettings(); },
+                          onChanged: (_) {
+                            _updatePostureSettings();
+                          },
                         ),
                       ),
                     ),
@@ -106,17 +112,18 @@ class _SettingsViewState extends State<SettingsView> {
                           textAlign: TextAlign.end,
                           style: TextStyle(color: Colors.black),
                           decoration: InputDecoration(
-                            contentPadding: EdgeInsets.all(10),
-                            floatingLabelBehavior:
-                                FloatingLabelBehavior.never,
-                            border: OutlineInputBorder(),
-                            labelText: 'Pitch',
-                            filled: true,
-                            labelStyle: TextStyle(color: Colors.black),
-                            fillColor: Colors.white
-                          ),
+                              contentPadding: EdgeInsets.all(10),
+                              floatingLabelBehavior:
+                                  FloatingLabelBehavior.never,
+                              border: OutlineInputBorder(),
+                              labelText: 'Pitch',
+                              filled: true,
+                              labelStyle: TextStyle(color: Colors.black),
+                              fillColor: Colors.white),
                           keyboardType: TextInputType.number,
-                          onChanged: (_) { _updatePostureSettings(); },
+                          onChanged: (_) {
+                            _updatePostureSettings();
+                          },
                         ),
                       ),
                     ),
@@ -130,17 +137,18 @@ class _SettingsViewState extends State<SettingsView> {
                           textAlign: TextAlign.end,
                           style: TextStyle(color: Colors.black),
                           decoration: InputDecoration(
-                            contentPadding: EdgeInsets.all(10),
-                            floatingLabelBehavior:
-                                FloatingLabelBehavior.never,
-                            border: OutlineInputBorder(),
-                            labelText: 'Seconds',
-                            filled: true,
-                            labelStyle: TextStyle(color: Colors.black),
-                            fillColor: Colors.white
-                          ),
+                              contentPadding: EdgeInsets.all(10),
+                              floatingLabelBehavior:
+                                  FloatingLabelBehavior.never,
+                              border: OutlineInputBorder(),
+                              labelText: 'Seconds',
+                              filled: true,
+                              labelStyle: TextStyle(color: Colors.black),
+                              fillColor: Colors.white),
                           keyboardType: TextInputType.number,
-                          onChanged: (_) { _updatePostureSettings(); },
+                          onChanged: (_) {
+                            _updatePostureSettings();
+                          },
                         ),
                       ),
                     ),
@@ -154,57 +162,47 @@ class _SettingsViewState extends State<SettingsView> {
                           textAlign: TextAlign.end,
                           style: TextStyle(color: Colors.black),
                           decoration: InputDecoration(
-                            contentPadding: EdgeInsets.all(10),
-                            floatingLabelBehavior:
-                                FloatingLabelBehavior.never,
-                            border: OutlineInputBorder(),
-                            labelText: 'Seconds',
-                            filled: true,
-                            labelStyle: TextStyle(color: Colors.black),
-                            fillColor: Colors.white
-                          ),
+                              contentPadding: EdgeInsets.all(10),
+                              floatingLabelBehavior:
+                                  FloatingLabelBehavior.never,
+                              border: OutlineInputBorder(),
+                              labelText: 'Seconds',
+                              filled: true,
+                              labelStyle: TextStyle(color: Colors.black),
+                              fillColor: Colors.white),
                           keyboardType: TextInputType.number,
-                          onChanged: (_) { _updatePostureSettings(); },
+                          onChanged: (_) {
+                            _updatePostureSettings();
+                          },
                         ),
                       ),
                     ),
-                  ]
-                ),
-                visible: _viewModel.badPostureSettings.isActive
-              ),
-            ]
-          )
-          
-        ),
+                  ]),
+                  visible: _viewModel.badPostureSettings.isActive),
+            ])),
         Padding(
           padding: EdgeInsets.all(8.0),
-          child: Row(
-              children: [
-              Expanded(
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: 
-                      _viewModel.isTracking
+          child: Row(children: [
+            Expanded(
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _viewModel.isTracking
                       ? Colors.green[300]
                       : Colors.blue[300],
-                    foregroundColor: Colors.black,
-                  ),
-                  onPressed:
-                    _viewModel.isTracking
-                    ? () {
-                      _viewModel.calibrate();
-                      Navigator.of(context).pop();
-                    }
-                    : () => _viewModel.startTracking(),
-                  child: Text(
-                    _viewModel.isTracking
-                    ? "Calibrate as Main Posture"
-                    : "Start Calibration"
-                  ),
+                  foregroundColor: Colors.black,
                 ),
-              )
-              ]
-          ),
+                onPressed: _viewModel.isTracking
+                    ? () {
+                        _viewModel.calibrate();
+                        Navigator.of(context).pop();
+                      }
+                    : () => _viewModel.startTracking(),
+                child: Text(_viewModel.isTracking
+                    ? "Calibrate as Main Posture"
+                    : "Start Calibration"),
+              ),
+            )
+          ]),
         ),
       ],
     );
@@ -213,12 +211,13 @@ class _SettingsViewState extends State<SettingsView> {
   void _updatePostureSettings() {
     BadPostureSettings settings = _viewModel.badPostureSettings;
     settings.rollAngleThreshold = int.parse(_rollAngleThresholdController.text);
-    settings.pitchAngleThreshold = int.parse(_pitchAngleThresholdController.text);
+    settings.pitchAngleThreshold =
+        int.parse(_pitchAngleThresholdController.text);
     settings.timeThreshold = int.parse(_badPostureTimeThresholdController.text);
-    settings.resetTimeThreshold = int.parse(_goodPostureTimeThresholdController.text);
+    settings.resetTimeThreshold =
+        int.parse(_goodPostureTimeThresholdController.text);
     _viewModel.setBadPostureSettings(settings);
   }
-
 
   @override
   void dispose() {

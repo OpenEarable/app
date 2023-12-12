@@ -10,7 +10,6 @@ import 'package:provider/provider.dart';
 
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
-
 class PostureTrackerView extends StatefulWidget {
   final AttitudeTracker _tracker;
   final OpenEarable _openEarable;
@@ -25,41 +24,41 @@ class _PostureTrackerViewState extends State<PostureTrackerView> {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider<PostureTrackerViewModel>(
-        create: (context) => PostureTrackerViewModel(widget._tracker, BadPostureReminder(widget._openEarable, widget._tracker)),
+        create: (context) => PostureTrackerViewModel(widget._tracker,
+            BadPostureReminder(widget._openEarable, widget._tracker)),
         builder: (context, child) => Consumer<PostureTrackerViewModel>(
-          builder: (context, postureTrackerViewModel, child) => Scaffold(
-            appBar: AppBar(
-              title: const Text("Posture Tracker"),
-              actions: [
-                IconButton(
-                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => SettingsView(postureTrackerViewModel))),
-                  icon: Icon(Icons.settings)
-                ),
-              ],
-            ),
-            body: Center(
-              child: this._buildContentView(postureTrackerViewModel),
-            ),
-          )
-        )
-      );
+            builder: (context, postureTrackerViewModel, child) => Scaffold(
+                  appBar: AppBar(
+                    title: const Text("Posture Tracker"),
+                    actions: [
+                      IconButton(
+                          onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                  builder: (context) =>
+                                      SettingsView(postureTrackerViewModel))),
+                          icon: Icon(Icons.settings)),
+                    ],
+                  ),
+                  body: Center(
+                    child: this._buildContentView(postureTrackerViewModel),
+                  ),
+                  backgroundColor: Theme.of(context).colorScheme.background,
+                )));
   }
 
   Widget _buildContentView(PostureTrackerViewModel postureTrackerViewModel) {
     var headViews = this._createHeadViews(postureTrackerViewModel);
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        ...headViews.map((e) => FractionallySizedBox(
-          widthFactor: .7,
-          child: e,
-        )),
-        this._buildTrackingButton(postureTrackerViewModel),
-      ]
-    );
+    return Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+      ...headViews.map((e) => FractionallySizedBox(
+            widthFactor: .7,
+            child: e,
+          )),
+      this._buildTrackingButton(postureTrackerViewModel),
+    ]);
   }
 
-  Widget _buildHeadView(String headAssetPath, String neckAssetPath, AlignmentGeometry headAlignment, double roll, double angleThreshold) {
+  Widget _buildHeadView(String headAssetPath, String neckAssetPath,
+      AlignmentGeometry headAlignment, double roll, double angleThreshold) {
     return Padding(
       padding: const EdgeInsets.all(5),
       child: PostureRollView(
@@ -75,33 +74,41 @@ class _PostureTrackerViewState extends State<PostureTrackerView> {
   List<Widget> _createHeadViews(postureTrackerViewModel) {
     return [
       this._buildHeadView(
-        "assets/posture_tracker/Head_Front.png",
-        "assets/posture_tracker/Neck_Front.png",
-        Alignment.center.add(Alignment(0, 0.3)),
-        postureTrackerViewModel.attitude.roll,
-        postureTrackerViewModel.badPostureSettings.rollAngleThreshold.toDouble()
-      ),
+          "assets/posture_tracker/Head_Front.png",
+          "assets/posture_tracker/Neck_Front.png",
+          Alignment.center.add(Alignment(0, 0.3)),
+          postureTrackerViewModel.attitude.roll,
+          postureTrackerViewModel.badPostureSettings.rollAngleThreshold
+              .toDouble()),
       this._buildHeadView(
-        "assets/posture_tracker/Head_Side.png",
-        "assets/posture_tracker/Neck_Side.png",
-        Alignment.center.add(Alignment(0, 0.3)),
-        -postureTrackerViewModel.attitude.pitch,
-        postureTrackerViewModel.badPostureSettings.pitchAngleThreshold.toDouble()
-      ),
+          "assets/posture_tracker/Head_Side.png",
+          "assets/posture_tracker/Neck_Side.png",
+          Alignment.center.add(Alignment(0, 0.3)),
+          -postureTrackerViewModel.attitude.pitch,
+          postureTrackerViewModel.badPostureSettings.pitchAngleThreshold
+              .toDouble()),
     ];
   }
-  
+
   Widget _buildTrackingButton(PostureTrackerViewModel postureTrackerViewModel) {
     return Column(children: [
       ElevatedButton(
         onPressed: postureTrackerViewModel.isAvailable
-          ? () { postureTrackerViewModel.isTracking ? postureTrackerViewModel.stopTracking() : postureTrackerViewModel.startTracking(); }
-          : null,
+            ? () {
+                postureTrackerViewModel.isTracking
+                    ? postureTrackerViewModel.stopTracking()
+                    : postureTrackerViewModel.startTracking();
+              }
+            : null,
         style: ElevatedButton.styleFrom(
-            backgroundColor: !postureTrackerViewModel.isTracking ? Color(0xff77F2A1) : Color(0xfff27777),
-            foregroundColor: Colors.black,
-          ),
-        child: postureTrackerViewModel.isTracking ? const Text("Stop Tracking") : const Text("Start Tracking"),
+          backgroundColor: !postureTrackerViewModel.isTracking
+              ? Color(0xff77F2A1)
+              : Color(0xfff27777),
+          foregroundColor: Colors.black,
+        ),
+        child: postureTrackerViewModel.isTracking
+            ? const Text("Stop Tracking")
+            : const Text("Start Tracking"),
       ),
       Visibility(
         visible: !postureTrackerViewModel.isAvailable,

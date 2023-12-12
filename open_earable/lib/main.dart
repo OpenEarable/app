@@ -20,13 +20,15 @@ class MyApp extends StatelessWidget {
           useMaterial3: false,
           colorScheme: ColorScheme(
               brightness: Brightness.dark,
-              primary: Color.fromARGB(255, 22, 22, 24),
+              primary: Color.fromARGB(
+                  255, 54, 53, 59), //Color.fromARGB(255, 22, 22, 24)
               onPrimary: Colors.white,
               secondary: Color.fromARGB(255, 119, 242, 161),
               onSecondary: Colors.white,
               error: Colors.red,
               onError: Colors.black,
-              background: Color.fromARGB(255, 54, 53, 59),
+              background: Color.fromARGB(
+                  255, 22, 22, 24), //Color.fromARGB(255, 54, 53, 59)
               onBackground: Colors.white,
               surface: Color.fromARGB(255, 22, 22, 24),
               onSurface: Colors.white),
@@ -106,7 +108,7 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Theme.of(context).colorScheme.primary,
+        backgroundColor: Theme.of(context).colorScheme.background,
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: Padding(
