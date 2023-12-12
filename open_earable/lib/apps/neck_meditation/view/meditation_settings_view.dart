@@ -24,11 +24,14 @@ class _SettingsViewState extends State<SettingsView> {
     super.initState();
     this._viewModel = widget._viewModel;
     _mainNeckDuration = TextEditingController(
-        text: _viewModel.meditationSettings.mainNeckRelaxation.inSeconds.toString());
+        text: _viewModel.meditationSettings.mainNeckRelaxation.inSeconds
+            .toString());
     _leftNeckDuration = TextEditingController(
-        text: _viewModel.meditationSettings.leftNeckRelaxation.inSeconds.toString());
+        text: _viewModel.meditationSettings.leftNeckRelaxation.inSeconds
+            .toString());
     _rightNeckDuration = TextEditingController(
-        text: _viewModel.meditationSettings.rightNeckRelaxation.inSeconds.toString());
+        text: _viewModel.meditationSettings.rightNeckRelaxation.inSeconds
+            .toString());
   }
 
   @override
@@ -64,10 +67,10 @@ class _SettingsViewState extends State<SettingsView> {
             children: [
               // add a switch to control the `isActive` property of the `BadPostureSettings`
               ListTile(
-                title: Text("Guided Neck Relaxation"),
+                title: Text("Meditation Settings"),
               ),
               ListTile(
-                title: Text("Main Neck Relaxation Duration (in seconds)"),
+                title: Text("Main Neck Relaxation Duration\n(in seconds)"),
                 trailing: SizedBox(
                   height: 37.0,
                   width: 52,
@@ -91,7 +94,7 @@ class _SettingsViewState extends State<SettingsView> {
                 ),
               ),
               ListTile(
-                title: Text("Left Neck Relaxation Duration (in seconds)"),
+                title: Text("Left Neck Relaxation Duration\n(in seconds)"),
                 trailing: SizedBox(
                   height: 37.0,
                   width: 52,
@@ -115,7 +118,7 @@ class _SettingsViewState extends State<SettingsView> {
                 ),
               ),
               ListTile(
-                title: Text("Right Neck Relaxation Duration (in seconds)"),
+                title: Text("Right Neck Relaxation Duration\n(in seconds)"),
                 trailing: SizedBox(
                   height: 37.0,
                   width: 52,
@@ -141,7 +144,6 @@ class _SettingsViewState extends State<SettingsView> {
             ],
           ),
         ),
-
         Padding(
           padding: EdgeInsets.all(8.0),
           child: Row(children: [
@@ -170,11 +172,24 @@ class _SettingsViewState extends State<SettingsView> {
     );
   }
 
+  /// Returns the new duration acquired from the Text.
+  /// Checks if the string is valid (doesn't contain '-' or '.'.
+  Duration getNewDuration(Duration duration, String newDuration) {
+    if (newDuration.contains('.') || newDuration.contains('-'))
+      return duration;
+
+    return Duration(seconds: int.parse(newDuration));
+  }
+
+  /// Update the Meditation Settings according to values, if field is empty set that timer Duration to 0
   void _updateMeditationSettings() {
     MeditationSettings settings = _viewModel.meditationSettings;
-    settings.mainNeckRelaxation = Duration(seconds:int.parse(_mainNeckDuration.text));
-    settings.rightNeckRelaxation = Duration(seconds:int.parse(_rightNeckDuration.text));
-    settings.leftNeckRelaxation = Duration(seconds:int.parse(_leftNeckDuration.text));
+    settings.mainNeckRelaxation =
+        getNewDuration(settings.mainNeckRelaxation, _mainNeckDuration.text);
+    settings.rightNeckRelaxation =
+        getNewDuration(settings.rightNeckRelaxation, _rightNeckDuration.text);
+    settings.leftNeckRelaxation =
+        getNewDuration(settings.leftNeckRelaxation, _leftNeckDuration.text);
     _viewModel.setMeditationSettings(settings);
   }
 

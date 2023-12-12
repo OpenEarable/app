@@ -3,31 +3,45 @@ import "package:open_earable/apps/posture_tracker/model/attitude.dart";
 import "package:open_earable/apps/posture_tracker/model/attitude_tracker.dart";
 import 'package:open_earable/apps/neck_meditation/model/meditation_state.dart';
 
+import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+
 class MeditationViewModel extends ChangeNotifier {
   Attitude _attitude = Attitude();
+
   Attitude get attitude => _attitude;
 
   bool get isTracking => _attitudeTracker.isTracking;
+
   bool get isAvailable => _attitudeTracker.isAvailable;
+
   NeckMeditation get meditation => _meditation;
+
   MeditationSettings get meditationSettings => _meditation.settings;
 
-  AttitudeTracker _attitudeTracker;
-  NeckMeditation _meditation;
+  MeditationState get meditationState => this._meditation.settings.state;
 
-  MeditationViewModel(this._attitudeTracker, this._meditation) {
+  AttitudeTracker _attitudeTracker;
+  OpenEarable _openEarable;
+  late NeckMeditation _meditation;
+
+  MeditationViewModel(this._attitudeTracker, this._openEarable) {
     _attitudeTracker.didChangeAvailability = (_) {
       notifyListeners();
     };
 
+    this._meditation = NeckMeditation(_openEarable, this);
     _attitudeTracker.listen((attitude) {
       _attitude = Attitude(
-        roll: attitude.roll,
-        pitch: attitude.pitch,
-        yaw: attitude.yaw
+          roll: attitude.roll,
+          pitch: attitude.pitch,
+          yaw: attitude.yaw
       );
       notifyListeners();
     });
+  }
+
+  Duration getRestDuration() {
+    return _meditation.getRestDuration();
   }
 
   void startTracking() {
@@ -37,6 +51,7 @@ class MeditationViewModel extends ChangeNotifier {
 
   void stopTracking() {
     _attitudeTracker.stop();
+    _attitude = Attitude();
     notifyListeners();
   }
 
@@ -44,6 +59,7 @@ class MeditationViewModel extends ChangeNotifier {
     _attitudeTracker.calibrateToCurrentAttitude();
   }
 
+  /// Used to set the Duration Settings for Meditation
   void setMeditationSettings(MeditationSettings settings) {
     _meditation.setSettings(settings);
   }

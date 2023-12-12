@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:open_earable/apps/neck_meditation/view_model/meditation_view_model.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
 /// Enum for the Meditation States
@@ -7,7 +8,8 @@ enum MeditationState {
   mainNeckStretch,
   leftNeckStretch,
   rightNeckStretch,
-  noStretch
+  noStretch,
+  doneStretching
 }
 
 /// Used to get a String representation for Display of the current meditation state
@@ -22,6 +24,8 @@ extension MeditationStateExtension on MeditationState {
         return 'Left Neck Area';
       case MeditationState.noStretch:
         return 'Not Stretching';
+      case MeditationState.doneStretching:
+        return 'You are done stretching. Good job!';
       default:
         return 'Invalid State';
     }
@@ -54,46 +58,71 @@ class NeckMeditation {
       rightNeckRelaxation: Duration(seconds: 30));
 
   final OpenEarable _openEarable;
+  final MeditationViewModel _viewModel;
+
+  /// Holds the Timer that increments the current Duration
+  var _restDurationTimer;
+  /// Stores the rest duration of the current timer
+  var _restDuration;
 
   /// Stores the current active timer for state transition
-  var currentTimer;
+  var _currentTimer;
 
   MeditationSettings get settings => _settings;
 
-  NeckMeditation(this._openEarable);
+  NeckMeditation(this._openEarable, this._viewModel);
 
   void setSettings(MeditationSettings settings) {
     _settings = settings;
   }
 
+  // Gets the rest duration of the current meditation timer
+  Duration getRestDuration() {
+    return _restDuration;
+  }
+
+  /// Starts the Meditation with the according timers
   startMeditation() {
     _settings.state = MeditationState.mainNeckStretch;
-    currentTimer = Timer(_settings.mainNeckRelaxation, _setNextState);
+    _restDuration = _settings.mainNeckRelaxation;
+    _currentTimer = Timer(_settings.mainNeckRelaxation, _setNextState);
+    _restDurationTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+      _restDuration -= Duration(seconds: 1);
+    });
   }
 
+  /// Stops the current Meditation
   stopMeditation() {
     _settings.state = MeditationState.noStretch;
-    currentTimer?.cancel();
+    _currentTimer.cancel();
+    _restDurationTimer.cancel();
+    _restDuration = Duration(seconds: 0);
   }
 
-  /// Used to set the next meditation state;
+  /// Used to set the next meditation state and set the correct Timer
   void _setNextState() {
     switch (_settings.state) {
       case MeditationState.noStretch:
+      case MeditationState.doneStretching:
         _settings.state = MeditationState.mainNeckStretch;
         return;
       case MeditationState.mainNeckStretch:
         _settings.state = MeditationState.leftNeckStretch;
-        currentTimer = Timer(_settings.rightNeckRelaxation, _setNextState);
+        _currentTimer = Timer(_settings.leftNeckRelaxation, _setNextState);
+        _restDuration = _settings.leftNeckRelaxation;
         _openEarable.audioPlayer.jingle(2);
         return;
       case MeditationState.leftNeckStretch:
         _settings.state = MeditationState.rightNeckStretch;
-        currentTimer = Timer(_settings.rightNeckRelaxation, _setNextState);
+        _currentTimer = Timer(_settings.rightNeckRelaxation, _setNextState);
+        _restDuration = _settings.rightNeckRelaxation;
         _openEarable.audioPlayer.jingle(2);
         return;
       case MeditationState.rightNeckStretch:
-        _settings.state = MeditationState.noStretch;
+        _settings.state = MeditationState.doneStretching;
+        _viewModel.stopTracking();
+        _restDurationTimer.cancel();
+        _restDuration = Duration(seconds: 0);
         _openEarable.audioPlayer.jingle(2);
         return;
       default:
