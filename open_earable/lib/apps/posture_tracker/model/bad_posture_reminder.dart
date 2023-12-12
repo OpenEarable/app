@@ -40,7 +40,7 @@ class BadPostureReminder {
     rollAngleThreshold: 20,
     pitchAngleThreshold: 20,
     timeThreshold: 10,
-    resetTimeThreshold: 2
+    resetTimeThreshold: 1
   );
   final OpenEarable _openEarable;
   final AttitudeTracker _attitudeTracker;
@@ -100,7 +100,9 @@ class BadPostureReminder {
           // Calculate the duration in seconds
           int duration = now.difference(_timestamps.lastGoodPosture!).inSeconds;
           // If the duration exceeds the minimum required, reset the last bad state time
-          if (duration > _settings.resetTimeThreshold) {
+          if (duration >= _settings.resetTimeThreshold) {
+            print("duration: $duration, reset time threshold: ${_settings.resetTimeThreshold}");
+            print("resetting last bad posture time");
             _timestamps.lastBadPosture = null;
           }
         }

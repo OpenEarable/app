@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:open_earable/apps/posture_tracker/model/attitude.dart';
 import 'package:open_earable/apps/posture_tracker/model/attitude_tracker.dart';
 import 'package:open_earable/apps/posture_tracker/model/ewma.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
