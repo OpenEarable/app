@@ -45,6 +45,17 @@ class AppsTab extends StatelessWidget {
                 MaterialPageRoute(
                     builder: (context) => Recorder(_openEarable)));
           }),
+      AppInfo(
+          iconData: Icons.arrow_upward,
+          title: "Jump Height Test",
+          description: "Test your maximum jump height.",
+          onTap: () {
+            Navigator.push(
+                context,
+                // TODO: Change PageRoute
+                MaterialPageRoute(
+                    builder: (context) => Recorder(_openEarable)));
+          }),
       // ... similarly for other apps
     ];
   }
