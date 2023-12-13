@@ -11,7 +11,10 @@ class StretchArcPainter extends CustomPainter {
   final NeckStretchState stretchState;
   final bool isFront;
 
-  StretchArcPainter({required this.angle, this.angleThreshold = 0, this.stretchState = NeckStretchState.noStretch, required this.isFront});
+  StretchArcPainter({required this.angle,
+    this.angleThreshold = 0,
+    this.stretchState = NeckStretchState.noStretch,
+    required this.isFront});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -21,7 +24,9 @@ class StretchArcPainter extends CustomPainter {
       ..strokeWidth = 5.0;
 
     Path circlePath = Path();
-    circlePath.addOval(Rect.fromCircle(center: Offset(size.width / 2, size.height / 2), radius: min(size.width, size.height) / 2));
+    circlePath.addOval(Rect.fromCircle(
+        center: Offset(size.width / 2, size.height / 2),
+        radius: min(size.width, size.height) / 2));
     canvas.drawPath(circlePath, circlePaint);
 
     // Create a paint object with purple color and stroke style
@@ -44,55 +49,67 @@ class StretchArcPainter extends CustomPainter {
 
     // Add an arc to the path
     anglePath.addArc(
-      Rect.fromCircle(center: center, radius: radius), // create a rectangle from the center and radius
+      Rect.fromCircle(center: center, radius: radius),
+      // create a rectangle from the center and radius
       startAngle, // start angle
       endAngle, // sweep angle
     );
 
     Path angleOvershootPath = Path();
-    angleOvershootPath.addArc(
-      Rect.fromCircle(center: center, radius: radius), // create a rectangle from the center and radius
-      startAngle + angle.sign * angleThreshold, // start angle
-      angle.sign * (angle.abs() - angleThreshold), // sweep angle
+
+    if (_isNegativeOvershoot()) {
+      angleOvershootPath.addArc(
+        Rect.fromCircle(center: center, radius: radius),
+        // create a rectangle from the center and radius
+        startAngle + angle.sign * angleThreshold, // start angle
+        angle.sign * (angle.abs() - angleThreshold), // sweep angle
+      );
+    } else {
+      angleOvershootPath.addArc(
+          Rect.fromCircle(center: center, radius: radius),
+          // create a rectangle from the center and radius
+          startAngle + angle.sign * angleThreshold, // start angle
+          _isOvershooting() ? angle.sign * (angle.abs() - angleThreshold) : 0, // sweep angle
     );
+    }
 
     Paint angleOvershootPaint = Paint()
-      ..color = Color.fromARGB(255, 0, 186, 255)
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = 5.0;
+    ..color = getOvershootColor()
+    ..style = PaintingStyle.stroke
+    ..strokeCap = StrokeCap.round
+    ..strokeWidth = 5.0;
 
     Path thresholdPath = Path();
     thresholdPath.addArc(
-      Rect.fromCircle(center: center, radius: radius), // create a rectangle from the center and radius
-      getStartAngle(startAngle, angleThreshold), // start angle
-      getThreshold(angleThreshold), // sweep angle
+    Rect.fromCircle(center: center, radius: radius),
+    // create a rectangle from the center and radius
+    getStartAngle(startAngle, angleThreshold), // start angle
+    getThreshold(angleThreshold), // sweep angle
     );
 
     Paint thresholdPaint = Paint()
-      ..color = Colors.redAccent[100]!
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = 5.0;
+    ..color = getThresholdColor()
+    ..style = PaintingStyle.stroke
+    ..strokeCap = StrokeCap.round
+    ..strokeWidth = 5.0;
 
     // Draw the path on the canvas
     canvas.drawPath(thresholdPath, thresholdPaint);
     canvas.drawPath(anglePath, anglePaint);
     if (angle.abs() > angleThreshold.abs()) {
-      canvas.drawPath(angleOvershootPath, angleOvershootPaint);
+    canvas.drawPath(angleOvershootPath, angleOvershootPaint);
     }
   }
 
   /// Gets the right start angle depending on stretch state
   double getStartAngle(double startAngle, double threshold) {
-    if (!this.isFront)
-      return startAngle - threshold;
+    if (!this.isFront) return startAngle - threshold;
 
-    switch(this.stretchState) {
-      case NeckStretchState.leftNeckStretch:
-        return startAngle - threshold;
+    switch (this.stretchState) {
       case NeckStretchState.rightNeckStretch:
-        return startAngle - threshold - pi/2 - 2/18 * pi;
+        return startAngle - threshold;
+      case NeckStretchState.leftNeckStretch:
+        return startAngle - threshold - pi / 2 - 2 / 18 * pi;
       default:
         return startAngle - threshold;
     }
@@ -101,27 +118,80 @@ class StretchArcPainter extends CustomPainter {
   /// Gets the right threshold depending on stretch state
   double getThreshold(double threshold) {
     if (this.isFront) {
-      switch(this.stretchState) {
+      switch (this.stretchState) {
         case NeckStretchState.rightNeckStretch:
         case NeckStretchState.leftNeckStretch:
-          return 2 * threshold + pi/2 + 2/18 * pi;
+          return 2 * threshold + pi / 2 + 2 / 18 * pi;
         default:
           return 2 * threshold;
       }
     }
 
-    switch(this.stretchState) {
+    switch (this.stretchState) {
       case NeckStretchState.mainNeckStretch:
-        return 2 * threshold + pi/2 + 1/36 * pi;
-      case NeckStretchState.rightNeckStretch:
-        return 2 * threshold + pi/2;
+        return 2 * threshold + pi / 2 + 1 / 36 * pi;
       default:
         return 2 * threshold;
     }
   }
 
+  /// Determines whether it actually is overshooting the threshold. This is a
+  /// small hack as the head angle cant go over a certain degree this way we can
+  /// ensure that the wrong stretch direction drawn part can never be overshot
+  bool _isOvershooting() {
+      if (this.isFront) {
+        switch (this.stretchState) {
+          case NeckStretchState.rightNeckStretch:
+            return angle.sign <= 0;
+          case NeckStretchState.leftNeckStretch:
+            return angle.sign >= 0;
+          default:
+            return true;
+        }
+      }
+
+      switch (this.stretchState) {
+        case NeckStretchState.mainNeckStretch:
+          return angle.sign <= 0;
+        default:
+          return true;
+      }
+  }
+
+  /// Detgermines whether the overshoot is negative (shouldnt stretch that part)
+  /// or is positive (should stretch that part)
+  bool _isNegativeOvershoot() {
+    return (this.isFront &&
+        this.stretchState == NeckStretchState.mainNeckStretch) ||
+        (!this.isFront &&
+            (this.stretchState == NeckStretchState.leftNeckStretch ||
+                this.stretchState == NeckStretchState.rightNeckStretch));
+  }
+
+  /// Returns the right color for the overshoot depending on stretch state and
+  /// if its upper or lower head state arc.
+  Color getOvershootColor() {
+    if (_isNegativeOvershoot()) {
+      // Equals Colors.redAccent[100]!
+      return Color.fromARGB(255, 255, 138, 128);
+    }
+
+    return Color.fromARGB(255, 0, 186, 255);
+  }
+
+  /// Returns the right color for the threshold depending on stretch state and
+  /// if its the upper or lower head state arc.
+  Color getThresholdColor() {
+    if (_isNegativeOvershoot()) {
+      return Color.fromARGB(255, 0, 186, 255);
+    }
+
+    // Equals Colors.redAccent[100]!
+    return Color.fromARGB(255, 255, 138, 128);
+  }
+
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+  bool shouldRepaint(CustomPainter oldDelegate) {
     // check if oldDelegate is an ArcPainter and if the angle is the same
     return oldDelegate is ArcPainter && oldDelegate.angle != this.angle;
   }

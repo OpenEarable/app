@@ -18,7 +18,11 @@ class StretchViewModel extends ChangeNotifier {
 
   StretchSettings get meditationSettings => _meditation.settings;
 
-  NeckStretchState get meditationState => this._meditation.settings.state;
+  NeckStretchState get meditationState => _meditation.settings.state;
+
+  Duration get restDuration => _meditation.restDuration;
+
+  set meditationSettings(StretchSettings settings) => _meditation.settings = settings;
 
   AttitudeTracker _attitudeTracker;
   OpenEarable _openEarable;
@@ -40,10 +44,6 @@ class StretchViewModel extends ChangeNotifier {
     });
   }
 
-  Duration getRestDuration() {
-    return _meditation.getRestDuration();
-  }
-
   void startTracking() {
     _attitudeTracker.start();
     notifyListeners();
@@ -57,11 +57,6 @@ class StretchViewModel extends ChangeNotifier {
 
   void calibrate() {
     _attitudeTracker.calibrateToCurrentAttitude();
-  }
-
-  /// Used to set the Duration Settings for Meditation
-  void setMeditationSettings(StretchSettings settings) {
-    _meditation.setSettings(settings);
   }
 
   @override

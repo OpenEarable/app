@@ -19,19 +19,50 @@ extension NeckStretchStateExtension on NeckStretchState {
       case NeckStretchState.mainNeckStretch:
         return 'Main Neck Area';
       case NeckStretchState.leftNeckStretch:
-        return 'Right Neck Area';
-      case NeckStretchState.rightNeckStretch:
         return 'Left Neck Area';
+      case NeckStretchState.rightNeckStretch:
+        return 'Right Neck Area';
       case NeckStretchState.noStretch:
         return 'Not Stretching';
-      case NeckStretchState.doneStretching:
-        return 'You are done stretching. Good job!';
       default:
         return 'Invalid State';
     }
   }
+
+  /// Gets the corresponding asset path for the front neck image
+  String get assetPathNeckFront {
+    switch (this) {
+      case NeckStretchState.rightNeckStretch:
+        return 'assets/neck_stretch/Neck_Right_Stretch.png';
+      case NeckStretchState.leftNeckStretch:
+        return 'assets/neck_stretch/Neck_Left_Stretch.png';
+      default:
+        return 'assets/posture_tracker/Neck_Front.png';
+    }
+  }
+
+  /// Gets the corresponding asset path for the side eck image
+  String get assetPathNeckSide {
+    switch (this) {
+      case NeckStretchState.mainNeckStretch:
+        return 'assets/neck_stretch/Neck_Main_Stretch.png';
+      default:
+        return 'assets/posture_tracker/Neck_Side.png';
+    }
+  }
+
+  /// Gets the corresponding asset path for the Head Front Image
+  String get assetPathHeadFront {
+    return 'assets/posture_tracker/Head_Front.png';
+  }
+
+  /// Gets the corresponding asset path for the Head Side Image
+  String get assetPathHeadSide {
+    return 'assets/posture_tracker/Head_Side.png';
+  }
 }
 
+/// Stores all settings needed to manage a stretching session
 class StretchSettings {
   NeckStretchState state;
 
@@ -44,6 +75,7 @@ class StretchSettings {
   /// Duration for the right neck relaxation
   Duration rightNeckRelaxation;
 
+  /// The stretch settings containing duration timers and state
   StretchSettings(
       {this.state = NeckStretchState.noStretch,
       required this.mainNeckRelaxation,
@@ -51,6 +83,7 @@ class StretchSettings {
       required this.rightNeckRelaxation});
 }
 
+/// Stores all data and functions to manage the guided neck meditation
 class NeckMeditation {
   StretchSettings _settings = StretchSettings(
       mainNeckRelaxation: Duration(seconds: 30),
@@ -63,67 +96,61 @@ class NeckMeditation {
   /// Holds the Timer that increments the current Duration
   var _restDurationTimer;
   /// Stores the rest duration of the current timer
-  var _restDuration;
+  late Duration _restDuration;
 
   /// Stores the current active timer for state transition
   var _currentTimer;
 
   StretchSettings get settings => _settings;
+  Duration get restDuration => _restDuration;
+  set settings(StretchSettings settings) => _settings = settings;
 
-  NeckMeditation(this._openEarable, this._viewModel);
-
-  /// Setter method for stretchSettings
-  void setSettings(StretchSettings settings) {
-    _settings = settings;
-  }
-
-  // Gets the rest duration of the current meditation timer
-  Duration getRestDuration() {
-    return _restDuration;
+  NeckMeditation(this._openEarable, this._viewModel) {
+    this._restDuration = Duration(seconds: 0);
   }
 
   /// Starts the Meditation with the according timers
-  startMeditation() {
-    _settings.state = NeckStretchState.mainNeckStretch;
-    _restDuration = _settings.mainNeckRelaxation;
-    _currentTimer = Timer(_settings.mainNeckRelaxation, _setNextState);
+  void startMeditation() {
+    _viewModel.startTracking();
+    _settings.state = NeckStretchState.noStretch;
+    _setNextState();
     _restDurationTimer = Timer.periodic(Duration(seconds: 1), (timer) {
       _restDuration -= Duration(seconds: 1);
     });
   }
 
   /// Stops the current Meditation
-  stopMeditation() {
+  void stopMeditation() {
     _settings.state = NeckStretchState.noStretch;
     _currentTimer.cancel();
     _restDurationTimer.cancel();
     _restDuration = Duration(seconds: 0);
+    _viewModel.stopTracking();
+  }
+
+  /// Sets the state and timers for the state.
+  void _setState(NeckStretchState state, Duration stateDuration) {
+      _settings.state = state;
+      _currentTimer = Timer(stateDuration, _setNextState);
+      _restDuration = stateDuration;
   }
 
   /// Used to set the next meditation state and set the correct Timer
   void _setNextState() {
     switch (_settings.state) {
       case NeckStretchState.noStretch:
-      case NeckStretchState.doneStretching:
-        _settings.state = NeckStretchState.mainNeckStretch;
+        _setState(NeckStretchState.mainNeckStretch, _settings.mainNeckRelaxation);
         return;
       case NeckStretchState.mainNeckStretch:
-        _settings.state = NeckStretchState.leftNeckStretch;
-        _currentTimer = Timer(_settings.leftNeckRelaxation, _setNextState);
-        _restDuration = _settings.leftNeckRelaxation;
-        _openEarable.audioPlayer.jingle(2);
-        return;
-      case NeckStretchState.leftNeckStretch:
-        _settings.state = NeckStretchState.rightNeckStretch;
-        _currentTimer = Timer(_settings.rightNeckRelaxation, _setNextState);
-        _restDuration = _settings.rightNeckRelaxation;
+        _setState(NeckStretchState.rightNeckStretch, _settings.rightNeckRelaxation);
         _openEarable.audioPlayer.jingle(2);
         return;
       case NeckStretchState.rightNeckStretch:
-        _settings.state = NeckStretchState.doneStretching;
-        _viewModel.stopTracking();
-        _restDurationTimer.cancel();
-        _restDuration = Duration(seconds: 0);
+        _setState(NeckStretchState.leftNeckStretch, _settings.leftNeckRelaxation);
+        _openEarable.audioPlayer.jingle(2);
+        return;
+      case NeckStretchState.leftNeckStretch:
+        stopMeditation();
         _openEarable.audioPlayer.jingle(2);
         return;
       default:

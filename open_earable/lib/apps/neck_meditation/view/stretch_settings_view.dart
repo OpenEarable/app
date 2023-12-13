@@ -94,12 +94,12 @@ class _SettingsViewState extends State<SettingsView> {
                 ),
               ),
               ListTile(
-                title: Text("Left Neck Relaxation Duration\n(in seconds)"),
+                title: Text("Right Neck Relaxation Duration\n(in seconds)"),
                 trailing: SizedBox(
                   height: 37.0,
                   width: 52,
                   child: TextField(
-                    controller: _leftNeckDuration,
+                    controller: _rightNeckDuration,
                     textAlign: TextAlign.end,
                     style: TextStyle(color: Colors.black),
                     decoration: InputDecoration(
@@ -118,12 +118,12 @@ class _SettingsViewState extends State<SettingsView> {
                 ),
               ),
               ListTile(
-                title: Text("Right Neck Relaxation Duration\n(in seconds)"),
+                title: Text("Left Neck Relaxation Duration\n(in seconds)"),
                 trailing: SizedBox(
                   height: 37.0,
                   width: 52,
                   child: TextField(
-                    controller: _rightNeckDuration,
+                    controller: _leftNeckDuration,
                     textAlign: TextAlign.end,
                     style: TextStyle(color: Colors.black),
                     decoration: InputDecoration(
@@ -175,8 +175,7 @@ class _SettingsViewState extends State<SettingsView> {
   /// Returns the new duration acquired from the Text.
   /// Checks if the string is valid (doesn't contain '-' or '.'.
   Duration getNewDuration(Duration duration, String newDuration) {
-    if (newDuration.contains('.') || newDuration.contains('-'))
-      return duration;
+    if (newDuration.contains('.') || newDuration.contains('-')) return duration;
 
     return Duration(seconds: int.parse(newDuration));
   }
@@ -190,7 +189,7 @@ class _SettingsViewState extends State<SettingsView> {
         getNewDuration(settings.rightNeckRelaxation, _rightNeckDuration.text);
     settings.leftNeckRelaxation =
         getNewDuration(settings.leftNeckRelaxation, _leftNeckDuration.text);
-    _viewModel.setMeditationSettings(settings);
+    _viewModel.meditationSettings = settings;
   }
 
   @override

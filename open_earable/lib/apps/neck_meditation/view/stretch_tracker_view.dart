@@ -29,13 +29,11 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
 
   /// Used to start the meditation via the button
   void _startMeditation() {
-    this._viewModel.startTracking();
     this._viewModel.meditation.startMeditation();
   }
 
   /// Used to stop the meditation via the button
   void _stopMeditation() {
-    this._viewModel.stopTracking();
     this._viewModel.meditation.stopMeditation();
   }
 
@@ -51,18 +49,6 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
 
     if (_viewModel.meditationState == NeckStretchState.noStretch)
       return TextSpan(text: "Click the Button below\n to start Meditating!");
-
-    if (_viewModel.meditationState == NeckStretchState.doneStretching)
-      return TextSpan(children: <TextSpan>[
-        TextSpan(text: "You are done stretching.\n"),
-        TextSpan(
-            text: "Well done!",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
-              color: Color.fromARGB(255, 0, 186, 255),
-            )),
-      ]);
 
     return TextSpan(children: <TextSpan>[
       TextSpan(
@@ -86,7 +72,7 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
         _viewModel.meditationState == NeckStretchState.noStretch)
       return Text('Stop Meditation');
 
-    return Text(_viewModel.getRestDuration().toString().substring(2, 7));
+    return Text(_viewModel.restDuration.toString().substring(2, 7));
   }
 
   @override
@@ -117,6 +103,7 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
                 )));
   }
 
+  /// Build the actual content you can see in the app
   Widget _buildContentView(StretchViewModel neckStretchViewModel) {
     var headViews = this._createHeadViews(neckStretchViewModel);
     return Column(
@@ -150,125 +137,24 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
     );
   }
 
-  /// Builds the actual head views using the PostureRollView
-  Widget _buildHeadView(
-      String headAssetPath,
-      String neckAssetPath,
-      AlignmentGeometry headAlignment,
-      double roll,
-      double angleThreshold,
-      NeckStretchState state) {
-    return Padding(
-      padding: const EdgeInsets.all(5),
-      child: StretchRollView(
-        roll: roll,
-        angleThreshold: angleThreshold * 3.14 / 180,
-        headAssetPath: headAssetPath,
-        neckAssetPath: neckAssetPath,
-        headAlignment: headAlignment,
-        stretchState: state,
-      ),
-    );
-  }
-
   /// Creates the Head Views that display depending on the MeditationState.
-  List<Widget> _createHeadViews(neckStretchViewModel) {
+  List<Widget> _createHeadViews(StretchViewModel neckStretchViewModel) {
     return [
       // Visible Head-Displays when not stretching
-      Visibility(
-        visible: this._viewModel.meditationState == NeckStretchState.noStretch ||
-            this._viewModel.meditationState == NeckStretchState.doneStretching,
-        child: this._buildHeadView(
-            "assets/posture_tracker/Head_Front.png",
-            "assets/posture_tracker/Neck_Front.png",
-            Alignment.center.add(Alignment(0, 0.3)),
-            neckStretchViewModel.attitude.roll,
-            0,
-            NeckStretchState.noStretch),
-      ),
-      Visibility(
-        visible: this._viewModel.meditationState == NeckStretchState.noStretch ||
-            this._viewModel.meditationState == NeckStretchState.doneStretching,
-        child: this._buildHeadView(
-            "assets/posture_tracker/Head_Side.png",
-            "assets/posture_tracker/Neck_Side.png",
-            Alignment.center.add(Alignment(0, 0.3)),
-            -neckStretchViewModel.attitude.pitch,
-            0,
-            NeckStretchState.noStretch),
-      ),
+      _buildStateViews(
+          NeckStretchState.noStretch, neckStretchViewModel, 0.0, 0.0),
 
       /// Visible Widgets for the main stretch
-      Visibility(
-        visible:
-            this._viewModel.meditationState == NeckStretchState.mainNeckStretch,
-        child: this._buildHeadView(
-            "assets/posture_tracker/Head_Front.png",
-            "assets/posture_tracker/Neck_Front.png",
-            Alignment.center.add(Alignment(0, 0.3)),
-            neckStretchViewModel.attitude.roll,
-            7.0,
-            NeckStretchState.mainNeckStretch),
-      ),
-      Visibility(
-        visible:
-            this._viewModel.meditationState == NeckStretchState.mainNeckStretch,
-        child: this._buildHeadView(
-            "assets/posture_tracker/Head_Side.png",
-            "assets/neck_stretch/Neck_Main_Stretch.png",
-            Alignment.center.add(Alignment(0, 0.3)),
-            -neckStretchViewModel.attitude.pitch,
-            50.0,
-            NeckStretchState.mainNeckStretch),
-      ),
+      _buildStateViews(
+          NeckStretchState.mainNeckStretch, neckStretchViewModel, 7.0, 50.0),
 
       /// Visible Widgets for the right stretch
-      Visibility(
-        visible:
-        this._viewModel.meditationState == NeckStretchState.rightNeckStretch,
-        child: this._buildHeadView(
-            "assets/posture_tracker/Head_Front.png",
-            "assets/neck_stretch/Neck_Right_Stretch.png",
-            Alignment.center.add(Alignment(0, 0.3)),
-            neckStretchViewModel.attitude.roll,
-            30.0,
-            NeckStretchState.rightNeckStretch),
-      ),
-      Visibility(
-        visible:
-        this._viewModel.meditationState == NeckStretchState.rightNeckStretch,
-        child: this._buildHeadView(
-            "assets/posture_tracker/Head_Side.png",
-            "assets/posture_tracker/Neck_Side.png",
-            Alignment.center.add(Alignment(0, 0.3)),
-            -neckStretchViewModel.attitude.pitch,
-            15.0,
-            NeckStretchState.rightNeckStretch),
-      ),
+      _buildStateViews(
+          NeckStretchState.rightNeckStretch, neckStretchViewModel, 30.0, 15.0),
 
       /// Visible Widgets for the left stretch
-      Visibility(
-        visible:
-            this._viewModel.meditationState == NeckStretchState.leftNeckStretch,
-        child: this._buildHeadView(
-            "assets/posture_tracker/Head_Front.png",
-            "assets/neck_stretch/Neck_Left_Stretch.png",
-            Alignment.center.add(Alignment(0, 0.3)),
-            neckStretchViewModel.attitude.roll,
-            30.0,
-            NeckStretchState.leftNeckStretch),
-      ),
-      Visibility(
-        visible:
-            this._viewModel.meditationState == NeckStretchState.leftNeckStretch,
-        child: this._buildHeadView(
-            "assets/posture_tracker/Head_Side.png",
-            "assets/posture_tracker/Neck_Side.png",
-            Alignment.center.add(Alignment(0, 0.3)),
-            -neckStretchViewModel.attitude.pitch,
-            15.0,
-            NeckStretchState.leftNeckStretch),
-      ),
+      _buildStateViews(
+          NeckStretchState.leftNeckStretch, neckStretchViewModel, 30.0, 15.0),
     ];
   }
 
@@ -295,5 +181,54 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
         ),
       ]),
     );
+  }
+
+  /// Builds the actual head views using the StretchRollView
+  Widget _buildHeadView(
+      String headAssetPath,
+      String neckAssetPath,
+      AlignmentGeometry headAlignment,
+      double roll,
+      double angleThreshold,
+      NeckStretchState state) {
+    return Padding(
+      padding: const EdgeInsets.all(5),
+      child: StretchRollView(
+        roll: roll,
+        angleThreshold: angleThreshold * 3.14 / 180,
+        headAssetPath: headAssetPath,
+        neckAssetPath: neckAssetPath,
+        headAlignment: headAlignment,
+        stretchState: state,
+      ),
+    );
+  }
+
+  /// Builds the state for a certain state and set thresholds
+  Visibility _buildStateViews(
+      NeckStretchState state,
+      StretchViewModel neckStretchViewModel,
+      double frontThreshold,
+      double sideThreshold) {
+    return Visibility(
+        visible: this._viewModel.meditationState == state,
+        child: Column(
+          children: <Widget>[
+            this._buildHeadView(
+                state.assetPathHeadFront,
+                state.assetPathNeckFront,
+                Alignment.center.add(Alignment(0, 0.3)),
+                neckStretchViewModel.attitude.roll,
+                frontThreshold,
+                state),
+            this._buildHeadView(
+                state.assetPathHeadSide,
+                state.assetPathNeckSide,
+                Alignment.center.add(Alignment(0, 0.3)),
+                neckStretchViewModel.attitude.pitch,
+                sideThreshold,
+                state),
+          ],
+        ));
   }
 }
