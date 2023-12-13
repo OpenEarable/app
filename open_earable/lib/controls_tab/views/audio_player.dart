@@ -209,18 +209,33 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     );
   }
 
+  Widget _getAudioPlayerRadio(int index) {
+    return Radio(
+      value: index,
+      groupValue: OpenEarableSettings().selectedAudioPlayerRadio,
+      onChanged: !_openEarable.bleManager.connected
+          ? null
+          : (int? value) {
+              setState(() {
+                OpenEarableSettings().selectedAudioPlayerRadio = value ?? 0;
+              });
+            },
+      activeColor: !_openEarable.bleManager.connected
+          ? Colors.grey
+          : Theme.of(context).colorScheme.secondary,
+      fillColor: MaterialStateProperty.resolveWith((states) {
+        if (states.contains(MaterialState.disabled)) {
+          return Colors.grey;
+        }
+        return Theme.of(context).colorScheme.secondary;
+      }),
+    );
+  }
+
   Widget _getFileNameRow() {
     return Row(
       children: [
-        Radio(
-          value: 0,
-          groupValue: OpenEarableSettings().selectedAudioPlayerRadio,
-          onChanged: (int? value) {
-            setState(() {
-              OpenEarableSettings().selectedAudioPlayerRadio = value ?? 0;
-            });
-          },
-        ),
+        _getAudioPlayerRadio(0),
         Expanded(
           child: SizedBox(
             height: 37.0,
@@ -255,15 +270,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
   Widget _getJingleRow() {
     return Row(
       children: [
-        Radio(
-          value: 1,
-          groupValue: OpenEarableSettings().selectedAudioPlayerRadio,
-          onChanged: (int? value) {
-            setState(() {
-              OpenEarableSettings().selectedAudioPlayerRadio = value ?? 0;
-            });
-          },
-        ),
+        _getAudioPlayerRadio(1),
         Expanded(
           child: SizedBox(
             height: 37.0,
@@ -300,15 +307,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
   Widget _getFrequencyRow() {
     return Row(
       children: [
-        Radio(
-          value: 2,
-          groupValue: OpenEarableSettings().selectedAudioPlayerRadio,
-          onChanged: (int? value) {
-            setState(() {
-              OpenEarableSettings().selectedAudioPlayerRadio = value ?? 0;
-            });
-          },
-        ),
+        _getAudioPlayerRadio(2),
         SizedBox(
           height: 37.0,
           width: 75,

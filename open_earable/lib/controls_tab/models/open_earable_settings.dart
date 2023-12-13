@@ -64,7 +64,7 @@ class OpenEarableSettings {
     selectedBarometerOption = "0";
     selectedMicrophoneOption = "0";
 
-    selectedAudioPlayerRadio = 0;
+    selectedAudioPlayerRadio = 3; // no radio is selected
     selectedJingle = jingleMap[1]!;
     selectedWaveForm = waveFormMap[1]!;
     selectedFilename = "filename.wav";
