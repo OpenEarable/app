@@ -47,7 +47,8 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
         ),
       );
 
-    if (_viewModel.meditationState == NeckStretchState.noStretch)
+    if (_viewModel.meditationState == NeckStretchState.noStretch ||
+        _viewModel.meditationState == NeckStretchState.doneStretching)
       return TextSpan(text: "Click the Button below\n to start Meditating!");
 
     return TextSpan(children: <TextSpan>[
@@ -137,27 +138,6 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
     );
   }
 
-  /// Creates the Head Views that display depending on the MeditationState.
-  List<Widget> _createHeadViews(StretchViewModel neckStretchViewModel) {
-    return [
-      // Visible Head-Displays when not stretching
-      _buildStateViews(
-          NeckStretchState.noStretch, neckStretchViewModel, 0.0, 0.0),
-
-      /// Visible Widgets for the main stretch
-      _buildStateViews(
-          NeckStretchState.mainNeckStretch, neckStretchViewModel, 7.0, 50.0),
-
-      /// Visible Widgets for the right stretch
-      _buildStateViews(
-          NeckStretchState.rightNeckStretch, neckStretchViewModel, 30.0, 15.0),
-
-      /// Visible Widgets for the left stretch
-      _buildStateViews(
-          NeckStretchState.leftNeckStretch, neckStretchViewModel, 30.0, 15.0),
-    ];
-  }
-
   // Creates the Button used to start the meditation
   Widget _buildMeditationButton(StretchViewModel neckStretchViewModel) {
     return Padding(
@@ -181,6 +161,27 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
         ),
       ]),
     );
+  }
+
+  /// Creates the Head Views that display depending on the MeditationState.
+  List<Widget> _createHeadViews(StretchViewModel neckStretchViewModel) {
+    return [
+      // Visible Head-Displays when not stretching
+      _buildStateViews(
+          NeckStretchState.noStretch, neckStretchViewModel, 0.0, 0.0),
+
+      /// Visible Widgets for the main stretch
+      _buildStateViews(
+          NeckStretchState.mainNeckStretch, neckStretchViewModel, 7.0, 50.0),
+
+      /// Visible Widgets for the right stretch
+      _buildStateViews(
+          NeckStretchState.rightNeckStretch, neckStretchViewModel, 30.0, 15.0),
+
+      /// Visible Widgets for the left stretch
+      _buildStateViews(
+          NeckStretchState.leftNeckStretch, neckStretchViewModel, 30.0, 15.0),
+    ];
   }
 
   /// Builds the actual head views using the StretchRollView
@@ -210,8 +211,17 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
       StretchViewModel neckStretchViewModel,
       double frontThreshold,
       double sideThreshold) {
+
+    var visibility;
+    if (state == NeckStretchState.noStretch) {
+      visibility = this._viewModel.meditationState == NeckStretchState.noStretch ||
+          this._viewModel.meditationState == NeckStretchState.doneStretching;
+    } else {
+      visibility = this._viewModel.meditationState == state;
+    }
+
     return Visibility(
-        visible: this._viewModel.meditationState == state,
+        visible: visibility,
         child: Column(
           children: <Widget>[
             this._buildHeadView(

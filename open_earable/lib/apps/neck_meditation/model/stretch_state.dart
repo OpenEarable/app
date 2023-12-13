@@ -25,7 +25,7 @@ extension NeckStretchStateExtension on NeckStretchState {
       case NeckStretchState.noStretch:
         return 'Not Stretching';
       default:
-        return 'Invalid State';
+        return 'Done Stretching';
     }
   }
 
@@ -150,7 +150,11 @@ class NeckMeditation {
         _openEarable.audioPlayer.jingle(2);
         return;
       case NeckStretchState.leftNeckStretch:
-        stopMeditation();
+        _settings.state = NeckStretchState.doneStretching;
+        _currentTimer.cancel();
+        _restDurationTimer.cancel();
+        _restDuration = Duration(seconds: 0);
+        _viewModel.stopTracking();
         _openEarable.audioPlayer.jingle(2);
         return;
       default:
