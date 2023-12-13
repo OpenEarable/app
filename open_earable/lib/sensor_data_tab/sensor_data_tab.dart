@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:open_earable/sensor_data_tab/earable_3d_model.dart';
+import 'package:open_earable/widgets/earable_not_connected_warning.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:open_earable/sensor_data_tab/sensor_chart.dart';
 
@@ -58,41 +59,10 @@ class _SensorDataTabState extends State<SensorDataTab>
   @override
   Widget build(BuildContext context) {
     if (!_openEarable.bleManager.connected) {
-      return _notConnectedWidget();
+      return EarableNotConnectedWarning();
     } else {
       return _buildSensorDataTabs();
     }
-  }
-
-  Widget _notConnectedWidget() {
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.warning,
-                size: 48,
-                color: Colors.red,
-              ),
-              SizedBox(height: 16),
-              Center(
-                child: Text(
-                  "Not connected to\nOpenEarable device",
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
   }
 
   Widget _buildSensorDataTabs() {
