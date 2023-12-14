@@ -27,6 +27,34 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
     this._viewModel = StretchViewModel(widget._tracker, widget._openEarable);
   }
 
+  @override
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider<StretchViewModel>.value(
+        value: _viewModel,
+        builder: (context, child) => Consumer<StretchViewModel>(
+            builder: (context, neckStretchViewModel, child) => Scaffold(
+                  appBar: AppBar(
+                    title: const Text("Guided Neck Relaxation"),
+                    actions: [
+                      IconButton(
+                          onPressed: (this._viewModel.meditationState ==
+                                      NeckStretchState.noStretch ||
+                                  this._viewModel.meditationState ==
+                                      NeckStretchState.doneStretching)
+                              ? () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                      builder: (context) =>
+                                          SettingsView(this._viewModel)))
+                              : null,
+                          icon: Icon(Icons.settings)),
+                    ],
+                  ),
+                  body: Center(
+                    child: this._buildContentView(neckStretchViewModel),
+                  ),
+                )));
+  }
+
   /// Used to start the meditation via the button
   void _startMeditation() {
     this._viewModel.meditation.startMeditation();
@@ -74,34 +102,6 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
       return Text('Stop Meditation');
 
     return Text(_viewModel.restDuration.toString().substring(2, 7));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider<StretchViewModel>.value(
-        value: _viewModel,
-        builder: (context, child) => Consumer<StretchViewModel>(
-            builder: (context, neckStretchViewModel, child) => Scaffold(
-                  appBar: AppBar(
-                    title: const Text("Guided Neck Relaxation"),
-                    actions: [
-                      IconButton(
-                          onPressed: (this._viewModel.meditationState ==
-                                      NeckStretchState.noStretch ||
-                                  this._viewModel.meditationState ==
-                                      NeckStretchState.doneStretching)
-                              ? () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                      builder: (context) =>
-                                          SettingsView(this._viewModel)))
-                              : null,
-                          icon: Icon(Icons.settings)),
-                    ],
-                  ),
-                  body: Center(
-                    child: this._buildContentView(neckStretchViewModel),
-                  ),
-                )));
   }
 
   /// Build the actual content you can see in the app
@@ -167,54 +167,33 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
   List<Widget> _createHeadViews(StretchViewModel neckStretchViewModel) {
     return [
       // Visible Head-Displays when not stretching
-      _buildStateViews(
+      _buildStretchViews(
           NeckStretchState.noStretch, neckStretchViewModel, 0.0, 0.0),
 
       /// Visible Widgets for the main stretch
-      _buildStateViews(
+      _buildStretchViews(
           NeckStretchState.mainNeckStretch, neckStretchViewModel, 7.0, 50.0),
 
       /// Visible Widgets for the right stretch
-      _buildStateViews(
+      _buildStretchViews(
           NeckStretchState.rightNeckStretch, neckStretchViewModel, 30.0, 15.0),
 
       /// Visible Widgets for the left stretch
-      _buildStateViews(
+      _buildStretchViews(
           NeckStretchState.leftNeckStretch, neckStretchViewModel, 30.0, 15.0),
     ];
   }
 
-  /// Builds the actual head views using the StretchRollView
-  Widget _buildHeadView(
-      String headAssetPath,
-      String neckAssetPath,
-      AlignmentGeometry headAlignment,
-      double roll,
-      double angleThreshold,
-      NeckStretchState state) {
-    return Padding(
-      padding: const EdgeInsets.all(5),
-      child: StretchRollView(
-        roll: roll,
-        angleThreshold: angleThreshold * 3.14 / 180,
-        headAssetPath: headAssetPath,
-        neckAssetPath: neckAssetPath,
-        headAlignment: headAlignment,
-        stretchState: state,
-      ),
-    );
-  }
-
-  /// Builds the state for a certain state and set thresholds
-  Visibility _buildStateViews(
+  /// Builds the head tracking/stretch view parts for a certain state and thresholds
+  Visibility _buildStretchViews(
       NeckStretchState state,
       StretchViewModel neckStretchViewModel,
       double frontThreshold,
       double sideThreshold) {
-
     var visibility;
     if (state == NeckStretchState.noStretch) {
-      visibility = this._viewModel.meditationState == NeckStretchState.noStretch ||
+      visibility = this._viewModel.meditationState ==
+              NeckStretchState.noStretch ||
           this._viewModel.meditationState == NeckStretchState.doneStretching;
     } else {
       visibility = this._viewModel.meditationState == state;
@@ -240,5 +219,26 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
                 state),
           ],
         ));
+  }
+
+  /// Builds the actual head views using the StretchRollView
+  Widget _buildHeadView(
+      String headAssetPath,
+      String neckAssetPath,
+      AlignmentGeometry headAlignment,
+      double roll,
+      double angleThreshold,
+      NeckStretchState state) {
+    return Padding(
+      padding: const EdgeInsets.all(5),
+      child: StretchRollView(
+        roll: roll,
+        angleThreshold: angleThreshold * 3.14 / 180,
+        headAssetPath: headAssetPath,
+        neckAssetPath: neckAssetPath,
+        headAlignment: headAlignment,
+        stretchState: state,
+      ),
+    );
   }
 }

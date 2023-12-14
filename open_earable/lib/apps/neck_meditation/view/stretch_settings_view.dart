@@ -174,10 +174,13 @@ class _SettingsViewState extends State<SettingsView> {
 
   /// Returns the new duration acquired from the Text.
   /// Checks if the string is valid (doesn't contain '-' or '.'.
+  /// Maximum allows time of 59 Minute 59 Seconds for UI consistency
   Duration getNewDuration(Duration duration, String newDuration) {
     if (newDuration.contains('.') || newDuration.contains('-')) return duration;
 
-    return Duration(seconds: int.parse(newDuration));
+    int parsed = int.parse(newDuration);
+
+    return parsed > 3599 ? Duration(seconds: 3599) : Duration(seconds: parsed);
   }
 
   /// Update the Meditation Settings according to values, if field is empty set that timer Duration to 0
