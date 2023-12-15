@@ -6,8 +6,6 @@ import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'model/base_attitude_tracker.dart';
 import 'model/driving_attitude.dart';
 
-
-
 class DrivingAssistantNotifier extends ChangeNotifier {
   DrivingAttitude _attitude = DrivingAttitude();
   DrivingAttitude get attitude => _attitude;
@@ -24,7 +22,6 @@ class DrivingAssistantNotifier extends ChangeNotifier {
     _attitudeTracker.didChangeAvailability = (_) {
       notifyListeners();
     };
-
     _attitudeTracker.listen((DrivingAttitude attitude) {
       _attitude = DrivingAttitude(
           roll: attitude.roll,

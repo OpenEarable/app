@@ -6,15 +6,15 @@ import 'package:open_earable/apps/posture_tracker/model/attitude_tracker.dart';
 import 'package:provider/provider.dart';
 import 'package:open_earable/apps/driving_assistant/driving_assistant_notifier.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:open_earable/apps/driving_assistant/model/driving_time.dart';
 
 import '../model/base_attitude_tracker.dart';
 
-
 class DrivingAssistantView extends StatefulWidget implements Observer {
-
+  GlobalKey<DrivingTimeState> _myKey = GlobalKey();
   final BaseAttitudeTracker _tracker;
   final OpenEarable _openEarable;
-  Color mugColor = Colors.white;
+  Color mugColor = Colors.green;
 
   DrivingAssistantView(this._tracker, this._openEarable);
 
@@ -40,11 +40,14 @@ class DrivingAssistantView extends StatefulWidget implements Observer {
 
 class _DrivingAssistantViewState extends State<DrivingAssistantView> {
   late final DrivingAssistantNotifier _drivingNotifier;
+  bool onDrive = false;
+  bool onPause = false;
 
   @override
   void initState() {
     super.initState();
-    this._drivingNotifier = DrivingAssistantNotifier(widget._tracker, new TirednessMonitor(widget._openEarable, widget._tracker));
+    this._drivingNotifier = DrivingAssistantNotifier(widget._tracker,
+        new TirednessMonitor(widget._openEarable, widget._tracker));
   }
 
   @override
@@ -53,64 +56,109 @@ class _DrivingAssistantViewState extends State<DrivingAssistantView> {
         value: _drivingNotifier,
         builder: (context, child) => Consumer<DrivingAssistantNotifier>(
             builder: (context, drivingAssistantNotifier, child) => Scaffold(
-              appBar: AppBar(
-                title: const Text("Driving Assistant"),
-                actions: [
-                  IconButton(
-                      onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => DrivingSettingsView(this._drivingNotifier, widget))),
-                      icon: Icon(Icons.settings)
+                  appBar: AppBar(
+                    title: const Text("Driving Assistant"),
+                    actions: [
+                      IconButton(
+                          onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                  builder: (context) => DrivingSettingsView(
+                                      this._drivingNotifier, widget))),
+                          icon: Icon(Icons.settings)),
+                    ],
                   ),
-                ],
-              ),
-              body: Center(
-                child: this._buildContentView(drivingAssistantNotifier),
-              ),
-            )
-        )
-    );
+                  body: Center(
+                    child: this._buildContentView(drivingAssistantNotifier),
+                  ),
+                )));
   }
 
-  Widget _buildContentView(DrivingAssistantNotifier drivingAssistantNotifier){
-    return Column(children: [
-      Padding(
+  Widget _buildContentView(DrivingAssistantNotifier drivingAssistantNotifier) {
+    return Column(
+      children: [
+        Padding(
           padding: const EdgeInsets.only(top: 200),
-        child: Icon(
-          Icons.coffee,
-          color: widget.mugColor,
-          size: 150,
+          child: Icon(
+            Icons.coffee,
+            color: widget.mugColor,
+            size: 150,
+          ),
         ),
-      ),
-      ElevatedButton(
-        onPressed: drivingAssistantNotifier.isAvailable
-            ? () { drivingAssistantNotifier.isTracking ? this._drivingNotifier.stopTracking(widget) : this._drivingNotifier.startTracking(widget); }
-            : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: !drivingAssistantNotifier.isTracking ? Color(0xff77F2A1) : Color(0xfff27777),
-          foregroundColor: Colors.black,
+        DrivingTime(key: widget._myKey),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton(
+              onPressed:
+              drivingAssistantNotifier.isAvailable && !onPause
+                  ? () {
+                drivingAssistantNotifier.isTracking
+                    ? {this._drivingNotifier.stopTracking(widget),
+                  widget._myKey.currentState?.stopTimer(),
+                  onDrive = false}
+                    : {this._drivingNotifier.startTracking(widget),
+                  widget._myKey.currentState?.startTimer(),
+                  onDrive = true};
+              }
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: !drivingAssistantNotifier.isTracking
+                    ? Color(0xff77F2A1)
+                    : Color(0xfff27777),
+                foregroundColor: Colors.black,
+              ),
+              child: drivingAssistantNotifier.isTracking
+                  ? const Text("Stop Driving")
+                  : const Text("Start Driving"),
+            ),
+            SizedBox(width: 40.0),
+            ElevatedButton(
+              onPressed:
+              drivingAssistantNotifier.isAvailable && onDrive
+                  ? () {
+                drivingAssistantNotifier.isTracking
+                    ? {this._drivingNotifier.stopTracking(widget),
+                  widget._myKey.currentState?.pauseTimer(),
+                  onPause = true}
+                    : {this._drivingNotifier.startTracking(widget),
+                  widget._myKey.currentState?.pauseTimer(),
+                  onPause = false};
+              }
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: !onPause
+                    ? Color(0xff77F2A1)
+                    : Color(0xfff27777),
+                foregroundColor: Colors.black,
+              ),
+              child: onPause
+                  ? const Text("Resume Driving")
+                  : const Text("Pause Driving"),
+            ),
+          ],
         ),
-        child: drivingAssistantNotifier.isTracking ? const Text("Stop Tracking") : const Text("Start Tracking"),
-      ),
-      Visibility(
-        visible: !drivingAssistantNotifier.isAvailable,
-        maintainState: true,
-        maintainAnimation: true,
-        maintainSize: true,
-        child: Text(
-          "No Earable Connected",
+
+        Visibility(
+          visible: !drivingAssistantNotifier.isAvailable,
+          maintainState: true,
+          maintainAnimation: true,
+          maintainSize: true,
+          child: Text(
+            "No Earable Connected",
+            style: TextStyle(
+              color: Colors.red,
+              fontSize: 12,
+            ),
+          ),
+        ),
+        Text(
+          drivingAssistantNotifier.attitude.gyroY.toString(),
           style: TextStyle(
-            color: Colors.red,
+            color: Colors.white,
             fontSize: 12,
           ),
         ),
-      ),
-      Text(
-        drivingAssistantNotifier.attitude.gyroY.toString(),
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 12,
-        ),
-      ),
-    ]);
+      ],
+    );
   }
-
 }
