@@ -99,7 +99,7 @@ class NeckMeditation {
   final StretchViewModel _viewModel;
 
   /// Defines whether you are currently resting between two stretch exercises
-  bool _resting = false;
+  late bool _resting;
 
   /// Holds the Timer that increments the current Duration
   var _restDurationTimer;
@@ -120,6 +120,7 @@ class NeckMeditation {
 
   NeckMeditation(this._openEarable, this._viewModel) {
     this._restDuration = Duration(seconds: 0);
+    this._resting = false;
   }
 
   /// Starts the Meditation with the according timers
@@ -148,14 +149,16 @@ class NeckMeditation {
     _settings.state = state;
     // If you just swapped to this state, first rest for restingTime, then set new state
     if (_resting) {
-      _resting = false;
+      _restDuration = _settings.restingTime;
       _currentTimer = Timer(_settings.restingTime, () {
+        _resting = false;
         _setState(state, stateDuration);
+        _openEarable.audioPlayer.jingle(8);
       });
     } else {
+      _restDuration = stateDuration;
       _currentTimer = Timer(stateDuration, _setNextState);
     }
-    _restDuration = stateDuration;
   }
 
   /// Used to set the next meditation state and set the correct Timer
@@ -163,7 +166,6 @@ class NeckMeditation {
     switch (_settings.state) {
       case NeckStretchState.noStretch:
       case NeckStretchState.doneStretching:
-        _resting = true;
         _setState(
             NeckStretchState.mainNeckStretch, _settings.mainNeckRelaxation);
         return;

@@ -48,8 +48,8 @@ class AppsTab extends StatelessWidget {
           }),
       AppInfo(
           iconData: Icons.self_improvement,
-          title: "Guided neck relaxation",
-          description: "Relax your neck using the OpenEarble.",
+          title: "Guided Neck Relaxation",
+          description: "Relax your neck with a stretch.",
           onTap: () {
             Navigator.push(
                 context,

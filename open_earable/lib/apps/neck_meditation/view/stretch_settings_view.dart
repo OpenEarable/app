@@ -34,14 +34,14 @@ class _SettingsViewState extends State<SettingsView> {
         text: _viewModel.meditationSettings.rightNeckRelaxation.inSeconds
             .toString());
     _restingDuration = TextEditingController(
-        text: _viewModel.meditationSettings.rightNeckRelaxation.inSeconds
+        text: _viewModel.meditationSettings.restingTime.inSeconds
             .toString());
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Guided Neck Meditation Settings")),
+      appBar: AppBar(title: const Text("Relaxation Settings")),
       body: ChangeNotifierProvider<StretchViewModel>.value(
           value: _viewModel,
           builder: (context, child) => Consumer<StretchViewModel>(
@@ -57,7 +57,7 @@ class _SettingsViewState extends State<SettingsView> {
         Card(
           color: Theme.of(context).colorScheme.primary,
           child: ListTile(
-            title: Text("Status"),
+            title: Text("OpenEarable"),
             trailing: Text(_viewModel.isTracking
                 ? "Tracking"
                 : _viewModel.isAvailable
@@ -71,7 +71,7 @@ class _SettingsViewState extends State<SettingsView> {
             children: [
               // add a switch to control the `isActive` property of the `BadPostureSettings`
               ListTile(
-                title: Text("Meditation Settings"),
+                title: Text("Settings"),
               ),
               ListTile(
                 title: Text("Main Neck Relaxation Duration\n(in seconds)"),

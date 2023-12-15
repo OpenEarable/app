@@ -1,21 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:open_earable/apps/posture_tracker/model/attitude_tracker.dart';
 import 'package:open_earable/apps/neck_meditation/view/stretch_roll_view.dart';
 import 'package:open_earable/apps/neck_meditation/view_model/stretch_view_model.dart';
 import 'package:open_earable/apps/neck_meditation/model/stretch_state.dart';
 import 'package:open_earable/apps/neck_meditation/view/stretch_settings_view.dart';
 
-import 'package:open_earable_flutter/src/open_earable_flutter.dart';
-
 class StretchTrackerView extends StatefulWidget {
-  final AttitudeTracker _tracker;
-  final OpenEarable _openEarable;
+  final StretchViewModel _viewModel;
 
-  StretchTrackerView(this._tracker, this._openEarable);
+  StretchTrackerView(this._viewModel);
 
   @override
   State<StretchTrackerView> createState() => _StretchTrackerViewState();
+}
+
+/// Builds the actual head views using the StretchRollView
+Widget buildHeadView(
+    String headAssetPath,
+    String neckAssetPath,
+    AlignmentGeometry headAlignment,
+    double roll,
+    double angleThreshold,
+    NeckStretchState state) {
+  return Padding(
+    padding: const EdgeInsets.all(5),
+    child: StretchRollView(
+      roll: roll,
+      angleThreshold: angleThreshold * 3.14 / 180,
+      headAssetPath: headAssetPath,
+      neckAssetPath: neckAssetPath,
+      headAlignment: headAlignment,
+      stretchState: state,
+    ),
+  );
 }
 
 class _StretchTrackerViewState extends State<StretchTrackerView> {
@@ -24,38 +41,35 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
   @override
   void initState() {
     super.initState();
-    this._viewModel = StretchViewModel(widget._tracker, widget._openEarable);
+    this._viewModel = widget._viewModel;
   }
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider<StretchViewModel>.value(
         value: _viewModel,
-        builder: (context, child) =>
-            Consumer<StretchViewModel>(
-                builder: (context, neckStretchViewModel, child) =>
-                    Scaffold(
-                      appBar: AppBar(
-                        title: const Text("Guided Neck Relaxation"),
-                        actions: [
-                          IconButton(
-                              onPressed: (this._viewModel.meditationState ==
-                                  NeckStretchState.noStretch ||
+        builder: (context, child) => Consumer<StretchViewModel>(
+            builder: (context, neckStretchViewModel, child) => Scaffold(
+                  appBar: AppBar(
+                    title: const Text("Guided Neck Relaxation"),
+                    actions: [
+                      IconButton(
+                          onPressed: (this._viewModel.meditationState ==
+                                      NeckStretchState.noStretch ||
                                   this._viewModel.meditationState ==
                                       NeckStretchState.doneStretching)
-                                  ? () =>
-                                  Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                          builder: (context) =>
-                                              SettingsView(this._viewModel)))
-                                  : null,
-                              icon: Icon(Icons.settings)),
-                        ],
-                      ),
-                      body: Center(
-                        child: this._buildContentView(neckStretchViewModel),
-                      ),
-                    )));
+                              ? () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                      builder: (context) =>
+                                          SettingsView(this._viewModel)))
+                              : null,
+                          icon: Icon(Icons.settings)),
+                    ],
+                  ),
+                  body: Center(
+                    child: this._buildContentView(neckStretchViewModel),
+                  ),
+                )));
   }
 
   /// Used to start the meditation via the button
@@ -127,11 +141,10 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
         ),
 
         ...headViews.map(
-              (e) =>
-              FractionallySizedBox(
-                widthFactor: .6,
-                child: e,
-              ),
+          (e) => FractionallySizedBox(
+            widthFactor: .6,
+            child: e,
+          ),
         ),
         // Used to place the Meditation-Button always at the bottom
         Expanded(
@@ -148,7 +161,8 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
       return Color(0xffffbb3d);
     }
 
-    return !neckStretchViewModel.isTracking ? Color(0xff77F2A1)
+    return !neckStretchViewModel.isTracking
+        ? Color(0xff77F2A1)
         : Color(0xfff27777);
   }
 
@@ -160,10 +174,10 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
         ElevatedButton(
           onPressed: neckStretchViewModel.isAvailable
               ? () {
-            neckStretchViewModel.isTracking
-                ? _stopMeditation()
-                : _startMeditation();
-          }
+                  neckStretchViewModel.isTracking
+                      ? _stopMeditation()
+                      : _startMeditation();
+                }
               : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: _getBackgroundColor(neckStretchViewModel),
@@ -197,14 +211,15 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
   }
 
   /// Builds the head tracking/stretch view parts for a certain state and thresholds
-  Visibility _buildStretchViews(NeckStretchState state,
+  Visibility _buildStretchViews(
+      NeckStretchState state,
       StretchViewModel neckStretchViewModel,
       double frontThreshold,
       double sideThreshold) {
     var visibility;
     if (state == NeckStretchState.noStretch) {
       visibility = this._viewModel.meditationState ==
-          NeckStretchState.noStretch ||
+              NeckStretchState.noStretch ||
           this._viewModel.meditationState == NeckStretchState.doneStretching;
     } else {
       visibility = this._viewModel.meditationState == state;
@@ -214,14 +229,14 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
         visible: visibility,
         child: Column(
           children: <Widget>[
-            this._buildHeadView(
+            buildHeadView(
                 state.assetPathHeadFront,
                 state.assetPathNeckFront,
                 Alignment.center.add(Alignment(0, 0.3)),
                 neckStretchViewModel.attitude.roll,
                 frontThreshold,
                 state),
-            this._buildHeadView(
+            buildHeadView(
                 state.assetPathHeadSide,
                 state.assetPathNeckSide,
                 Alignment.center.add(Alignment(0, 0.3)),
@@ -230,25 +245,5 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
                 state),
           ],
         ));
-  }
-
-  /// Builds the actual head views using the StretchRollView
-  Widget _buildHeadView(String headAssetPath,
-      String neckAssetPath,
-      AlignmentGeometry headAlignment,
-      double roll,
-      double angleThreshold,
-      NeckStretchState state) {
-    return Padding(
-      padding: const EdgeInsets.all(5),
-      child: StretchRollView(
-        roll: roll,
-        angleThreshold: angleThreshold * 3.14 / 180,
-        headAssetPath: headAssetPath,
-        neckAssetPath: neckAssetPath,
-        headAlignment: headAlignment,
-        stretchState: state,
-      ),
-    );
   }
 }

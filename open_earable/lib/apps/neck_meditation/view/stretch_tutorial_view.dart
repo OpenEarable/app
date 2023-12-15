@@ -1,18 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:open_earable/apps/posture_tracker/model/attitude_tracker.dart';
-import 'package:open_earable/apps/neck_meditation/view/stretch_roll_view.dart';
+import 'package:open_earable/apps/neck_meditation/view/stretch_tracker_view.dart';
 import 'package:open_earable/apps/neck_meditation/view_model/stretch_view_model.dart';
 import 'package:open_earable/apps/neck_meditation/model/stretch_state.dart';
 import 'package:open_earable/apps/neck_meditation/view/stretch_settings_view.dart';
-
-import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 class StretchTutorialView extends StatefulWidget {
-  final AttitudeTracker _tracker;
-  final OpenEarable _openEarable;
+  final StretchViewModel _viewModel;
 
-  StretchTutorialView(this._tracker, this._openEarable);
+  StretchTutorialView(this._viewModel);
 
   @override
   State<StretchTutorialView> createState() => _StretchTutorialViewState();
@@ -20,11 +17,14 @@ class StretchTutorialView extends StatefulWidget {
 
 class _StretchTutorialViewState extends State<StretchTutorialView> {
   late final StretchViewModel _viewModel;
+  final YoutubePlayerController _ytController = YoutubePlayerController(
+      initialVideoId: "H5h54Q0wpps",
+      flags: YoutubePlayerFlags(mute: false, hideThumbnail: true));
 
   @override
   void initState() {
     super.initState();
-    this._viewModel = StretchViewModel(widget._tracker, widget._openEarable);
+    this._viewModel = widget._viewModel;
   }
 
   @override
@@ -50,7 +50,9 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
                     ],
                   ),
                   body: Center(
-                    child: this._buildContentView(neckStretchViewModel),
+                    child: SingleChildScrollView(
+                      child: this._buildContentView(neckStretchViewModel),
+                    ),
                   ),
                 )));
   }
@@ -59,65 +61,244 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
   Widget _buildContentView(StretchViewModel neckStretchViewModel) {
     return Column(
       children: <Widget>[
-        Padding(
-          padding: EdgeInsets.all(5),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(8, 8, 8, 8),
-            child: RichText(
-              textAlign: TextAlign.center,
-              text: TextSpan(
-                children: <TextSpan>[
-                  TextSpan(
-                      text:
-                          'Here the body part, which is currently being stretched, will be displayed.')
+        Card(
+          color: Theme.of(context).colorScheme.primary,
+          child: Column(
+            children: [
+              // add a switch to control the `isActive` property of the `BadPostureSettings`
+              ListTile(
+                title: Text("Video showing the different stretches"),
+              ),
+              YoutubePlayer(
+                controller: _ytController,
+                bottomActions: [
+                  CurrentPosition(),
+                  ProgressBar(
+                    isExpanded: true,
+                  ),
                 ],
               ),
-            ),
+            ],
           ),
         ),
+        Card(
+          color: Theme.of(context).colorScheme.primary,
+          child: Column(
+            children: [
+              // add a switch to control the `isActive` property of the `BadPostureSettings`
+              ListTile(
+                title: Text("Explaining the Tracking Colors"),
+              ),
 
-        Padding(
-          padding: EdgeInsets.all(8),
-          child: RichText(
-            textAlign: TextAlign.left,
-            text: TextSpan(
-                text:
-                    "Here both your Front and Side view of your head will be displayed. The blue part shows you what part of your neck should currently be stretched. When starting to stretch you should gently tilt your head towards the instructed direction (the gray area of the circle). Once you feel your neck stretch stop and hold the position till the sound occurs. Then you can start stretching the next part of your neck."),
+              Padding(
+                padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
+                child: RichText(
+                  textAlign: TextAlign.justify,
+                  text: TextSpan(
+                    children: <TextSpan>[
+                      TextSpan(
+                        text:
+                            'With these widgets you can you can track your current head positioning. Depending on the color of the area you are supposed to be inside of it or outside of it.\n',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              Padding(
+                padding: EdgeInsets.fromLTRB(24, 0, 24, 0),
+                child: RichText(
+                  textAlign: TextAlign.justify,
+                  text: TextSpan(
+                    children: <TextSpan>[
+                      TextSpan(
+                        text: 'Blue: ',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: Color.fromARGB(255, 0, 186, 255),
+                        ),
+                      ),
+                      TextSpan(
+                        text: 'Try to keep your head within this area\n\n',
+                      ),
+                      TextSpan(
+                        text: 'Red: ',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: Color(0xfff27777),
+                        ),
+                      ),
+                      TextSpan(
+                        text:
+                            'You are currently stretching, try to gently move your head into the grey area\n\n',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
+        Card(
+          color: Theme.of(context).colorScheme.primary,
+          child: Column(
+            children: [
+              ListTile(
+                title: Text('Example: Tracker for Main Neck Stretch'),
+                titleAlignment: ListTileTitleAlignment.center,
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(0, 0, 0, 16),
+                child: Column(
+                  children: <Widget>[
+                    RichText(
+                      textAlign: TextAlign.center,
+                      text: TextSpan(
+                        children: <TextSpan>[
+                          TextSpan(
+                            text: "Currently Stretching: \n",
+                          ),
+                          TextSpan(
+                            text: NeckStretchState.mainNeckStretch.display,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              color: Color.fromARGB(255, 0, 186, 255),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
 
-        FractionallySizedBox(
-          widthFactor: 0.6,
-          child: this._buildHeadView(
-              NeckStretchState.mainNeckStretch.assetPathNeckSide,
-              NeckStretchState.mainNeckStretch.assetPathHeadSide,
-              Alignment.center.add(Alignment(0, 0.3)),
-              neckStretchViewModel.attitude.pitch,
-              30,
-              NeckStretchState.noStretch),
-        ),
-
-        /// Used to place the Meditation-Button always at the bottom
-        Expanded(
-          child: Container(),
-        ),
-
-        /// Explainer text for the button
-        Padding(
-          padding: EdgeInsets.all(8),
-          child: RichText(
-            textAlign: TextAlign.left,
-            text: TextSpan(
-              children: <TextSpan>[
-                TextSpan(
-                    text:
-                        'This button will be used to start and to preemptively stop the meditation. If you are currently meditating the button will show you the remaining time for the current stretch.'),
-                TextSpan(text: ''),
-              ],
-            ),
+                    /// The head views used for meditation
+                    FractionallySizedBox(
+                      widthFactor: 0.6,
+                      child: buildHeadView(
+                          NeckStretchState.mainNeckStretch.assetPathHeadFront,
+                          NeckStretchState.mainNeckStretch.assetPathNeckFront,
+                          Alignment.center.add(Alignment(0, 0.3)),
+                          neckStretchViewModel.attitude.pitch,
+                          30,
+                          NeckStretchState.mainNeckStretch),
+                    ),
+                    FractionallySizedBox(
+                      widthFactor: 0.6,
+                      child: buildHeadView(
+                          NeckStretchState.mainNeckStretch.assetPathHeadSide,
+                          NeckStretchState.mainNeckStretch.assetPathNeckSide,
+                          Alignment.center.add(Alignment(0, 0.3)),
+                          neckStretchViewModel.attitude.pitch,
+                          50,
+                          NeckStretchState.mainNeckStretch),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
+                child: RichText(
+                  textAlign: TextAlign.justify,
+                  text: TextSpan(
+                    children: <TextSpan>[
+                      TextSpan(
+                          text:
+                              'The area of your neck that is currently being stretched will be colored in '),
+                      TextSpan(
+                        text: 'blue',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: Color.fromARGB(255, 0, 186, 255),
+                        ),
+                      ),
+                      TextSpan(
+                          text:
+                              '.\n\nWhenever an exercise is over a sound will play to inform you that you are done with the current stretch. Afterwards you will have a small time to prepare for the next stretch (normally 5 seconds). The button will always keep you up to date with your time limits, and above the tracker is also a text telling you what exactly you are currently stretching.\n\n'),
+                      TextSpan(
+                          text:
+                              'You can use the button bellow to have a preview of how the tracking will look.\n'),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
-        this._buildMeditationButton(neckStretchViewModel),
+        Card(
+          color: Theme.of(context).colorScheme.primary,
+          child: Column(
+            children: [
+              // add a switch to control the `isActive` property of the `BadPostureSettings`
+              ListTile(
+                title: Text("Explaining the Meditation Button"),
+              ),
+
+              /// Explainer text for the button
+              Padding(
+                padding: EdgeInsets.all(16),
+                child: RichText(
+                  textAlign: TextAlign.justify,
+                  text: TextSpan(
+                    children: <TextSpan>[
+                      TextSpan(
+                        text:
+                            'This button is used to start the meditation or to stop it preemptively. Depending on the color you can tell the current state:\n',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(24, 0, 24, 0),
+                child: RichText(
+                  textAlign: TextAlign.justify,
+                  text: TextSpan(
+                    children: <TextSpan>[
+                      TextSpan(
+                        text: 'Green: ',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: Color(0xff77F2A1),
+                        ),
+                      ),
+                      TextSpan(
+                        text: 'You are currently not meditating\n\n',
+                      ),
+                      TextSpan(
+                        text: 'Red: ',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: Color(0xfff27777),
+                        ),
+                      ),
+                      TextSpan(
+                        text:
+                            'You are currently meditating, the button will display the remaining time\n\n',
+                      ),
+                      TextSpan(
+                        text: 'Yellow: ',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: Color(0xffffbb3d),
+                        ),
+                      ),
+                      TextSpan(
+                          text:
+                              'You are currently having a break between the stretches. The button displays the remaining time.\n\n'),
+                    ],
+                  ),
+                ),
+              ),
+
+              this._buildMeditationButton(neckStretchViewModel),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -146,27 +327,6 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
               : const Text("Start Meditation"),
         ),
       ]),
-    );
-  }
-
-  /// Builds the actual head views using the StretchRollView
-  Widget _buildHeadView(
-      String headAssetPath,
-      String neckAssetPath,
-      AlignmentGeometry headAlignment,
-      double roll,
-      double angleThreshold,
-      NeckStretchState state) {
-    return Padding(
-      padding: const EdgeInsets.all(5),
-      child: StretchRollView(
-        roll: roll,
-        angleThreshold: angleThreshold * 3.14 / 180,
-        headAssetPath: headAssetPath,
-        neckAssetPath: neckAssetPath,
-        headAlignment: headAlignment,
-        stretchState: state,
-      ),
     );
   }
 }
