@@ -16,6 +16,7 @@ class _SettingsViewState extends State<SettingsView> {
   late final TextEditingController _mainNeckDuration;
   late final TextEditingController _leftNeckDuration;
   late final TextEditingController _rightNeckDuration;
+  late final TextEditingController _restingDuration;
 
   late final StretchViewModel _viewModel;
 
@@ -30,6 +31,9 @@ class _SettingsViewState extends State<SettingsView> {
         text: _viewModel.meditationSettings.leftNeckRelaxation.inSeconds
             .toString());
     _rightNeckDuration = TextEditingController(
+        text: _viewModel.meditationSettings.rightNeckRelaxation.inSeconds
+            .toString());
+    _restingDuration = TextEditingController(
         text: _viewModel.meditationSettings.rightNeckRelaxation.inSeconds
             .toString());
   }
@@ -141,6 +145,30 @@ class _SettingsViewState extends State<SettingsView> {
                   ),
                 ),
               ),
+              ListTile(
+                title: Text("Resting Duration between exercises\n(in seconds)"),
+                trailing: SizedBox(
+                  height: 37.0,
+                  width: 52,
+                  child: TextField(
+                    controller: _restingDuration,
+                    textAlign: TextAlign.end,
+                    style: TextStyle(color: Colors.black),
+                    decoration: InputDecoration(
+                        contentPadding: EdgeInsets.all(10),
+                        floatingLabelBehavior: FloatingLabelBehavior.never,
+                        border: OutlineInputBorder(),
+                        labelText: 'Seconds',
+                        filled: true,
+                        labelStyle: TextStyle(color: Colors.black),
+                        fillColor: Colors.white),
+                    keyboardType: TextInputType.number,
+                    onChanged: (_) {
+                      _updateMeditationSettings();
+                    },
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -175,7 +203,7 @@ class _SettingsViewState extends State<SettingsView> {
   /// Returns the new duration acquired from the Text.
   /// Checks if the string is valid (doesn't contain '-' or '.'.
   /// Maximum allows time of 59 Minute 59 Seconds for UI consistency
-  Duration getNewDuration(Duration duration, String newDuration) {
+  Duration _getNewDuration(Duration duration, String newDuration) {
     if (newDuration.contains('.') || newDuration.contains('-')) return duration;
 
     int parsed = int.parse(newDuration);
@@ -187,12 +215,13 @@ class _SettingsViewState extends State<SettingsView> {
   void _updateMeditationSettings() {
     StretchSettings settings = _viewModel.meditationSettings;
     settings.mainNeckRelaxation =
-        getNewDuration(settings.mainNeckRelaxation, _mainNeckDuration.text);
+        _getNewDuration(settings.mainNeckRelaxation, _mainNeckDuration.text);
     settings.rightNeckRelaxation =
-        getNewDuration(settings.rightNeckRelaxation, _rightNeckDuration.text);
+        _getNewDuration(settings.rightNeckRelaxation, _rightNeckDuration.text);
     settings.leftNeckRelaxation =
-        getNewDuration(settings.leftNeckRelaxation, _leftNeckDuration.text);
+        _getNewDuration(settings.leftNeckRelaxation, _leftNeckDuration.text);
     _viewModel.meditationSettings = settings;
+        _getNewDuration(settings.restingTime, _restingDuration.text);
   }
 
   @override

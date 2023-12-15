@@ -22,6 +22,8 @@ class StretchViewModel extends ChangeNotifier {
 
   Duration get restDuration => _meditation.restDuration;
 
+  bool get isResting => _meditation.resting;
+
   set meditationSettings(StretchSettings settings) => _meditation.settings = settings;
 
   AttitudeTracker _attitudeTracker;

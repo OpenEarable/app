@@ -31,28 +31,31 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider<StretchViewModel>.value(
         value: _viewModel,
-        builder: (context, child) => Consumer<StretchViewModel>(
-            builder: (context, neckStretchViewModel, child) => Scaffold(
-                  appBar: AppBar(
-                    title: const Text("Guided Neck Relaxation"),
-                    actions: [
-                      IconButton(
-                          onPressed: (this._viewModel.meditationState ==
-                                      NeckStretchState.noStretch ||
+        builder: (context, child) =>
+            Consumer<StretchViewModel>(
+                builder: (context, neckStretchViewModel, child) =>
+                    Scaffold(
+                      appBar: AppBar(
+                        title: const Text("Guided Neck Relaxation"),
+                        actions: [
+                          IconButton(
+                              onPressed: (this._viewModel.meditationState ==
+                                  NeckStretchState.noStretch ||
                                   this._viewModel.meditationState ==
                                       NeckStretchState.doneStretching)
-                              ? () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                      builder: (context) =>
-                                          SettingsView(this._viewModel)))
-                              : null,
-                          icon: Icon(Icons.settings)),
-                    ],
-                  ),
-                  body: Center(
-                    child: this._buildContentView(neckStretchViewModel),
-                  ),
-                )));
+                                  ? () =>
+                                  Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                          builder: (context) =>
+                                              SettingsView(this._viewModel)))
+                                  : null,
+                              icon: Icon(Icons.settings)),
+                        ],
+                      ),
+                      body: Center(
+                        child: this._buildContentView(neckStretchViewModel),
+                      ),
+                    )));
   }
 
   /// Used to start the meditation via the button
@@ -124,10 +127,11 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
         ),
 
         ...headViews.map(
-          (e) => FractionallySizedBox(
-            widthFactor: .6,
-            child: e,
-          ),
+              (e) =>
+              FractionallySizedBox(
+                widthFactor: .6,
+                child: e,
+              ),
         ),
         // Used to place the Meditation-Button always at the bottom
         Expanded(
@@ -138,6 +142,16 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
     );
   }
 
+  /// Gets the correct background color for the meditation button
+  Color _getBackgroundColor(StretchViewModel neckStretchViewModel) {
+    if (neckStretchViewModel.isResting) {
+      return Color(0xffffbb3d);
+    }
+
+    return !neckStretchViewModel.isTracking ? Color(0xff77F2A1)
+        : Color(0xfff27777);
+  }
+
   // Creates the Button used to start the meditation
   Widget _buildMeditationButton(StretchViewModel neckStretchViewModel) {
     return Padding(
@@ -146,15 +160,13 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
         ElevatedButton(
           onPressed: neckStretchViewModel.isAvailable
               ? () {
-                  neckStretchViewModel.isTracking
-                      ? _stopMeditation()
-                      : _startMeditation();
-                }
+            neckStretchViewModel.isTracking
+                ? _stopMeditation()
+                : _startMeditation();
+          }
               : null,
           style: ElevatedButton.styleFrom(
-            backgroundColor: !neckStretchViewModel.isTracking
-                ? Color(0xff77F2A1)
-                : Color(0xfff27777),
+            backgroundColor: _getBackgroundColor(neckStretchViewModel),
             foregroundColor: Colors.black,
           ),
           child: _getButtonText(),
@@ -185,15 +197,14 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
   }
 
   /// Builds the head tracking/stretch view parts for a certain state and thresholds
-  Visibility _buildStretchViews(
-      NeckStretchState state,
+  Visibility _buildStretchViews(NeckStretchState state,
       StretchViewModel neckStretchViewModel,
       double frontThreshold,
       double sideThreshold) {
     var visibility;
     if (state == NeckStretchState.noStretch) {
       visibility = this._viewModel.meditationState ==
-              NeckStretchState.noStretch ||
+          NeckStretchState.noStretch ||
           this._viewModel.meditationState == NeckStretchState.doneStretching;
     } else {
       visibility = this._viewModel.meditationState == state;
@@ -222,8 +233,7 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
   }
 
   /// Builds the actual head views using the StretchRollView
-  Widget _buildHeadView(
-      String headAssetPath,
+  Widget _buildHeadView(String headAssetPath,
       String neckAssetPath,
       AlignmentGeometry headAlignment,
       double roll,
