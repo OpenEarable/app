@@ -8,22 +8,19 @@ import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 class StretchViewModel extends ChangeNotifier {
   Attitude _attitude = Attitude();
 
+  /// Getters for the attitude-Tracker
   Attitude get attitude => _attitude;
-
   bool get isTracking => _attitudeTracker.isTracking;
-
   bool get isAvailable => _attitudeTracker.isAvailable;
 
+  /// Getters for the neck stretch settings and state
   NeckStretch get neckStretch => _neckStretch;
-
   StretchSettings get stretchSettings => _neckStretch.settings;
-
   NeckStretchState get stretchState => _neckStretch.settings.state;
-
   Duration get restDuration => _neckStretch.restDuration;
-
   bool get isResting => _neckStretch.resting;
 
+  /// Setter for the neck stretching settings
   set stretchSettings(StretchSettings settings) =>
       _neckStretch.settings = settings;
 
@@ -46,17 +43,20 @@ class StretchViewModel extends ChangeNotifier {
     });
   }
 
+  /// Starts tracking of the openEarable
   void startTracking() {
     _attitudeTracker.start();
     notifyListeners();
   }
 
+  /// Stops tracking of the openEarable and resets the attitude for the headViews
   void stopTracking() {
     _attitudeTracker.stop();
     _attitude = Attitude();
     notifyListeners();
   }
 
+  /// Used to calibrate the starting point for the head tracking
   void calibrate() {
     _attitudeTracker.calibrateToCurrentAttitude();
   }

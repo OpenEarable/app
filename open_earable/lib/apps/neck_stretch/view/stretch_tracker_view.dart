@@ -65,6 +65,7 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
                     title: const Text("Guided Neck Stretch"),
                     actions: [
                       IconButton(
+                          /// Settings button, only active when not stretching
                           onPressed: (this._viewModel.stretchState ==
                                       NeckStretchState.noStretch ||
                                   this._viewModel.stretchState ==
@@ -93,6 +94,7 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
     this._viewModel.neckStretch.stopStretching();
   }
 
+  /// Returns the TextSpan representing the Status Text at the top of the app
   TextSpan _getStatusText() {
     if (!_viewModel.isAvailable)
       return TextSpan(
@@ -124,6 +126,8 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
     ]);
   }
 
+  /// Returns the button text displayed within the button. Used to also display
+  /// the remaining time of each phase
   Text _getButtonText() {
     if (!_viewModel.isTracking) return Text('Start Stretching');
 

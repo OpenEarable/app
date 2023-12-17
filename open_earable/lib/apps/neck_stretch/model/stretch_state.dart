@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:open_earable/apps/neck_stretch/view_model/stretch_view_model.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
-/// Enum for the Meditation States
+/// Enum for the neck stretch states
 enum NeckStretchState {
   mainNeckStretch,
   leftNeckStretch,
@@ -141,6 +141,7 @@ class NeckStretch {
     _viewModel.stopTracking();
   }
 
+  /// Starts the countdown for restDuration
   void _startCountdown() {
     _restDurationTimer = Timer.periodic(Duration(seconds: 1), (timer) {
       _restDuration -= Duration(seconds: 1);
@@ -152,6 +153,11 @@ class NeckStretch {
     _settings.state = state;
     // If you just swapped to this state, first rest for restingTime, then set new state
     if (_resting) {
+      /// If we don't restart the timer it results in a weird UI inconsistency
+      /// for displaying the _restDuration as then the restDuration is already
+      /// counted down when the next Timer hasn't started yet.
+      _restDurationTimer.cancel();
+      _startCountdown();
       _restDuration = _settings.restingTime;
       _currentTimer = Timer(_settings.restingTime, () {
         _resting = false;
@@ -164,7 +170,7 @@ class NeckStretch {
     }
   }
 
-  /// Used to set the next meditation state and set the correct Timer
+  /// Used to set the next stretch state and set the correct Timers
   void _setNextState() {
     switch (_settings.state) {
       case NeckStretchState.noStretch:
@@ -186,7 +192,6 @@ class NeckStretch {
         _openEarable.audioPlayer.jingle(2);
         return;
       case NeckStretchState.leftNeckStretch:
-        _resting = false;
         _settings.state = NeckStretchState.doneStretching;
         _currentTimer.cancel();
         _restDurationTimer.cancel();

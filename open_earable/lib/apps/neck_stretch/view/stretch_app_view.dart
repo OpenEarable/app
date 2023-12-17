@@ -67,6 +67,7 @@ class _StretchAppViewState extends State<StretchAppView> {
         appBar: AppBar(
           title: const Text("Guided Neck Stretch"),
           actions: [
+            /// Settings button, only active when not stretching
             IconButton(
                 onPressed: (this._viewModel.stretchState ==
                             NeckStretchState.noStretch ||

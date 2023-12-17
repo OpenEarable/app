@@ -50,6 +50,7 @@ class _SettingsViewState extends State<SettingsView> {
     );
   }
 
+  /// Creates the actual settings view
   Widget _buildSettingsView() {
     return SingleChildScrollView(
       child: Column(
@@ -69,7 +70,7 @@ class _SettingsViewState extends State<SettingsView> {
             color: Theme.of(context).colorScheme.primary,
             child: Column(
               children: [
-                // add a switch to control the `isActive` property of the `BadPostureSettings`
+                /// Settings for all timers used
                 ListTile(
                   title: Text("Timers"),
                 ),
@@ -204,7 +205,7 @@ class _SettingsViewState extends State<SettingsView> {
 
   /// Returns the new duration acquired from the Text.
   /// Checks if the string is valid (doesn't contain '-' or '.'.
-  /// Maximum allows time of 59 Minute 59 Seconds for UI consistency
+  /// Maximum allows time of 59 Minute 59 Seconds for UI consistency, if its more it sets 59 Minutes 59 Seconds
   Duration _getNewDuration(Duration duration, String newDuration) {
     if (newDuration.contains('.') || newDuration.contains('-')) return duration;
 

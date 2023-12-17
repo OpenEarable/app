@@ -74,6 +74,7 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
   Widget _buildContentView(StretchViewModel neckStretchViewModel) {
     return Column(
       children: <Widget>[
+        /// Card with a YoutubePlayer containing a Video explaining all the stretches
         Card(
           color: Theme.of(context).colorScheme.primary,
           child: Column(
@@ -93,6 +94,7 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
             ],
           ),
         ),
+        /// Card used to explain the tracking colors
         Card(
           color: Theme.of(context).colorScheme.primary,
           child: Column(
@@ -152,6 +154,7 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
             ],
           ),
         ),
+        /// Example of the Tracker in Main Neck Stretch state
         Card(
           color: Theme.of(context).colorScheme.primary,
           child: Column(
@@ -237,6 +240,7 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
             ],
           ),
         ),
+        /// Card explaining the stretching button
         Card(
           color: Theme.of(context).colorScheme.primary,
           child: Column(
