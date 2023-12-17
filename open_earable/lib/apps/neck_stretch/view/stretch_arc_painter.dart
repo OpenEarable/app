@@ -4,6 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:open_earable/apps/neck_stretch/model/stretch_state.dart';
 import 'package:open_earable/apps/posture_tracker/view/arc_painter.dart';
 
+/// Colors used for bad stretch directions
+/// Equivalent with Colors.redAccent[100]!
+final Color badStretchColor = Color.fromARGB(255, 255, 138, 128);
+final Color badStretchIndicatorColor = Colors.redAccent[100]!;
+/// Colors used for good stretch direction
+final Color goodStretchColor = Color(0xff77F2A1);
+final Color goodStretchIndicatorColor = Colors.greenAccent[100]!;
+
 class StretchArcPainter extends CustomPainter {
   /// the angle of rotation
   final double angle;
@@ -29,9 +37,9 @@ class StretchArcPainter extends CustomPainter {
         radius: min(size.width, size.height) / 2));
     canvas.drawPath(circlePath, circlePaint);
 
-    // Create a paint object with purple color and stroke style
+    // Create a paint object with the right color for the stretch indicator
     Paint anglePaint = Paint()
-      ..color = _isCorrectStretchDirection() ? Colors.redAccent[100]! : Colors.greenAccent[100]!
+      ..color = _getIndicatorColor()
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeWidth = 5.0;
@@ -55,6 +63,7 @@ class StretchArcPainter extends CustomPainter {
       endAngle, // sweep angle
     );
 
+    /// Draw the overshooting path
     Path angleOvershootPath = Path();
 
     if (_isNegativeOvershoot()) {
@@ -69,12 +78,12 @@ class StretchArcPainter extends CustomPainter {
           Rect.fromCircle(center: center, radius: radius),
           // create a rectangle from the center and radius
           startAngle + angle.sign * angleThreshold, // start angle
-          !_isCorrectStretchDirection() ? angle.sign * (angle.abs() - angleThreshold) : 0, // sweep angle
+          !_isWrongStretchDirection() ? angle.sign * (angle.abs() - angleThreshold) : 0, // sweep angle
     );
     }
 
     Paint angleOvershootPaint = Paint()
-    ..color = getOvershootColor()
+    ..color = _getOvershootColor()
     ..style = PaintingStyle.stroke
     ..strokeCap = StrokeCap.round
     ..strokeWidth = 5.0;
@@ -83,12 +92,12 @@ class StretchArcPainter extends CustomPainter {
     thresholdPath.addArc(
     Rect.fromCircle(center: center, radius: radius),
     // create a rectangle from the center and radius
-    getStartAngle(startAngle, angleThreshold), // start angle
-    getThreshold(angleThreshold), // sweep angle
+    _getStartAngle(startAngle, angleThreshold), // start angle
+    _getThreshold(angleThreshold), // sweep angle
     );
 
     Paint thresholdPaint = Paint()
-    ..color = getThresholdColor()
+    ..color = _getThresholdColor()
     ..style = PaintingStyle.stroke
     ..strokeCap = StrokeCap.round
     ..strokeWidth = 5.0;
@@ -102,7 +111,7 @@ class StretchArcPainter extends CustomPainter {
   }
 
   /// Gets the right start angle depending on stretch state
-  double getStartAngle(double startAngle, double threshold) {
+  double _getStartAngle(double startAngle, double threshold) {
     if (!this.isFront) return startAngle - threshold;
 
     switch (this.stretchState) {
@@ -116,7 +125,7 @@ class StretchArcPainter extends CustomPainter {
   }
 
   /// Gets the right threshold depending on stretch state
-  double getThreshold(double threshold) {
+  double _getThreshold(double threshold) {
     if (this.isFront) {
       switch (this.stretchState) {
         case NeckStretchState.rightNeckStretch:
@@ -136,7 +145,7 @@ class StretchArcPainter extends CustomPainter {
   }
 
   /// Determines whether the user is currently stretching in the right direction
-  bool _isCorrectStretchDirection() {
+  bool _isWrongStretchDirection() {
     if (this.isFront) {
       switch (this.stretchState) {
         case NeckStretchState.rightNeckStretch:
@@ -168,24 +177,37 @@ class StretchArcPainter extends CustomPainter {
 
   /// Returns the right color for the overshoot depending on stretch state and
   /// if its upper or lower head state arc.
-  Color getOvershootColor() {
+  Color _getOvershootColor() {
     if (_isNegativeOvershoot()) {
       // Equals Colors.redAccent[100]!
-      return Color.fromARGB(255, 255, 138, 128);
+      return badStretchColor;
     }
 
-    return Color(0xff77F2A1);
+    return goodStretchColor;
   }
 
   /// Returns the right color for the threshold depending on stretch state and
   /// if its the upper or lower head state arc.
-  Color getThresholdColor() {
+  Color _getThresholdColor() {
     if (_isNegativeOvershoot()) {
-      return Color(0xff77F2A1);
+      return goodStretchIndicatorColor;
     }
 
     // Equals Colors.redAccent[100]!
-    return Color.fromARGB(255, 124, 124, 124);
+    return Colors.black38;
+  }
+
+  /// Gets the right indicator color depending on stretch angle and part
+  Color _getIndicatorColor() {
+    if(_isNegativeOvershoot())
+        return goodStretchColor;
+
+
+    if(_isWrongStretchDirection())
+      return badStretchIndicatorColor;
+
+
+    return goodStretchIndicatorColor;
   }
 
   @override
