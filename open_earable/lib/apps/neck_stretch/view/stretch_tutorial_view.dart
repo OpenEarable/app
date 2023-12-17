@@ -47,7 +47,6 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
                               : () {};
                           Navigator.of(context).pop();
                         }),
-                    centerTitle: true,
                     title: const Text("Guided Neck Stretch"),
                     actions: [
                       IconButton(
@@ -79,7 +78,6 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
           color: Theme.of(context).colorScheme.primary,
           child: Column(
             children: [
-              // add a switch to control the `isActive` property of the `BadPostureSettings`
               ListTile(
                 title: Text("Video showing the different stretches"),
               ),
@@ -99,7 +97,6 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
           color: Theme.of(context).colorScheme.primary,
           child: Column(
             children: [
-              // add a switch to control the `isActive` property of the `BadPostureSettings`
               ListTile(
                 title: Text("Explaining the Tracking Colors"),
               ),
@@ -186,7 +183,7 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
                       ),
                     ),
 
-                    /// The head views used for meditation
+                    /// The head views used for stretching
                     FractionallySizedBox(
                       widthFactor: 0.6,
                       child: buildHeadView(
@@ -244,7 +241,6 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
           color: Theme.of(context).colorScheme.primary,
           child: Column(
             children: [
-              // add a switch to control the `isActive` property of the `BadPostureSettings`
               ListTile(
                 title: Text("Explaining the Stretching Button"),
               ),
@@ -317,7 +313,7 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
     );
   }
 
-  // Creates the Button used to start the meditation
+  // Creates the Button used to start the stretch exercise
   Widget _buildMeditationButton(StretchViewModel neckStretchViewModel) {
     return Padding(
       padding: EdgeInsets.all(5),

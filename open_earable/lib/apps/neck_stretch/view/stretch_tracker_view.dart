@@ -62,7 +62,7 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
                               : () {};
                           Navigator.of(context).pop();
                         }),
-                    title: const Text("Guided Neck Relaxation"),
+                    title: const Text("Guided Neck Stretch"),
                     actions: [
                       IconButton(
                           onPressed: (this._viewModel.stretchState ==
@@ -103,9 +103,11 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
         ),
       );
 
-    if (_viewModel.stretchState == NeckStretchState.noStretch ||
-        _viewModel.stretchState == NeckStretchState.doneStretching)
+    if (_viewModel.stretchState == NeckStretchState.noStretch)
       return TextSpan(text: "Click the Button below\n to start Stretching!");
+
+    if (_viewModel.stretchState == NeckStretchState.doneStretching)
+      return TextSpan(text: "You are done stretching,\n good job!");
 
     return TextSpan(children: <TextSpan>[
       TextSpan(

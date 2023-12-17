@@ -24,10 +24,13 @@ class StretchViewModel extends ChangeNotifier {
 
   bool get isResting => _neckStretch.resting;
 
-  set stretchSettings(StretchSettings settings) => _neckStretch.settings = settings;
+  set stretchSettings(StretchSettings settings) =>
+      _neckStretch.settings = settings;
 
   AttitudeTracker _attitudeTracker;
   OpenEarable _openEarable;
+
+  /// The model class containing all information and logics needed to start and handle a guided neck stretch
   late NeckStretch _neckStretch;
 
   StretchViewModel(this._attitudeTracker, this._openEarable) {
@@ -38,10 +41,7 @@ class StretchViewModel extends ChangeNotifier {
     this._neckStretch = NeckStretch(_openEarable, this);
     _attitudeTracker.listen((attitude) {
       _attitude = Attitude(
-          roll: attitude.roll,
-          pitch: attitude.pitch,
-          yaw: attitude.yaw
-      );
+          roll: attitude.roll, pitch: attitude.pitch, yaw: attitude.yaw);
       notifyListeners();
     });
   }
