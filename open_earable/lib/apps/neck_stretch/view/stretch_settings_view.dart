@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:open_earable/apps/neck_meditation/model/stretch_state.dart';
-import 'package:open_earable/apps/neck_meditation/view_model/stretch_view_model.dart';
+import 'package:open_earable/apps/neck_stretch/model/stretch_state.dart';
+import 'package:open_earable/apps/neck_stretch/view_model/stretch_view_model.dart';
 import 'package:provider/provider.dart';
 
 class SettingsView extends StatefulWidget {
@@ -25,23 +25,23 @@ class _SettingsViewState extends State<SettingsView> {
     super.initState();
     this._viewModel = widget._viewModel;
     _mainNeckDuration = TextEditingController(
-        text: _viewModel.meditationSettings.mainNeckRelaxation.inSeconds
+        text: _viewModel.stretchSettings.mainNeckRelaxation.inSeconds
             .toString());
     _leftNeckDuration = TextEditingController(
-        text: _viewModel.meditationSettings.leftNeckRelaxation.inSeconds
+        text: _viewModel.stretchSettings.leftNeckRelaxation.inSeconds
             .toString());
     _rightNeckDuration = TextEditingController(
-        text: _viewModel.meditationSettings.rightNeckRelaxation.inSeconds
+        text: _viewModel.stretchSettings.rightNeckRelaxation.inSeconds
             .toString());
     _restingDuration = TextEditingController(
-        text: _viewModel.meditationSettings.restingTime.inSeconds
+        text: _viewModel.stretchSettings.restingTime.inSeconds
             .toString());
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Relaxation Settings")),
+      appBar: AppBar(title: const Text("Stretch Settings")),
       body: ChangeNotifierProvider<StretchViewModel>.value(
           value: _viewModel,
           builder: (context, child) => Consumer<StretchViewModel>(
@@ -71,7 +71,7 @@ class _SettingsViewState extends State<SettingsView> {
             children: [
               // add a switch to control the `isActive` property of the `BadPostureSettings`
               ListTile(
-                title: Text("Settings"),
+                title: Text("Timers"),
               ),
               ListTile(
                 title: Text("Main Neck Relaxation Duration\n(in seconds)"),
@@ -213,14 +213,14 @@ class _SettingsViewState extends State<SettingsView> {
 
   /// Update the Meditation Settings according to values, if field is empty set that timer Duration to 0
   void _updateMeditationSettings() {
-    StretchSettings settings = _viewModel.meditationSettings;
+    StretchSettings settings = _viewModel.stretchSettings;
     settings.mainNeckRelaxation =
         _getNewDuration(settings.mainNeckRelaxation, _mainNeckDuration.text);
     settings.rightNeckRelaxation =
         _getNewDuration(settings.rightNeckRelaxation, _rightNeckDuration.text);
     settings.leftNeckRelaxation =
         _getNewDuration(settings.leftNeckRelaxation, _leftNeckDuration.text);
-    _viewModel.meditationSettings = settings;
+    settings.restingTime =
         _getNewDuration(settings.restingTime, _restingDuration.text);
   }
 

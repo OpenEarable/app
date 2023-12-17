@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:open_earable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_earable/apps/posture_tracker/view/posture_tracker_view.dart';
 import 'package:open_earable/apps/recorder.dart';
-import 'package:open_earable/apps/neck_meditation/view/stretch_app_view.dart';
+import 'package:open_earable/apps/neck_stretch/view/stretch_app_view.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
 class AppInfo {
@@ -48,7 +48,7 @@ class AppsTab extends StatelessWidget {
           }),
       AppInfo(
           iconData: Icons.self_improvement,
-          title: "Guided Neck Relaxation",
+          title: "Guided Neck Stretch",
           description: "Relax your neck with a stretch.",
           onTap: () {
             Navigator.push(

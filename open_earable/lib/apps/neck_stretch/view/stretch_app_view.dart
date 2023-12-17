@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'package:open_earable/apps_tab.dart';
 import 'package:open_earable/apps/posture_tracker/model/attitude_tracker.dart';
-import 'package:open_earable/apps/neck_meditation/view/stretch_tracker_view.dart';
-import 'package:open_earable/apps/neck_meditation/view/stretch_tutorial_view.dart';
-import 'package:open_earable/apps/neck_meditation/view_model/stretch_view_model.dart';
-import 'package:open_earable/apps/neck_meditation/model/stretch_state.dart';
-import 'package:open_earable/apps/neck_meditation/view/stretch_settings_view.dart';
+import 'package:open_earable/apps/neck_stretch/view/stretch_tracker_view.dart';
+import 'package:open_earable/apps/neck_stretch/view/stretch_tutorial_view.dart';
+import 'package:open_earable/apps/neck_stretch/view_model/stretch_view_model.dart';
+import 'package:open_earable/apps/neck_stretch/model/stretch_state.dart';
+import 'package:open_earable/apps/neck_stretch/view/stretch_settings_view.dart';
 
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
@@ -31,7 +31,7 @@ class _StretchAppViewState extends State<StretchAppView> {
     this._viewModel = StretchViewModel(widget._tracker, widget._openEarable);
   }
 
-  List<AppInfo> meditationApps(BuildContext context) {
+  List<AppInfo> stretchApps(BuildContext context) {
     return [
       AppInfo(
           iconData: Icons.play_circle,
@@ -61,16 +61,16 @@ class _StretchAppViewState extends State<StretchAppView> {
 
   @override
   Widget build(BuildContext context) {
-    List<AppInfo> apps = meditationApps(context);
+    List<AppInfo> apps = stretchApps(context);
 
     return Scaffold(
         appBar: AppBar(
-          title: const Text("Guided Neck Relaxation"),
+          title: const Text("Guided Neck Stretch"),
           actions: [
             IconButton(
-                onPressed: (this._viewModel.meditationState ==
+                onPressed: (this._viewModel.stretchState ==
                             NeckStretchState.noStretch ||
-                        this._viewModel.meditationState ==
+                        this._viewModel.stretchState ==
                             NeckStretchState.doneStretching)
                     ? () => Navigator.of(context).push(MaterialPageRoute(
                         builder: (context) => SettingsView(this._viewModel)))

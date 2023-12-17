@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:open_earable/apps/neck_meditation/view/stretch_roll_view.dart';
-import 'package:open_earable/apps/neck_meditation/view_model/stretch_view_model.dart';
-import 'package:open_earable/apps/neck_meditation/model/stretch_state.dart';
-import 'package:open_earable/apps/neck_meditation/view/stretch_settings_view.dart';
+import 'package:open_earable/apps/neck_stretch/view/stretch_roll_view.dart';
+import 'package:open_earable/apps/neck_stretch/view_model/stretch_view_model.dart';
+import 'package:open_earable/apps/neck_stretch/model/stretch_state.dart';
+import 'package:open_earable/apps/neck_stretch/view/stretch_settings_view.dart';
 
 class StretchTrackerView extends StatefulWidget {
   final StretchViewModel _viewModel;
@@ -54,9 +54,9 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
                     title: const Text("Guided Neck Relaxation"),
                     actions: [
                       IconButton(
-                          onPressed: (this._viewModel.meditationState ==
+                          onPressed: (this._viewModel.stretchState ==
                                       NeckStretchState.noStretch ||
-                                  this._viewModel.meditationState ==
+                                  this._viewModel.stretchState ==
                                       NeckStretchState.doneStretching)
                               ? () => Navigator.of(context).push(
                                   MaterialPageRoute(
@@ -74,12 +74,12 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
 
   /// Used to start the meditation via the button
   void _startMeditation() {
-    this._viewModel.meditation.startMeditation();
+    this._viewModel.neckStretch.startMeditation();
   }
 
   /// Used to stop the meditation via the button
   void _stopMeditation() {
-    this._viewModel.meditation.stopMeditation();
+    this._viewModel.neckStretch.stopMeditation();
   }
 
   TextSpan _getStatusText() {
@@ -92,16 +92,16 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
         ),
       );
 
-    if (_viewModel.meditationState == NeckStretchState.noStretch ||
-        _viewModel.meditationState == NeckStretchState.doneStretching)
-      return TextSpan(text: "Click the Button below\n to start Meditating!");
+    if (_viewModel.stretchState == NeckStretchState.noStretch ||
+        _viewModel.stretchState == NeckStretchState.doneStretching)
+      return TextSpan(text: "Click the Button below\n to start Stretching!");
 
     return TextSpan(children: <TextSpan>[
       TextSpan(
         text: "Currently Stretching: \n",
       ),
       TextSpan(
-        text: this._viewModel.meditationState.display,
+        text: this._viewModel.stretchState.display,
         style: TextStyle(
           fontWeight: FontWeight.bold,
           fontSize: 15,
@@ -112,11 +112,11 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
   }
 
   Text _getButtonText() {
-    if (!_viewModel.isTracking) return Text('Start Meditation');
+    if (!_viewModel.isTracking) return Text('Start Stretching');
 
-    if (_viewModel.meditationState == NeckStretchState.doneStretching ||
-        _viewModel.meditationState == NeckStretchState.noStretch)
-      return Text('Stop Meditation');
+    if (_viewModel.stretchState == NeckStretchState.doneStretching ||
+        _viewModel.stretchState == NeckStretchState.noStretch)
+      return Text('Stop Stretching');
 
     return Text(_viewModel.restDuration.toString().substring(2, 7));
   }
@@ -218,11 +218,11 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
       double sideThreshold) {
     var visibility;
     if (state == NeckStretchState.noStretch) {
-      visibility = this._viewModel.meditationState ==
+      visibility = this._viewModel.stretchState ==
               NeckStretchState.noStretch ||
-          this._viewModel.meditationState == NeckStretchState.doneStretching;
+          this._viewModel.stretchState == NeckStretchState.doneStretching;
     } else {
-      visibility = this._viewModel.meditationState == state;
+      visibility = this._viewModel.stretchState == state;
     }
 
     return Visibility(

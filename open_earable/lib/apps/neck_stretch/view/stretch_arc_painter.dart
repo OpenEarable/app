@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:open_earable/apps/neck_meditation/model/stretch_state.dart';
+import 'package:open_earable/apps/neck_stretch/model/stretch_state.dart';
 import 'package:open_earable/apps/posture_tracker/view/arc_painter.dart';
 
 class StretchArcPainter extends CustomPainter {

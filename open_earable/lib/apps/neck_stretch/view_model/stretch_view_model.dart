@@ -1,7 +1,7 @@
 import "package:flutter/material.dart";
 import "package:open_earable/apps/posture_tracker/model/attitude.dart";
 import "package:open_earable/apps/posture_tracker/model/attitude_tracker.dart";
-import 'package:open_earable/apps/neck_meditation/model/stretch_state.dart';
+import 'package:open_earable/apps/neck_stretch/model/stretch_state.dart';
 
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
@@ -14,28 +14,28 @@ class StretchViewModel extends ChangeNotifier {
 
   bool get isAvailable => _attitudeTracker.isAvailable;
 
-  NeckMeditation get meditation => _meditation;
+  NeckStretch get neckStretch => _neckStretch;
 
-  StretchSettings get meditationSettings => _meditation.settings;
+  StretchSettings get stretchSettings => _neckStretch.settings;
 
-  NeckStretchState get meditationState => _meditation.settings.state;
+  NeckStretchState get stretchState => _neckStretch.settings.state;
 
-  Duration get restDuration => _meditation.restDuration;
+  Duration get restDuration => _neckStretch.restDuration;
 
-  bool get isResting => _meditation.resting;
+  bool get isResting => _neckStretch.resting;
 
-  set meditationSettings(StretchSettings settings) => _meditation.settings = settings;
+  set stretchSettings(StretchSettings settings) => _neckStretch.settings = settings;
 
   AttitudeTracker _attitudeTracker;
   OpenEarable _openEarable;
-  late NeckMeditation _meditation;
+  late NeckStretch _neckStretch;
 
   StretchViewModel(this._attitudeTracker, this._openEarable) {
     _attitudeTracker.didChangeAvailability = (_) {
       notifyListeners();
     };
 
-    this._meditation = NeckMeditation(_openEarable, this);
+    this._neckStretch = NeckStretch(_openEarable, this);
     _attitudeTracker.listen((attitude) {
       _attitude = Attitude(
           roll: attitude.roll,

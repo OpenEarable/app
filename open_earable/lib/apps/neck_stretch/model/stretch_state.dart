@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:open_earable/apps/neck_meditation/view_model/stretch_view_model.dart';
+import 'package:open_earable/apps/neck_stretch/view_model/stretch_view_model.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
 /// Enum for the Meditation States
@@ -88,7 +88,7 @@ class StretchSettings {
 }
 
 /// Stores all data and functions to manage the guided neck meditation
-class NeckMeditation {
+class NeckStretch {
   StretchSettings _settings = StretchSettings(
       mainNeckRelaxation: Duration(seconds: 30),
       leftNeckRelaxation: Duration(seconds: 30),
@@ -118,7 +118,7 @@ class NeckMeditation {
 
   set settings(StretchSettings settings) => _settings = settings;
 
-  NeckMeditation(this._openEarable, this._viewModel) {
+  NeckStretch(this._openEarable, this._viewModel) {
     this._restDuration = Duration(seconds: 0);
     this._resting = false;
   }
@@ -129,9 +129,6 @@ class NeckMeditation {
     _viewModel.startTracking();
     _settings.state = NeckStretchState.noStretch;
     _setNextState();
-    _restDurationTimer = Timer.periodic(Duration(seconds: 1), (timer) {
-      _restDuration -= Duration(seconds: 1);
-    });
   }
 
   /// Stops the current Meditation
@@ -142,6 +139,12 @@ class NeckMeditation {
     _restDurationTimer.cancel();
     _restDuration = Duration(seconds: 0);
     _viewModel.stopTracking();
+  }
+
+  void _startCountdown() {
+    _restDurationTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+      _restDuration -= Duration(seconds: 1);
+    });
   }
 
   /// Sets the state and timers for the state.
@@ -166,6 +169,7 @@ class NeckMeditation {
     switch (_settings.state) {
       case NeckStretchState.noStretch:
       case NeckStretchState.doneStretching:
+        _startCountdown();
         _setState(
             NeckStretchState.mainNeckStretch, _settings.mainNeckRelaxation);
         return;

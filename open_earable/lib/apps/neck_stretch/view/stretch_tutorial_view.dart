@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:open_earable/apps/neck_meditation/view/stretch_tracker_view.dart';
-import 'package:open_earable/apps/neck_meditation/view_model/stretch_view_model.dart';
-import 'package:open_earable/apps/neck_meditation/model/stretch_state.dart';
-import 'package:open_earable/apps/neck_meditation/view/stretch_settings_view.dart';
+
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+
+import 'package:open_earable/apps/neck_stretch/view/stretch_tracker_view.dart';
+import 'package:open_earable/apps/neck_stretch/view_model/stretch_view_model.dart';
+import 'package:open_earable/apps/neck_stretch/model/stretch_state.dart';
+import 'package:open_earable/apps/neck_stretch/view/stretch_settings_view.dart';
 
 class StretchTutorialView extends StatefulWidget {
   final StretchViewModel _viewModel;
@@ -34,12 +36,23 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
         builder: (context, child) => Consumer<StretchViewModel>(
             builder: (context, neckStretchViewModel, child) => Scaffold(
                   appBar: AppBar(
-                    title: const Text("Guided Neck Relaxation"),
+                    /// Override leading back arrow button to stop tracking if
+                    /// user stopped stretching
+                    leading: IconButton(
+                        icon: Icon(Icons.arrow_back),
+                        onPressed: () {
+                          neckStretchViewModel.isTracking
+                              ? neckStretchViewModel.stopTracking()
+                              : () {};
+                          Navigator.of(context).pop();
+                        }),
+                    centerTitle: true,
+                    title: const Text("Guided Neck Stretch"),
                     actions: [
                       IconButton(
-                          onPressed: (this._viewModel.meditationState ==
+                          onPressed: (this._viewModel.stretchState ==
                                       NeckStretchState.noStretch ||
-                                  this._viewModel.meditationState ==
+                                  this._viewModel.stretchState ==
                                       NeckStretchState.doneStretching)
                               ? () => Navigator.of(context).push(
                                   MaterialPageRoute(
@@ -232,7 +245,7 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
             children: [
               // add a switch to control the `isActive` property of the `BadPostureSettings`
               ListTile(
-                title: Text("Explaining the Meditation Button"),
+                title: Text("Explaining the Stretching Button"),
               ),
 
               /// Explainer text for the button
@@ -323,8 +336,8 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
             foregroundColor: Colors.black,
           ),
           child: neckStretchViewModel.isTracking
-              ? const Text("Stop Meditation")
-              : const Text("Start Meditation"),
+              ? const Text("Stop Stretching")
+              : const Text("Start Stretching"),
         ),
       ]),
     );
