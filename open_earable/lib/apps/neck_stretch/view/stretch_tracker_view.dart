@@ -51,6 +51,16 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
         builder: (context, child) => Consumer<StretchViewModel>(
             builder: (context, neckStretchViewModel, child) => Scaffold(
                   appBar: AppBar(
+                    /// Override leading back arrow button to stop tracking if
+                    /// user stopped stretching
+                    leading: IconButton(
+                        icon: Icon(Icons.arrow_back),
+                        onPressed: () {
+                          neckStretchViewModel.isTracking
+                              ? _stopStretching()
+                              : () {};
+                          Navigator.of(context).pop();
+                        }),
                     title: const Text("Guided Neck Relaxation"),
                     actions: [
                       IconButton(
@@ -72,14 +82,14 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
                 )));
   }
 
-  /// Used to start the meditation via the button
-  void _startMeditation() {
-    this._viewModel.neckStretch.startMeditation();
+  /// Used to start stretching via the button
+  void _startStretching() {
+    this._viewModel.neckStretch.startStretching();
   }
 
-  /// Used to stop the meditation via the button
-  void _stopMeditation() {
-    this._viewModel.neckStretch.stopMeditation();
+  /// Used to stop stretching via the button
+  void _stopStretching() {
+    this._viewModel.neckStretch.stopStretching();
   }
 
   TextSpan _getStatusText() {
@@ -146,16 +156,16 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
             child: e,
           ),
         ),
-        // Used to place the Meditation-Button always at the bottom
+        // Used to place the Stretching Button always at the bottom
         Expanded(
           child: Container(),
         ),
-        this._buildMeditationButton(neckStretchViewModel),
+        this._buildStretchButton(neckStretchViewModel),
       ],
     );
   }
 
-  /// Gets the correct background color for the meditation button
+  /// Gets the correct background color for the stretching button
   Color _getBackgroundColor(StretchViewModel neckStretchViewModel) {
     if (neckStretchViewModel.isResting) {
       return Color(0xffffbb3d);
@@ -166,8 +176,8 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
         : Color(0xfff27777);
   }
 
-  // Creates the Button used to start the meditation
-  Widget _buildMeditationButton(StretchViewModel neckStretchViewModel) {
+  // Creates the Button used to start the stretch exercise
+  Widget _buildStretchButton(StretchViewModel neckStretchViewModel) {
     return Padding(
       padding: EdgeInsets.all(5),
       child: Column(children: [
@@ -175,8 +185,8 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
           onPressed: neckStretchViewModel.isAvailable
               ? () {
                   neckStretchViewModel.isTracking
-                      ? _stopMeditation()
-                      : _startMeditation();
+                      ? _stopStretching()
+                      : _startStretching();
                 }
               : null,
           style: ElevatedButton.styleFrom(
@@ -189,7 +199,7 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
     );
   }
 
-  /// Creates the Head Views that display depending on the MeditationState.
+  /// Creates the Head Views that display depending on the stretch state.
   List<Widget> _createHeadViews(StretchViewModel neckStretchViewModel) {
     return [
       // Visible Head-Displays when not stretching
@@ -218,8 +228,7 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
       double sideThreshold) {
     var visibility;
     if (state == NeckStretchState.noStretch) {
-      visibility = this._viewModel.stretchState ==
-              NeckStretchState.noStretch ||
+      visibility = this._viewModel.stretchState == NeckStretchState.noStretch ||
           this._viewModel.stretchState == NeckStretchState.doneStretching;
     } else {
       visibility = this._viewModel.stretchState == state;

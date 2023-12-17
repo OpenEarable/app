@@ -31,7 +31,7 @@ class StretchArcPainter extends CustomPainter {
 
     // Create a paint object with purple color and stroke style
     Paint anglePaint = Paint()
-      ..color = Colors.purpleAccent
+      ..color = _isCorrectStretchDirection() ? Colors.redAccent[100]! : Colors.greenAccent[100]!
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeWidth = 5.0;
@@ -69,7 +69,7 @@ class StretchArcPainter extends CustomPainter {
           Rect.fromCircle(center: center, radius: radius),
           // create a rectangle from the center and radius
           startAngle + angle.sign * angleThreshold, // start angle
-          _isOvershooting() ? angle.sign * (angle.abs() - angleThreshold) : 0, // sweep angle
+          !_isCorrectStretchDirection() ? angle.sign * (angle.abs() - angleThreshold) : 0, // sweep angle
     );
     }
 
@@ -135,27 +135,25 @@ class StretchArcPainter extends CustomPainter {
     }
   }
 
-  /// Determines whether it actually is overshooting the threshold. This is a
-  /// small hack as the head angle cant go over a certain degree this way we can
-  /// ensure that the wrong stretch direction drawn part can never be overshot
-  bool _isOvershooting() {
-      if (this.isFront) {
-        switch (this.stretchState) {
-          case NeckStretchState.rightNeckStretch:
-            return angle.sign <= 0;
-          case NeckStretchState.leftNeckStretch:
-            return angle.sign >= 0;
-          default:
-            return true;
-        }
-      }
-
+  /// Determines whether the user is currently stretching in the right direction
+  bool _isCorrectStretchDirection() {
+    if (this.isFront) {
       switch (this.stretchState) {
-        case NeckStretchState.mainNeckStretch:
+        case NeckStretchState.rightNeckStretch:
+          return angle.sign >= 0;
+        case NeckStretchState.leftNeckStretch:
           return angle.sign <= 0;
         default:
-          return true;
+          return false;
       }
+    }
+
+    switch (this.stretchState) {
+      case NeckStretchState.mainNeckStretch:
+        return angle.sign >= 0;
+      default:
+        return false;
+    }
   }
 
   /// Detgermines whether the overshoot is negative (shouldnt stretch that part)
@@ -176,18 +174,18 @@ class StretchArcPainter extends CustomPainter {
       return Color.fromARGB(255, 255, 138, 128);
     }
 
-    return Color.fromARGB(255, 0, 186, 255);
+    return Color(0xff77F2A1);
   }
 
   /// Returns the right color for the threshold depending on stretch state and
   /// if its the upper or lower head state arc.
   Color getThresholdColor() {
     if (_isNegativeOvershoot()) {
-      return Color.fromARGB(255, 0, 186, 255);
+      return Color(0xff77F2A1);
     }
 
     // Equals Colors.redAccent[100]!
-    return Color.fromARGB(255, 255, 138, 128);
+    return Color.fromARGB(255, 124, 124, 124);
   }
 
   @override

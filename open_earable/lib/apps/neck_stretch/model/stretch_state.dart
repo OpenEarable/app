@@ -124,7 +124,7 @@ class NeckStretch {
   }
 
   /// Starts the Meditation with the according timers
-  void startMeditation() {
+  void startStretching() {
     _resting = false;
     _viewModel.startTracking();
     _settings.state = NeckStretchState.noStretch;
@@ -132,7 +132,7 @@ class NeckStretch {
   }
 
   /// Stops the current Meditation
-  void stopMeditation() {
+  void stopStretching() {
     _resting = false;
     _settings.state = NeckStretchState.noStretch;
     _currentTimer.cancel();

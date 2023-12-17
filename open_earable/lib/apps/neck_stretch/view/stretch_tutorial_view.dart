@@ -21,7 +21,7 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
   late final StretchViewModel _viewModel;
   final YoutubePlayerController _ytController = YoutubePlayerController(
       initialVideoId: "H5h54Q0wpps",
-      flags: YoutubePlayerFlags(mute: false, hideThumbnail: true));
+      flags: YoutubePlayerFlags(mute: false, autoPlay: false));
 
   @override
   void initState() {
