@@ -3,14 +3,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:open_earable/apps/neck_stretch/model/stretch_state.dart';
 import 'package:open_earable/apps/posture_tracker/view/arc_painter.dart';
+import 'package:open_earable/apps/neck_stretch/model/stretch_colors.dart';
 
-/// Colors used for bad stretch directions
-/// Equivalent with Colors.redAccent[100]!
-final Color badStretchColor = Color.fromARGB(255, 255, 138, 128);
-final Color badStretchIndicatorColor = Colors.redAccent[100]!;
-/// Colors used for good stretch direction
-final Color goodStretchColor = Color(0xff77F2A1);
-final Color goodStretchIndicatorColor = Colors.greenAccent[100]!;
 
 class StretchArcPainter extends CustomPainter {
   /// the angle of rotation
@@ -27,7 +21,7 @@ class StretchArcPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     Paint circlePaint = Paint()
-      ..color = const Color.fromARGB(255, 195, 195, 195)
+      ..color = outerRing
       ..style = PaintingStyle.stroke
       ..strokeWidth = 5.0;
 
@@ -193,8 +187,7 @@ class StretchArcPainter extends CustomPainter {
       return goodStretchIndicatorColor;
     }
 
-    // Equals Colors.redAccent[100]!
-    return Colors.black38;
+    return wrongAreaIndicator;
   }
 
   /// Gets the right indicator color depending on stretch angle and part

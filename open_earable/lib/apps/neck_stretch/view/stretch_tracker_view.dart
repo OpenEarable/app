@@ -4,6 +4,7 @@ import 'package:open_earable/apps/neck_stretch/view/stretch_roll_view.dart';
 import 'package:open_earable/apps/neck_stretch/view_model/stretch_view_model.dart';
 import 'package:open_earable/apps/neck_stretch/model/stretch_state.dart';
 import 'package:open_earable/apps/neck_stretch/view/stretch_settings_view.dart';
+import 'package:open_earable/apps/neck_stretch/model/stretch_colors.dart';
 
 class StretchTrackerView extends StatefulWidget {
   final StretchViewModel _viewModel;
@@ -115,7 +116,7 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
         style: TextStyle(
           fontWeight: FontWeight.bold,
           fontSize: 15,
-          color: Color.fromARGB(255, 0, 186, 255),
+          color: stretchedAreaColor,
         ),
       )
     ]);
@@ -168,12 +169,12 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
   /// Gets the correct background color for the stretching button
   Color _getBackgroundColor(StretchViewModel neckStretchViewModel) {
     if (neckStretchViewModel.isResting) {
-      return Color(0xffffbb3d);
+      return restingButtonColor;
     }
 
     return !neckStretchViewModel.isTracking
-        ? Color(0xff77F2A1)
-        : Color(0xfff27777);
+        ? startButtonColor
+        : stopButtonColor;
   }
 
   // Creates the Button used to start the stretch exercise

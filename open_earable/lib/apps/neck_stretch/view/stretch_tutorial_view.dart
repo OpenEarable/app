@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
+import 'package:open_earable/apps/neck_stretch/model/stretch_colors.dart';
 import 'package:open_earable/apps/neck_stretch/view/stretch_tracker_view.dart';
 import 'package:open_earable/apps/neck_stretch/view_model/stretch_view_model.dart';
 import 'package:open_earable/apps/neck_stretch/model/stretch_state.dart';
@@ -125,22 +126,22 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
                   text: TextSpan(
                     children: <TextSpan>[
                       TextSpan(
-                        text: 'Blue: ',
+                        text: 'Green: ',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
-                          color: Color.fromARGB(255, 0, 186, 255),
+                          color: goodStretchIndicatorColor,
                         ),
                       ),
                       TextSpan(
                         text: 'Try to keep your head within this area\n\n',
                       ),
                       TextSpan(
-                        text: 'Red: ',
+                        text: 'Dark Grey: ',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
-                          color: Color(0xfff27777),
+                          color: wrongAreaIndicator,
                         ),
                       ),
                       TextSpan(
@@ -178,7 +179,7 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 15,
-                              color: Color.fromARGB(255, 0, 186, 255),
+                              color: stretchedAreaColor,
                             ),
                           ),
                         ],
@@ -223,7 +224,7 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
-                          color: Color.fromARGB(255, 0, 186, 255),
+                          color: stretchedAreaColor,
                         ),
                       ),
                       TextSpan(
@@ -274,7 +275,7 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
-                          color: Color(0xff77F2A1),
+                          color: startButtonColor,
                         ),
                       ),
                       TextSpan(
@@ -285,7 +286,7 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
-                          color: Color(0xfff27777),
+                          color: stopButtonColor,
                         ),
                       ),
                       TextSpan(
@@ -297,7 +298,7 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
-                          color: Color(0xffffbb3d),
+                          color: restingButtonColor,
                         ),
                       ),
                       TextSpan(
@@ -331,8 +332,8 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
               : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: !neckStretchViewModel.isTracking
-                ? Color(0xff77F2A1)
-                : Color(0xfff27777),
+                ? startButtonColor
+                : stopButtonColor,
             foregroundColor: Colors.black,
           ),
           child: neckStretchViewModel.isTracking
