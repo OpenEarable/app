@@ -220,14 +220,11 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
                 OpenEarableSettings().selectedAudioPlayerRadio = value ?? 0;
               });
             },
-      activeColor: !_openEarable.bleManager.connected
-          ? Colors.grey
-          : Theme.of(context).colorScheme.secondary,
       fillColor: MaterialStateProperty.resolveWith((states) {
-        if (states.contains(MaterialState.disabled)) {
-          return Colors.grey;
+        if (states.contains(MaterialState.selected)) {
+          return Theme.of(context).colorScheme.secondary;
         }
-        return Theme.of(context).colorScheme.secondary;
+        return Colors.grey;
       }),
     );
   }
