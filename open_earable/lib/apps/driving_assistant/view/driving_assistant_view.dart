@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:open_earable/apps/driving_assistant/controller/tiredness_monitor.dart';
 import 'package:open_earable/apps/driving_assistant/view/observer.dart';
 import 'package:open_earable/apps/driving_assistant/view/driving_settings_view.dart';
-import 'package:open_earable/apps/posture_tracker/model/attitude_tracker.dart';
 import 'package:provider/provider.dart';
-import 'package:open_earable/apps/driving_assistant/driving_assistant_notifier.dart';
+import 'package:open_earable/apps/driving_assistant/controller/driving_assistant_notifier.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:open_earable/apps/driving_assistant/model/driving_time.dart';
 
@@ -19,19 +18,8 @@ class DrivingAssistantView extends StatefulWidget implements Observer {
   DrivingAssistantView(this._tracker, this._openEarable);
 
   @override
-  void update(int tirednessCounter) {
-    //Mug update
-    switch (tirednessCounter) {
-      case >= 4:
-        mugColor = Colors.red;
-        break;
-      case >= 2:
-        mugColor = Colors.yellow;
-        break;
-      case < 2:
-        mugColor = Colors.green;
-        break;
-    }
+  void update(Color mugColor) {
+    this.mugColor = mugColor;
   }
 
   @override
@@ -53,24 +41,25 @@ class _DrivingAssistantViewState extends State<DrivingAssistantView> {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider<DrivingAssistantNotifier>.value(
-        value: _drivingNotifier,
-        builder: (context, child) => Consumer<DrivingAssistantNotifier>(
-            builder: (context, drivingAssistantNotifier, child) => Scaffold(
-                  appBar: AppBar(
-                    title: const Text("Driving Assistant"),
-                    actions: [
-                      IconButton(
-                          onPressed: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                  builder: (context) => DrivingSettingsView(
-                                      this._drivingNotifier, widget))),
-                          icon: Icon(Icons.settings)),
-                    ],
-                  ),
-                  body: Center(
-                    child: this._buildContentView(drivingAssistantNotifier),
-                  ),
-                )));
+      value: _drivingNotifier,
+      builder: (context, child) => Consumer<DrivingAssistantNotifier>(
+        builder: (context, drivingAssistantNotifier, child) => Scaffold(
+          appBar: AppBar(
+            title: const Text("Driving Assistant"),
+            actions: [
+              IconButton(
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (context) =>
+                          DrivingSettingsView(this._drivingNotifier, widget))),
+                  icon: Icon(Icons.settings)),
+            ],
+          ),
+          body: Center(
+            child: this._buildContentView(drivingAssistantNotifier),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildContentView(DrivingAssistantNotifier drivingAssistantNotifier) {
@@ -89,17 +78,20 @@ class _DrivingAssistantViewState extends State<DrivingAssistantView> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             ElevatedButton(
-              onPressed:
-              drivingAssistantNotifier.isAvailable && !onPause
+              onPressed: drivingAssistantNotifier.isAvailable && !onPause
                   ? () {
-                drivingAssistantNotifier.isTracking
-                    ? {this._drivingNotifier.stopTracking(widget),
-                  widget._myKey.currentState?.stopTimer(),
-                  onDrive = false}
-                    : {this._drivingNotifier.startTracking(widget),
-                  widget._myKey.currentState?.startTimer(),
-                  onDrive = true};
-              }
+                      drivingAssistantNotifier.isTracking
+                          ? {
+                              this._drivingNotifier.stopTracking(widget),
+                              widget._myKey.currentState?.stopTimer(),
+                              onDrive = false
+                            }
+                          : {
+                              this._drivingNotifier.startTracking(widget),
+                              widget._myKey.currentState?.startTimer(),
+                              onDrive = true
+                            };
+                    }
                   : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: !drivingAssistantNotifier.isTracking
@@ -113,22 +105,24 @@ class _DrivingAssistantViewState extends State<DrivingAssistantView> {
             ),
             SizedBox(width: 40.0),
             ElevatedButton(
-              onPressed:
-              drivingAssistantNotifier.isAvailable && onDrive
+              onPressed: drivingAssistantNotifier.isAvailable && onDrive
                   ? () {
-                drivingAssistantNotifier.isTracking
-                    ? {this._drivingNotifier.stopTracking(widget),
-                  widget._myKey.currentState?.pauseTimer(),
-                  onPause = true}
-                    : {this._drivingNotifier.startTracking(widget),
-                  widget._myKey.currentState?.pauseTimer(),
-                  onPause = false};
-              }
+                      drivingAssistantNotifier.isTracking
+                          ? {
+                              this._drivingNotifier.stopTracking(widget),
+                              widget._myKey.currentState?.pauseTimer(),
+                              onPause = true
+                            }
+                          : {
+                              this._drivingNotifier.startTracking(widget),
+                              widget._myKey.currentState?.pauseTimer(),
+                              onPause = false
+                            };
+                    }
                   : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: !onPause
-                    ? Color(0xff77F2A1)
-                    : Color(0xfff27777),
+                backgroundColor:
+                    !onPause ? Color(0xff77F2A1) : Color(0xfff27777),
                 foregroundColor: Colors.black,
               ),
               child: onPause
@@ -137,7 +131,6 @@ class _DrivingAssistantViewState extends State<DrivingAssistantView> {
             ),
           ],
         ),
-
         Visibility(
           visible: !drivingAssistantNotifier.isAvailable,
           maintainState: true,
@@ -149,13 +142,6 @@ class _DrivingAssistantViewState extends State<DrivingAssistantView> {
               color: Colors.red,
               fontSize: 12,
             ),
-          ),
-        ),
-        Text(
-          drivingAssistantNotifier.attitude.gyroY.toString(),
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 12,
           ),
         ),
       ],

@@ -1,3 +1,5 @@
-abstract class Observer{
-  void update(int tirednessCounter);
+import 'dart:ui';
+
+abstract class Observer {
+  void update(Color mugColor);
 }

@@ -9,6 +9,7 @@ class DrivingAttitudeTracker extends BaseAttitudeTracker {
 
   @override
   bool get isTracking => _subscription != null && !_subscription!.isPaused;
+
   @override
   bool get isAvailable => _openEarable.bleManager.connected;
 
@@ -21,7 +22,6 @@ class DrivingAttitudeTracker extends BaseAttitudeTracker {
     });
   }
 
-
   @override
   void start() {
     if (_subscription?.isPaused ?? false) {
@@ -30,12 +30,13 @@ class DrivingAttitudeTracker extends BaseAttitudeTracker {
     }
 
     _openEarable.sensorManager.writeSensorConfig(_buildSensorConfig());
-    _subscription = _openEarable.sensorManager.subscribeToSensorData(0).listen((event) {
+    _subscription =
+        _openEarable.sensorManager.subscribeToSensorData(0).listen((event) {
       updateDrivingAttitude(
-          roll: event["EULER"]["ROLL"],
-          pitch: event["EULER"]["PITCH"],
-          yaw: event["EULER"]["YAW"],
-          gyroY: event["GYRO"]["Y"],
+        roll: event["EULER"]["ROLL"],
+        pitch: event["EULER"]["PITCH"],
+        yaw: event["EULER"]["YAW"],
+        gyroY: event["GYRO"]["Y"],
       );
     });
   }
@@ -52,10 +53,6 @@ class DrivingAttitudeTracker extends BaseAttitudeTracker {
   }
 
   OpenEarableSensorConfig _buildSensorConfig() {
-    return OpenEarableSensorConfig(
-        sensorId: 0,
-        samplingRate: 30,
-        latency: 0
-    );
+    return OpenEarableSensorConfig(sensorId: 0, samplingRate: 30, latency: 0);
   }
 }

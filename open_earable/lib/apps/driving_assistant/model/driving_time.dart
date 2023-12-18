@@ -1,11 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:open_earable/apps/driving_assistant/driving_assistant_notifier.dart';
 
 class DrivingTime extends StatefulWidget {
-
-  const DrivingTime ({required Key key}) : super(key: key);
+  const DrivingTime({required Key key}) : super(key: key);
 
   @override
   DrivingTimeState createState() => DrivingTimeState();
@@ -35,7 +33,7 @@ class DrivingTimeState extends State<DrivingTime> {
     }
 
     void tick(_) {
-      if(!manualPause){
+      if (!manualPause) {
         counter++;
       }
       streamController.add(counter);
@@ -55,25 +53,19 @@ class DrivingTimeState extends State<DrivingTime> {
     return streamController.stream;
   }
 
-  void startTimer(){
+  void startTimer() {
     timerStream = stopWatchStream();
     timerSubscription = timerStream!.listen((int newTick) {
       setState(() {
-        hoursStr = ((newTick / (60 * 60)) % 60)
-            .floor()
-            .toString()
-            .padLeft(2, '0');
-        minutesStr = ((newTick / 60) % 60)
-            .floor()
-            .toString()
-            .padLeft(2, '0');
-        secondsStr =
-            (newTick % 60).floor().toString().padLeft(2, '0');
+        hoursStr =
+            ((newTick / (60 * 60)) % 60).floor().toString().padLeft(2, '0');
+        minutesStr = ((newTick / 60) % 60).floor().toString().padLeft(2, '0');
+        secondsStr = (newTick % 60).floor().toString().padLeft(2, '0');
       });
     });
   }
 
-  void stopTimer(){
+  void stopTimer() {
     timerSubscription.cancel();
     timerStream = null;
     setState(() {
@@ -83,8 +75,8 @@ class DrivingTimeState extends State<DrivingTime> {
     });
   }
 
-  void pauseTimer(){
-    if(!manualPause){
+  void pauseTimer() {
+    if (!manualPause) {
       manualPause = true;
     } else {
       manualPause = false;
