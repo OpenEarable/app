@@ -54,6 +54,8 @@ class _JumpHeightTestState extends State<JumpHeightTest> {
   bool _isJumping = false;
   /// Instance of OpenEarable device.
   final OpenEarable _openEarable;
+  /// Flag to indicate if an OpenEarable device is connected.
+  bool _earableConnected = false;
   /// Subscription to IMU sensor data.
   StreamSubscription? _imuSubscription;
   /// Stores the maximum height achieved in a jump.
@@ -88,6 +90,7 @@ class _JumpHeightTestState extends State<JumpHeightTest> {
     // Set up listeners for sensor data.
     if (_openEarable.bleManager.connected) {
       _setupListeners();
+      _earableConnected = true;
     }
   }
 
@@ -234,13 +237,21 @@ class _JumpHeightTestState extends State<JumpHeightTest> {
                 jumpDataSeries,
                 animate: false,
                 behaviors: [
+                  // X-axis label.
                   new charts.ChartTitle('Time (ms)',
                       behaviorPosition: charts.BehaviorPosition.bottom,
-                      titleStyleSpec: charts.TextStyleSpec(color: charts.MaterialPalette.white),
+                      titleStyleSpec: charts.TextStyleSpec(
+                        color: charts.MaterialPalette.white,
+                        fontSize: 10
+                      ),
                       titleOutsideJustification: charts.OutsideJustification.middleDrawArea),
+                  // Y-axis label.
                   new charts.ChartTitle('Height (m)',
                       behaviorPosition: charts.BehaviorPosition.start,
-                      titleStyleSpec: charts.TextStyleSpec(color: charts.MaterialPalette.white),
+                      titleStyleSpec: charts.TextStyleSpec(
+                        color: charts.MaterialPalette.white,
+                        fontSize: 10
+                      ),
                       titleOutsideJustification: charts.OutsideJustification.middleDrawArea)
                 ],
                 // Include timeline points in line.
@@ -251,10 +262,30 @@ class _JumpHeightTestState extends State<JumpHeightTest> {
               'Max Height: ${_maxHeight.toStringAsFixed(2)} m',
               style: Theme.of(context).textTheme.headlineMedium,
             ),
-            ElevatedButton(
-              onPressed: _isJumping ? _stopJump : _startJump,
-              child: Text(_isJumping ? 'Stop Jump' : 'Start Jump'),
-            ),
+            Column(children: [
+              ElevatedButton(
+                onPressed: _earableConnected ? () { _isJumping ? _stopJump() : _startJump(); } : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: !_isJumping ? Colors.greenAccent : Colors.red,
+                  foregroundColor: Colors.black,
+                ),
+                child: Text(_isJumping ? 'Stop Jump' : 'Start Jump'),
+              ),
+              Visibility(
+                // Show error message if no OpenEarable device is connected.
+                visible: !_earableConnected,
+                maintainState: true,
+                maintainAnimation: true,
+                maintainSize: true,
+                child: Text(
+                  "No Earable Connected",
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontSize: 12,
+                  ),
+                ),
+              )
+            ])
           ],
         ),
       ),
