@@ -82,6 +82,7 @@ class _JumpHeightTestState extends State<JumpHeightTest> {
   /// Constructs a _JumpHeightTestState object with a given OpenEarable device.
   _JumpHeightTestState(this._openEarable);
 
+  /// Initializes state and sets up listeners for sensor data.
   @override
   void initState() {
     super.initState();
@@ -91,6 +92,52 @@ class _JumpHeightTestState extends State<JumpHeightTest> {
     if (_openEarable.bleManager.connected) {
       _setupListeners();
       _earableConnected = true;
+    }
+  }
+
+  /// Disposes IMU data subscription when the state object is removed.
+  @override
+  void dispose() {
+    super.dispose();
+    _imuSubscription?.cancel();
+  }
+
+  /// Sets up listeners to receive sensor data from the OpenEarable device.
+  _setupListeners() {
+    _imuSubscription =
+      _openEarable.sensorManager.subscribeToSensorData(0).listen((data) {
+        // Only process sensor data if jump measurement is ongoing.
+        if (!_isJumping) {
+          return;
+        }
+        _processSensorData(data);
+      });
+  }
+  
+  /// Starts the jump height measurement process.
+  /// It sets the sampling rate, initializes or resets variables, and begins listening to sensor data.
+  void _startJump() {
+    // Set sampling rate to maximum.
+    _openEarable.sensorManager.writeSensorConfig(_buildSensorConfig());
+    _startTime = DateTime.now();
+
+    setState(() {
+      // Clear data from previous jump.
+      _jumpData.clear();
+      _isJumping = true;
+      _height = 0.0;
+      _velocity = 0.0;
+      // Reset max height on starting a new jump
+      _maxHeight = 0.0;
+    });
+  }
+
+  /// Stops the jump height measurement process.
+  void _stopJump() {
+    if (_isJumping) {
+      setState(() {
+        _isJumping = false;
+      });
     }
   }
 
@@ -108,18 +155,6 @@ class _JumpHeightTestState extends State<JumpHeightTest> {
         errorMeasure: _errorMeasureAcc,
         errorEstimate: _errorMeasureAcc,
         q: 0.9);
-  }
-
-  /// Sets up listeners to receive sensor data from the OpenEarable device.
-  _setupListeners() {
-    _imuSubscription =
-      _openEarable.sensorManager.subscribeToSensorData(0).listen((data) {
-        // Only process sensor data if jump measurement is ongoing.
-        if (!_isJumping) {
-          return;
-        }
-        _processSensorData(data);
-      });
   }
 
   /// Processes incoming sensor data and updates jump height.
@@ -175,39 +210,6 @@ class _JumpHeightTestState extends State<JumpHeightTest> {
     });
     // For debugging.
     // print("Stationary: ${deviceIsStationary(0.3)}, Acc: $currentAcc, Vel: $velocity, Height: $height");
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-    _imuSubscription?.cancel();
-  }
-
-  /// Starts the jump height measurement process.
-  /// It sets the sampling rate, initializes or resets variables, and begins listening to sensor data.
-  void _startJump() {
-    // Set sampling rate to maximum.
-    _openEarable.sensorManager.writeSensorConfig(_buildSensorConfig());
-    _startTime = DateTime.now();
-
-    setState(() {
-      // Clear data from previous jump.
-      _jumpData.clear();
-      _isJumping = true;
-      _height = 0.0;
-      _velocity = 0.0;
-      // Reset max height on starting a new jump
-      _maxHeight = 0.0;
-    });
-  }
-
-  /// Stops the jump height measurement process.
-  void _stopJump() {
-    if (_isJumping) {
-      setState(() {
-        _isJumping = false;
-      });
-    }
   }
 
   /// Builds the UI for the jump height test.
