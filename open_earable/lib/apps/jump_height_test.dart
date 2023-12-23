@@ -228,6 +228,19 @@ class _JumpHeightTestState extends State<JumpHeightTest> {
             _buildChart(),
             _buildText(),
             _buildButtons(),
+            Visibility(
+              // Show error message if no OpenEarable device is connected.
+              visible: !_earableConnected,
+              maintainState: true,
+              maintainAnimation: true,
+              child: Text(
+                "No Earable Connected",
+                style: TextStyle(
+                  color: Colors.red,
+                  fontSize: 12,
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -248,70 +261,63 @@ class _JumpHeightTestState extends State<JumpHeightTest> {
     ];
 
     return Expanded(
-      child: charts.LineChart(
-        jumpDataSeries,
-        animate: false,
-        behaviors: [
-          // X-axis label.
-          new charts.ChartTitle('Time (ms)',
-              behaviorPosition: charts.BehaviorPosition.bottom,
-              titleStyleSpec: charts.TextStyleSpec(
-                color: charts.MaterialPalette.white,
-                fontSize: 10
-              ),
-              titleOutsideJustification: charts.OutsideJustification.middleDrawArea),
-          // Y-axis label.
-          new charts.ChartTitle('Height (m)',
-              behaviorPosition: charts.BehaviorPosition.start,
-              titleStyleSpec: charts.TextStyleSpec(
-                color: charts.MaterialPalette.white,
-                fontSize: 10
-              ),
-              titleOutsideJustification: charts.OutsideJustification.middleDrawArea)
-        ],
-        // Include timeline points in line.
-        defaultRenderer: charts.LineRendererConfig(includePoints: true),
+      child: Container(
+        child: charts.LineChart(
+          jumpDataSeries,
+          animate: false,
+          behaviors: [
+            // X-axis label.
+            charts.ChartTitle('Time (ms)',
+                behaviorPosition: charts.BehaviorPosition.bottom,
+                titleStyleSpec: charts.TextStyleSpec(
+                  color: charts.MaterialPalette.white,
+                  fontSize: 10,
+                ),
+                titleOutsideJustification: charts.OutsideJustification.middleDrawArea),
+            // Y-axis label.
+            charts.ChartTitle('Height (m)',
+                behaviorPosition: charts.BehaviorPosition.start,
+                titleStyleSpec: charts.TextStyleSpec(
+                  color: charts.MaterialPalette.white,
+                  fontSize: 10,
+                ),
+                titleOutsideJustification: charts.OutsideJustification.middleDrawArea),
+          ],
+          // Include timeline points in line.
+          defaultRenderer: charts.LineRendererConfig(includePoints: true),
+        ),
       ),
     );
   }
 
   /// Builds a text widget to display the maximum jump height achieved.
   Widget _buildText() {
-    return Text(
-      'Max Height: ${_maxHeight.toStringAsFixed(2)} m',
-      style: 
-        Theme.of(context).textTheme.headlineMedium
+    return Container(
+      child: Text(
+        'Max Height: ${_maxHeight.toStringAsFixed(2)} m',
+        style: Theme.of(context).textTheme.headlineSmall,
+      ),
     );
   }
 
   /// Builds buttons to start and stop the jump height measurement process.
   Widget _buildButtons() {
-    return Column(children: [
-      ElevatedButton(
-        onPressed: _earableConnected ? () { _isJumping ? _stopJump() : _startJump(); } : null,
+    return Flexible(
+      child: ElevatedButton(
+        onPressed: _earableConnected
+            ? () {
+                _isJumping ? _stopJump() : _startJump();
+              }
+            : null,
         style: ElevatedButton.styleFrom(
           backgroundColor: !_isJumping ? Colors.greenAccent : Colors.red,
           foregroundColor: Colors.black,
         ),
         child: Text(_isJumping ? 'Stop Jump' : 'Start Jump'),
       ),
-      Visibility(
-        // Show error message if no OpenEarable device is connected.
-        visible: !_earableConnected,
-        maintainState: true,
-        maintainAnimation: true,
-        maintainSize: true,
-        child: Text(
-          "No Earable Connected",
-          style: TextStyle(
-            color: Colors.red,
-            fontSize: 12,
-          ),
-        ),
-      )
-    ]);
+    );
   }
-
+  
   /// Builds a sensor configuration for the OpenEarable device.
   /// Sets the sensor ID, sampling rate, and latency.
   OpenEarableSensorConfig _buildSensorConfig() {
