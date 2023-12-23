@@ -214,8 +214,28 @@ class _JumpHeightTestState extends State<JumpHeightTest> {
 
   /// Builds the UI for the jump height test.
   /// It displays a line chart of jump height over time and the maximum jump height achieved.
+  // This build function is getting a little too big. Consider refactoring.
   @override
   Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Jump Height Test'),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            _buildChart(),
+            _buildText(),
+            _buildButtons(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Builds a line chart to display jump height over time.
+  Widget _buildChart() {
     List<charts.Series<Jump, num>> jumpDataSeries = [
       charts.Series(
         id: "Jumps",
@@ -226,72 +246,70 @@ class _JumpHeightTestState extends State<JumpHeightTest> {
         colorFn: (Jump series, _) => charts.MaterialPalette.cyan.shadeDefault,
       )
     ];
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Jump Height Test'),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Expanded(
-              child: charts.LineChart(
-                jumpDataSeries,
-                animate: false,
-                behaviors: [
-                  // X-axis label.
-                  new charts.ChartTitle('Time (ms)',
-                      behaviorPosition: charts.BehaviorPosition.bottom,
-                      titleStyleSpec: charts.TextStyleSpec(
-                        color: charts.MaterialPalette.white,
-                        fontSize: 10
-                      ),
-                      titleOutsideJustification: charts.OutsideJustification.middleDrawArea),
-                  // Y-axis label.
-                  new charts.ChartTitle('Height (m)',
-                      behaviorPosition: charts.BehaviorPosition.start,
-                      titleStyleSpec: charts.TextStyleSpec(
-                        color: charts.MaterialPalette.white,
-                        fontSize: 10
-                      ),
-                      titleOutsideJustification: charts.OutsideJustification.middleDrawArea)
-                ],
-                // Include timeline points in line.
-                defaultRenderer: charts.LineRendererConfig(includePoints: true),
-                ),
-            ),
-            Text(
-              'Max Height: ${_maxHeight.toStringAsFixed(2)} m',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            Column(children: [
-              ElevatedButton(
-                onPressed: _earableConnected ? () { _isJumping ? _stopJump() : _startJump(); } : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: !_isJumping ? Colors.greenAccent : Colors.red,
-                  foregroundColor: Colors.black,
-                ),
-                child: Text(_isJumping ? 'Stop Jump' : 'Start Jump'),
+
+    return Expanded(
+      child: charts.LineChart(
+        jumpDataSeries,
+        animate: false,
+        behaviors: [
+          // X-axis label.
+          new charts.ChartTitle('Time (ms)',
+              behaviorPosition: charts.BehaviorPosition.bottom,
+              titleStyleSpec: charts.TextStyleSpec(
+                color: charts.MaterialPalette.white,
+                fontSize: 10
               ),
-              Visibility(
-                // Show error message if no OpenEarable device is connected.
-                visible: !_earableConnected,
-                maintainState: true,
-                maintainAnimation: true,
-                maintainSize: true,
-                child: Text(
-                  "No Earable Connected",
-                  style: TextStyle(
-                    color: Colors.red,
-                    fontSize: 12,
-                  ),
-                ),
-              )
-            ])
-          ],
-        ),
+              titleOutsideJustification: charts.OutsideJustification.middleDrawArea),
+          // Y-axis label.
+          new charts.ChartTitle('Height (m)',
+              behaviorPosition: charts.BehaviorPosition.start,
+              titleStyleSpec: charts.TextStyleSpec(
+                color: charts.MaterialPalette.white,
+                fontSize: 10
+              ),
+              titleOutsideJustification: charts.OutsideJustification.middleDrawArea)
+        ],
+        // Include timeline points in line.
+        defaultRenderer: charts.LineRendererConfig(includePoints: true),
       ),
     );
+  }
+
+  /// Builds a text widget to display the maximum jump height achieved.
+  Widget _buildText() {
+    return Text(
+      'Max Height: ${_maxHeight.toStringAsFixed(2)} m',
+      style: 
+        Theme.of(context).textTheme.headlineMedium
+    );
+  }
+
+  /// Builds buttons to start and stop the jump height measurement process.
+  Widget _buildButtons() {
+    return Column(children: [
+      ElevatedButton(
+        onPressed: _earableConnected ? () { _isJumping ? _stopJump() : _startJump(); } : null,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: !_isJumping ? Colors.greenAccent : Colors.red,
+          foregroundColor: Colors.black,
+        ),
+        child: Text(_isJumping ? 'Stop Jump' : 'Start Jump'),
+      ),
+      Visibility(
+        // Show error message if no OpenEarable device is connected.
+        visible: !_earableConnected,
+        maintainState: true,
+        maintainAnimation: true,
+        maintainSize: true,
+        child: Text(
+          "No Earable Connected",
+          style: TextStyle(
+            color: Colors.red,
+            fontSize: 12,
+          ),
+        ),
+      )
+    ]);
   }
 
   /// Builds a sensor configuration for the OpenEarable device.
