@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:open_earable/apps/jump_height_test/jump_height_chart.dart';
 import 'dart:async';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:charts_flutter/flutter.dart' as charts;
@@ -12,7 +13,6 @@ class JumpHeightTest extends StatefulWidget {
   /// Constructs a JumpHeightTest widget with a given OpenEarable device.
   JumpHeightTest(this._openEarable);
 
-  @override
   _JumpHeightTestState createState() => _JumpHeightTestState(_openEarable);
 }
 
@@ -43,7 +43,8 @@ class HeightChart extends StatelessWidget {
 }
 
 /// State class for JumpHeightTest widget.
-class _JumpHeightTestState extends State<JumpHeightTest> {
+class _JumpHeightTestState extends State<JumpHeightTest>
+  with SingleTickerProviderStateMixin {
   /// Stores the start time of a jump test.
   DateTime? _startTime;
   /// Current height calculated from sensor data.
@@ -78,6 +79,7 @@ class _JumpHeightTestState extends State<JumpHeightTest> {
   double _accZ = 0.0;
   /// Pitch angle in radians.
   double _pitch = 0.0;
+  late TabController _tabController;
 
   /// Constructs a _JumpHeightTestState object with a given OpenEarable device.
   _JumpHeightTestState(this._openEarable);
@@ -86,6 +88,9 @@ class _JumpHeightTestState extends State<JumpHeightTest> {
   @override
   void initState() {
     super.initState();
+    // Set sampling rate to maximum.
+    _openEarable.sensorManager.writeSensorConfig(_buildSensorConfig());
+    _tabController = TabController(vsync: this, length: 3);
     // Initialize Kalman filters.
     _initializeKalmanFilters();
     // Set up listeners for sensor data.
@@ -117,8 +122,6 @@ class _JumpHeightTestState extends State<JumpHeightTest> {
   /// Starts the jump height measurement process.
   /// It sets the sampling rate, initializes or resets variables, and begins listening to sensor data.
   void _startJump() {
-    // Set sampling rate to maximum.
-    _openEarable.sensorManager.writeSensorConfig(_buildSensorConfig());
     _startTime = DateTime.now();
 
     setState(() {
@@ -218,17 +221,31 @@ class _JumpHeightTestState extends State<JumpHeightTest> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
         title: Text('Jump Height Test'),
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            _buildChart(),
-            _buildText(),
-            _buildButtons(),
-            Visibility(
+      body: Column(
+        children: [
+          TabBar(
+            controller: _tabController,
+            indicatorColor: Colors.white, // Color of the underline indicator
+            labelColor: Colors.white, // Color of the active tab label
+            unselectedLabelColor: Colors.grey, // Color of the inactive tab labels
+            tabs: [
+              Tab(text: 'Height'),
+              Tab(text: 'Raw Acc.'),
+              Tab(text: 'Filtered Acc.'),
+            ],
+          ),
+          Expanded(
+            child: (!_openEarable.bleManager.connected)
+                ? _notConnectedWidget()
+                : _buildJumpHeightDataTabs(),
+          ),
+          _buildText(),
+          _buildButtons(),
+          Visibility(
               // Show error message if no OpenEarable device is connected.
               visible: !_earableConnected,
               maintainState: true,
@@ -241,12 +258,52 @@ class _JumpHeightTestState extends State<JumpHeightTest> {
                 ),
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
 
+  Widget _notConnectedWidget() {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.warning,
+                size: 48,
+                color: Colors.red,
+              ),
+              SizedBox(height: 16),
+              Center(
+                child: Text(
+                  "Not connected to\nOpenEarable device",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildJumpHeightDataTabs() {
+    return TabBarView(
+        controller: _tabController,
+        children: [
+          JumpHeightChart(_openEarable, "Height Data"),
+          JumpHeightChart(_openEarable, "Raw Acceleration Data"),
+          JumpHeightChart(_openEarable, "Filtered Acceleration Data")
+        ],
+    );
+  }
   /// Builds a line chart to display jump height over time.
   Widget _buildChart() {
     List<charts.Series<Jump, num>> jumpDataSeries = [
@@ -313,7 +370,7 @@ class _JumpHeightTestState extends State<JumpHeightTest> {
           backgroundColor: !_isJumping ? Colors.greenAccent : Colors.red,
           foregroundColor: Colors.black,
         ),
-        child: Text(_isJumping ? 'Stop Jump' : 'Start Jump'),
+        child: Text(_isJumping ? 'Stop Jump' : 'Set Baseline & Start Jump'),
       ),
     );
   }
