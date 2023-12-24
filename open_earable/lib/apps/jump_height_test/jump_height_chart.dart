@@ -58,55 +58,56 @@ class _JumpHeightChartState extends State<JumpHeightChart> {
       _dataSubscription =
         _openEarable.sensorManager.subscribeToSensorData(0).listen((data) {
           int timestamp = data["timestamp"];
-            XYZValue rawAccelerometerValue = XYZValue(
-              timestamp: timestamp,
-              x: data["ACC"]["X"],
-              y: data["ACC"]["Y"],
-              z: data["ACC"]["Z"],
-              units: data["ACC"]["units"]
-            );
-            XYZValue filteredAccelerometerValue = XYZValue(
-              timestamp: timestamp,
-              x: _kalmanX.filtered(data["ACC"]["X"]),
-              y: _kalmanY.filtered(data["ACC"]["Y"]),
-              z: _kalmanZ.filtered(data["ACC"]["Z"]),
-              units: data["ACC"]["units"]
-            );
+          _pitch = data["EULER"]["PITCH"];
+
+          XYZValue rawAccData = XYZValue(
+            timestamp: timestamp,
+            x: data["ACC"]["X"],
+            y: data["ACC"]["Y"],
+            z: data["ACC"]["Z"],
+            units: {"X": "m/s²", "Y": "m/s²", "Z": "m/s²"}
+          );
+          XYZValue filteredAccData = XYZValue(
+            timestamp: timestamp,
+            x: _kalmanX.filtered(data["ACC"]["X"]),
+            y: _kalmanY.filtered(data["ACC"]["Y"]),
+            z: _kalmanZ.filtered(data["ACC"]["Z"]),
+            units: {"X": "m/s²", "Y": "m/s²", "Z": "m/s²"}
+          );
 
           if (_title == "Height Data") {
-            DataValue height = _calculateHeightData(filteredAccelerometerValue);
+            DataValue height = _calculateHeightData(filteredAccData);
             _updateData(height);
           }
           if (_title == "Raw Acceleration Data") {
-            _updateData(rawAccelerometerValue);
+            _updateData(rawAccData);
           } else if (_title == "Filtered Acceleration Data") {
-            _updateData(filteredAccelerometerValue);
+            _updateData(filteredAccData);
           }
-          // double pitch = data["EULER"]["PITCH"];
       });
   }
 
   DataValue _calculateHeightData(XYZValue accValue) {
-    double currentAcc = accValue.z * cos(_pitch) + accValue.x * sin(_pitch);
     // Subtract gravity to get acceleration due to movement.
-    currentAcc -= _gravity; 
+    double currentAcc = accValue.z * cos(_pitch) + accValue.x * sin(_pitch) - _gravity;;
+
     double threshold = 0.3;
     double accMagnitude = sqrt(accValue.x * accValue.x + accValue.y * accValue.y + accValue.z * accValue.z);
     bool isStationary = (accMagnitude > _gravity - threshold) && (accMagnitude < _gravity + threshold);
     /// Checks if the device is stationary based on acceleration magnitude.
-      if (isStationary) {
-          _velocity = 0.0;
-      } else {
-          // Integrate acceleration to get velocity.
-          _velocity += currentAcc * _timeSlice;
+    if (isStationary) {
+        _velocity = 0.0;
+    } else {
+        // Integrate acceleration to get velocity.
+        _velocity += currentAcc * _timeSlice;
 
-          // Integrate velocity to get height.
-          _height += _velocity * _timeSlice;
-      }
+        // Integrate velocity to get height.
+        _height += _velocity * _timeSlice;
+    }
 
-      // Prevent height from going negative.
-      _height = max(0, _height);
-      return Jump(DateTime.fromMillisecondsSinceEpoch(accValue.timestamp), _height);
+    // Prevent height from going negative.
+    _height = max(0, _height);
+    return Jump(DateTime.fromMillisecondsSinceEpoch(accValue.timestamp), _height);
   }
 
   _updateData(DataValue value) {

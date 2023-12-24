@@ -16,37 +16,14 @@ class JumpHeightTest extends StatefulWidget {
   _JumpHeightTestState createState() => _JumpHeightTestState(_openEarable);
 }
 
-/// A class representing a jump with a time and height.
-class Jump {
-  final DateTime _time;
-  final double _height;
-
-  /// Constructs a Jump object with a time and height.
-  Jump(this._time, this._height);
-}
-
-/// A stateless widget to display jump heights in a bar chart.
-class HeightChart extends StatelessWidget {
-  final List<charts.Series> _seriesList;
-  final bool _animate;
-
-  /// Constructs a HeightChart widget with given series list and animate flag.
-  HeightChart(this._seriesList, {required bool animate}) : _animate = animate;
-
-  @override
-  Widget build(BuildContext context) {
-    return new charts.BarChart(
-      _seriesList.cast<charts.Series<Jump, String>>(),
-      animate: _animate,
-    );
-  }
-}
-
 /// State class for JumpHeightTest widget.
 class _JumpHeightTestState extends State<JumpHeightTest>
   with SingleTickerProviderStateMixin {
   /// Stores the start time of a jump test.
-  DateTime? _startTime;
+  Timer? _timer;
+  Duration _jumpDuration = Duration.zero;
+  DateTime? _startOfJump;
+  DateTime? _endOfJump;
   /// Current height calculated from sensor data.
   double _height = 0.0;
   // List to store each jump's data.
@@ -115,6 +92,9 @@ class _JumpHeightTestState extends State<JumpHeightTest>
         if (!_isJumping) {
           return;
         }
+        setState(() {
+          _jumpDuration = DateTime.now().difference(_startOfJump!);
+        });
         _processSensorData(data);
       });
   }
@@ -122,7 +102,7 @@ class _JumpHeightTestState extends State<JumpHeightTest>
   /// Starts the jump height measurement process.
   /// It sets the sampling rate, initializes or resets variables, and begins listening to sensor data.
   void _startJump() {
-    _startTime = DateTime.now();
+    _startOfJump = DateTime.now();
 
     setState(() {
       // Clear data from previous jump.
@@ -137,6 +117,7 @@ class _JumpHeightTestState extends State<JumpHeightTest>
 
   /// Stops the jump height measurement process.
   void _stopJump() {
+    _endOfJump = DateTime.now();
     if (_isJumping) {
       setState(() {
         _isJumping = false;
@@ -215,6 +196,11 @@ class _JumpHeightTestState extends State<JumpHeightTest>
     // print("Stationary: ${deviceIsStationary(0.3)}, Acc: $currentAcc, Vel: $velocity, Height: $height");
   }
 
+  String _prettyDuration(Duration duration) {
+    var seconds = duration.inMilliseconds / 1000;
+   return '${seconds.toStringAsFixed(2)} s';
+  }
+
   /// Builds the UI for the jump height test.
   /// It displays a line chart of jump height over time and the maximum jump height achieved.
   // This build function is getting a little too big. Consider refactoring.
@@ -243,8 +229,10 @@ class _JumpHeightTestState extends State<JumpHeightTest>
                 ? _notConnectedWidget()
                 : _buildJumpHeightDataTabs(),
           ),
-          _buildText(),
+          SizedBox(height: 20),  // Margin between chart and button
           _buildButtons(),
+          SizedBox(height: 20),  // Margin between button and text
+          _buildText(),
           Visibility(
               // Show error message if no OpenEarable device is connected.
               visible: !_earableConnected,
@@ -304,58 +292,23 @@ class _JumpHeightTestState extends State<JumpHeightTest>
         ],
     );
   }
-  /// Builds a line chart to display jump height over time.
-  Widget _buildChart() {
-    List<charts.Series<Jump, num>> jumpDataSeries = [
-      charts.Series(
-        id: "Jumps",
-        data: _jumpData,
-        // X-axis: time in milliseconds since the start of the jump.
-        domainFn: (Jump series, _) => series._time.difference(_startTime!).inMilliseconds,
-        measureFn: (Jump series, _) => series._height,
-        colorFn: (Jump series, _) => charts.MaterialPalette.cyan.shadeDefault,
-      )
-    ];
-
-    return Expanded(
-      child: Container(
-        child: charts.LineChart(
-          jumpDataSeries,
-          animate: false,
-          behaviors: [
-            // X-axis label.
-            charts.ChartTitle('Time (ms)',
-                behaviorPosition: charts.BehaviorPosition.bottom,
-                titleStyleSpec: charts.TextStyleSpec(
-                  color: charts.MaterialPalette.white,
-                  fontSize: 10,
-                ),
-                titleOutsideJustification: charts.OutsideJustification.middleDrawArea),
-            // Y-axis label.
-            charts.ChartTitle('Height (m)',
-                behaviorPosition: charts.BehaviorPosition.start,
-                titleStyleSpec: charts.TextStyleSpec(
-                  color: charts.MaterialPalette.white,
-                  fontSize: 10,
-                ),
-                titleOutsideJustification: charts.OutsideJustification.middleDrawArea),
-          ],
-          // Include timeline points in line.
-          defaultRenderer: charts.LineRendererConfig(includePoints: true),
-        ),
-      ),
-    );
-  }
-
-  /// Builds a text widget to display the maximum jump height achieved.
+  
   Widget _buildText() {
     return Container(
-      child: Text(
-        'Max Height: ${_maxHeight.toStringAsFixed(2)} m',
-        style: Theme.of(context).textTheme.headlineSmall,
+      child: Column(
+        children: [
+          Text(
+            'Max height: ${_maxHeight.toStringAsFixed(2)} m',
+            style: Theme.of(context).textTheme.headlineMedium,
+          ),
+          Text('Jump time: ${_prettyDuration(_jumpDuration)}',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+        ],
       ),
     );
   }
+
 
   /// Builds buttons to start and stop the jump height measurement process.
   Widget _buildButtons() {
