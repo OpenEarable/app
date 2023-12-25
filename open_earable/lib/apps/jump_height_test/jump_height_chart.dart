@@ -120,6 +120,7 @@ class _JumpHeightChartState extends State<JumpHeightChart> {
       });
   }
 
+  /// Calculates the height of the jump.
   DataValue _calculateHeightData(XYZValue accValue) {
     // Subtract gravity to get acceleration due to movement.
     double currentAcc = accValue._z * cos(_pitch) + accValue._x * sin(_pitch) - _gravity;;
@@ -143,6 +144,7 @@ class _JumpHeightChartState extends State<JumpHeightChart> {
     return Jump(DateTime.fromMillisecondsSinceEpoch(accValue._timestamp), _height);
   }
 
+  /// Updates the data of the chart.
   _updateData(DataValue value) {
     setState(() {
       _data.add(value);
@@ -162,6 +164,7 @@ class _JumpHeightChartState extends State<JumpHeightChart> {
     });
   }
 
+  /// Gets the color of the chart lines.
   _getColor(String title) {
     switch (title) {
       case "Height Data":
@@ -194,6 +197,7 @@ class _JumpHeightChartState extends State<JumpHeightChart> {
     _dataSubscription?.cancel();
   }
 
+  /// Checks the length of the data an removes the oldest data if it is too long.
   _checkLength(data) {
     if (data.length > _numDatapoints) {
       data.removeRange(0, data.length - _numDatapoints);
