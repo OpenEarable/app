@@ -8,40 +8,68 @@ import 'package:collection/collection.dart';
 import 'dart:math';
 import 'dart:core';
 
+/// A class representing a Chart for Jump Height.
 class JumpHeightChart extends StatefulWidget {
+  /// The OpenEarable object.
   final OpenEarable _openEarable;
+  /// The title of the chart.
   final String _title;
+
+  /// Constructs a JumpHeightChart object with an OpenEarable object and a title.
   JumpHeightChart(this._openEarable, this._title);
+
   @override
-  _JumpHeightChartState createState() =>
-      _JumpHeightChartState(_openEarable, _title);
+  _JumpHeightChartState createState() => _JumpHeightChartState(_openEarable, _title);
 }
 
+/// A class representing the state of a JumpHeightChart.
 class _JumpHeightChartState extends State<JumpHeightChart> {
+  /// The OpenEarable object.
   final OpenEarable _openEarable;
+  /// The title of the chart.
   final String _title;
+  /// The data of the chart.
   late List<DataValue> _data;
+  /// The subscription to the data.
   StreamSubscription? _dataSubscription;
-  _JumpHeightChartState(this._openEarable, this._title);
+  /// The minimum x value of the chart.
   late int _minX = 0;
+  /// The maximum x value of the chart.
   late int _maxX = 0;
+  /// The colors of the chart.
   late List<String> colors;
+  /// The series of the chart.
   List<charts.Series<dynamic, num>> seriesList = [];
+  /// The minimum y value of the chart.
   late double _minY;
+  /// The maximum y value of the chart.
   late double _maxY;
+  /// The error measure of the Kalman filter.
   final _errorMeasureAcc = 5.0;
-  late SimpleKalman _kalmanX, _kalmanY, _kalmanZ;
+  /// The Kalman filter for the x value.
+  late SimpleKalman _kalmanX;
+  /// The Kalman filter for the y value.
+  late SimpleKalman _kalmanY;
+  /// The Kalman filter for the z value.
+  late SimpleKalman _kalmanZ;
+  /// The number of datapoints to display on the chart.
   int _numDatapoints = 200;
 
+  /// The velocity of the device.
   double _velocity = 0.0;
   /// Sampling rate time slice (inverse of frequency).
-  double _timeSlice = 1 / 30.0; 
+  double _timeSlice = 1.0 / 30.0; 
   /// Standard gravity in m/s^2.
   double _gravity = 9.81;
   /// Pitch angle in radians.
   double _pitch = 0.0;
+  /// The height of the jump.
   double _height = 0.0;
 
+  /// Constructs a _JumpHeightChartState object with an OpenEarable object and a title.
+  _JumpHeightChartState(this._openEarable, this._title);
+
+  /// Sets up the listeners for the data.
   _setupListeners() {
       _kalmanX = SimpleKalman(
           errorMeasure: _errorMeasureAcc,
@@ -75,24 +103,29 @@ class _JumpHeightChartState extends State<JumpHeightChart> {
             units: {"X": "m/s²", "Y": "m/s²", "Z": "m/s²"}
           );
 
-          if (_title == "Height Data") {
-            DataValue height = _calculateHeightData(filteredAccData);
-            _updateData(height);
-          }
-          if (_title == "Raw Acceleration Data") {
-            _updateData(rawAccData);
-          } else if (_title == "Filtered Acceleration Data") {
-            _updateData(filteredAccData);
+          switch (_title) {
+            case "Height Data":
+              DataValue height = _calculateHeightData(filteredAccData);
+              _updateData(height);
+              break;
+            case "Raw Acceleration Data":
+              _updateData(rawAccData);
+              break;
+            case "Filtered Acceleration Data":
+              _updateData(filteredAccData);
+              break;
+            default:
+              throw ArgumentError("Invalid tab title.");
           }
       });
   }
 
   DataValue _calculateHeightData(XYZValue accValue) {
     // Subtract gravity to get acceleration due to movement.
-    double currentAcc = accValue.z * cos(_pitch) + accValue.x * sin(_pitch) - _gravity;;
+    double currentAcc = accValue._z * cos(_pitch) + accValue._x * sin(_pitch) - _gravity;;
 
     double threshold = 0.3;
-    double accMagnitude = sqrt(accValue.x * accValue.x + accValue.y * accValue.y + accValue.z * accValue.z);
+    double accMagnitude = sqrt(accValue._x * accValue._x + accValue._y * accValue._y + accValue._z * accValue._z);
     bool isStationary = (accMagnitude > _gravity - threshold) && (accMagnitude < _gravity + threshold);
     /// Checks if the device is stationary based on acceleration magnitude.
     if (isStationary) {
@@ -104,10 +137,10 @@ class _JumpHeightChartState extends State<JumpHeightChart> {
         // Integrate velocity to get height.
         _height += _velocity * _timeSlice;
     }
-
     // Prevent height from going negative.
     _height = max(0, _height);
-    return Jump(DateTime.fromMillisecondsSinceEpoch(accValue.timestamp), _height);
+
+    return Jump(DateTime.fromMillisecondsSinceEpoch(accValue._timestamp), _height);
   }
 
   _updateData(DataValue value) {
@@ -124,18 +157,24 @@ class _JumpHeightChartState extends State<JumpHeightChart> {
       _maxY = maxAbsValue;
 
       _minY = -maxAbsValue;
-      _maxX = value.timestamp;
-      _minX = _data[0].timestamp;
+      _maxX = value._timestamp;
+      _minX = _data[0]._timestamp;
     });
   }
 
   _getColor(String title) {
-    if (title == "Height Data") {
-      return ['#FF6347', '#3CB371', '#1E90FF'];
-    } else if (title == "Raw Acceleration Data") {
-      return ['#FFD700', '#FF4500', '#D8BFD8'];
-    } else if (title == "Filtered Acceleration Data") {
-      return ['#F08080', '#98FB98', '#ADD8E6'];
+    switch (title) {
+      case "Height Data":
+        // Blue, Orange, and Teal - Good for colorblindness
+        return ['#007bff', '#ff7f0e', '#2ca02c']; 
+      case "Raw Acceleration Data":
+        // Purple, Magenta, and Cyan - Diverse hue and brightness
+        return ['#9467bd', '#d62728', '#17becf']; 
+      case "Filtered Acceleration Data":
+        // Olive, Brown, and Navy - High contrast
+        return ['#8c564b', '#e377c2', '#1f77b4']; 
+      default:
+        throw ArgumentError("Invalid tab title.");
     }
   }
 
@@ -168,32 +207,32 @@ class _JumpHeightChartState extends State<JumpHeightChart> {
         charts.Series<DataValue, int>(
           id: 'Height (m)',
           colorFn: (_, __) => charts.Color.fromHex(code: colors[0]),
-          domainFn: (DataValue data, _) => data.timestamp,
-          measureFn: (DataValue data, _) => (data as Jump).height,
+          domainFn: (DataValue data, _) => data._timestamp,
+          measureFn: (DataValue data, _) => (data as Jump)._height,
           data: _data,
         ),
       ];
     } else {
       seriesList = [
         charts.Series<DataValue, int>(
-          id: 'X${_data.isNotEmpty ? " (${_data[0].units['X']})" : ""}',
+          id: 'X${_data.isNotEmpty ? " (${_data[0]._units['X']})" : ""}',
           colorFn: (_, __) => charts.Color.fromHex(code: colors[0]),
-          domainFn: (DataValue data, _) => data.timestamp,
-          measureFn: (DataValue data, _) => (data as XYZValue).x,
+          domainFn: (DataValue data, _) => data._timestamp,
+          measureFn: (DataValue data, _) => (data as XYZValue)._x,
           data: _data,
         ),
         charts.Series<DataValue, int>(
-          id: 'Y${_data.isNotEmpty ? " (${_data[0].units['Y']})" : ""}',
+          id: 'Y${_data.isNotEmpty ? " (${_data[0]._units['Y']})" : ""}',
           colorFn: (_, __) => charts.Color.fromHex(code: colors[1]),
-          domainFn: (DataValue data, _) => data.timestamp,
-          measureFn: (DataValue data, _) => (data as XYZValue).y,
+          domainFn: (DataValue data, _) => data._timestamp,
+          measureFn: (DataValue data, _) => (data as XYZValue)._y,
           data: _data,
         ),
         charts.Series<DataValue, int>(
-          id: 'Z${_data.isNotEmpty ? " (${_data[0].units['Z']})" : ""}',
+          id: 'Z${_data.isNotEmpty ? " (${_data[0]._units['Z']})" : ""}',
           colorFn: (_, __) => charts.Color.fromHex(code: colors[2]),
-          domainFn: (DataValue data, _) => data.timestamp,
-          measureFn: (DataValue data, _) => (data as XYZValue).z,
+          domainFn: (DataValue data, _) => data._timestamp,
+          measureFn: (DataValue data, _) => (data as XYZValue)._z,
           data: _data,
         ),
       ];
@@ -248,72 +287,81 @@ class _JumpHeightChartState extends State<JumpHeightChart> {
   }
 }
 
+/// A class representing a generic data value.
 abstract class DataValue {
-  final int timestamp;
-  final Map<dynamic, dynamic> units;
+  /// The timestamp of the data.
+  final int _timestamp;
+  /// The units of the data.
+  final Map<dynamic, dynamic> _units;
+
+  /// Returns the minimum value of the data.
   double getMin();
+  /// Returns the maximum value of the data.
   double getMax();
-  DataValue({required this.timestamp, required this.units});
+
+  /// Constructs a DataValue object with a timestamp and units.
+  DataValue({required int timestamp, required Map<dynamic, dynamic> units}) : _units = units, _timestamp = timestamp;
 }
 
+/// A class representing a generic XYZ value.
 class XYZValue extends DataValue {
-  final double x;
-  final double y;
-  final double z;
+  /// The x value of the data.
+  final double _x;
+  /// The y value of the data.
+  final double _y;
+  /// The z value of the data. 
+  final double _z;
 
+  /// Constructs a XYZValue object with a timestamp, x, y, z, and units.
   XYZValue(
       {required timestamp,
-      required this.x,
-      required this.y,
-      required this.z,
+      required double x,
+      required double y,
+      required double z,
       required units})
-      : super(timestamp: timestamp, units: units);
+      : _z = z, _y = y, _x = x, super(timestamp: timestamp, units: units);
 
   @override
   double getMax() {
-    return max(x, max(y, z));
+    return max(_x, max(_y, _z));
   }
 
   @override
   double getMin() {
-    return min(x, min(y, z));
+    return min(_x, min(_y, _z));
   }
 
   @override
   String toString() {
-    return "timestamp: $timestamp\nx: $x, y: $y, z: $z";
+    return "timestamp: $_timestamp\nx: $_x, y: $_y, z: $_z";
   }
 }
 
 /// A class representing a jump with a time and height.
 class Jump extends DataValue {
+  /// The time of the jump.
   final DateTime _time;
+  /// The height of the jump.
   final double _height;
 
   /// Constructs a Jump object with a time and height.
   Jump(DateTime time, double height)
       : _time = time,
         _height = height,
-        super(
-          timestamp: time.millisecondsSinceEpoch, 
-          units: {'height': 'meters'} // Providing default units
-        );
+        super(timestamp: time.millisecondsSinceEpoch, units: {'height': 'meters'});
 
   @override
   double getMin() {
-    // Implement logic for min value
-    // For example, it might always be 0 for a jump.
     return 0.0;
   }
 
   @override
   double getMax() {
-    // Implement logic for max value
-    // For Jump, it's likely the height.
     return _height;
   }
 
-  // Optionally, if you need to access time and height outside, consider adding getters.
-  DateTime get time => _time;
-  double get height => _height;
+  @override
+  String toString() {
+    return "timestamp: ${_time.millisecondsSinceEpoch}\nheight $_height";
+  }
 }

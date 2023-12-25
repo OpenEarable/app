@@ -2,17 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:open_earable/apps/jump_height_test/jump_height_chart.dart';
 import 'dart:async';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
-import 'package:charts_flutter/flutter.dart' as charts;
 import 'package:simple_kalman/simple_kalman.dart';
 import 'dart:math';
 
 /// An app that lets you test your jump height using an OpenEarable device.
 class JumpHeightTest extends StatefulWidget {
+  /// Instance of OpenEarable device.
   final OpenEarable _openEarable;
 
   /// Constructs a JumpHeightTest widget with a given OpenEarable device.
   JumpHeightTest(this._openEarable);
 
+  /// Creates a state for JumpHeightTest widget.
   _JumpHeightTestState createState() => _JumpHeightTestState(_openEarable);
 }
 
@@ -20,10 +21,9 @@ class JumpHeightTest extends StatefulWidget {
 class _JumpHeightTestState extends State<JumpHeightTest>
   with SingleTickerProviderStateMixin {
   /// Stores the start time of a jump test.
-  Timer? _timer;
-  Duration _jumpDuration = Duration.zero;
   DateTime? _startOfJump;
-  DateTime? _endOfJump;
+  /// Stores the duration of a jump test.
+  Duration _jumpDuration = Duration.zero;
   /// Current height calculated from sensor data.
   double _height = 0.0;
   // List to store each jump's data.
@@ -56,6 +56,7 @@ class _JumpHeightTestState extends State<JumpHeightTest>
   double _accZ = 0.0;
   /// Pitch angle in radians.
   double _pitch = 0.0;
+  /// Manages the [TabBar].
   late TabController _tabController;
 
   /// Constructs a _JumpHeightTestState object with a given OpenEarable device.
@@ -65,13 +66,13 @@ class _JumpHeightTestState extends State<JumpHeightTest>
   @override
   void initState() {
     super.initState();
-    // Set sampling rate to maximum.
-    _openEarable.sensorManager.writeSensorConfig(_buildSensorConfig());
     _tabController = TabController(vsync: this, length: 3);
-    // Initialize Kalman filters.
-    _initializeKalmanFilters();
     // Set up listeners for sensor data.
     if (_openEarable.bleManager.connected) {
+      // Set sampling rate to maximum.
+      _openEarable.sensorManager.writeSensorConfig(_buildSensorConfig());
+      // Initialize Kalman filters.
+      _initializeKalmanFilters();
       _setupListeners();
       _earableConnected = true;
     }
@@ -117,7 +118,6 @@ class _JumpHeightTestState extends State<JumpHeightTest>
 
   /// Stops the jump height measurement process.
   void _stopJump() {
-    _endOfJump = DateTime.now();
     if (_isJumping) {
       setState(() {
         _isJumping = false;
