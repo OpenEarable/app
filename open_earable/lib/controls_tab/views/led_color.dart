@@ -150,7 +150,7 @@ class _LEDColorCardState extends State<LEDColorCard> {
         padding: const EdgeInsets.symmetric(horizontal: 5.0),
         child: Card(
           //LED Color Picker Card
-          color: Color(0xff161618),
+          color: Theme.of(context).colorScheme.primary,
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(

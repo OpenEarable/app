@@ -38,6 +38,7 @@ class PostureTrackerViewModel extends ChangeNotifier {
 
   void stopTracking() {
     _attitudeTracker.stop();
+    _badPostureReminder.stop();
     notifyListeners();
   }
 
@@ -51,6 +52,7 @@ class PostureTrackerViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    stopTracking();
     _attitudeTracker.cancle();
     super.dispose();
   }

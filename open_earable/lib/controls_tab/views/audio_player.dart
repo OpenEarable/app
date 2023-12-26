@@ -184,7 +184,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
       padding: const EdgeInsets.symmetric(horizontal: 5.0),
       child: Card(
         //Audio Player Card
-        color: Color(0xff161618),
+        color: Theme.of(context).colorScheme.primary,
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -209,18 +209,30 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     );
   }
 
+  Widget _getAudioPlayerRadio(int index) {
+    return Radio(
+      value: index,
+      groupValue: OpenEarableSettings().selectedAudioPlayerRadio,
+      onChanged: !_openEarable.bleManager.connected
+          ? null
+          : (int? value) {
+              setState(() {
+                OpenEarableSettings().selectedAudioPlayerRadio = value ?? 0;
+              });
+            },
+      fillColor: MaterialStateProperty.resolveWith((states) {
+        if (states.contains(MaterialState.selected)) {
+          return Theme.of(context).colorScheme.secondary;
+        }
+        return Colors.grey;
+      }),
+    );
+  }
+
   Widget _getFileNameRow() {
     return Row(
       children: [
-        Radio(
-          value: 0,
-          groupValue: OpenEarableSettings().selectedAudioPlayerRadio,
-          onChanged: (int? value) {
-            setState(() {
-              OpenEarableSettings().selectedAudioPlayerRadio = value ?? 0;
-            });
-          },
-        ),
+        _getAudioPlayerRadio(0),
         Expanded(
           child: SizedBox(
             height: 37.0,
@@ -255,15 +267,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
   Widget _getJingleRow() {
     return Row(
       children: [
-        Radio(
-          value: 1,
-          groupValue: OpenEarableSettings().selectedAudioPlayerRadio,
-          onChanged: (int? value) {
-            setState(() {
-              OpenEarableSettings().selectedAudioPlayerRadio = value ?? 0;
-            });
-          },
-        ),
+        _getAudioPlayerRadio(1),
         Expanded(
           child: SizedBox(
             height: 37.0,
@@ -300,18 +304,10 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
   Widget _getFrequencyRow() {
     return Row(
       children: [
-        Radio(
-          value: 2,
-          groupValue: OpenEarableSettings().selectedAudioPlayerRadio,
-          onChanged: (int? value) {
-            setState(() {
-              OpenEarableSettings().selectedAudioPlayerRadio = value ?? 0;
-            });
-          },
-        ),
+        _getAudioPlayerRadio(2),
         SizedBox(
           height: 37.0,
-          width: 80,
+          width: 75,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 0),
             child: TextField(
@@ -411,9 +407,13 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    _waveFormTextController.text,
-                    style: TextStyle(fontSize: 16.0),
+                  Expanded(
+                    child: Text(
+                      _waveFormTextController.text,
+                      style: TextStyle(fontSize: 16.0),
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: false,
+                    ),
                   ),
                   Icon(Icons.arrow_drop_down),
                 ],
