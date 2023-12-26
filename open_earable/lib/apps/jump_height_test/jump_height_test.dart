@@ -174,6 +174,7 @@ class _JumpHeightTestState extends State<JumpHeightTest>
     setState(() {
       if (_deviceIsStationary(0.3)) {
           _velocity = 0.0;
+          _height = 0.0;
       } else {
           // Integrate acceleration to get velocity.
           _velocity += currentAcc * _timeSlice;
@@ -231,8 +232,6 @@ class _JumpHeightTestState extends State<JumpHeightTest>
           ),
           SizedBox(height: 20),  // Margin between chart and button
           _buildButtons(),
-          SizedBox(height: 20),  // Margin between button and text
-          _buildText(),
           Visibility(
               // Show error message if no OpenEarable device is connected.
               visible: !_earableConnected,
@@ -246,6 +245,8 @@ class _JumpHeightTestState extends State<JumpHeightTest>
                 ),
               ),
             ),
+          SizedBox(height: 20),  // Margin between button and text
+          _buildText()
         ],
       ),
     );

@@ -123,14 +123,15 @@ class _JumpHeightChartState extends State<JumpHeightChart> {
   /// Calculates the height of the jump.
   DataValue _calculateHeightData(XYZValue accValue) {
     // Subtract gravity to get acceleration due to movement.
-    double currentAcc = accValue._z * cos(_pitch) + accValue._x * sin(_pitch) - _gravity;;
+    double currentAcc = accValue._z * cos(_pitch) + accValue._x * sin(_pitch) - _gravity;
 
     double threshold = 0.3;
     double accMagnitude = sqrt(accValue._x * accValue._x + accValue._y * accValue._y + accValue._z * accValue._z);
     bool isStationary = (accMagnitude > _gravity - threshold) && (accMagnitude < _gravity + threshold);
-    /// Checks if the device is stationary based on acceleration magnitude.
+    // Checks if the device is stationary based on acceleration magnitude.
     if (isStationary) {
         _velocity = 0.0;
+        _height = 0.0;
     } else {
         // Integrate acceleration to get velocity.
         _velocity += currentAcc * _timeSlice;
