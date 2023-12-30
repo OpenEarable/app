@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import '../models/open_earable_settings.dart';
 
@@ -98,7 +99,9 @@ class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
       padding: const EdgeInsets.symmetric(horizontal: 5.0),
       child: Card(
         //Audio Player Card
-        color: Theme.of(context).colorScheme.primary,
+        color: Platform.isIOS
+            ? CupertinoTheme.of(context).primaryContrastingColor
+            : Theme.of(context).colorScheme.primary,
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -156,20 +159,33 @@ class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
                 children: [
                   Expanded(
                     child: SizedBox(
-                      height: 37.0,
-                      child: ElevatedButton(
-                        onPressed: _openEarable.bleManager.connected
-                            ? _writeSensorConfigs
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _openEarable.bleManager.connected
-                              ? Theme.of(context).colorScheme.secondary
-                              : Colors.grey,
-                          foregroundColor: Colors.black,
-                          enableFeedback: _openEarable.bleManager.connected,
-                        ),
-                        child: Text("Set Configuration"),
-                      ),
+                      height: 37,
+                      child: Platform.isIOS
+                          ? CupertinoButton(
+                              padding: EdgeInsets.zero,
+                              onPressed: _openEarable.bleManager.connected
+                                  ? () => _writeSensorConfigs()
+                                  : null,
+                              color: _openEarable.bleManager.connected
+                                  ? CupertinoTheme.of(context).primaryColor
+                                  : Colors.grey,
+                              child: Text("Set Configuration"),
+                            )
+                          : ElevatedButton(
+                              onPressed: _openEarable.bleManager.connected
+                                  ? () => _writeSensorConfigs()
+                                  : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _openEarable
+                                        .bleManager.connected
+                                    ? Theme.of(context).colorScheme.secondary
+                                    : Colors.grey,
+                                foregroundColor: Colors.black,
+                                enableFeedback:
+                                    _openEarable.bleManager.connected,
+                              ),
+                              child: Text("Set Configuration"),
+                            ),
                     ),
                   ),
                 ],
@@ -190,13 +206,29 @@ class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
       Function(String) changeSelection) {
     return Row(
       children: [
-        Checkbox(
-          checkColor: Theme.of(context).colorScheme.primary,
-          fillColor: MaterialStateProperty.resolveWith(_getCheckboxColor),
-          value: settingSelected,
-          onChanged: _openEarable.bleManager.connected ? changeBool : null,
+        Platform.isIOS
+            ? CupertinoCheckbox(
+                value: settingSelected,
+                onChanged:
+                    _openEarable.bleManager.connected ? changeBool : null,
+                activeColor: settingSelected
+                    ? CupertinoTheme.of(context).primaryColor
+                    : CupertinoTheme.of(context).primaryContrastingColor,
+                checkColor: CupertinoTheme.of(context).primaryContrastingColor,
+              )
+            : Checkbox(
+                checkColor: Theme.of(context).colorScheme.primary,
+                fillColor: MaterialStateProperty.resolveWith(_getCheckboxColor),
+                value: settingSelected,
+                onChanged:
+                    _openEarable.bleManager.connected ? changeBool : null,
+              ),
+        Text(
+          sensorName,
+          style: TextStyle(
+            color: Color.fromRGBO(168, 168, 172, 1.0),
+          ),
         ),
-        Text(sensorName),
         Spacer(),
         Container(
             decoration: BoxDecoration(
@@ -206,52 +238,122 @@ class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
               borderRadius: BorderRadius.circular(4.0),
             ),
             child: SizedBox(
-                height: 37,
                 width: 100,
+                height: 37,
                 child: Container(
                     alignment: Alignment.centerRight,
-                    child: DropdownButton<String>(
-                      dropdownColor: _openEarable.bleManager.connected
-                          ? Colors.white
-                          : Colors.grey[200],
-                      alignment: Alignment.centerRight,
-                      value: currentValue,
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          changeSelection(newValue!);
-                          if (int.parse(newValue) != 0) {
-                            changeBool(true);
-                          } else {
-                            changeBool(false);
-                          }
-                        });
-                      },
-                      items: options.map((String value) {
-                        return DropdownMenuItem<String>(
-                          alignment: Alignment.centerRight,
-                          value: value,
-                          child: Text(
-                            value,
-                            style: TextStyle(
-                              color: _openEarable.bleManager.connected
-                                  ? Colors.black
-                                  : Colors.grey,
-                            ),
-                            textAlign: TextAlign.end,
-                          ),
-                        );
-                      }).toList(),
-                      underline: Container(),
-                      icon: Icon(
-                        Icons.arrow_drop_down,
+                    child: _valuePicker(context, options, currentValue,
+                        changeBool, changeSelection)))),
+        SizedBox(width: 8),
+        Text("Hz", style: TextStyle(color: Color.fromRGBO(168, 168, 172, 1.0))),
+      ],
+    );
+  }
+
+  Widget _valuePicker(
+      BuildContext context,
+      List<String> options,
+      String currentValue,
+      Function(bool?) changeBool,
+      Function(String) changeSelection) {
+    if (Platform.isIOS) {
+      return CupertinoButton(
+        borderRadius: BorderRadius.all(Radius.circular(4.0)),
+        color: Colors.white,
+        padding: EdgeInsets.fromLTRB(8, 0, 0, 0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: <Widget>[
+            Text(
+              currentValue,
+              style: TextStyle(
+                color: _openEarable.bleManager.connected
+                    ? Colors.black
+                    : Colors.grey,
+              ),
+            ),
+          ],
+        ),
+        onPressed: () => _showCupertinoPicker(
+            context, options, currentValue, changeBool, changeSelection),
+      );
+    } else {
+      return DropdownButton<String>(
+        dropdownColor:
+            _openEarable.bleManager.connected ? Colors.white : Colors.grey[200],
+        alignment: Alignment.centerRight,
+        value: currentValue,
+        onChanged: (String? newValue) {
+          setState(() {
+            changeSelection(newValue!);
+            if (int.parse(newValue) != 0) {
+              changeBool(true);
+            } else {
+              changeBool(false);
+            }
+          });
+        },
+        items: options.map((String value) {
+          return DropdownMenuItem<String>(
+            alignment: Alignment.centerRight,
+            value: value,
+            child: Text(
+              value,
+              style: TextStyle(
+                color: _openEarable.bleManager.connected
+                    ? Colors.black
+                    : Colors.grey,
+              ),
+              textAlign: TextAlign.end,
+            ),
+          );
+        }).toList(),
+        underline: Container(),
+        icon: Icon(
+          Icons.arrow_drop_down,
+          color: _openEarable.bleManager.connected ? Colors.black : Colors.grey,
+        ),
+      );
+    }
+  }
+
+  void _showCupertinoPicker(context, List<String> options, String currentValue,
+      Function(bool?) changeBool, Function(String) changeSelection) {
+    showCupertinoModalPopup(
+      context: context,
+      builder: (_) => Container(
+        height: 200,
+        color: Colors.white,
+        child: CupertinoPicker(
+          backgroundColor: _openEarable.bleManager.connected
+              ? Colors.white
+              : Colors.grey[200],
+          itemExtent: 32, // Height of each item
+          onSelectedItemChanged: (int index) {
+            setState(() {
+              String newValue = options[index];
+              changeSelection(newValue);
+              if (int.parse(newValue) != 0) {
+                changeBool(true);
+              } else {
+                changeBool(false);
+              }
+            });
+          },
+          children: options
+              .map((String value) => Center(
+                    child: Text(
+                      value,
+                      style: TextStyle(
                         color: _openEarable.bleManager.connected
                             ? Colors.black
                             : Colors.grey,
                       ),
-                    )))),
-        SizedBox(width: 8),
-        Text("Hz"),
-      ],
+                    ),
+                  ))
+              .toList(),
+        ),
+      ),
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'dart:io';
 import 'views/sensor_configuration.dart';
 import 'views/connect.dart';
 import 'views/led_color.dart';
@@ -70,7 +71,9 @@ class _ControlTabState extends State<ControlTab> {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
         child: GestureDetector(
-            onTap: () => FocusScope.of(context).unfocus(),
+            onTap: () => Platform.isIOS
+                ? FocusScope.of(context).requestFocus(FocusNode())
+                : FocusScope.of(context).unfocus(),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [

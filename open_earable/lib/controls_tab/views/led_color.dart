@@ -1,8 +1,10 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:open_earable/controls_tab/models/open_earable_settings.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'dart:async';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'dart:io';
 
 class LEDColorCard extends StatefulWidget {
   final OpenEarable _openEarable;
@@ -113,35 +115,72 @@ class _LEDColorCardState extends State<LEDColorCard> {
   */
 
   void _openColorPicker() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Pick a color for the RGB LED'),
-          content: SingleChildScrollView(
-            child: ColorPicker(
-              pickerColor: OpenEarableSettings().selectedColor,
-              onColorChanged: (color) {
-                setState(() {
-                  OpenEarableSettings().selectedColor = color;
-                });
-              },
-              showLabel: true,
-              pickerAreaHeightPercent: 0.8,
-              enableAlpha: false,
+    if (Platform.isAndroid) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return Material(
+              child: AlertDialog(
+            title: const Text('Pick a color for the RGB LED'),
+            content: SingleChildScrollView(
+              child: ColorPicker(
+                pickerColor: OpenEarableSettings().selectedColor,
+                onColorChanged: (color) {
+                  setState(() {
+                    OpenEarableSettings().selectedColor = color;
+                  });
+                },
+                showLabel: true,
+                pickerAreaHeightPercent: 0.8,
+                enableAlpha: false,
+              ),
             ),
-          ),
-          actions: <Widget>[
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Done'),
+            actions: <Widget>[
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text('Done'),
+              ),
+            ],
+          ));
+        },
+      );
+    } else {
+      showCupertinoDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return CupertinoAlertDialog(
+            title: Text('Pick a color for the RGB LED'),
+            content: SingleChildScrollView(
+              child: Material(
+                // Wrap with Material
+                child: ColorPicker(
+                  pickerColor: OpenEarableSettings().selectedColor,
+                  onColorChanged: (color) {
+                    // Your color change logic
+                    setState(() {
+                      OpenEarableSettings().selectedColor = color;
+                    });
+                  },
+                  showLabel: true,
+                  pickerAreaHeightPercent: 0.8,
+                  enableAlpha: false,
+                ),
+              ),
             ),
-          ],
-        );
-      },
-    );
+            actions: <Widget>[
+              CupertinoDialogAction(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: Text('Done'),
+              ),
+            ],
+          );
+        },
+      );
+    }
   }
 
   @override
@@ -150,7 +189,9 @@ class _LEDColorCardState extends State<LEDColorCard> {
         padding: const EdgeInsets.symmetric(horizontal: 5.0),
         child: Card(
           //LED Color Picker Card
-          color: Theme.of(context).colorScheme.primary,
+          color: Platform.isIOS
+              ? CupertinoTheme.of(context).primaryContrastingColor
+              : Theme.of(context).colorScheme.primary,
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -182,39 +223,73 @@ class _LEDColorCardState extends State<LEDColorCard> {
                     SizedBox(width: 5),
                     SizedBox(
                       width: 66,
-                      child: ElevatedButton(
-                        onPressed: _openEarable.bleManager.connected
-                            ? _setLEDColor
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(
-                                0xff53515b), // Set the background color to grey
-                            foregroundColor: Colors.white),
-                        child: Text('Set'),
-                      ),
+                      height: 36,
+                      child: Platform.isIOS
+                          ? CupertinoButton(
+                              padding: EdgeInsets.zero,
+                              child: Text('Set',
+                                  style: TextStyle(color: Colors.white)),
+                              onPressed: _openEarable.bleManager.connected
+                                  ? _setLEDColor
+                                  : null,
+                              color: Color(0xff53515b),
+                            )
+                          : ElevatedButton(
+                              onPressed: _openEarable.bleManager.connected
+                                  ? _setLEDColor
+                                  : null,
+                              style: ElevatedButton.styleFrom(
+                                  backgroundColor: Color(
+                                      0xff53515b), // Set the background color to grey
+                                  foregroundColor: Colors.white),
+                              child: Text('Set'),
+                            ),
                     ),
                     SizedBox(width: 5),
-                    ElevatedButton(
-                      onPressed: _openEarable.bleManager.connected
-                          ? _startRainbowMode
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                          backgroundColor: Color(
-                              0xff53515b), // Set the background color to grey
-                          foregroundColor: Colors.white),
-                      child: Text("🦄"),
-                    ),
+                    SizedBox(
+                        width: 66,
+                        height: 36,
+                        child: Platform.isIOS
+                            ? CupertinoButton(
+                                onPressed: _openEarable.bleManager.connected
+                                    ? _startRainbowMode
+                                    : null,
+                                color: Color(0xff53515b),
+                                padding: EdgeInsets.zero,
+                                child: Text("🦄"))
+                            : ElevatedButton(
+                                onPressed: _openEarable.bleManager.connected
+                                    ? _startRainbowMode
+                                    : null,
+                                style: ElevatedButton.styleFrom(
+                                    backgroundColor: Color(
+                                        0xff53515b), // Set the background color to grey
+                                    foregroundColor: Colors.white),
+                                child: Text("🦄"),
+                              )),
                     Spacer(),
-                    ElevatedButton(
-                      onPressed: _openEarable.bleManager.connected
-                          ? _turnLEDoff
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xfff27777),
-                        foregroundColor: Colors.black,
-                      ),
-                      child: Text('Off'),
-                    ),
+                    SizedBox(
+                      width: 66,
+                      height: 36,
+                      child: Platform.isIOS
+                          ? CupertinoButton(
+                              onPressed: _openEarable.bleManager.connected
+                                  ? _turnLEDoff
+                                  : null,
+                              padding: EdgeInsets.zero,
+                              color: Color(0xfff27777),
+                              child: Text('Off'))
+                          : ElevatedButton(
+                              onPressed: _openEarable.bleManager.connected
+                                  ? _turnLEDoff
+                                  : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Color(0xfff27777),
+                                foregroundColor: Colors.black,
+                              ),
+                              child: Text('Off'),
+                            ),
+                    )
                   ],
                 ),
               ],
