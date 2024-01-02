@@ -85,11 +85,8 @@ class _EarableDataChartState extends State<EarableDataChart> {
       _checkLength(_data);
       SensorData? maxXYZValue = maxBy(_data, (SensorData b) => b.getMax());
       SensorData? minXYZValue = minBy(_data, (SensorData b) => b.getMin());
-      if (maxXYZValue == null || minXYZValue == null) {
-        return;
-      }
       double maxAbsValue =
-          max(maxXYZValue.getMax().abs(), minXYZValue.getMin().abs());
+          max(maxXYZValue!.getMax().abs(), minXYZValue!.getMin().abs());
       _maxY = (_title == "Pressure" || _title == "Temperature")
           ? max(0, maxXYZValue.getMax())
           : maxAbsValue;
