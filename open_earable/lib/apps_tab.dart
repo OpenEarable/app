@@ -45,6 +45,16 @@ class AppsTab extends StatelessWidget {
                 MaterialPageRoute(
                     builder: (context) => Recorder(_openEarable)));
           }),
+      AppInfo(
+          iconData: Icons.fiber_smart_record,
+          title: "X Simon",
+          description: "X mach was",
+          onTap: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => Recorder(_openEarable)));
+          }),
       // ... similarly for other apps
     ];
   }
