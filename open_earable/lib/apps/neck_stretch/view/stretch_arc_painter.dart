@@ -112,7 +112,7 @@ class StretchArcPainter extends CustomPainter {
       case NeckStretchState.rightNeckStretch:
         return startAngle - threshold;
       case NeckStretchState.leftNeckStretch:
-        return startAngle - threshold - pi / 2 - 2 / 18 * pi;
+        return startAngle - (0.775 * pi);
       default:
         return startAngle - threshold;
     }
@@ -124,7 +124,7 @@ class StretchArcPainter extends CustomPainter {
       switch (this.stretchState) {
         case NeckStretchState.rightNeckStretch:
         case NeckStretchState.leftNeckStretch:
-          return 2 * threshold + pi / 2 + 2 / 18 * pi;
+          return threshold + (0.775 * pi);
         default:
           return 2 * threshold;
       }
@@ -132,7 +132,7 @@ class StretchArcPainter extends CustomPainter {
 
     switch (this.stretchState) {
       case NeckStretchState.mainNeckStretch:
-        return 2 * threshold + pi / 2 + 1 / 36 * pi;
+        return threshold + (0.8 * pi);
       default:
         return 2 * threshold;
     }
