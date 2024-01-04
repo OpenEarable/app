@@ -16,6 +16,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: '🦻 OpenEarable',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
           useMaterial3: false,
           colorScheme: ColorScheme(

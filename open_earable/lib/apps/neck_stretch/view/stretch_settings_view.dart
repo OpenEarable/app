@@ -11,6 +11,7 @@ class SettingsView extends StatefulWidget {
 
   @override
   State<SettingsView> createState() => _SettingsViewState();
+
 }
 
 class _SettingsViewState extends State<SettingsView> {

@@ -62,6 +62,43 @@ extension NeckStretchStateExtension on NeckStretchState {
   }
 }
 
+/// Stores all data for a stretching session
+class StretchStats {
+  /// Maximum angle reached when doing the main neck stretch
+  double maxMainAngle;
+
+  /// Maximum angle reached on the left neck stretch
+  double maxLeftAngle;
+
+  /// Maximum angle reached on the right neck stretch
+  double maxRightAngle;
+
+  /// Duration over set main angle threshold
+  double mainStretchDuration;
+
+  /// Duration over set side angle threshold
+  double leftStretchDuration;
+  double rightStretchDuration;
+
+
+  StretchStats(
+      {this.maxMainAngle = 0,
+      this.maxLeftAngle = 0,
+      this.maxRightAngle = 0,
+      this.mainStretchDuration = 0,
+      this.leftStretchDuration = 0,
+      this.rightStretchDuration = 0});
+
+  void clear() {
+    this.maxMainAngle = 0;
+    this.maxLeftAngle = 0;
+    this.maxRightAngle = 0;
+    this.mainStretchDuration = 0;
+    this.leftStretchDuration = 0;
+    this.rightStretchDuration = 0;
+  }
+}
+
 /// Stores all settings needed to manage a stretching session
 class StretchSettings {
   NeckStretchState state;

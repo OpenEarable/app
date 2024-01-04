@@ -7,6 +7,7 @@ import 'package:open_earable/apps/neck_stretch/view/stretch_tutorial_view.dart';
 import 'package:open_earable/apps/neck_stretch/view_model/stretch_view_model.dart';
 import 'package:open_earable/apps/neck_stretch/model/stretch_state.dart';
 import 'package:open_earable/apps/neck_stretch/view/stretch_settings_view.dart';
+import 'package:open_earable/apps/neck_stretch/view/stretch_stats_view.dart';
 
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
@@ -41,8 +42,18 @@ class _StretchAppViewState extends State<StretchAppView> {
             Navigator.push(
                 context,
                 MaterialPageRoute(
+                    builder: (context) => StretchTrackerView(this._viewModel)));
+          }),
+      AppInfo(
+          iconData: Icons.info,
+          title: "Last Stretch Stats",
+          description: "Your stats about your last stretch.",
+          onTap: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
                     builder: (context) =>
-                        StretchTrackerView(this._viewModel)));
+                        StretchStatsView(this._viewModel)));
           }),
       AppInfo(
           iconData: Icons.help,
