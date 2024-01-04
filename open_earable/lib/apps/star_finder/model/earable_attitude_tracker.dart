@@ -4,7 +4,7 @@ import 'package:open_earable/apps/star_finder/model/attitude_tracker.dart';
 import 'package:open_earable/apps/star_finder/model/ewma.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
-class EarableAttitudeTracker extends AttitudeTracker {
+class StarFinderEarableAttitudeTracker extends AttitudeTracker {
   final OpenEarable _openEarable;
   StreamSubscription<Map<String, dynamic>>? _subscription;
   
@@ -13,11 +13,11 @@ class EarableAttitudeTracker extends AttitudeTracker {
   @override
   bool get isAvailable => _openEarable.bleManager.connected;
 
-  EWMA _rollEWMA = EWMA(0.5);
-  EWMA _pitchEWMA = EWMA(0.5);
-  EWMA _yawEWMA = EWMA(0.5);
+  EWMA _x = EWMA(0.2);
+  EWMA _y = EWMA(0.2);
+  EWMA _z = EWMA(0.2);
 
-  EarableAttitudeTracker(this._openEarable) {
+  StarFinderEarableAttitudeTracker(this._openEarable) {
     _openEarable.bleManager.connectionStateStream.listen((connected) {
       didChangeAvailability(this);
       if (!connected) {
@@ -36,9 +36,9 @@ class EarableAttitudeTracker extends AttitudeTracker {
     _openEarable.sensorManager.writeSensorConfig(_buildSensorConfig());
     _subscription = _openEarable.sensorManager.subscribeToSensorData(0).listen((event) {
       updateAttitude(
-        roll: _rollEWMA.update(event["EULER"]["ROLL"]),
-        pitch: _pitchEWMA.update(event["EULER"]["PITCH"]),
-        yaw: _yawEWMA.update(event["EULER"]["YAW"])
+        x: _x.update(event["MAG"]["X"]),
+        y: _y.update(event["MAG"]["Y"]),
+        z: _z.update(event["MAG"]["Z"])
       );
     });
   }

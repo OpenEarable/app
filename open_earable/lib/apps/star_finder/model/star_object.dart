@@ -1,5 +1,9 @@
 import 'dart:math';
 
-class star_object_coordinates {
-  
+class StarObjectCoordinates {
+  double _x;
+  double _y;
+  double _z;
+
+  StarObjectCoordinates(this._x, this._y, this._z);
 }
