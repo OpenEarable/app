@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:open_earable/apps/neck_stretch/model/stretch_state.dart';
 import 'package:open_earable/apps/neck_stretch/view_model/stretch_view_model.dart';
 import 'package:provider/provider.dart';
+import 'dart:core';
 
 class SettingsView extends StatefulWidget {
   final StretchViewModel _viewModel;
@@ -17,6 +18,8 @@ class _SettingsViewState extends State<SettingsView> {
   late final TextEditingController _leftNeckDuration;
   late final TextEditingController _rightNeckDuration;
   late final TextEditingController _restingDuration;
+  late final TextEditingController _forwardStretchAngle;
+  late final TextEditingController _sideStretchAngle;
 
   late final StretchViewModel _viewModel;
 
@@ -35,6 +38,8 @@ class _SettingsViewState extends State<SettingsView> {
             .toString());
     _restingDuration = TextEditingController(
         text: _viewModel.stretchSettings.restingTime.inSeconds.toString());
+    _forwardStretchAngle = TextEditingController(text: _viewModel.stretchSettings.forwardStretchAngle.toString());
+    _sideStretchAngle = TextEditingController(text: _viewModel.stretchSettings.sideStretchAngle.toString());
   }
 
   @override
@@ -78,7 +83,7 @@ class _SettingsViewState extends State<SettingsView> {
                   title: Text("Main Neck Relaxation Duration\n(in seconds)"),
                   trailing: SizedBox(
                     height: 37.0,
-                    width: 52,
+                    width: 62.0,
                     child: TextField(
                       controller: _mainNeckDuration,
                       textAlign: TextAlign.end,
@@ -102,7 +107,7 @@ class _SettingsViewState extends State<SettingsView> {
                   title: Text("Right Neck Relaxation Duration\n(in seconds)"),
                   trailing: SizedBox(
                     height: 37.0,
-                    width: 52,
+                    width: 62.0,
                     child: TextField(
                       controller: _rightNeckDuration,
                       textAlign: TextAlign.end,
@@ -126,7 +131,7 @@ class _SettingsViewState extends State<SettingsView> {
                   title: Text("Left Neck Relaxation Duration\n(in seconds)"),
                   trailing: SizedBox(
                     height: 37.0,
-                    width: 52,
+                    width: 62.0,
                     child: TextField(
                       controller: _leftNeckDuration,
                       textAlign: TextAlign.end,
@@ -151,7 +156,7 @@ class _SettingsViewState extends State<SettingsView> {
                       Text("Resting Duration between exercises\n(in seconds)"),
                   trailing: SizedBox(
                     height: 37.0,
-                    width: 52,
+                    width: 62.0,
                     child: TextField(
                       controller: _restingDuration,
                       textAlign: TextAlign.end,
@@ -161,6 +166,65 @@ class _SettingsViewState extends State<SettingsView> {
                           floatingLabelBehavior: FloatingLabelBehavior.never,
                           border: OutlineInputBorder(),
                           labelText: 'Seconds',
+                          filled: true,
+                          labelStyle: TextStyle(color: Colors.black),
+                          fillColor: Colors.white),
+                      keyboardType: TextInputType.number,
+                      onChanged: (_) {
+                        _updateMeditationSettings();
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Card(
+            color: Theme.of(context).colorScheme.primary,
+            child: Column(
+              children: [
+                /// Settings for all timers used
+                ListTile(
+                  title: Text("Stretch Thresholds"),
+                ),
+                ListTile(
+                  title: Text("Main Neck Stretch Goal\n(as an angle)"),
+                  trailing: SizedBox(
+                    height: 37.0,
+                    width: 62.0,
+                    child: TextField(
+                      controller: _forwardStretchAngle,
+                      textAlign: TextAlign.end,
+                      style: TextStyle(color: Colors.black),
+                      decoration: InputDecoration(
+                          contentPadding: EdgeInsets.all(10),
+                          floatingLabelBehavior: FloatingLabelBehavior.never,
+                          border: OutlineInputBorder(),
+                          labelText: 'Angle',
+                          filled: true,
+                          labelStyle: TextStyle(color: Colors.black),
+                          fillColor: Colors.white),
+                      keyboardType: TextInputType.number,
+                      onChanged: (_) {
+                        _updateMeditationSettings();
+                      },
+                    ),
+                  ),
+                ),
+                ListTile(
+                  title: Text("Side Neck Stretch Goal\n(as an angle)"),
+                  trailing: SizedBox(
+                    height: 37.0,
+                    width: 62.0,
+                    child: TextField(
+                      controller: _sideStretchAngle,
+                      textAlign: TextAlign.end,
+                      style: TextStyle(color: Colors.black),
+                      decoration: InputDecoration(
+                          contentPadding: EdgeInsets.all(10),
+                          floatingLabelBehavior: FloatingLabelBehavior.never,
+                          border: OutlineInputBorder(),
+                          labelText: 'Angle',
                           filled: true,
                           labelStyle: TextStyle(color: Colors.black),
                           fillColor: Colors.white),
@@ -214,6 +278,12 @@ class _SettingsViewState extends State<SettingsView> {
     return parsed > 3599 ? Duration(seconds: 3599) : Duration(seconds: parsed);
   }
 
+  double _parseAngle(double old, String input) {
+    if (input.contains('-')) return old;
+
+    return double.parse(input);
+}
+
   /// Update the Meditation Settings according to values, if field is empty set that timer Duration to 0
   void _updateMeditationSettings() {
     StretchSettings settings = _viewModel.stretchSettings;
@@ -225,6 +295,8 @@ class _SettingsViewState extends State<SettingsView> {
         _getNewDuration(settings.leftNeckRelaxation, _leftNeckDuration.text);
     settings.restingTime =
         _getNewDuration(settings.restingTime, _restingDuration.text);
+    settings.forwardStretchAngle = _parseAngle(settings.forwardStretchAngle, _forwardStretchAngle.text);
+    settings.sideStretchAngle = _parseAngle(settings.sideStretchAngle, _sideStretchAngle.text);
   }
 
   @override

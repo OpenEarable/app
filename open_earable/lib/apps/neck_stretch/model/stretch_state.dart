@@ -78,13 +78,22 @@ class StretchSettings {
   /// Time used for resting between each set
   Duration restingTime;
 
+  /// Angle used for stretching forward
+  double forwardStretchAngle;
+
+  /// Angle used for stretching sideways
+  double sideStretchAngle;
+
   /// The stretch settings containing duration timers and state
-  StretchSettings(
-      {this.state = NeckStretchState.noStretch,
-      required this.mainNeckRelaxation,
-      required this.leftNeckRelaxation,
-      required this.rightNeckRelaxation,
-      required this.restingTime});
+  StretchSettings({
+    this.state = NeckStretchState.noStretch,
+    required this.mainNeckRelaxation,
+    required this.leftNeckRelaxation,
+    required this.rightNeckRelaxation,
+    required this.restingTime,
+    required this.forwardStretchAngle,
+    required this.sideStretchAngle,
+  });
 }
 
 /// Stores all data and functions to manage the guided neck meditation
@@ -93,7 +102,9 @@ class NeckStretch {
       mainNeckRelaxation: Duration(seconds: 30),
       leftNeckRelaxation: Duration(seconds: 30),
       rightNeckRelaxation: Duration(seconds: 30),
-      restingTime: Duration(seconds: 5));
+      restingTime: Duration(seconds: 5),
+      forwardStretchAngle: 45,
+      sideStretchAngle: 30);
 
   final OpenEarable _openEarable;
   final StretchViewModel _viewModel;
