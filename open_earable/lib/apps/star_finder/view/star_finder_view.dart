@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:open_earable/apps/star_finder/model/attitude.dart';
 import 'package:open_earable/apps/star_finder/model/attitude_tracker.dart';
+import 'package:open_earable/apps/star_finder/model/right_direction.dart';
+import 'package:open_earable/apps/star_finder/model/star_object.dart';
 import 'package:open_earable/apps/star_finder/view_model/star_finder_view_model.dart';
 import 'package:provider/provider.dart';
 
@@ -22,7 +24,7 @@ class _StarFinderViewState extends State<StarFinderView> {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider<StarFinderViewModel>(
-        create: (context) => StarFinderViewModel(widget._tracker),
+        create: (context) => StarFinderViewModel(widget._tracker, RightDirection(widget._openEarable, widget._tracker, StarObject(392.0, -40.0, -288.0))),
         builder: (context, child) => Consumer<StarFinderViewModel>(
             builder: (context, starFinderViewModel, child) => Scaffold(
                   appBar: AppBar(
@@ -37,13 +39,13 @@ class _StarFinderViewState extends State<StarFinderView> {
                     //],
                   ),
                   body: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Text("${(starFinderViewModel.attitude.x).abs().toStringAsFixed(0)},${(starFinderViewModel.attitude.y).abs().toStringAsFixed(0)},${(starFinderViewModel.attitude.z).abs().toStringAsFixed(0)}",
-          style: TextStyle(
-              // use proper color matching the background
-              color: Theme.of(context).colorScheme.onBackground,
-              fontSize: 30,
-              fontWeight: FontWeight.bold)),
-              this._buildTrackingButton(starFinderViewModel),
+                    Text("${(starFinderViewModel.attitude.x).toStringAsFixed(0)},${(starFinderViewModel.attitude.y).toStringAsFixed(0)},${(starFinderViewModel.attitude.z).toStringAsFixed(0)}",
+                    style: TextStyle(
+                    // use proper color matching the background
+                     color: Theme.of(context).colorScheme.onBackground,
+                    fontSize: 30,
+                    fontWeight: FontWeight.bold)),
+                     this._buildTrackingButton(starFinderViewModel),
                     //child: this._buildContentView(starFinderViewModel),
                   ]),
                     

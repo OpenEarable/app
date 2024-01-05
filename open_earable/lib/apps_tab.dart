@@ -48,9 +48,9 @@ class AppsTab extends StatelessWidget {
                     builder: (context) => Recorder(_openEarable)));
           }),
       AppInfo(
-          iconData: Icons.fiber_smart_record,
-          title: "X Simon",
-          description: "X mach was",
+          iconData: Icons.star,
+          title: "Star Finder",
+          description: "Find stars in the night sky",
           onTap: () {
             Navigator.push(
                 context,

@@ -1,6 +1,7 @@
 import "package:flutter/material.dart";
 import "package:open_earable/apps/star_finder/model/attitude.dart";
 import 'package:open_earable/apps/star_finder/model/attitude_tracker.dart';
+import "package:open_earable/apps/star_finder/model/right_direction.dart";
 
 class StarFinderViewModel extends ChangeNotifier {
   Attitude _attitude = Attitude();
@@ -10,8 +11,9 @@ class StarFinderViewModel extends ChangeNotifier {
   bool get isAvailable => _attitudeTracker.isAvailable;
 
   AttitudeTracker _attitudeTracker;
+  RightDirection _rightDirection;
 
-  StarFinderViewModel(this._attitudeTracker) {
+  StarFinderViewModel(this._attitudeTracker, this._rightDirection) {
     _attitudeTracker.didChangeAvailability = (_) {
       notifyListeners();
     };
@@ -28,11 +30,13 @@ class StarFinderViewModel extends ChangeNotifier {
 
   void startTracking() {
     _attitudeTracker.start();
+    _rightDirection.start();
     notifyListeners();
   }
 
   void stopTracking() {
     _attitudeTracker.stop();
+    _rightDirection.stop();
     notifyListeners();
   }
 
