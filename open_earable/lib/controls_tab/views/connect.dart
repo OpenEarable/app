@@ -57,7 +57,14 @@ class ConnectCard extends StatelessWidget {
                 ),
               ),
               Text(
-                "Firmware ${_openEarable.deviceFirmwareVersion ?? "0.0.0"}",
+                "Firmware: ${_openEarable.deviceFirmwareVersion ?? "not available"}",
+                style: TextStyle(
+                  color: Color.fromRGBO(168, 168, 172, 1.0),
+                  fontSize: 15.0,
+                ),
+              ),
+              Text(
+                "Hardware: ${_openEarable.deviceHardwareVersion ?? "not available"}",
                 style: TextStyle(
                   color: Color.fromRGBO(168, 168, 172, 1.0),
                   fontSize: 15.0,
