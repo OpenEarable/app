@@ -4,7 +4,6 @@ import "package:flutter/material.dart";
 import "package:open_earable/apps/posture_tracker/model/attitude.dart";
 import "package:open_earable/apps/posture_tracker/model/attitude_tracker.dart";
 import 'package:open_earable/apps/neck_stretch/model/stretch_state.dart';
-
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
 class StretchViewModel extends ChangeNotifier {
@@ -17,7 +16,7 @@ class StretchViewModel extends ChangeNotifier {
 
   bool get isAvailable => _attitudeTracker.isAvailable;
 
-  /// Getters for the neck stretch settings and state
+  /// Getters for the neck stretch settings, state and stats
   NeckStretch get neckStretch => _neckStretch;
 
   StretchSettings get stretchSettings => _neckStretch.settings;
@@ -40,6 +39,7 @@ class StretchViewModel extends ChangeNotifier {
   /// The model class containing all information and logics needed to start and handle a guided neck stretch
   late NeckStretch _neckStretch;
   late StretchStats _stretchStats;
+  /// Timer that is used to track the current stretching stats, called every 0.01s
   late Timer _settingsTracker;
 
   StretchViewModel(this._attitudeTracker, this._openEarable) {
@@ -57,17 +57,17 @@ class StretchViewModel extends ChangeNotifier {
     });
   }
 
-  /// Starts tracking of the openEarable
+  /// Starts tracking of using OpenEarable
   void startTracking() {
     _attitudeTracker.start();
     _stretchStats.clear();
     _settingsTracker = Timer.periodic(new Duration(milliseconds: 10), (timer) {
-      _setStretchStats();
+      _trackStretchStats();
     });
     notifyListeners();
   }
 
-  /// Stops tracking of the openEarable and resets the attitude for the headViews
+  /// Stops tracking of the OpenEarable and resets the attitude for the headViews
   void stopTracking() {
     _attitudeTracker.stop();
     _attitude = Attitude();
@@ -86,8 +86,8 @@ class StretchViewModel extends ChangeNotifier {
     super.dispose();
   }
 
-  /// Set the stretch stats according to current stretch state
-  void _setStretchStats() {
+  /// Track the stretch stats according to current stretch state
+  void _trackStretchStats() {
     /// If you are resting, don't track, only last refresh
     if (this.isResting) {
       return;

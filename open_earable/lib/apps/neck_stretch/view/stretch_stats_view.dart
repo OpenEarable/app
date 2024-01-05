@@ -11,7 +11,9 @@ class StretchStatsView extends StatefulWidget {
   State<StretchStatsView> createState() => _StretchStatsViewState();
 }
 
+/// Stateful Widget to display the current stretching stats of the most recent stretch
 class _StretchStatsViewState extends State<StretchStatsView> {
+  /// The stretching stats
   late StretchStats _stats;
 
   @override
@@ -22,7 +24,6 @@ class _StretchStatsViewState extends State<StretchStatsView> {
 
   @override
   Widget build(BuildContext context) {
-    print("STRETCH DURATION: ${_stats.mainStretchDuration}");
     return Scaffold(
       appBar: AppBar(title: const Text("Stretch Stats")),
       body: SingleChildScrollView(

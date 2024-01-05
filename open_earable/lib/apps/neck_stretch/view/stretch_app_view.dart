@@ -22,7 +22,7 @@ class StretchAppView extends StatefulWidget {
 }
 
 /// This class is the initial view you get when opening the Stretch-App
-/// It refers to the tutorial page and the actual stretching page
+/// It refers to all the submodules of the stretching app
 class _StretchAppViewState extends State<StretchAppView> {
   late final StretchViewModel _viewModel;
 
@@ -46,7 +46,7 @@ class _StretchAppViewState extends State<StretchAppView> {
           }),
       AppInfo(
           iconData: Icons.info,
-          title: "Last Stretch Stats",
+          title: "Stretch Stats",
           description: "Your stats about your last stretch.",
           onTap: () {
             Navigator.push(

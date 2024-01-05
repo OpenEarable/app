@@ -189,7 +189,7 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
                     /// The head views used for stretching
                     FractionallySizedBox(
                       widthFactor: 0.6,
-                      child: buildHeadView(
+                      child: StretchTrackerView.buildHeadView(
                           NeckStretchState.mainNeckStretch.assetPathHeadFront,
                           NeckStretchState.mainNeckStretch.assetPathNeckFront,
                           Alignment.center.add(Alignment(0, 0.3)),
@@ -199,7 +199,7 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
                     ),
                     FractionallySizedBox(
                       widthFactor: 0.6,
-                      child: buildHeadView(
+                      child: StretchTrackerView.buildHeadView(
                           NeckStretchState.mainNeckStretch.assetPathHeadSide,
                           NeckStretchState.mainNeckStretch.assetPathNeckSide,
                           Alignment.center.add(Alignment(0, 0.3)),

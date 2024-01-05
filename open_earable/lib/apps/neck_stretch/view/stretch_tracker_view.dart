@@ -13,27 +13,27 @@ class StretchTrackerView extends StatefulWidget {
 
   @override
   State<StretchTrackerView> createState() => _StretchTrackerViewState();
-}
 
-/// Builds the actual head views using the StretchRollView
-Widget buildHeadView(
-    String headAssetPath,
-    String neckAssetPath,
-    AlignmentGeometry headAlignment,
-    double roll,
-    double angleThreshold,
-    NeckStretchState state) {
-  return Padding(
-    padding: const EdgeInsets.all(5),
-    child: StretchRollView(
-      roll: roll,
-      angleThreshold: angleThreshold * 3.14 / 180,
-      headAssetPath: headAssetPath,
-      neckAssetPath: neckAssetPath,
-      headAlignment: headAlignment,
-      stretchState: state,
-    ),
-  );
+  /// Builds the actual head views using the StretchRollView
+  static Widget buildHeadView(
+      String headAssetPath,
+      String neckAssetPath,
+      AlignmentGeometry headAlignment,
+      double roll,
+      double angleThreshold,
+      NeckStretchState state) {
+    return Padding(
+      padding: const EdgeInsets.all(5),
+      child: StretchRollView(
+        roll: roll,
+        angleThreshold: angleThreshold * 3.14 / 180,
+        headAssetPath: headAssetPath,
+        neckAssetPath: neckAssetPath,
+        headAlignment: headAlignment,
+        stretchState: state,
+      ),
+    );
+  }
 }
 
 class _StretchTrackerViewState extends State<StretchTrackerView> {
@@ -245,14 +245,14 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
         visible: visibility,
         child: Column(
           children: <Widget>[
-            buildHeadView(
+            StretchTrackerView.buildHeadView(
                 state.assetPathHeadFront,
                 state.assetPathNeckFront,
                 Alignment.center.add(Alignment(0, 0.3)),
                 neckStretchViewModel.attitude.roll,
                 frontThreshold,
                 state),
-            buildHeadView(
+            StretchTrackerView.buildHeadView(
                 state.assetPathHeadSide,
                 state.assetPathNeckSide,
                 Alignment.center.add(Alignment(0, 0.3)),

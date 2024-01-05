@@ -72,6 +72,7 @@ class StretchArcPainter extends CustomPainter {
           Rect.fromCircle(center: center, radius: radius),
           // create a rectangle from the center and radius
           startAngle + angle.sign * angleThreshold, // start angle
+          // If you are facing the wrong direction you don't need to draw this
           !_isWrongStretchDirection() ? angle.sign * (angle.abs() - angleThreshold) : 0, // sweep angle
     );
     }
@@ -124,7 +125,7 @@ class StretchArcPainter extends CustomPainter {
       switch (this.stretchState) {
         case NeckStretchState.rightNeckStretch:
         case NeckStretchState.leftNeckStretch:
-          return threshold + (0.775 * pi);
+          return threshold + (0.775 * pi); // Will place the dark grey area till the start of the neck
         default:
           return 2 * threshold;
       }
@@ -132,7 +133,7 @@ class StretchArcPainter extends CustomPainter {
 
     switch (this.stretchState) {
       case NeckStretchState.mainNeckStretch:
-        return threshold + (0.8 * pi);
+        return threshold + (0.8 * pi); // Will place the dark grey area till the start of the neck
       default:
         return 2 * threshold;
     }
