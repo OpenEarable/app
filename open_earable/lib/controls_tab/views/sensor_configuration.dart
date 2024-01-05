@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import '../models/open_earable_settings.dart';
@@ -97,7 +98,7 @@ class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
       padding: const EdgeInsets.symmetric(horizontal: 5.0),
       child: Card(
         //Audio Player Card
-        color: Color(0xff161618),
+        color: Theme.of(context).colorScheme.primary,
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -132,9 +133,7 @@ class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
                   (bool? newValue) {
                 if (newValue != null) {
                   setState(() {
-                    print("SELECTED $newValue");
                     OpenEarableSettings().barometerSettingSelected = newValue;
-                    print(OpenEarableSettings().barometerSettingSelected);
                   });
                 }
               }, (String newValue) {

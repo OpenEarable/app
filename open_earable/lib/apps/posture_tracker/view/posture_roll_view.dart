@@ -27,41 +27,33 @@ class PostureRollView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(children: [
-      Text(
-          "${(this.roll * 180 / 3.14).abs().toStringAsFixed(0)}°",
+      Text("${(this.roll * 180 / 3.14).abs().toStringAsFixed(0)}°",
           style: TextStyle(
-            // use proper color matching the background
-              color: Theme
-                  .of(context)
-                  .colorScheme
-                  .onBackground,
+              // use proper color matching the background
+              color: Theme.of(context).colorScheme.onBackground,
               fontSize: 30,
-              fontWeight: FontWeight.bold
-          )
-      ),
+              fontWeight: FontWeight.bold)),
       CustomPaint(
-          painter: ArcPainter(
-              angle: this.roll, angleThreshold: this.angleThreshold),
+          painter:
+              ArcPainter(angle: this.roll, angleThreshold: this.angleThreshold),
           child: Padding(
               padding: EdgeInsets.all(10),
               child: ClipOval(
                   child: Container(
-                      color: roll.abs() > _MAX_ROLL ? Colors.red.withOpacity(
-                          0.5) : Colors.transparent,
+                      color: roll.abs() > _MAX_ROLL
+                          ? Colors.red.withOpacity(0.5)
+                          : Colors.transparent,
                       child: Stack(children: [
                         Image.asset(this.neckAssetPath),
                         Transform.rotate(
-                            angle: this.roll.isFinite ? roll.abs() < _MAX_ROLL
-                                ? this.roll
-                                : roll.sign * _MAX_ROLL : 0,
+                            angle: this.roll.isFinite
+                                ? roll.abs() < _MAX_ROLL
+                                    ? this.roll
+                                    : roll.sign * _MAX_ROLL
+                                : 0,
                             alignment: this.headAlignment,
-                            child: Image.asset(this.headAssetPath)
-                        ),
-                      ])
-                  )
-              )
-          )
-      ),
+                            child: Image.asset(this.headAssetPath)),
+                      ]))))),
     ]);
   }
 }

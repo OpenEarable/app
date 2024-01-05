@@ -37,10 +37,10 @@ class PostureTimestamps {
 
 class BadPostureReminder {
   BadPostureSettings _settings = BadPostureSettings(
-    rollAngleThreshold: 7,
-    pitchAngleThreshold: 15,
+    rollAngleThreshold: 20,
+    pitchAngleThreshold: 20,
     timeThreshold: 10,
-    resetTimeThreshold: 2
+    resetTimeThreshold: 1
   );
   final OpenEarable _openEarable;
   final AttitudeTracker _attitudeTracker;
@@ -49,6 +49,8 @@ class BadPostureReminder {
   BadPostureSettings get settings => _settings;
 
   BadPostureReminder(this._openEarable, this._attitudeTracker);
+
+  bool? _lastPostureWasBad = null;
 
   void start() {
     _timestamps.lastReset = DateTime.now();
@@ -64,6 +66,10 @@ class BadPostureReminder {
 
       DateTime now = DateTime.now();
       if (_isBadPosture(attitude)) {
+        if (!(_lastPostureWasBad ?? false)) {
+          _openEarable.rgbLed.writeLedColor(r: 255, g: 0, b: 0);
+        }
+
         // If this is the first time the program enters the bad state, store the current time
         if (_timestamps.lastBadPosture == null) {
           _timestamps.lastBadPosture = now;
@@ -81,6 +87,10 @@ class BadPostureReminder {
         // Reset the last good state time
         _timestamps.lastGoodPosture = null;
       } else {
+        if (_lastPostureWasBad ?? false) {
+          _openEarable.rgbLed.writeLedColor(r: 0, g: 255, b: 0);
+        }
+
         // If this is the first time the program enters the good state, store the current time
         if (_timestamps.lastGoodPosture == null) {
           _timestamps.lastGoodPosture = now;
@@ -90,12 +100,22 @@ class BadPostureReminder {
           // Calculate the duration in seconds
           int duration = now.difference(_timestamps.lastGoodPosture!).inSeconds;
           // If the duration exceeds the minimum required, reset the last bad state time
-          if (duration > _settings.resetTimeThreshold) {
+          if (duration >= _settings.resetTimeThreshold) {
+            print("duration: $duration, reset time threshold: ${_settings.resetTimeThreshold}");
+            print("resetting last bad posture time");
             _timestamps.lastBadPosture = null;
           }
         }
       }
+      _lastPostureWasBad = _isBadPosture(attitude);
     });
+  }
+
+  void stop() {
+    _timestamps.lastBadPosture = null;
+    _timestamps.lastGoodPosture = null;
+    _openEarable.rgbLed.writeLedColor(r: 0, g: 0, b: 0);
+    _attitudeTracker.stop();
   }
   
   void setSettings(BadPostureSettings settings) {

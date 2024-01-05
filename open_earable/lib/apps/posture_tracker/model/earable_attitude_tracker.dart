@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:open_earable/apps/posture_tracker/model/attitude_tracker.dart';
+import 'package:open_earable/apps/posture_tracker/model/ewma.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
 class EarableAttitudeTracker extends AttitudeTracker {
@@ -12,6 +13,10 @@ class EarableAttitudeTracker extends AttitudeTracker {
   @override
   bool get isAvailable => _openEarable.bleManager.connected;
 
+  EWMA _rollEWMA = EWMA(0.5);
+  EWMA _pitchEWMA = EWMA(0.5);
+  EWMA _yawEWMA = EWMA(0.5);
+
   EarableAttitudeTracker(this._openEarable) {
     _openEarable.bleManager.connectionStateStream.listen((connected) {
       didChangeAvailability(this);
@@ -20,7 +25,6 @@ class EarableAttitudeTracker extends AttitudeTracker {
       }
     });
   }
-
 
   @override
   void start() {
@@ -32,9 +36,9 @@ class EarableAttitudeTracker extends AttitudeTracker {
     _openEarable.sensorManager.writeSensorConfig(_buildSensorConfig());
     _subscription = _openEarable.sensorManager.subscribeToSensorData(0).listen((event) {
       updateAttitude(
-        roll: event["EULER"]["ROLL"],
-        pitch: event["EULER"]["PITCH"],
-        yaw: event["EULER"]["YAW"]
+        roll: _rollEWMA.update(event["EULER"]["ROLL"]),
+        pitch: _pitchEWMA.update(event["EULER"]["PITCH"]),
+        yaw: _yawEWMA.update(event["EULER"]["YAW"])
       );
     });
   }
@@ -46,6 +50,7 @@ class EarableAttitudeTracker extends AttitudeTracker {
 
   @override
   void cancle() {
+    stop();
     _subscription?.cancel();
     super.cancle();
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:open_earable/widgets/earable_not_connected_warning.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
@@ -23,9 +24,12 @@ class _RecorderState extends State<Recorder> {
   late List<String> _csvHeader;
   late List<String> _labels;
   late String _selectedLabel;
+  Timer? _timer;
+  Duration _duration = Duration();
   @override
   void initState() {
     super.initState();
+
     _labels = [
       "No Label",
       "Label 1",
@@ -63,9 +67,32 @@ class _RecorderState extends State<Recorder> {
     listFilesInDocumentsDirectory();
   }
 
+  void _startTimer() {
+    _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+      setState(() {
+        _duration = _duration + Duration(seconds: 1);
+      });
+    });
+  }
+
+  void _stopTimer() {
+    if (_timer != null) {
+      _timer!.cancel();
+      _duration = Duration();
+    }
+  }
+
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
+    String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
+    return "$twoDigitMinutes:$twoDigitSeconds";
+  }
+
   @override
   void dispose() {
     super.dispose();
+    _timer?.cancel();
     _imuSubscription?.cancel();
     _barometerSubscription?.cancel();
   }
@@ -178,9 +205,11 @@ class _RecorderState extends State<Recorder> {
         _recording = false;
       });
       _csvWriter?.cancelTimer();
+      _stopTimer();
     } else {
       _csvWriter = CsvWriter(listFilesInDocumentsDirectory);
       _csvWriter?.addData(_csvHeader);
+      _startTimer();
       setState(() {
         _recording = true;
       });
@@ -203,116 +232,142 @@ class _RecorderState extends State<Recorder> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
-      appBar: AppBar(
-        title: Text('Recorder'),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Row(
-              children: [
-                Padding(
-                  padding: EdgeInsets.all(16),
-                  child: ElevatedButton(
-                    onPressed: startStopRecording,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _recording
-                          ? Color(0xfff27777)
-                          : Theme.of(context).colorScheme.secondary,
-                      foregroundColor: Colors.black,
-                    ),
-                    child: Text(
-                      _recording ? "Stop Recording" : "Start Recording",
-                      style: TextStyle(fontSize: 20),
-                    ),
+        backgroundColor: Theme.of(context).colorScheme.background,
+        appBar: AppBar(
+          title: Text('Recorder'),
+        ),
+        body: _openEarable.bleManager.connected
+            ? _recorderWidget()
+            : EarableNotConnectedWarning());
+  }
+
+  Widget _recorderWidget() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: Text(
+              _formatDuration(_duration),
+              style: TextStyle(
+                fontFamily: 'Digital', // This is a common monospaced font
+                fontSize: 80,
+                fontWeight: FontWeight.normal,
+              ),
+            ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Padding(
+                padding: EdgeInsets.all(16),
+                child: ElevatedButton(
+                  onPressed: startStopRecording,
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: Size(200, 36),
+                    backgroundColor: _recording
+                        ? Color(0xfff27777)
+                        : Theme.of(context).colorScheme.secondary,
+                    foregroundColor: Colors.black,
+                  ),
+                  child: Text(
+                    _recording ? "Stop Recording" : "Start Recording",
+                    style: TextStyle(fontSize: 20),
                   ),
                 ),
-                DropdownButton<String>(
-                  value: _selectedLabel,
-                  icon: const Icon(Icons.arrow_drop_down),
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      _selectedLabel = newValue!;
-                    });
-                  },
-                  items: _labels.map<DropdownMenuItem<String>>((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                ),
-              ],
-            ),
-            Text("Recordings", style: TextStyle(fontSize: 20.0)),
-            Divider(
-              thickness: 2,
-            ),
-            Expanded(
-              child: _recordings.isEmpty
-                  ? Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.warning,
-                                size: 48,
-                                color: Colors.red,
-                              ),
-                              SizedBox(height: 16),
-                              Center(
-                                child: Text(
-                                  "No recordings found",
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  textAlign: TextAlign.center,
+              ),
+              DropdownButton<String>(
+                value: _selectedLabel,
+                icon: const Icon(Icons.arrow_drop_down),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    _selectedLabel = newValue!;
+                  });
+                },
+                items: _labels.map<DropdownMenuItem<String>>((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+          Text("Recordings", style: TextStyle(fontSize: 20.0)),
+          Divider(
+            thickness: 2,
+          ),
+          Expanded(
+            child: _recordings.isEmpty
+                ? Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.warning,
+                              size: 48,
+                              color: Colors.red,
+                            ),
+                            SizedBox(height: 16),
+                            Center(
+                              child: Text(
+                                "No recordings found",
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
                                 ),
+                                textAlign: TextAlign.center,
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      ],
-                    )
-                  : ListView.builder(
-                      itemCount: _recordings.length,
-                      itemBuilder: (context, index) {
-                        return ListTile(
-                          title: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: Text(
-                                    _recordings[index].path.split("/").last,
-                                    maxLines: 1,
-                                  ),
+                      ),
+                    ],
+                  )
+                : ListView.builder(
+                    itemCount: _recordings.length,
+                    itemBuilder: (context, index) {
+                      return ListTile(
+                        title: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  _recordings[index].path.split("/").last,
+                                  maxLines: 1,
                                 ),
                               ),
-                              IconButton(
-                                icon: Icon(Icons.delete),
-                                onPressed: () {
-                                  deleteFile(_recordings[index]);
-                                },
-                              ),
-                            ],
-                          ),
-                          onTap: () {
-                            OpenFile.open(_recordings[index].path);
-                          },
-                        );
-                      },
-                    ),
-            )
-          ],
-        ),
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.delete,
+                                  color: (_recording && index == 0)
+                                      ? Color.fromARGB(50, 255, 255, 255)
+                                      : Colors.white),
+                              onPressed: () {
+                                (_recording && index == 0)
+                                    ? null
+                                    : deleteFile(_recordings[index]);
+                              },
+                              splashColor: (_recording && index == 0)
+                                  ? Colors.transparent
+                                  : Theme.of(context).splashColor,
+                            ),
+                          ],
+                        ),
+                        onTap: () {
+                          OpenFile.open(_recordings[index].path);
+                        },
+                      );
+                    },
+                  ),
+          )
+        ],
       ),
     );
   }
