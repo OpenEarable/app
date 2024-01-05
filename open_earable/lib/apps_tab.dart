@@ -56,7 +56,7 @@ class AppsTab extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                     builder: (context) => StarFinderView(
-                        StarFinderEarableAttitudeTracker(_openEarable), _openEarable)));
+                        StarFinderEarableAttitudeTracker(_openEarable), _openEarable, )));
           }),
       // ... similarly for other apps
     ];

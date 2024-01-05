@@ -12,11 +12,13 @@ import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 class RightDirection {
   final OpenEarable _openEarable;
   final AttitudeTracker _attitudeTracker;
-  StarObject starObject;
+  StarObject _starObject;
   DateTime lastScanTime = DateTime.now();
   DateTime lastJingleTime = DateTime.now();
 
-  RightDirection(this._openEarable, this._attitudeTracker, this.starObject);
+  StarObject get starObject => _starObject;
+
+  RightDirection(this._openEarable, this._attitudeTracker, this._starObject);
 
   void start() {
    _attitudeTracker.listen((attitude) {
@@ -44,13 +46,9 @@ class RightDirection {
     _attitudeTracker.stop();
   }
 
-  bool _isRightDirection(Attitude attitude, StarObject starObject) {
-    print(starObject.calculateDistance(attitude.x, attitude.y, attitude.z)); 
-    return (starObject.calculateDistance(attitude.x, attitude.y, attitude.z)) < 100.0;
-  }
 
   void scan(Attitude attitude, DateTime now) {
-    if (_isRightDirection(attitude, starObject)){
+    if (_starObject.inThisDirection(attitude)){
       success(now);
     }
     else {
@@ -69,5 +67,9 @@ class RightDirection {
     _openEarable.audioPlayer.jingle(2);
     lastJingleTime = now;
     }
+  }
+
+  void setStarObject(StarObject starObject) {
+    _starObject = starObject;
   }
 }
