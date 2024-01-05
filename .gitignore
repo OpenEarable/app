@@ -117,3 +117,6 @@ Temporary Items
 .history
 .ionide
 .vscode/settings.json
+
+# idea folder
+.idea
