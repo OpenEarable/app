@@ -10,7 +10,6 @@ class EarableWeather extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Earable Weather',
       debugShowCheckedModeBanner: false,
       home: WeatherPage(openEarable),
     );
