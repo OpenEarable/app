@@ -50,7 +50,7 @@ class _WeatherScreenState extends State<WeatherPage> {
   }
 
   void _fetchWeather() {
-    
+
   }
 
   @override
