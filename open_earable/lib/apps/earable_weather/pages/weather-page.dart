@@ -3,6 +3,7 @@ import 'package:open_earable/apps/earable_weather/config.dart';
 import 'package:open_earable/apps/earable_weather/models/weather-model.dart';
 import 'package:open_earable/apps/earable_weather/services/weather-service.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:lottie/lottie.dart';
 import 'dart:async';
 
 class WeatherPage extends StatefulWidget {
@@ -66,6 +67,33 @@ class _WeatherScreenState extends State<WeatherPage> {
   }
 
   // Weather animations
+  String getWeatherAnimation(String? mainCondition) {
+    if (mainCondition == null) {
+      return 'lib/apps/earable_weather/assets/sunny.json'; 
+    }
+
+    switch(mainCondition.toLowerCase()) {
+      case 'clouds':
+      case 'mist':
+      case 'smoke':
+      case 'haze':
+      case 'dust':
+        return 'lib/apps/earable_weather/assets/cloudy.json';
+      case 'fog':
+        return 'lib/apps/earable_weather/assets/foggy.json';
+      case 'snow':
+        return 'lib/apps/earable_weather/assets/snowy.json';
+      case 'rain':
+      case 'drizzle':
+      case 'shower rain':
+        return 'lib/apps/earable_weather/assets/rainy.json';
+      case 'thunderstorm':
+        return 'lib/apps/earable_weather/assets/thunder.json';
+      case 'clear':
+      default:
+        return 'lib/apps/earable_weather/assets/sunny.json';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +108,14 @@ class _WeatherScreenState extends State<WeatherPage> {
             // City name
             Text(_weather?.cityName ?? "Loading City..."),
 
-            Text('${_weather?.temperature.round()}°C')
+            // Animation
+            Lottie.asset(getWeatherAnimation(_weather?.mainCondition)),
+
+            // Temperature
+            Text('${_weather?.temperature.round()}°C'),
+
+            // Weather Condition
+            Text(_weather?.mainCondition ?? ""),
           ]
         ),
       ),

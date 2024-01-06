@@ -130,6 +130,7 @@ flutter:
   assets:
     - assets/
     - assets/posture_tracker/
+    - lib/apps/earable_weather/assets/
 
   fonts:
     - family:  OpenEarableIcon
