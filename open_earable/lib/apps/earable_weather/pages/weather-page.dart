@@ -49,17 +49,44 @@ class _WeatherScreenState extends State<WeatherPage> {
     });
   }
 
-  void _fetchWeather() {
+  // Fetch weather
+  void _fetchWeather() async {
+    // Get the current city
+    String cityName = await _weatherService.getCurrentCity();
 
+    // Get weather for city
+    try {
+      final weather = await _weatherService.getWeather(cityName);
+      setState(() {
+        _weather = weather;
+      });
+    } catch(e) {
+      print(e);
+    }
   }
+
+  // Weather animations
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.background,
-        appBar: AppBar(
-          title: Text('Earbale Weather'),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // City name
+            Text(_weather?.cityName ?? "Loading City..."),
+
+            Text('${_weather?.temperature.round()}°C')
+          ]
         ),
+      ),
     );
+  }
+
+  @override
+  void dispose() {
+    _barometerSubscription?.cancel();  
+    super.dispose(); 
   }
 }

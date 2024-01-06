@@ -7,7 +7,7 @@ import 'package:open_earable/apps/earable_weather/models/weather-model.dart';
 import 'package:http/http.dart' as http;
 
 class WeatherService {
-  static const BASE_URL = 'ttps://api.openweathermap.org/data/2.5/weather';
+  static const BASE_URL = 'https://api.openweathermap.org/data/2.5/weather';
   final String apiKey;  
 
   late bool serviceEnabled;
