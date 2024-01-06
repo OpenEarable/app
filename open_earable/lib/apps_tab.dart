@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:open_earable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_earable/apps/posture_tracker/view/posture_tracker_view.dart';
 import 'package:open_earable/apps/recorder.dart';
+import 'package:open_earable/apps/neck_stretcher/model/earable_attitude_tracker.dart';
+import 'package:open_earable/apps/neck_stretcher/view/exercises_view.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
 class AppInfo {
@@ -45,7 +47,18 @@ class AppsTab extends StatelessWidget {
                 MaterialPageRoute(
                     builder: (context) => Recorder(_openEarable)));
           }),
-      // ... similarly for other apps
+      AppInfo(
+          iconData: Icons.face_2,
+          title: "Neck Stretcher",
+          description: "Stretch your neck.",
+          onTap: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => ExercisesView(
+                        EarableAttitudeTracker_Stretcher(_openEarable),
+                        _openEarable)));
+          }),
     ];
   }
 
@@ -66,8 +79,8 @@ class AppsTab extends StatelessWidget {
                     leading: Icon(apps[index].iconData, size: 40.0),
                     title: Text(apps[index].title),
                     subtitle: Text(apps[index].description),
-                    trailing: Icon(Icons.arrow_forward_ios,
-                        size: 16.0), // Arrow icon on the right
+                    trailing: Icon(Icons.arrow_forward_ios, size: 16.0),
+                    // Arrow icon on the right
                     onTap:
                         apps[index].onTap, // Callback when the card is tapped
                   ),
