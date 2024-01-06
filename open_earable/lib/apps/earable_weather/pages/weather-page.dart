@@ -107,13 +107,10 @@ class _WeatherScreenState extends State<WeatherPage> {
           children: [
             // City name
             Text(_weather?.cityName ?? "Loading City..."),
-
             // Animation
             Lottie.asset(getWeatherAnimation(_weather?.mainCondition)),
-
             // Temperature
             Text('${_weather?.temperature.round()}°C'),
-
             // Weather Condition
             Text(_weather?.mainCondition ?? ""),
           ]
