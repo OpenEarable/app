@@ -3,6 +3,7 @@ import 'package:open_earable/apps/posture_tracker/model/earable_attitude_tracker
 import 'package:open_earable/apps/posture_tracker/view/posture_tracker_view.dart';
 import 'package:open_earable/apps/recorder.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:open_earable/apps/gyro_bird/main_view.dart';
 
 class AppInfo {
   final IconData iconData;
@@ -44,6 +45,16 @@ class AppsTab extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                     builder: (context) => Recorder(_openEarable)));
+          }),
+      AppInfo(
+          iconData: Icons.gamepad_rounded,
+          title: "GyroBird",
+          description: "Test your skills.",
+          onTap: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => GyroBird(_openEarable)));
           }),
       // ... similarly for other apps
     ];
