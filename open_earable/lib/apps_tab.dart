@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:open_earable/apps/endless_runner/model/attitude_tracker.dart';
 import 'package:open_earable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_earable/apps/posture_tracker/view/posture_tracker_view.dart';
 import 'package:open_earable/apps/recorder.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:open_earable/apps/endless_runner/view/endless_runner_view.dart';
+
 
 class AppInfo {
   final IconData iconData;
@@ -44,6 +47,17 @@ class AppsTab extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                     builder: (context) => Recorder(_openEarable)));
+          }),
+      AppInfo(
+          iconData: Icons.follow_the_signs,
+          title: "Endless Runner",
+          description: "Get as far as possible.",
+          onTap: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => EndlessRunnerView(
+                        EarableAttitudeTracker(_openEarable) as AttitudeTracker, _openEarable)));
           }),
       // ... similarly for other apps
     ];
