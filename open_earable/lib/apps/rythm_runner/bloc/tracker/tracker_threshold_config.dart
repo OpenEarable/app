@@ -1,4 +1,5 @@
-
+/// This is a data class used to store the thresholds
+/// for the X, Z, and X+Z values used by the pedometer.
 class TrackerThresholdConfig {
   final double xThreshold;
   final double zThreshold;

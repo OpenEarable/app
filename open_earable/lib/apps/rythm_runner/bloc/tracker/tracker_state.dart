@@ -2,7 +2,9 @@ part of 'tracker_bloc.dart';
 
 @immutable
 sealed class TrackerState {
+  // Tracker configuration, containing thresholds for pedometer
   final TrackerThresholdConfig config;
+  // Run data, containing info on the current tracking run
   final TrackerRunData runData;
 
   const TrackerState({required this.config, required this.runData});
@@ -10,8 +12,10 @@ sealed class TrackerState {
   TrackerState copyWith({TrackerThresholdConfig? config});
 }
 
+/// This is the idle state for the tracker. It resets all run data.
 final class TrackerIdleState extends TrackerState {
   TrackerIdleState({required TrackerThresholdConfig config})
+      // Automatically reset the run data with the idle state
       : super(
             config: config,
             runData: TrackerRunData(
@@ -29,6 +33,7 @@ final class TrackerIdleState extends TrackerState {
   }
 }
 
+/// This is the running state for the tracker. It requires run data to be instantiated.
 final class TrackerRunningState extends TrackerState {
   TrackerRunningState(
       {required TrackerThresholdConfig config, required TrackerRunData runData})
@@ -42,6 +47,7 @@ final class TrackerRunningState extends TrackerState {
   }
 }
 
+/// This is the tracker finished state, it represents a completed run of the tracker
 final class TrackerFinishedState extends TrackerState {
   TrackerFinishedState(
       {required TrackerThresholdConfig config, required TrackerRunData runData})

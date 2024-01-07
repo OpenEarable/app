@@ -1,5 +1,8 @@
 import 'package:collection/collection.dart';
 
+/// This is a data class used to store information 
+/// on a tracking process. It contains information 
+/// like the step count, elapsed time, and so on.
 class TrackerRunData {
   final Duration duration;
   final Duration elapsed;
@@ -21,29 +24,41 @@ class TrackerRunData {
     this.lastStepTime,
   });
 
+  // Minimum interval between steps, so we dont double-count
   final int minStepIntervalMillis = 140;
 
+  /// This function increments the step count by one and also calculates 
+  /// the current steps per minute as well as the beats per minute, which
+  /// are calculated using a running average with a window size of 5.
   TrackerRunData incrementStepCount() {
+    // Check if the last recorded step is far enough in the past
     var now = DateTime.now();
     if (lastStepTime == null ||
         now.difference(lastStepTime!).inMilliseconds > minStepIntervalMillis) {
+      // Increase step count and calculate exact steps per minute
       int _newStepCount = stepCount + 1;
       double _newStepsPerMinute = (((_newStepCount) /
               (elapsed.inSeconds != 0 ? elapsed.inSeconds + 1 : 1)) *
           60);
 
+      // Round steps per minute to BPM and generate window for running average
       int _newBpmValue = _newStepsPerMinute.round();
       List<int> _newValues = [...bpmValues, _newBpmValue];
       if (_newValues.length > 5) {
         _newValues = _newValues.sublist(_newValues.length - 5);
       }
+      // If the timer has run for over 10 seconds start using the 
+      // average BPM value. We wait 10 seconds for the system to 
+      // calibrate, there are too many fluctuations before this.
       int _newBpmAverage = bpmValue;
       if (elapsed.inSeconds > 10) {
+        // calculate running average
         _newBpmAverage =
             (_newValues.reduce((value, element) => value + element) /
                     _newValues.length)
                 .round();
       }
+      // return a TrackerRunData instance with the new values
       return this.copyWith(
           stepCount: _newStepCount,
           stepsPerMinute: _newStepsPerMinute,
@@ -52,29 +67,18 @@ class TrackerRunData {
           bpmAverage: _newBpmAverage,
           bpmValues: _newValues);
     }
+    // If the last step wasn't far enough in the past, simply return this
     return this;
   }
 
+  /// This function increases the elapsed time and decreases the 
+  /// remaining timer duration. It is called once a second.
   TrackerRunData tick() {
-    int _newBpmValue = ((((stepsPerMinute / 1).floor() * 1) +
-                ((stepsPerMinute / 1).round() * 1)) /
-            2)
-        .round();
-    List<int> _newValues = [...bpmValues, _newBpmValue];
-    int _newBpmAverage = bpmValue;
-    if (elapsed.inSeconds > 10) {
-      _newBpmAverage = (_newValues.reduce((value, element) => value + element) /
-              _newValues.length)
-          .round();
-    }
     return this.copyWith(
         duration: Duration(seconds: this.duration.inSeconds - 1),
-        elapsed: Duration(seconds: this.elapsed.inSeconds + 1),
-        bpmValue: _newBpmValue,
-        bpmAverage: _newBpmAverage,
-        bpmValues: _newValues);
+        elapsed: Duration(seconds: this.elapsed.inSeconds + 1));
   }
-
+  
   TrackerRunData copyWith({
     Duration? duration,
     Duration? elapsed,
