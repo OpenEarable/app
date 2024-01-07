@@ -13,9 +13,9 @@ class StarFinderEarableAttitudeTracker extends AttitudeTracker {
   @override
   bool get isAvailable => _openEarable.bleManager.connected;
 
-  EWMA _x = EWMA(0.2);
-  EWMA _y = EWMA(0.2);
-  EWMA _z = EWMA(0.2);
+  EWMA _roll = EWMA(0.2);
+  EWMA _pitch = EWMA(0.2);
+  EWMA _yaw = EWMA(0.2);
 
   StarFinderEarableAttitudeTracker(this._openEarable) {
     _openEarable.bleManager.connectionStateStream.listen((connected) {
@@ -36,10 +36,11 @@ class StarFinderEarableAttitudeTracker extends AttitudeTracker {
     _openEarable.sensorManager.writeSensorConfig(_buildSensorConfig());
     _subscription = _openEarable.sensorManager.subscribeToSensorData(0).listen((event) {
       updateAttitude(
-        x: _x.update(event["MAG"]["X"]),
-        y: _y.update(event["MAG"]["Y"]),
-        z: _z.update(event["MAG"]["Z"])
+        roll: _roll.update(event["EULER"]["ROLL"]) * 180 / 3.14,
+        pitch: _pitch.update(event["EULER"]["PITCH"]) * 180 / 3.14,
+        yaw: _yaw.update(event["EULER"]["YAW"]) * 180 / 3.14
       );
+      //print("${event["EULER"]["ROLL"]},${event["EULER"]["PITCH"]},${event["EULER"]["YAW"]}");
     });
   }
 

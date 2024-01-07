@@ -7,68 +7,72 @@ import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
 class StarObjectInfo {
   final IconData iconData;
-  final String title;
+  final String name;
   final String description;
   final VoidCallback onTap;
 
   StarObjectInfo(
       {required this.iconData,
-      required this.title,
+      required this.name,
       required this.description,
       required this.onTap});
 }
 
 
-class StarObjectsTab extends StatelessWidget {
+class StarObjectsTab extends StatefulWidget {
+  final StarFinderViewModel viewModel;
 
-  final StarFinderViewModel _viewModel;
+  StarObjectsTab(this.viewModel);
 
-  StarObjectsTab(StarFinderViewModel this._viewModel);
-
-  List<StarObjectInfo> starObjects(BuildContext context) {
-  // Define your stars here
-  List<StarObject> stars = StarObjectList.starObjects;
-
-  // Map the stars to StarObjectInfo
-  return stars.map((starObject) => StarObjectInfo(
-      iconData: starObject.icon,
-      title: starObject.name,
-      description: starObject.description,
-      onTap: () {
-        _viewModel.setStarObject(starObject);
-      }
-    )).toList();
+  @override
+  _StarObjectsTabState createState() => _StarObjectsTabState();
 }
+
+class _StarObjectsTabState extends State<StarObjectsTab> {
+  List<StarObjectInfo> starObjects(BuildContext context) {
+    List<StarObject> stars = StarObjectList.starObjects;
+    return stars.map((starObject) => StarObjectInfo(
+        iconData: starObject,
+        name: starObject.name,
+        description: starObject.description,
+        onTap: () {
+          setState(() {
+            widget.viewModel.setStarObject(starObject);
+          });
+        }
+      )).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
     List<StarObjectInfo> stars = starObjects(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Chose a Star Object")),
+      appBar: AppBar(title: const Text("Choose a Star Object")),
       body: Padding(
         padding: const EdgeInsets.only(top: 5),
         child: ListView.builder(
           itemCount: stars.length,
           itemBuilder: (BuildContext context, int index) {
             return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 5),
-                child: Card(
-                  color: Theme.of(context).colorScheme.primary,
-                  child: ListTile(
-                    leading: Icon(stars[index].iconData, size: 40.0),
-                    title: Text(stars[index].title),
-                    subtitle: Text(stars[index].description),
-                    trailing: Icon(Icons.arrow_forward_ios,
-                        size: 16.0), // Arrow icon on the right
-                    contentPadding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0), // Increase padding
-                    onTap:
-                        stars[index].onTap, // Callback when the card is tapped
-                  ),
-                ));
+              padding: const EdgeInsets.symmetric(horizontal: 5),
+              child: Card(
+                color: widget.viewModel.starObject.name == stars[index].name
+                    ? Colors.blue
+                    : Theme.of(context).colorScheme.primary,
+                child: ListTile(
+                  leading: Icon(stars[index].iconData, size: 40.0),
+                  title: Text(stars[index].name),
+                  subtitle: Text(stars[index].description),
+                  contentPadding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+                  onTap: stars[index].onTap,
+                ),
+              )
+            );
           },
-        )),
-        backgroundColor: Theme.of(context).colorScheme.background,
+        )
+      ),
+      backgroundColor: Theme.of(context).colorScheme.background,
     );
   }
 }

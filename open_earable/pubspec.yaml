@@ -125,6 +125,7 @@ flutter:
   assets:
     - assets/
     - assets/posture_tracker/
+    - assets/star_finder/
 
   fonts:
     - family:  OpenEarableIcon

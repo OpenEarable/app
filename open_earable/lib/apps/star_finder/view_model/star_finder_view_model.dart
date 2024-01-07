@@ -12,6 +12,7 @@ class StarFinderViewModel extends ChangeNotifier {
   bool get isAvailable => _attitudeTracker.isAvailable;
 
   StarObject get starObject => _rightDirection.starObject;
+  RightDirection get rightDirection => _rightDirection;
 
   AttitudeTracker _attitudeTracker;
   RightDirection _rightDirection;
@@ -23,9 +24,9 @@ class StarFinderViewModel extends ChangeNotifier {
 
     _attitudeTracker.listen((attitude) {
       _attitude = Attitude(
-        x: attitude.x,
-        y: attitude.y,
-        z: attitude.z
+        roll: attitude.roll,
+        pitch: attitude.pitch,
+        yaw: attitude.yaw
       );
       notifyListeners();
     });
@@ -49,6 +50,7 @@ class StarFinderViewModel extends ChangeNotifier {
 
   void setStarObject(StarObject starObject) {
     _rightDirection.setStarObject(starObject);
+    notifyListeners();
   }
 
   @override

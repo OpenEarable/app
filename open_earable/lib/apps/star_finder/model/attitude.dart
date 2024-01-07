@@ -1,42 +1,42 @@
 class Attitude {
   /// the x axis attitude
-  double x;
+  double roll;
   /// the y axis attitude
-  double y;
+  double pitch;
   /// the z axis attitude
-  double z;
+  double yaw;
 
-  Attitude({this.x = 0, this.y = 0, this.z = 0});
+  Attitude({this.roll = 0, this.pitch = 0, this.yaw = 0});
 
   Attitude operator +(Attitude other) {
     return Attitude(
-      x: x + other.x,
-      y: y + other.y,
-      z: z + other.z
+      roll: roll + other.roll,
+      pitch: pitch + other.pitch,
+      yaw: yaw + other.yaw
     );
   }
 
   Attitude operator -(Attitude other) {
     return Attitude(
-      x: x - other.x,
-      y: y - other.y,
-      z: z - other.z
+      roll: roll - other.roll,
+      pitch: pitch - other.pitch,
+      yaw: yaw - other.yaw
     );
   }
 
   Attitude operator *(double scalar) {
     return Attitude(
-      x: x * scalar,
-      y: y * scalar,
-      z: z * scalar
+      roll: roll * scalar,
+      pitch: pitch * scalar,
+      yaw: yaw * scalar
     );
   }
 
   Attitude operator /(double scalar) {
     return Attitude(
-      x: x / scalar,
-      y: y / scalar,
-      z: z / scalar
+      roll: roll / scalar,
+      pitch: pitch / scalar,
+      yaw: yaw / scalar
     );
   }
 }
