@@ -4,17 +4,29 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
+/// This class is used to store the Spotify User Credentials in a
+/// JSON file, so it can be loaded automatically when the app starts.
 class SpotifyUserCredentialsStorage {
+  // Get the directory where we save our files
   Future<String> get _localPath async {
     final directory = await getApplicationDocumentsDirectory();
     return directory.path;
   }
 
+  // Get the path to our storage file
   Future<File> get _localUserCredentialsFile async {
     final path = await _localPath;
     return File("$path/spotify_credentials.json");
   }
 
+
+  /// This function builds and returns a map based on the SpotifyAPICredentials object it is passed
+  /// 
+  /// Args:
+  ///   credentials (SpotifyApiCredentials): object containing all relevant API credentials
+  /// 
+  /// Returns:
+  ///   a Map<String, dynamic> containing all relevant information from the credentials.
   Map<String, dynamic> _userCredentialsToMap(
       SpotifyApiCredentials credentials) {
     return {
@@ -27,6 +39,14 @@ class SpotifyUserCredentialsStorage {
     };
   }
 
+  /// This function builds and returns a SpotifyApiCredentials object from
+  /// the values provided in the map.
+  /// 
+  /// Args:
+  ///   map (Map<String, dynamic>): A map containing all relevant Spotify Credentials info
+  /// 
+  /// Returns:
+  ///   a new SpotifyApiCredentials instance generated from the map
   SpotifyApiCredentials _mapToUserCredentials(Map<String, dynamic> map) {
     return SpotifyApiCredentials(
       map["clientId"],
@@ -41,12 +61,23 @@ class SpotifyUserCredentialsStorage {
     );
   }
 
-  Future<File> writeUserCredentials(SpotifyApiCredentials credentials) async {
+  /// This function saves the given Spotify Credentials to the file.
+  /// 
+  /// Args:
+  ///   credentials (SpotifyApiCredentials): User Credentials containing info such as the access-token
+  /// 
+  /// Returns:
+  ///   The method is returning a `Future<File>`.
+  Future<void> writeUserCredentials(SpotifyApiCredentials credentials) async {
     final file = await _localUserCredentialsFile;
     String json = jsonEncode(_userCredentialsToMap(credentials));
-    return file.writeAsString(json);
+    await file.writeAsString(json);
   }
 
+  /// This function returns a SpotifyCredentials object, containing the users credentials to access the API
+  /// 
+  /// Returns:
+  ///   a SpotifyCredentials object, or null if it doesn't exist
   Future<SpotifyApiCredentials?> readUserCredentials() async {
     try {
       final file = await _localUserCredentialsFile;
@@ -58,6 +89,10 @@ class SpotifyUserCredentialsStorage {
     }
   }
 
+  /// This function deletes the stored Spotify Credentials.
+  /// 
+  /// Returns:
+  ///   True, if deletion is successful.
   Future<bool> deleteUserCredentials() async {
     try {
       final file = await _localUserCredentialsFile;
@@ -71,6 +106,10 @@ class SpotifyUserCredentialsStorage {
     }
   }
 
+  /// This function checks if a file containing the SpotifyCredentials exists
+  /// 
+  /// Returns:
+  ///   true, if such a file exists
   Future<bool> userCredentialsExist() async {
     try {
       final file = await _localUserCredentialsFile;

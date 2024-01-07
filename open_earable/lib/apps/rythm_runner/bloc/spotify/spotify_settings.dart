@@ -1,7 +1,11 @@
 import 'package:spotify/spotify.dart';
 
+/// This is a data class used to store all relevant information
+/// for the interaction with the Spotify API.
 class SpotifySettingsData {
+  // String used to represent no device being selected
   static final String NO_DEVICE = "no_device";
+  // Map from BPM-Count to Playlist-ID used to play fitting music
   static final Map<int, String> BPM_PLAYLIST_MAP = {
     100: "5JpANhLlGcgZcLFcrNhL7j",
     105: "56cgN0YoqzPjmNBBuiVo6b",
@@ -19,19 +23,33 @@ class SpotifySettingsData {
     165: "37i9dQZF1EIcNylL4dr08W",
     170: "37i9dQZF1EIgfIackHptHl",
   };
+  // A playlist containing ambient sounds to make sure playback is running
   static final String TICKING_PLAYLIST = "spotify:playlist:4tcGT5louclexAxlPjoVRw";
+
+  // App Settings for the App that controls the playback
   final String spotifyClientId;
   final String spotifyClientSecret;
   final String redirectUrl =
       "ekulos-edu-kit-teco-openearable-rythmrunner://callback/";
+
+  // Spotify Interface, which we use to interact with the API 
   final SpotifyApi? spotifyInterface;
+
+  // Data related to authentication with the API
   final SpotifyApiCredentials? credentials;
   final dynamic grant;
   final Uri? authUrl;
+
+  // The connected users Spotify displayname
   final String? spotifyName;
+
+  // A list of all available devices
   final Iterable<Device> devices;
+  // The currently selected device
   final String selectedDeviceId;
+  // The device we started playing on using the API
   final String? playingOnDeviceId;
+  // A Map to identify a device and its information by its ID
   final Map<String, Device> idDeviceMap;
 
   SpotifySettingsData(
