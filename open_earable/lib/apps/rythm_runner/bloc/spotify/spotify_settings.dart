@@ -93,6 +93,9 @@ class SpotifySettingsData {
     );
   }
 
+  /// This function returns the current SpotifySettingsData with
+  /// the exception of the spotifyInterface, devices, selectedDeviceId 
+  /// and playingOnDeviceId. Those are all reset or set to null.
   SpotifySettingsData copyWithoutSpotifyApi() {
     return SpotifySettingsData(
       spotifyClientId: this.spotifyClientId,
@@ -109,10 +112,12 @@ class SpotifySettingsData {
     );
   }
 
+  /// This function sets up the spotify grant by passing the app credentials
   Future<SpotifySettingsData> setupSpotifyGrant() async {
     SpotifyApiCredentials newCredentials =
         SpotifyApiCredentials(spotifyClientId, spotifyClientSecret);
     dynamic newGrant = SpotifyApi.authorizationCodeGrant(newCredentials);
+    // Permission scopes, that will be requested from the user
     final scopes = [
       "user-read-playback-state",
       "user-modify-playback-state",
@@ -122,6 +127,7 @@ class SpotifySettingsData {
     return this.copyWith(
         credentials: newCredentials,
         grant: newGrant,
+        // Setup the Autorization URL using the redirectUrl and the scopes
         authUrl: newGrant.getAuthorizationUrl(Uri.parse(redirectUrl),
             scopes: scopes));
   }

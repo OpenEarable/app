@@ -9,6 +9,7 @@ sealed class SpotifyState {
   SpotifyState copyWith({SpotifySettingsData? config});
 }
 
+/// This is the default Spotify state, handling all normal API interaction
 final class SpotifyDefault extends SpotifyState {
   SpotifyDefault(super.spotifySettings);
   
@@ -18,7 +19,9 @@ final class SpotifyDefault extends SpotifyState {
   }
 }
 
+/// This is an error state, which is entered, when an API call causes an issue
 final class SpotifyError extends SpotifyDefault {
+  // The error message, which is displayed in an error banner
   final String message;
 
   SpotifyError(super.spotifySettings, {required this.message});
