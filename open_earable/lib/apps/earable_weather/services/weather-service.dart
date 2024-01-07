@@ -1,13 +1,15 @@
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
+import 'package:open_earable/apps/earable_weather/models/weather-forecast-model.dart';
 import 'package:open_earable/apps/earable_weather/models/weather-model.dart';
 import 'package:http/http.dart' as http;
 
 class WeatherService {
-  static const BASE_URL = 'https://api.openweathermap.org/data/2.5/weather';
+  static const BASE_URL = 'https://api.openweathermap.org/data/2.5/';
   final String apiKey;  
 
   late bool serviceEnabled;
@@ -16,12 +18,22 @@ class WeatherService {
   WeatherService(this.apiKey);
 
   Future<Weather> getWeather(String cityName) async {
-    final response = await http.get(Uri.parse('$BASE_URL?q=$cityName&appid=$apiKey&units=metric'));
+    final response = await http.get(Uri.parse('${BASE_URL}weather?q=${cityName}&appid=${apiKey}&units=metric'));
 
     if(response.statusCode == 200) {
       return Weather.fromJson(jsonDecode(response.body));
     } else {
       throw Exception('Failed to load weather');
+    }
+  }
+
+  Future<WeatherForecast> getForecast(String cityName) async {
+    final response = await http.get(Uri.parse('${BASE_URL}forecast?q=${cityName}&appid=${apiKey}&units=metric'));
+
+    if(response.statusCode == 200) {
+      return WeatherForecast.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to load forecast');
     }
   }
 

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:open_earable/apps/earable_weather/main.dart';
 import 'package:open_earable/apps/earable_weather/pages/weather-page.dart';
 import 'package:open_earable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_earable/apps/posture_tracker/view/posture_tracker_view.dart';
