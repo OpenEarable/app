@@ -19,6 +19,8 @@ class _WeatherScreenState extends State<WeatherPage> {
   final OpenEarable _openEarable;
 
   StreamSubscription? _barometerSubscription;
+  StreamSubscription? _batteryLevelSubscription;
+  double _earableBattery = 0;
 
   // Add state variables for sensor data
   String timestamp = "";
@@ -41,17 +43,21 @@ class _WeatherScreenState extends State<WeatherPage> {
     _fetchWeather();
     _fetchForecast();
 
-    /*
     if (_openEarable.bleManager.connected) {
       _setupListeners();
-    }*/
+    }
   }
 
   void _setupListeners() {
     _barometerSubscription = _openEarable.sensorManager.subscribeToSensorData(1).listen((event) {
-      timestamp = event["timestamp"].toString();
       pressure = event["BARO"]["Pressure"].toString();
       temperature = event["TEMP"]["Temperature"].toString();
+    });
+
+    _batteryLevelSubscription = _openEarable.sensorManager.getBatteryLevelStream().listen((batteryLevel) {
+      setState(() {
+        _earableBattery = batteryLevel[0];
+      });
     });
   }
 
@@ -121,7 +127,22 @@ class _WeatherScreenState extends State<WeatherPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Earable Weather'),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Earable Weather'),
+            Slider(
+              value: _earableBattery,
+              max: 100,
+              divisions: 100,
+              onChanged: (double value) {
+                setState(() {
+                  _earableBattery = value;
+                });
+              },
+            ),
+          ],
+        ),
         actions: [
           IconButton(
             icon: Icon(_isHorizontalView ? Icons.view_agenda : Icons.view_carousel),
@@ -144,8 +165,7 @@ class _WeatherScreenState extends State<WeatherPage> {
               Lottie.asset(getWeatherAnimation(_weather?.mainCondition), height: 200), // Adjusted height for visibility
               // Temperature
               Text('${_weather?.temperature.round()}°C'),
-              // Weather Condition
-              Text(_weather?.mainCondition ?? ""),
+
               SizedBox(height: 20), // Adds a bit of spacing
 
               // Display forecast
@@ -164,7 +184,6 @@ class _WeatherScreenState extends State<WeatherPage> {
           children: [
             Lottie.asset(getWeatherAnimation(weather.mainCondition), width: 100, height: 100),
             Text('${weather.temperature.round()}°C'),
-            Text(weather.mainCondition),
           ],
         ),
       );
@@ -190,8 +209,9 @@ class _WeatherScreenState extends State<WeatherPage> {
 
 
   @override
-  void dispose() {
+  void dispose() { 
+    super.dispose();
     _barometerSubscription?.cancel();  
-    super.dispose(); 
+    _batteryLevelSubscription?.cancel();
   }
 }
