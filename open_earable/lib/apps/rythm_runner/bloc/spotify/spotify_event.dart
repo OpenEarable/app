@@ -49,8 +49,9 @@ class RequestSpotifyAuth extends SpotifyEvent {}
 // Event to play the song provided in the mediaKey
 class PlaySpotifySong extends SpotifyEvent {
   final String mediaKey;
+  final int positionMs;
 
-  PlaySpotifySong({required this.mediaKey});
+  PlaySpotifySong({required this.mediaKey, required this.positionMs});
 }
 
 // Event to pause playback on the currently selected device

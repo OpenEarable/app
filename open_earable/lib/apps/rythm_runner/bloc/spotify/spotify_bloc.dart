@@ -94,7 +94,8 @@ class SpotifyBloc extends Bloc<SpotifyEvent, SpotifyState> {
         }
         add(UpdateSpotifyApi(spotifyApi: spotify));
       } on AuthorizationException catch (e) {
-        print("authorization exception. can most likely be ignored, related to api issue: $e");
+        print(
+            "authorization exception. can most likely be ignored, related to api issue: $e");
       } on Error catch (e, st) {
         print("error: $e $st");
       }
@@ -172,23 +173,24 @@ class SpotifyBloc extends Bloc<SpotifyEvent, SpotifyState> {
         if (devices.length == 0) {
           SimpleEventBus().sendEvent(CancelTracking());
         }
+        String? newSelectedDevice = state.spotifySettings.selectedDeviceId;
         if (!devices
             .map((e) => e.id)
             .contains(state.spotifySettings.selectedDeviceId)) {
           SimpleEventBus().sendEvent(CancelTracking());
+          newSelectedDevice = SpotifySettingsData.NO_DEVICE;
           add(UpdateSelectedDevice(newDeviceId: SpotifySettingsData.NO_DEVICE));
         }
         Map<String, Device> idDeviceMap = Map();
-        String? newSelectedDevice = state.spotifySettings.selectedDeviceId;
         devices.forEach((element) {
           if (element.id == null) {
             return;
           }
-          if (element.isActive != null && !element.isActive!) {
+          /*if (element.isActive != null && !element.isActive!) {
             return;
-          }
+          }*/
           idDeviceMap[element.id!] = element;
-          if (state.spotifySettings.selectedDeviceId ==
+          if (newSelectedDevice ==
               SpotifySettingsData.NO_DEVICE) {
             newSelectedDevice = element.id;
             add(UpdateSelectedDevice(newDeviceId: newSelectedDevice));
@@ -219,10 +221,17 @@ class SpotifyBloc extends Bloc<SpotifyEvent, SpotifyState> {
           await state.spotifySettings.spotifyInterface!.player
               .startOrResume(
                   deviceId: state.spotifySettings.selectedDeviceId,
-                  options: StartOrResumeOptions(
-                      positionMs: 0,
-                      offset: PositionOffset(0),
-                      contextUri: event.mediaKey))
+                  // Handle playing differently, depending on 
+                  // if we get passed a track or a playlist/album
+                  options: event.mediaKey.contains(":track:")
+                      ? StartOrResumeOptions(
+                          positionMs: event.positionMs,
+                          offset: PositionOffset(0),
+                          uris: [event.mediaKey])
+                      : StartOrResumeOptions(
+                          positionMs: 0,
+                          offset: PositionOffset(0),
+                          contextUri: event.mediaKey))
               .then((value) {
             //_showSnackBarText(context, "Started playlist at $bpmInFives BPM");
             emit(SpotifyDefault(state.spotifySettings.copyWith(
