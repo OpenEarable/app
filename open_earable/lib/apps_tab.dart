@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:open_earable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_earable/apps/posture_tracker/view/posture_tracker_view.dart';
 import 'package:open_earable/apps/recorder.dart';
+import 'package:open_earable/apps/rythm_runner/bloc/spotify/spotify_bloc.dart';
+import 'package:open_earable/apps/rythm_runner/bloc/tracker/tracker_bloc.dart';
+import 'package:open_earable/apps/rythm_runner/rythm_runner.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
 class AppInfo {
@@ -45,6 +49,33 @@ class AppsTab extends StatelessWidget {
                 MaterialPageRoute(
                     builder: (context) => Recorder(_openEarable)));
           }),
+      AppInfo(
+          iconData: Icons.music_note,
+          title: "Rythm Runner",
+          description: "Play music at your jogging speed.",
+          onTap: () => {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    // Use MultiBlocProvider to inject our SpotifyBloc and 
+                    // TrackerBloc so both are accessible in the tree.
+                    builder: (context) => MultiBlocProvider(
+                      providers: [
+                        BlocProvider(
+                          // Provide SpotifyBloc
+                          create: (context) => SpotifyBloc(),
+                        ),
+                        BlocProvider(
+                          // Provide TrackerBloc with OpenEarable instance
+                          create: (context) => TrackerBloc(_openEarable),
+                        ),
+                      ],
+                      // Pass actual RythmRunner Widget
+                      child: RythmRunner(_openEarable),
+                    ),
+                  ),
+                )
+              }),
       // ... similarly for other apps
     ];
   }

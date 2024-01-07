@@ -65,6 +65,13 @@ dependencies:
   open_file: ^3.3.2
   provider: ^6.1.1
 
+  # Rythm Runner
+  flutter_bloc: ^8.0.1
+  spotify: 0.11.0
+  app_links: 3.5.0
+  url_launcher:
+  scidart: ^0.0.2-dev.12
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
