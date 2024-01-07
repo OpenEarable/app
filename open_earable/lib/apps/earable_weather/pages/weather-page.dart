@@ -20,14 +20,14 @@ class _WeatherScreenState extends State<WeatherPage> {
 
   StreamSubscription? _barometerSubscription;
   StreamSubscription? _batteryLevelSubscription;
-  double _earableBattery = 0;
+  int _earableBattery = 0;
 
   // Add state variables for sensor data
-  String timestamp = "";
   String temperature = "";
   String pressure = ""; 
 
-  bool _isHorizontalView = true;
+  bool isHorizontalView = true;
+  bool playSound = true;
 
   // API Key
   final _weatherService = WeatherService(Config.openWeatherApiKey);
@@ -56,7 +56,7 @@ class _WeatherScreenState extends State<WeatherPage> {
 
     _batteryLevelSubscription = _openEarable.sensorManager.getBatteryLevelStream().listen((batteryLevel) {
       setState(() {
-        _earableBattery = batteryLevel[0];
+        _earableBattery = batteryLevel[0].toInt();
       });
     });
   }
@@ -90,10 +90,6 @@ class _WeatherScreenState extends State<WeatherPage> {
     }
   }
 
-  String _getCityBySearch() {
-    return "";
-  }
-
   // Weather animations
   String getWeatherAnimation(String? mainCondition) {
     if (mainCondition == null) {
@@ -111,17 +107,26 @@ class _WeatherScreenState extends State<WeatherPage> {
         return 'lib/apps/earable_weather/assets/foggy.json';
       case 'snow':
         return 'lib/apps/earable_weather/assets/snowy.json';
+      case 'thunderstorm':
+        this._notificationSound(4);
+        return 'lib/apps/earable_weather/assets/thunder.json';
       case 'rain':
       case 'drizzle':
       case 'shower rain':
         return 'lib/apps/earable_weather/assets/rainy.json';
-      case 'thunderstorm':
-        return 'lib/apps/earable_weather/assets/thunder.json';
       case 'clear':
       default:
         return 'lib/apps/earable_weather/assets/sunny.json';
     }
   }
+
+  // Should only be called if a thunderstorm is about to happen
+  void _notificationSound(int id) {
+    if (playSound) {
+      _openEarable.audioPlayer.jingle(id);
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -131,24 +136,16 @@ class _WeatherScreenState extends State<WeatherPage> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text('Earable Weather'),
-            Slider(
-              value: _earableBattery,
-              max: 100,
-              divisions: 100,
-              onChanged: (double value) {
-                setState(() {
-                  _earableBattery = value;
-                });
-              },
-            ),
+            Text('${_earableBattery}%'),
           ],
         ),
         actions: [
-          IconButton(
-            icon: Icon(_isHorizontalView ? Icons.view_agenda : Icons.view_carousel),
-            onPressed: () {
+          // Toggle for sound
+          Switch(
+            value: playSound,
+            onChanged: (value) {
               setState(() {
-                _isHorizontalView = !_isHorizontalView;
+                playSound = value;
               });
             },
           ),
@@ -180,12 +177,30 @@ class _WeatherScreenState extends State<WeatherPage> {
                   style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 10),
-                // Main condition
-                Text(
-                  _weather?.mainCondition ?? "",
-                  style: TextStyle(fontSize: 15),
+                // Main condition and icon button
+                Stack(
+                  children: [
+                    Align(
+                      alignment: Alignment.center,
+                      child: Text(
+                        _weather?.mainCondition ?? "",
+                        style: TextStyle(fontSize: 15),
+                      ),
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: IconButton(
+                        padding: const EdgeInsets.symmetric(horizontal: 50),
+                        icon: Icon(isHorizontalView ? Icons.view_agenda : Icons.view_carousel),
+                        onPressed: () {
+                          setState(() {
+                            isHorizontalView = !isHorizontalView;
+                          });
+                        },
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(height: 20),
                 // Display forecast
                 _displayForecast(),
               ],
@@ -216,7 +231,7 @@ class _WeatherScreenState extends State<WeatherPage> {
     double screenHeight = MediaQuery.of(context).size.height;
 
     // Conditional layout based on _isHorizontalView
-    if (_isHorizontalView) {
+    if (isHorizontalView) {
       double cardWidth = screenWidth / 5.0; // Adjust as needed for horizontal view
       return SingleChildScrollView(
         scrollDirection: Axis.horizontal,
