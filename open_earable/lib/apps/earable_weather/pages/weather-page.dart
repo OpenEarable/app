@@ -155,31 +155,50 @@ class _WeatherScreenState extends State<WeatherPage> {
         ],
       ),
       body: Center(
-        child: SingleChildScrollView(  // Added SingleChildScrollView for scrolling
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // City name
-              Text(_weather?.cityName ?? "Loading City..."),
-              // Current date
-              Text(_weather?.longFormattedDate ?? ""),
-              // Animation
-              Lottie.asset(getWeatherAnimation(_weather?.mainCondition), height: 200), // Adjusted height for visibility
-              // Temperature
-              Text('${_weather?.temperature.round()}°C'),
-
-              SizedBox(height: 20), // Adds a bit of spacing
-
-              // Display forecast
-              _displayForecast(),
-            ],
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // City name
+                Text(
+                  _weather?.cityName ?? "Loading City...",
+                  style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
+                ),
+                // Current date 
+                Text(
+                  _weather?.longFormattedDate ?? "",
+                  style: TextStyle(fontSize: 15),
+                ),
+                SizedBox(height: 60),
+                // Animation
+                Lottie.asset(getWeatherAnimation(_weather?.mainCondition), height: 200),
+                SizedBox(height: 20),
+                // Temperature
+                Text(
+                  '${_weather?.temperature.round()}°C',
+                  style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 10),
+                // Main condition
+                Text(
+                  _weather?.mainCondition ?? "",
+                  style: TextStyle(fontSize: 15),
+                ),
+                SizedBox(height: 20),
+                // Display forecast
+                _displayForecast(),
+              ],
+            ),
           ),
         ),
+    
       ),
     );
   }
 
   Widget _displayForecast() {
+    // Generate the list of cards from the weather forecast data
     List<Widget> cards = _weatherForecast!.dailyForecast.map((Weather weather) {
       return Card(
         child: Column(
@@ -192,24 +211,55 @@ class _WeatherScreenState extends State<WeatherPage> {
       );
     }).toList();
 
+    // Determine the screen size
+    double screenWidth = MediaQuery.of(context).size.width;
+    double screenHeight = MediaQuery.of(context).size.height;
+
+    // Conditional layout based on _isHorizontalView
     if (_isHorizontalView) {
+      double cardWidth = screenWidth / 5.0; // Adjust as needed for horizontal view
       return SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: cards,
+          children: cards.map((card) => SizedBox(width: cardWidth, child: card)).toList(),
         ),
       );
     } else {
-      return Column(
-        children: cards.map((card) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-          child: SizedBox(width: double.infinity, height: 150, child: card),
-        )).toList(),
-      );
+      double cardHeight = screenHeight / 12.5; 
+      List<Widget> verticalCards = _weatherForecast!.dailyForecast.map((Weather weather) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: SizedBox(
+            width: double.infinity,
+            height: cardHeight,
+            child: Card(
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 1,
+                    child: Lottie.asset(getWeatherAnimation(weather.mainCondition), fit: BoxFit.contain),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('${weather.temperature.round()}°C'),
+                        Text(weather.shortFormattedDate),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }).toList();
+      return Column(children: verticalCards);
     }
   }
-
 
   @override
   void dispose() { 
