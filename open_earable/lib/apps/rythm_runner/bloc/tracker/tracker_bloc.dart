@@ -57,7 +57,7 @@ class TrackerBloc extends Bloc<TrackerEvent, TrackerState> {
         // That the current device has playback and we don't get an API error
         // when we want to play a song after completing the tracking.
         SimpleEventBus().sendEvent(
-            PlaySpotifySong(mediaKey: SpotifySettingsData.TICKING_PLAYLIST, positionMs: 31000));
+            PlaySpotifySong(mediaKey: SpotifySettingsData.TICKING_TRACK, positionMs: 31000));
 
         // Storage for X and Z Axis values
         List<double> _xAxisValues = [];

@@ -24,7 +24,7 @@ class SpotifySettingsData {
     170: "37i9dQZF1EIgfIackHptHl",
   };
   // A playlist containing ambient sounds to make sure playback is running
-  static final String TICKING_PLAYLIST = "spotify:track:2F9xBxKbx2M0pbgtSu8fLf";
+  static final String TICKING_TRACK = "spotify:track:2F9xBxKbx2M0pbgtSu8fLf";
 
   // App Settings for the App that controls the playback
   final String spotifyClientId;
