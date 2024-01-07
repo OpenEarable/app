@@ -140,6 +140,14 @@ class _WeatherScreenState extends State<WeatherPage> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: Icon(isHorizontalView ? Icons.view_agenda : Icons.view_carousel),
+            onPressed: () {
+              setState(() {
+                isHorizontalView = !isHorizontalView;
+              });
+            },
+          ),
           // Toggle for sound
           Switch(
             value: playSound,
@@ -178,29 +186,11 @@ class _WeatherScreenState extends State<WeatherPage> {
                 ),
                 SizedBox(height: 10),
                 // Main condition and icon button
-                Stack(
-                  children: [
-                    Align(
-                      alignment: Alignment.center,
-                      child: Text(
-                        _weather?.mainCondition ?? "",
-                        style: TextStyle(fontSize: 15),
-                      ),
-                    ),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: IconButton(
-                        padding: const EdgeInsets.symmetric(horizontal: 50),
-                        icon: Icon(isHorizontalView ? Icons.view_agenda : Icons.view_carousel),
-                        onPressed: () {
-                          setState(() {
-                            isHorizontalView = !isHorizontalView;
-                          });
-                        },
-                      ),
-                    ),
-                  ],
+                Text(
+                  _weather?.mainCondition ?? "",
+                  style: TextStyle(fontSize: 15)
                 ),
+                SizedBox(height: 20),
                 // Display forecast
                 _displayForecast(),
               ],
