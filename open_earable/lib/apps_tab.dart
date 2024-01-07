@@ -3,6 +3,9 @@ import 'package:open_earable/apps/posture_tracker/model/earable_attitude_tracker
 import 'package:open_earable/apps/posture_tracker/view/posture_tracker_view.dart';
 import 'package:open_earable/apps/recorder.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'apps/endless_runner/view/endless_runner_view.dart';
+import 'apps/endless_runner/model/earable_attitude_tracker.dart' as earable_attitude_tracker_endless_runner;
+
 
 class AppInfo {
   final IconData iconData;
@@ -12,9 +15,9 @@ class AppInfo {
 
   AppInfo(
       {required this.iconData,
-      required this.title,
-      required this.description,
-      required this.onTap});
+        required this.title,
+        required this.description,
+        required this.onTap});
 }
 
 class AppsTab extends StatelessWidget {
@@ -37,13 +40,23 @@ class AppsTab extends StatelessWidget {
           }),
       AppInfo(
           iconData: Icons.fiber_smart_record,
-          title: "Recorder",
+          title: "Recorde",
           description: "Record data from OpenEarable.",
           onTap: () {
             Navigator.push(
                 context,
                 MaterialPageRoute(
                     builder: (context) => Recorder(_openEarable)));
+          }),
+      AppInfo(
+          iconData: Icons.follow_the_signs,
+          title: "Endless Runner",
+          description: "Get as far as possible.",
+          onTap: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => EndlessRunnerView(earable_attitude_tracker_endless_runner.EarableAttitudeTracker(_openEarable), _openEarable)));
           }),
       // ... similarly for other apps
     ];
@@ -69,7 +82,7 @@ class AppsTab extends StatelessWidget {
                     trailing: Icon(Icons.arrow_forward_ios,
                         size: 16.0), // Arrow icon on the right
                     onTap:
-                        apps[index].onTap, // Callback when the card is tapped
+                    apps[index].onTap, // Callback when the card is tapped
                   ),
                 ));
           },
