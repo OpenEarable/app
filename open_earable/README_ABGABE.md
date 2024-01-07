@@ -8,6 +8,7 @@ Hier finden sich einige wichtige Infos zur Abgabe und der Inbetriebnahme der App
 ## Funktionalität
 1. Die vollständige Funktionalität wurde lediglich auf einem iPhone überprüft. Ein Android-Gerät stand nicht zur Verfügung.
 2. In iOS und Android-Simulatoren lief die Anwendung korrekt, die IMU-Earable-Funktionalität konnte mangels Verbindung zum Earable nicht getestet werden.
+3. Der Schrittzähler wurde über simples Joggen am Platz getestet. Leichtes auf und ab bewegen des Earables funktioniert genauso.
 
 ## AndroidManifest.xml und Info.plist
 In beiden dieser Dateien wurden Änderungen vorgenommen, sodass die App auf die Callbacks von Spotify aus dem Browser reagieren kann.

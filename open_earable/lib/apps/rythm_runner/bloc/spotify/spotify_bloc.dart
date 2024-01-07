@@ -13,7 +13,7 @@ import 'package:app_links/app_links.dart';
 part 'spotify_event.dart';
 part 'spotify_state.dart';
 
-/// This is the Bloc class handling the event 
+/// This is the Bloc class handling the event
 /// listeners (logic) for spotify related events
 class SpotifyBloc extends Bloc<SpotifyEvent, SpotifyState> {
   // File storage for the Spotify App API settings
@@ -34,13 +34,12 @@ class SpotifyBloc extends Bloc<SpotifyEvent, SpotifyState> {
             selectedDeviceId: SpotifySettingsData.NO_DEVICE,
             devices: Iterable.empty(),
             idDeviceMap: Map()))) {
-
     // Listen for PlaySong, PausePlayback and UpdateDeviceList events on event bus
     SimpleEventBus().stream.listen((event) {
-      if (event is PlaySpotifySong ||
-          event is PauseSpotifyPlayback ||
-          event is UpdateDeviceList) {
-        if (!this.isClosed) {
+      if (!this.isClosed) {
+        if (event is PlaySpotifySong ||
+            event is PauseSpotifyPlayback ||
+            event is UpdateDeviceList) {
           add(event);
         }
       }
@@ -50,7 +49,7 @@ class SpotifyBloc extends Bloc<SpotifyEvent, SpotifyState> {
     on<LoadStoredData>((event, emit) async {
       // Check if app settings exist
       if (await _appSettingsStorage.spotifyAppSettingsExist()) {
-        // If they to, read the map from the storage and emit a new state 
+        // If they to, read the map from the storage and emit a new state
         // containining the clientId and clientSecret
         Map<String, dynamic>? appSettings =
             await _appSettingsStorage.readSpotifyAppSettings();
@@ -146,7 +145,7 @@ class SpotifyBloc extends Bloc<SpotifyEvent, SpotifyState> {
         add(UpdateDeviceList());
         emit(SpotifyDefault(newSettings));
       } on AuthorizationException catch (ex, st) {
-        // Remove the Spotify API Interface, delete stored  
+        // Remove the Spotify API Interface, delete stored
         // credentials and emit the error state.
         newSettings = newSettings.copyWithoutSpotifyApi();
         await _userCredentialsStorage.deleteUserCredentials();
@@ -165,7 +164,7 @@ class SpotifyBloc extends Bloc<SpotifyEvent, SpotifyState> {
               .copyWith(selectedDeviceId: event.newDeviceId)));
     });
 
-    // React to new App API Settings (clientId and clientSecret) input 
+    // React to new App API Settings (clientId and clientSecret) input
     on<UpdateSpotifyAppSettings>((event, emit) async {
       // Delete current data, then save new data
       await _userCredentialsStorage.deleteUserCredentials();
@@ -246,8 +245,7 @@ class SpotifyBloc extends Bloc<SpotifyEvent, SpotifyState> {
           // Assign ids to new device map
           idDeviceMap[element.id!] = element;
           // Assign a new device, if there is currently none selected
-          if (newSelectedDevice ==
-              SpotifySettingsData.NO_DEVICE) {
+          if (newSelectedDevice == SpotifySettingsData.NO_DEVICE) {
             newSelectedDevice = element.id;
             add(UpdateSelectedDevice(newDeviceId: newSelectedDevice));
             emit(SpotifyDefault(state.spotifySettings
@@ -283,7 +281,7 @@ class SpotifyBloc extends Bloc<SpotifyEvent, SpotifyState> {
           await state.spotifySettings.spotifyInterface!.player
               .startOrResume(
                   deviceId: state.spotifySettings.selectedDeviceId,
-                  // Handle playing differently, depending on 
+                  // Handle playing differently, depending on
                   // if we get passed a track or a playlist/album
                   options: event.mediaKey.contains(":track:")
                       ? StartOrResumeOptions(
@@ -373,7 +371,7 @@ class SpotifyBloc extends Bloc<SpotifyEvent, SpotifyState> {
   }
 
   /// This function opens the given URL in an external browser if possible.
-  /// 
+  ///
   /// Args:
   ///   url (String): The url that is supposed to be opened.
   Future<void> _openExternalUrl(String url) async {

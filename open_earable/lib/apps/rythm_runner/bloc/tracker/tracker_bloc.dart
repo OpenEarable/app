@@ -16,7 +16,7 @@ import 'tracker_threshold_config.dart';
 part 'tracker_event.dart';
 part 'tracker_state.dart';
 
-/// This is the Bloc class handling the event 
+/// This is the Bloc class handling the event
 /// listeners (logic) for tracker related events
 class TrackerBloc extends Bloc<TrackerEvent, TrackerState> {
   final OpenEarable _openEarable;
@@ -56,8 +56,8 @@ class TrackerBloc extends Bloc<TrackerEvent, TrackerState> {
         // Play a ticking playlist, while the countdown runs. This makes sure
         // That the current device has playback and we don't get an API error
         // when we want to play a song after completing the tracking.
-        SimpleEventBus().sendEvent(
-            PlaySpotifySong(mediaKey: SpotifySettingsData.TICKING_TRACK, positionMs: 31000));
+        SimpleEventBus().sendEvent(PlaySpotifySong(
+            mediaKey: SpotifySettingsData.TICKING_TRACK, positionMs: 31000));
 
         // Storage for X and Z Axis values
         List<double> _xAxisValues = [];
@@ -94,8 +94,8 @@ class TrackerBloc extends Bloc<TrackerEvent, TrackerState> {
             if (!this.isClosed) {
               add(TrackStep());
             }
-          // We primitively add together the values for x and z 
-          // and if the sum is larger than the threshold, we track a step
+            // We primitively add together the values for x and z
+            // and if the sum is larger than the threshold, we track a step
           } else if (ax + az > state.config.xzThreshold) {
             if (!this.isClosed) {
               add(TrackStep());
@@ -108,7 +108,7 @@ class TrackerBloc extends Bloc<TrackerEvent, TrackerState> {
     });
     on<TrackingTick>((event, emit) {
       // Check if we are connected to earable. If not, cancel tracking.
-      if(!_openEarable.bleManager.connected) {
+      if (!_openEarable.bleManager.connected) {
         add(CancelTracking());
         return;
       }
@@ -123,7 +123,7 @@ class TrackerBloc extends Bloc<TrackerEvent, TrackerState> {
           SimpleEventBus().sendEvent(UpdateDeviceList());
         }
       } else {
-        // If the timer has run out, cancel the timer and 
+        // If the timer has run out, cancel the timer and
         // IMU subscription and call the CompleteTracking event
         _timer?.cancel();
         _imuSubscription?.cancel();
@@ -146,16 +146,22 @@ class TrackerBloc extends Bloc<TrackerEvent, TrackerState> {
       SimpleEventBus().sendEvent(PauseSpotifyPlayback());
     });
     on<CompleteTracking>((event, emit) {
-      // Emit state to indicate the tracking completed normally
-      emit(TrackerFinishedState(config: state.config, runData: state.runData));
       // Calculate the nearest number devidable by 5 to the BPM count
       int bpmInFives = (state.runData.bpmAverage / 5).round() * 5;
-      // Check if we have a playlist for this speed. If so, send a 
-      // PlaySpotifySong event over the Event Bus.
+      // Check if we have a playlist for this speed. 
       if (SpotifySettingsData.BPM_PLAYLIST_MAP.containsKey(bpmInFives)) {
+        // Emit state to indicate the tracking completed normally
+        emit(
+            TrackerFinishedState(config: state.config, runData: state.runData));
+      // Send PlaySpotifySong event over the Event Bus.
         SimpleEventBus().sendEvent(PlaySpotifySong(
             mediaKey: "spotify:playlist:" +
-                SpotifySettingsData.BPM_PLAYLIST_MAP[bpmInFives]!, positionMs: 0));
+                SpotifySettingsData.BPM_PLAYLIST_MAP[bpmInFives]!,
+            positionMs: 0));
+      } else {
+        // Don't play music if we don't have a playlist
+        emit(TrackerIdleState(config: state.config));
+        SimpleEventBus().sendEvent(PauseSpotifyPlayback());
       }
     });
     on<UpdateTrackerSettings>((event, emit) {
@@ -181,10 +187,10 @@ class TrackerBloc extends Bloc<TrackerEvent, TrackerState> {
 
   /// The function `_detectPeak` checks if a peak is detected based on three consecutive values and a
   /// threshold.
-  /// 
+  ///
   /// Args:
   ///   threshold (double): Determines how large the peak has to be to be counted
-  /// 
+  ///
   /// Returns:
   ///   a boolean, if a peak was detected
   bool _detectPeak(double y2, double y1, double y0, double threshold) {
