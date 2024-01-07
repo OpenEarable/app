@@ -161,6 +161,8 @@ class _WeatherScreenState extends State<WeatherPage> {
             children: [
               // City name
               Text(_weather?.cityName ?? "Loading City..."),
+              // Current date
+              Text(_weather?.longFormattedDate ?? ""),
               // Animation
               Lottie.asset(getWeatherAnimation(_weather?.mainCondition), height: 200), // Adjusted height for visibility
               // Temperature
@@ -184,6 +186,7 @@ class _WeatherScreenState extends State<WeatherPage> {
           children: [
             Lottie.asset(getWeatherAnimation(weather.mainCondition), width: 100, height: 100),
             Text('${weather.temperature.round()}°C'),
+            Text(weather.shortFormattedDate),
           ],
         ),
       );

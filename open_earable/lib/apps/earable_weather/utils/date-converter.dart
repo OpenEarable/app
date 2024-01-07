@@ -1,5 +1,5 @@
 String createDate(int dt, String type) {
-  DateTime day = DateTime.fromMillisecondsSinceEpoch(dt * 1000);
+  DateTime day = DateTime.fromMillisecondsSinceEpoch(dt);
   if (type == "long") {
     return "${day.weekdayToString}, ${day.day} ${day.monthToString} ${day.year}";
   } else {
