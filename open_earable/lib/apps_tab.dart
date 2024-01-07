@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:open_earable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_earable/apps/posture_tracker/view/posture_tracker_view.dart';
 import 'package:open_earable/apps/recorder.dart';
+import 'package:open_earable/apps/head_trainer/view/head_trainer_list_view.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
 class AppInfo {
@@ -45,7 +46,15 @@ class AppsTab extends StatelessWidget {
                 MaterialPageRoute(
                     builder: (context) => Recorder(_openEarable)));
           }),
-      // ... similarly for other apps
+      AppInfo(
+          iconData: Icons.face,
+          title: "Head Trainer",
+          description: "Follow sequences of head movements.",
+          onTap: () {
+            Navigator.push(context, MaterialPageRoute(
+                builder: (context) => HeadTrainerListView(_openEarable,))
+            );
+          }),
     ];
   }
 
