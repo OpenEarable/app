@@ -57,15 +57,20 @@ class AppsTab extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
+                    // Use MultiBlocProvider to inject our SpotifyBloc and 
+                    // TrackerBloc so both are accessible in the tree.
                     builder: (context) => MultiBlocProvider(
                       providers: [
                         BlocProvider(
+                          // Provide SpotifyBloc
                           create: (context) => SpotifyBloc(),
                         ),
                         BlocProvider(
+                          // Provide TrackerBloc with OpenEarable instance
                           create: (context) => TrackerBloc(_openEarable),
                         ),
                       ],
+                      // Pass actual RythmRunner Widget
                       child: RythmRunner(_openEarable),
                     ),
                   ),

@@ -23,9 +23,11 @@ class _RythmRunnerState extends State<RythmRunner> {
   @override
   void initState() {
     super.initState();
+    // Cause the SpotifyBloc to load given Spotify-App or Spotify-Client data and if both are present connect to Spotify
     BlocProvider.of<SpotifyBloc>(context, listen: false).add(LoadStoredData());
   }
 
+  /// Returns the base widget for the RythmRunner App. It contains the initialization of all relevant cards for our view.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -33,23 +35,23 @@ class _RythmRunnerState extends State<RythmRunner> {
       appBar: AppBar(
         title: Text("Rythm Runner"),
       ),
-      body: /*_openEarable.bleManager.connected
-          ?*/ SingleChildScrollView(
-              child: GestureDetector(
-              onTap: () => FocusScope.of(context).unfocus(),
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16.0),
-                child: Column(
-                  children: [
-                    SpotifyCard(),
-                    TrackerCard(_openEarable),
-                    TrackerSettingsCard(),
-                  ],
-                ),
-              ),
-            ))
-          /*: EarableNotConnectedWarning()*/,
+      body: SingleChildScrollView(
+          child: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16.0),
+          child: Column(
+            children: [
+              // Create Spotify Card (responsible for spotify settings and device management)
+              SpotifyCard(),
+              // Create Tracker Card (responsible for step tracking) and pass [OpenEarable] instance
+              TrackerCard(_openEarable),
+              // Create Tracker Card (responsible for step tracker configuration, threshold values)
+              TrackerSettingsCard(),
+            ],
+          ),
+        ),
+      )),
     );
   }
 }
