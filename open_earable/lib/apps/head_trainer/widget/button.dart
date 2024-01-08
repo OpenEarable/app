@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+// Generic button in OpenEarable style
 class Button extends StatelessWidget {
   const Button({required this.text, required this.onPressed});
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../model/sequence.dart';
 
+// Generic card to display a move detailed
 class MoveCard extends StatelessWidget {
 
   final Move move;

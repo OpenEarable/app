@@ -23,18 +23,21 @@ class _NewMoveViewState extends State<NewMoveView> {
   int _amountInDegree = 0;
   int _timeInSeconds = 0;
 
+  // Set type of move
   _setType(MoveType type) {
     setState(() {
       _type = type;
     });
   }
 
+  // Set amount of movement in degree for move
   _setAmount(int amountInDegree) {
     setState(() {
       _amountInDegree = amountInDegree;
     });
   }
 
+  // Set time to hold move in seconds
   _setTime(int timeInSeconds) {
     setState(() {
       _timeInSeconds = timeInSeconds;
@@ -105,6 +108,7 @@ class _NewMoveViewState extends State<NewMoveView> {
     );
   }
 
+  // Build dropdown menu for selected move type
   Widget _buildDropdownMenu() {
     return DropdownMenu(
       // TODO: fix hardcoded width
@@ -141,6 +145,8 @@ class _NewMoveViewState extends State<NewMoveView> {
     );
   }
 
+  // Display warning when user selects a rotation because these can have
+  // tracking issues with OpenEarable
   void _showRotationWarning(BuildContext context) {
     showDialog(
       context: context,
@@ -167,6 +173,8 @@ class _NewMoveViewState extends State<NewMoveView> {
     );
   }
 
+  // Build a generic row containing the title of the setting, a description and
+  // the setting itself
   Widget _buildRow({
     required String title,
     required String description,

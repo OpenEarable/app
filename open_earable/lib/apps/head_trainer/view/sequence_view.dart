@@ -32,6 +32,7 @@ class _SequenceViewState extends State<SequenceView> {
 
   _SequenceViewState(this._sequence, this._oriValueUpdater);
 
+  // Called everytime now values can be get from from the sequence calculator
   _updateCurrentValues() {
     setState(() {
       _currentPos = _sequenceCalculator.currentPosition;

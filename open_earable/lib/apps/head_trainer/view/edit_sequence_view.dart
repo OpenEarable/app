@@ -39,18 +39,21 @@ class _EditSequenceViewState extends State<EditSequenceView> {
     }
   }
 
+  // Change name of sequence
   _changeName(String newName) {
     setState(() {
       _sequence.name = newName;
     });
   }
 
+  // Add move to sequence
   _addMove(Move move) {
     setState(() {
       _sequence.moves.add(move);
     });
   }
 
+  // Remove move from sequence
   _removeMove(Move move) {
     setState(() {
       _sequence.moves.remove(move);
@@ -89,10 +92,21 @@ class _EditSequenceViewState extends State<EditSequenceView> {
               onTap: () {
                 _showEditNameDialog();
               },
-              child: Text(
-                _sequence.name,
-                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    _sequence.name,
+                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      _showEditNameDialog();
+                    },
+                    icon: Icon(Icons.edit),
+                  ),
+                ],
               ),
             ),
           ),
@@ -118,6 +132,7 @@ class _EditSequenceViewState extends State<EditSequenceView> {
     );
   }
 
+  // Displays a dialog where the user can edit the name and save it
   Future<void> _showEditNameDialog() async {
     return showDialog(
         context: context,

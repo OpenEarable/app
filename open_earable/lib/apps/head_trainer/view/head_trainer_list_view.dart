@@ -57,7 +57,7 @@ class _HeadTrainerListViewState extends State<HeadTrainerListView> {
 
   @override
   void initState() {
-    _sequences.add(Sequence("Test Sequence", [
+    _sequences.add(Sequence("Example Sequence", [
       Move(MoveType.tiltLeft, 20, 5, 5),
       Move(MoveType.tiltForward, 10, 5, 5),
       Move(MoveType.rotateRight, 45, 10, 15),
@@ -67,7 +67,6 @@ class _HeadTrainerListViewState extends State<HeadTrainerListView> {
       Move(MoveType.rotateRight, 60, 12, 18),
       Move(MoveType.rotateLeft, 20, 10, 12),
     ]));
-    _sequences.add(Sequence("Test Sequence 2", []));
 
     _oriValueUpdater = OrientationValueUpdater(
       openEarable: _openEarable,
@@ -93,24 +92,9 @@ class _HeadTrainerListViewState extends State<HeadTrainerListView> {
   
   @override
   Widget build(BuildContext context) {
+    // Show an alert if the OpenEarable is not connected
     if (!_openEarable.bleManager.connected && !_shouldIgnoreError) {
-      return AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        title: Text("OpenEarable not connected"),
-        content: Text("Please connect an OpenEarable before opening this app."),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Go Back",
-                  style: TextStyle(color: Colors.white))
-          ),
-          TextButton(
-              onPressed: () => _ignoreError(),
-              child: const Text("Ignore Error",
-                  style: TextStyle(color: Colors.white)),
-          )
-        ],
-      );
+      _notConnectAlert();
     }
 
     return Scaffold(
@@ -140,6 +124,7 @@ class _HeadTrainerListViewState extends State<HeadTrainerListView> {
     );
   }
 
+  // Displays a list of sequences
   Widget _buildList() {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 8, horizontal: 8),
@@ -152,6 +137,8 @@ class _HeadTrainerListViewState extends State<HeadTrainerListView> {
     );
   }
 
+  // Displays a card containing the name of the sequence and buttons to start,
+  // edit or delete the sequence
   Widget _buildSequenceCard(Sequence sequence, BuildContext context) {
     return Card(
       color: Theme.of(context).colorScheme.primary,
@@ -205,6 +192,28 @@ class _HeadTrainerListViewState extends State<HeadTrainerListView> {
     );
   }
 
+  // Displays alert that the OpenEarable is not connected
+  Widget _notConnectAlert() {
+    return AlertDialog(
+      backgroundColor: Theme.of(context).colorScheme.primary,
+      title: Text("OpenEarable not connected"),
+      content: Text("Please connect an OpenEarable before opening this app."),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Go Back",
+                style: TextStyle(color: Colors.white))
+        ),
+        TextButton(
+          onPressed: () => _ignoreError(),
+          child: const Text("Ignore Error",
+              style: TextStyle(color: Colors.white)),
+        )
+      ],
+    );
+  }
+
+  // Display dialog that asks if the user really wants to delete the sequence
   void _showDeleteDialog(Sequence sequence, BuildContext context) {
     showDialog(
       context: context,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+// Generic text input in OpenEarable style
 class TextInput extends StatelessWidget {
 
   final String initialValue;

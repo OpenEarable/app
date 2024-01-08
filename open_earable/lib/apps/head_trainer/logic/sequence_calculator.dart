@@ -35,6 +35,7 @@ class SequenceCalculator {
   // If current move position is hold progress will go from 0 to 1 over time
   double? currentMoveProgress;
 
+  // subscribe to OrientationValueUpdater
   startCalculator() {
     _streamSubscription = oriValueUpdater.subscribe().listen((value) {
       oriValueOffset.roll = value.roll;
@@ -45,6 +46,7 @@ class SequenceCalculator {
     });
   }
 
+  // cancel stream subscription
   stopCalculator() {
     _streamSubscription?.cancel();
   }
@@ -58,6 +60,7 @@ class SequenceCalculator {
 
     _calculateMoveProbability();
 
+    // set the current probability to the probability of the current move
     currentMoveProbability = switch(currentMove.type) {
       MoveType.rotateRight => _rotateRight,
       MoveType.rotateLeft => _rotateLeft,
@@ -91,11 +94,13 @@ class SequenceCalculator {
     }
   }
 
+  // Reset if holding of move is canceled
   _resetProgress() {
     currentMoveProgress = 0;
     _positionTimestamp = null;
   }
 
+  // Calculate the probability of the move currently performed
   _calculateMoveProbability() {
     OrientationValue value = oriValueOffset.getWithOffset();
 

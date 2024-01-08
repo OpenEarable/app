@@ -33,13 +33,15 @@ class _ConfigureHeadViewState extends State<ConfigureHeadView> {
   double _yawDrift = 0.0;
 
   StreamSubscription? _streamSubscription;
-  
+
+  // Set zero position and offset for all future use
   _onSetZero() {
     setState(() {
       _oriValueUpdater.valueOffset = _oriValue.getNegativeAsOffset();
     });
   }
 
+  // The the amount the yaw drift should be counteracted over time
   _setYawDrift(double yawDrift) {
     setState(() {
       _yawDrift = yawDrift;
@@ -87,6 +89,7 @@ class _ConfigureHeadViewState extends State<ConfigureHeadView> {
     );
   }
 
+  // Displays if the OpenEarable is connected or not
   Widget _buildStatusCard() {
     bool status = _openEarable.bleManager.connected;
 
@@ -108,6 +111,7 @@ class _ConfigureHeadViewState extends State<ConfigureHeadView> {
     );
   }
 
+  // Shows the currently orientation of the OpenEarable with offset
   Widget _buildOrientationCard(OrientationValue value) {
     return Card(
       color: Theme.of(context).colorScheme.primary,
@@ -148,6 +152,7 @@ class _ConfigureHeadViewState extends State<ConfigureHeadView> {
     );
   }
 
+  // Shows a specific value of the orientation
   Widget _buildValueRow(String name, double value) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -164,6 +169,7 @@ class _ConfigureHeadViewState extends State<ConfigureHeadView> {
     );
   }
 
+  // Displays a card to set a value to counteract the yaw drift
   Widget _buildYawDriftCard() {
     return Card(
       color: Theme.of(context).colorScheme.primary,

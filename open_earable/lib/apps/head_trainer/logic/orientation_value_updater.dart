@@ -29,6 +29,7 @@ class OrientationValueUpdater {
    */
   int time = 0;
 
+  // subscribe to SensorManager from OpenEarable
   setupListeners() {
     _dataSubscription =
         openEarable.sensorManager.subscribeToSensorData(0).listen((data) {
@@ -40,6 +41,7 @@ class OrientationValueUpdater {
         });
   }
 
+  // Mock values that can be used when debugging the application
   setupMockListeners() {
     _timer = Timer.periodic(Duration(milliseconds: 100), (timer) {
       valueOffset.roll = 1.234;
@@ -50,11 +52,13 @@ class OrientationValueUpdater {
     });
   }
 
+  // Cancel subscription from SensorManager and Mock Listener
   stopListener() {
     _dataSubscription?.cancel();
     _timer?.cancel();
   }
 
+  // Let another class use the data of this class
   subscribe() {
     return streamController.stream;
   }

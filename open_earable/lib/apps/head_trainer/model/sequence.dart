@@ -12,8 +12,11 @@ class Sequence {
 
 class Move {
   final MoveType type;
+  // amount in degree the move should be performed
   final int amountInDegree;
+  // time in seconds the move should be hold
   final int timeInSeconds;
+  // leeway in degree for move
   final int plusMinusDegree;
 
   Move(this.type, this.amountInDegree, this.timeInSeconds, this.plusMinusDegree);
@@ -23,6 +26,7 @@ class Move {
 
 }
 
+// Default leeway for different types of moves
 _getDefaultPlusMinus(MoveType type) {
   return switch(type) {
     MoveType.tiltForward => 10,
@@ -35,11 +39,17 @@ _getDefaultPlusMinus(MoveType type) {
 }
 
 enum MoveType {
+  // Tilt head forward (pitch axis)
   tiltForward(type: "Tilt", direction: "Forward"),
+  // Tilt head backwards (pitch axis)
   tiltBackwards(type: "Tilt", direction: "Backwards"),
+  // Tilt head to the left (roll axis)
   tiltLeft(type: "Tilt", direction: "Left"),
+  // Tilt head to the right (roll axis)
   tiltRight(type: "Tilt", direction: "Right"),
+  // Rotate the head clockwise (yaw axis)
   rotateLeft(type: "Rotate", direction: "Left"),
+  // Rotate the head counter clockwise (yaw axis)
   rotateRight(type: "Rotate", direction: "Right");
 
   const MoveType({
