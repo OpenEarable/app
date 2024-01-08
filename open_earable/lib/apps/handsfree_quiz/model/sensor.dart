@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/cupertino.dart';
 import 'package:open_earable/apps/handsfree_quiz/model/position.dart';
 import 'package:open_earable/apps/handsfree_quiz/view/quiz_view.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
