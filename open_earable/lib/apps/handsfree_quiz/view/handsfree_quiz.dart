@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:open_earable/apps/handsfree_quiz//model/question.dart';
-import 'package:open_earable/apps/handsfree_quiz//view/question_Manager.dart';
-import 'package:open_earable/apps/handsfree_quiz//view/quiz_view.dart';
-import 'package:open_earable/apps/handsfree_quiz//view/score_view.dart';
-import 'package:open_earable/apps/handsfree_quiz//view/start_quiz_allert.dart';
+import 'package:open_earable/apps/handsfree_quiz/model/question.dart';
+import 'package:open_earable/apps/handsfree_quiz/view/question_Manager.dart';
+import 'package:open_earable/apps/handsfree_quiz/view/quiz_view.dart';
+import 'package:open_earable/apps/handsfree_quiz/view/score_view.dart';
+import 'package:open_earable/apps/handsfree_quiz/view/start_quiz_allert.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
 import '../model/quiz.dart';

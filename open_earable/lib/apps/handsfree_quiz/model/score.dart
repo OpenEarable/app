@@ -8,7 +8,7 @@ class Score {
 
   Score({required int score, required this.maxScore}) {
     scoreText = "$score/$maxScore";
-    //check for division by zero
+    /// check for division by zero
     if (maxScore != 0) {
       value = (score.toDouble()) / (maxScore.toDouble());
     } else {

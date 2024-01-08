@@ -1,4 +1,3 @@
-import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:open_earable/apps/handsfree_quiz/model/question.dart';
@@ -10,7 +9,8 @@ import '../model/quiz.dart';
 import '../model/sensor.dart';
 
 class QuizView extends StatefulWidget {
-  //Method that is needed so the
+  /// Method that is needed so the caller of the Quizview
+  /// can handle the final Score
   final void Function(Quiz quiz) finalScore;
   final Quiz quiz;
   final OpenEarable _openEarable;
@@ -27,8 +27,7 @@ class QuizState extends State<QuizView> {
   final OpenEarable _openEarable;
   late Question currentQuestion;
   bool currentAnswer = false;
-  Positions _positions = Positions();
-  List<Position> _data = <Position>[];
+  Directions _directions = Directions();
   late Sensor sensor;
 
   QuizState(this._openEarable, {required this.quiz}) {
@@ -43,7 +42,7 @@ class QuizState extends State<QuizView> {
     if (quiz.questionsLeft()) {
       setState(() {
         correct = quiz.answerQuestion(answer);
-        _data.clear();
+        _directions.clear();
         _answerReaction(correct, currentQuestion);
       });
     }
@@ -61,16 +60,20 @@ class QuizState extends State<QuizView> {
    * Method that on notification adds the current read Position and
    * tries to answer the current Question with the new Information
    */
-  void updateData(Position position) {
-    _positions.addPosition(position);
-    print(position.toString());
-    final Answer answer = _positions.computeAnswer();
+  void updateData(Direction direction) {
+    _directions.addPosition(direction);
+    final Answer answer = _directions.computeAnswer();
+
     if (answer == Answer.yes) {
-      sensor.stopListen();
+      if(_openEarable.bleManager.connected) {
+        sensor.stopListen();
+      }
       _answerQuestion(true);
     }
     if (answer == Answer.no) {
-      sensor.stopListen();
+      if(_openEarable.bleManager.connected) {
+        sensor.stopListen();
+      }
       _answerQuestion(false);
     }
   }
@@ -81,6 +84,7 @@ class QuizState extends State<QuizView> {
   void checkEnd() {
     /// Remove the AnswerView Widget
     Navigator.pop(context);
+
     /// Check if the Quiz has been finished
     if (!quiz.questionsLeft()) {
       _finishQuiz();
@@ -97,13 +101,13 @@ class QuizState extends State<QuizView> {
    * Create The AnswerView
    */
   void _answerReaction(bool correct, Question question) {
-    Future pushed = Navigator.of(context).push(MaterialPageRoute(
+    Navigator.of(context).push(MaterialPageRoute(
         builder: (context) => AnswerView(
               correct: correct,
               quizView: this,
               question: question,
-            )));
-    pushed.then((value) => () => checkEnd());
+            ),
+    ));
   }
 
   void _finishQuiz() {
@@ -159,13 +163,6 @@ class QuizState extends State<QuizView> {
       ),
     );
   }
-
-  Widget _bodyCreation() {
-
-
-    return Placeholder();
-  }
-
 
   @override
   void dispose() {

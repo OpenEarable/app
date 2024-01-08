@@ -46,7 +46,7 @@ class AppsTab extends StatelessWidget {
                 MaterialPageRoute(
                     builder: (context) => Recorder(_openEarable)));
           }),
-      AppInfo(iconData: Icons.fiber_dvr_rounded, title: "Quiz", description: "Quiz", onTap: () {
+      AppInfo(iconData: Icons.check_circle_outline, title: "Quiz", description: "Quiz", onTap: () {
         Navigator.push(context,MaterialPageRoute(builder: (context) => HandsfreeQuiz(_openEarable)));
       })
       // ... similarly for other apps

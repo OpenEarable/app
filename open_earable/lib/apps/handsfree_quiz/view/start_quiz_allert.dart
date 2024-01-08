@@ -61,10 +61,7 @@ class _StartQuizAlertState extends State<StartQuizAlert> {
    * the button will do nothing
    */
   void _onPressedAction() {
-    /// Button pressed without content does nothing
-    if(numberController.text == null) return;
     final int input = int.parse(numberController.text);
-    assert(input is int);
     /// if input would be illegal for Quiz, button also does nothing
     if (questionNumber < input || input <= 0) return;
     /// start Quiz with input

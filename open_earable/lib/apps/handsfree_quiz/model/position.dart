@@ -3,12 +3,12 @@
  */
 class Position {
   ///threshold for a difference to be recognized as movement
-  final double threshold = 5.0;
-  double _x;
-  double _y;
-  double _z;
+  final double threshold = 2.0;
+  final double x;
+  final double y;
+  final double z;
 
-  Position(this._x, this._y, this._z);
+  Position(this.x, this.y, this.z);
 
   /**
    * Method to get the direction that another Position is relative to this one
@@ -20,9 +20,8 @@ class Position {
    *
    */
   Direction direction(Position position) {
-    final double xDir = _x - position._x;
-    final double yDir = _y - position._y;
-    final double zDir = _z - position._z;
+    final double yDir = y - position.y;
+    final double zDir = z - position.z;
     if (yDir.abs() > threshold && zDir.abs() > threshold) {
       return Direction.mix;
     } else if (yDir.abs() < threshold && zDir.abs() < threshold) {
@@ -35,28 +34,19 @@ class Position {
   }
 
   String toString() {
-    return "x: $_x y: $_y z: $_z";
+    return "x: $x y: $y z: $z";
   }
 }
 
 /**
  * Object that Contains a movement
  */
-class Positions {
-  final List<Position> _data = <Position>[];
+class Directions {
   late List<Direction> directions = <Direction>[];
 
-  void addPosition(Position pos) {
-    _data.add(pos);
-    computeDirections();
-  }
-
-  /**
-   * Method that Computes the directions from the given Positions
-   */
-  void computeDirections() {
-    for (int i = directions.length - 1; i < _data.length - 1; i++) {
-      directions.add(_data[i].direction(_data[i + 1]));
+  void addPosition(Direction direction) {
+    if(direction != Direction.idle && direction != Direction.mix) {
+      directions.add(direction);
     }
   }
 
@@ -75,7 +65,7 @@ class Positions {
     } else if (directions.contains(Direction.up)) {
       if (directions.contains(Direction.left) ||
           directions.contains(Direction.right)) {
-        _clear();
+        clear();
         return Answer.failed;
       } else if (directions.contains(Direction.down)) {
         return Answer.yes;
@@ -85,7 +75,7 @@ class Positions {
     } else if (directions.contains(Direction.left)) {
       if (directions.contains(Direction.up) ||
           directions.contains(Direction.down)) {
-        _clear();
+        clear();
         return Answer.failed;
       } else if (directions.contains(Direction.right)) {
         return Answer.no;
@@ -97,8 +87,7 @@ class Positions {
     }
   }
 
-  void _clear() {
-    _data.clear();
+  void clear() {
     directions.clear();
   }
 }
@@ -112,4 +101,9 @@ enum Direction {
   idle,
 }
 
-enum Answer { yes, no, failed, notEnoughData }
+enum Answer {
+  yes,
+  no,
+  failed,
+  notEnoughData
+}
