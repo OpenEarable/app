@@ -45,6 +45,16 @@ class AppsTab extends StatelessWidget {
                 MaterialPageRoute(
                     builder: (context) => Recorder(_openEarable)));
           }),
+      AppInfo(
+          iconData: Icons.music_note,
+          title: "Tightness Meter",
+          description: "Track your headbanging.",
+          onTap: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => TightnessMeter(_openEarable)));
+          }),
       // ... similarly for other apps
     ];
   }
