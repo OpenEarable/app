@@ -176,7 +176,7 @@ class _WeatherScreenState extends State<WeatherPage> {
           await refreshWeather();
           return Future<void>.delayed(const Duration(seconds: 3));
         },
-        child: SafeArea(
+        child: _weather != null ? SafeArea(
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             child: Column(
@@ -214,10 +214,36 @@ class _WeatherScreenState extends State<WeatherPage> {
               ],
             ),
           ),
-        ),
+        ) : _loadWeatherUI(),
       ),
     );
   }
+
+  Widget _loadWeatherUI() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: <Widget>[
+          // Loading animation
+          CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
+          ),
+          SizedBox(height: 20), // Space between the indicator and the text
+          // Informative text
+          Text(
+            'Fetching Weather Data...',
+            style: TextStyle(
+              fontSize: 18.0,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
 
   Widget _displayForecast() {
     // Generate the list of cards from the weather forecast data
