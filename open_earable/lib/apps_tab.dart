@@ -4,8 +4,6 @@ import 'package:open_earable/apps/posture_tracker/view/posture_tracker_view.dart
 import 'package:open_earable/apps/recorder.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
-import 'package:open_earable/apps/stepCounter/step_counter.dart';
-
 class AppInfo {
   final IconData iconData;
   final String title;
@@ -48,16 +46,6 @@ class AppsTab extends StatelessWidget {
                     builder: (context) => Recorder(_openEarable)));
           }),
       // ... similarly for other apps
-      AppInfo(
-          iconData: Icons.do_not_step,
-          title: "StepCounter",
-          description: "StepCounter and Average Step per Second",
-          onTap: () {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => StepCounter(_openEarable)));
-          }),
     ];
   }
 
