@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:open_earable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_earable/apps/posture_tracker/view/posture_tracker_view.dart';
+import 'package:open_earable/apps/quizzmee/view/quizzmee_tracker_view.dart';
 import 'package:open_earable/apps/recorder.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
@@ -12,9 +13,9 @@ class AppInfo {
 
   AppInfo(
       {required this.iconData,
-      required this.title,
-      required this.description,
-      required this.onTap});
+        required this.title,
+        required this.description,
+        required this.onTap});
 }
 
 class AppsTab extends StatelessWidget {
@@ -45,7 +46,18 @@ class AppsTab extends StatelessWidget {
                 MaterialPageRoute(
                     builder: (context) => Recorder(_openEarable)));
           }),
-      // ... similarly for other apps
+
+      // New Quizzmee App
+      AppInfo(
+          iconData: Icons.quiz,
+          title: "Quizzmee",
+          description: "Interactive quiz game.",
+          onTap: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => QuizzmeeView(_openEarable)));
+          }),
     ];
   }
 
@@ -69,7 +81,7 @@ class AppsTab extends StatelessWidget {
                     trailing: Icon(Icons.arrow_forward_ios,
                         size: 16.0), // Arrow icon on the right
                     onTap:
-                        apps[index].onTap, // Callback when the card is tapped
+                    apps[index].onTap, // Callback when the card is tapped
                   ),
                 ));
           },
