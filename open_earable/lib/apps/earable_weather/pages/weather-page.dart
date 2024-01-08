@@ -101,11 +101,8 @@ class _WeatherScreenState extends State<WeatherPage> {
     try {
       _fetchWeather();
       _fetchForecast();
-      // Uncomment and implement _showFeedback for visual feedback
-      //_showFeedback(true); // true for success
     } catch (e) {
       print(e); 
-      //_showFeedback(false); // false for failure
     }
   }
 
@@ -154,6 +151,11 @@ class _WeatherScreenState extends State<WeatherPage> {
       _openEarable.audioPlayer.jingle(id);
     }
   }
+
+  void _playWeatherAudio() {
+    String weatherAudioFileName = "";
+    _openEarable.audioPlayer.wavFile(weatherAudioFileName);
+  } 
 
   @override
   Widget build(BuildContext context) {
@@ -218,7 +220,30 @@ class _WeatherScreenState extends State<WeatherPage> {
                 ),
                 SizedBox(height: 60),
                 // Display weather animation
-                Lottie.asset(getWeatherAnimation(_weather?.mainCondition), height: 200),
+                Container(
+                  child: Stack(
+                    children: <Widget>[
+                        Lottie.asset(getWeatherAnimation(_weather?.mainCondition), height: 200),
+                        Positioned(
+                          bottom: 20, right: 5,
+                          child: CircleAvatar(
+                            radius: 25,
+                            backgroundColor: Colors.white,
+                            child: IconButton(
+                              icon: Icon(
+                                Icons.volume_up,
+                                color: Colors.blue,
+                              ),
+                              onPressed: () {
+                                _playWeatherAudio();
+                              },
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                
                 SizedBox(height: 20),
                 // Display temperature
                 Text(
