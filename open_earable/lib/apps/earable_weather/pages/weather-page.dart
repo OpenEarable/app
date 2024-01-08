@@ -7,6 +7,8 @@ import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:lottie/lottie.dart';
 import 'dart:async';
 
+const double EDGE_OFFSET = 100.0;
+
 class WeatherPage extends StatefulWidget {
   final OpenEarable _openEarable;
   WeatherPage(this._openEarable);
@@ -18,12 +20,10 @@ class WeatherPage extends StatefulWidget {
 class _WeatherScreenState extends State<WeatherPage> {
   final OpenEarable _openEarable;
 
+  // Add state variables for sensor data
   StreamSubscription? _barometerSubscription;
   StreamSubscription? _batteryLevelSubscription;
   int _earableBattery = 0;
-
-  // Add state variables for sensor data
-  String temperature = "";
   String pressure = ""; 
 
   bool isHorizontalView = true;
@@ -51,7 +51,6 @@ class _WeatherScreenState extends State<WeatherPage> {
   void _setupListeners() {
     _barometerSubscription = _openEarable.sensorManager.subscribeToSensorData(1).listen((event) {
       pressure = event["BARO"]["Pressure"].toString();
-      temperature = event["TEMP"]["Temperature"].toString();
     });
 
     _batteryLevelSubscription = _openEarable.sensorManager.getBatteryLevelStream().listen((batteryLevel) {
@@ -87,6 +86,17 @@ class _WeatherScreenState extends State<WeatherPage> {
       });
     } catch(e) {
       print(e);
+    }
+  }
+
+  Future<void> refreshWeather() async {
+    try {
+      _fetchWeather();
+      _fetchForecast();
+      //_showFeedback(true); // true for success
+    } catch (e) {
+      print(e); 
+      //_showFeedback(false); // false for failure
     }
   }
 
@@ -127,7 +137,6 @@ class _WeatherScreenState extends State<WeatherPage> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -159,12 +168,20 @@ class _WeatherScreenState extends State<WeatherPage> {
           ),
         ],
       ),
-      body: Center(
+      body: RefreshIndicator(
+        color: Colors.white,
+        backgroundColor: Colors.black,
+        edgeOffset: EDGE_OFFSET,
+        onRefresh: () async {
+          await refreshWeather();
+          return Future<void>.delayed(const Duration(seconds: 3));
+        },
         child: SafeArea(
           child: SingleChildScrollView(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                SizedBox(height: 60),
                 // City name
                 Text(
                   _weather?.cityName ?? "Loading City...",
@@ -197,7 +214,6 @@ class _WeatherScreenState extends State<WeatherPage> {
             ),
           ),
         ),
-    
       ),
     );
   }
