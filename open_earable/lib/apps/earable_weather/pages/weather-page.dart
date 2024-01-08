@@ -3,11 +3,9 @@ import 'package:open_earable/apps/earable_weather/config.dart';
 import 'package:open_earable/apps/earable_weather/models/weather-forecast-model.dart';
 import 'package:open_earable/apps/earable_weather/models/weather-model.dart';
 import 'package:open_earable/apps/earable_weather/services/weather-service.dart';
+import 'package:open_earable/apps/earable_weather/utils/weather-info-converter.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:lottie/lottie.dart';
-import 'package:flutter_tts/flutter_tts.dart';
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
 import 'dart:async';
 
 // Constant for edge offset used in UI layout
@@ -44,9 +42,6 @@ class _WeatherScreenState extends State<WeatherPage> {
   // Nullable variables for weather data
   Weather? _weather;
   WeatherForecast? _weatherForecast;
-
-  // Initialize TTS
-  final FlutterTts flutterTts = FlutterTts();
 
   // Constructor initializing with OpenEarable
   _WeatherScreenState(this._openEarable);
@@ -158,49 +153,13 @@ class _WeatherScreenState extends State<WeatherPage> {
     }
   }
 
-  /*
-  Future _speak() async{
-    var result = await flutterTts.speak("Hello World");
-    if (result == 1) setState(() => ttsState = TtsState.playing);
-  }
-
-  Future _stop() async{
-    var result = await flutterTts.stop();
-    if (result == 1) setState(() => ttsState = TtsState.stopped);
-  }*/
-
-  void _playWeatherAudio() async {
-    // Prepare the text
-    String textToSpeak = "The Weather in ${_weather?.cityName} is "
+  void _onConvertAndPlayWeather() async {
+    String weatherData = "The Weather in ${_weather?.cityName} is "
                         "${_weather?.mainCondition} and the "
                         "temperature is ${_weather?.temperature.round()} degree celsius.";
 
-    await flutterTts.setLanguage("en-US");
-    await flutterTts.setPitch(0.8);
-    await flutterTts.speak(textToSpeak);
-
-    // Define a function to handle completion of TTS
-    /*flutterTts.setCompletionHandler(() {
-      // Play the saved audio file
-      String filePath = // Path to the saved .wav file
-      _openEarable.audioPlayer.wavFile(filePath);
-    });
-
-    // Convert text to speech and save as WAV file
-    await _convertTextToSpeechAndSave(flutterTts, textToSpeak);*/
-  }
-
-  Future<void> _convertTextToSpeechAndSave(FlutterTts flutterTts, String text) async {
-    // Get the directory to store the file
-    Directory tempDir = await getTemporaryDirectory();
-    String filePath = '${tempDir.path}/weather_info.wav';
-
-    // Convert text to speech
-    // Note: This is a hypothetical function, as FlutterTts doesn't directly support saving as a file.
-    // You might need a different approach or a different package.
-    //await flutterTts.toWavFile(text, filePath);
-
-    // Handle other logic if needed, like playback or updating the UI
+    String filePath = await WeatherUtils.convertWeatherToSpeech(weatherData);
+    _openEarable.audioPlayer.wavFile(filePath);
   }
 
   @override
@@ -281,7 +240,7 @@ class _WeatherScreenState extends State<WeatherPage> {
                                 color: Colors.blue,
                               ),
                               onPressed: () {
-                                _playWeatherAudio();
+                                _onConvertAndPlayWeather();
                               },
                             ),
                           ),
