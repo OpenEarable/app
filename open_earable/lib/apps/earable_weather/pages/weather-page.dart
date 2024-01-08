@@ -178,6 +178,7 @@ class _WeatherScreenState extends State<WeatherPage> {
         },
         child: SafeArea(
           child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
