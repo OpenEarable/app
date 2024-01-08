@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:circular_menu/circular_menu.dart';
 
+/// A simple return button to navigate to the previous Route.
+/// It mimics the look of the [CircularMenu] menu button
 class returnButton extends StatelessWidget {
   const returnButton({
     super.key,

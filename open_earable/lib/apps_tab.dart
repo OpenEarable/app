@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:open_earable/apps/gym_spotter/spot.dart';
+import 'package:open_earable/apps/gym_spotter/gym_spotter_app.dart';
 import 'package:open_earable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_earable/apps/posture_tracker/view/posture_tracker_view.dart';
 import 'package:open_earable/apps/recorder.dart';
@@ -48,8 +48,8 @@ class AppsTab extends StatelessWidget {
           }),
       AppInfo(
           iconData: Icons.fitness_center,
-          title: "WE GO GYM",
-          description: "we make gym gymable",
+          title: "Deadlift Spotter",
+          description: "Detect incorrect posture during a deadlift.",
           onTap: () {
             Navigator.push(context,
                 MaterialPageRoute(builder: (context) => Spot(_openEarable)));
