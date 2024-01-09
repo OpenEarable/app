@@ -64,6 +64,8 @@ dependencies:
   path_provider: ^2.1.1
   open_file: ^3.3.2
   provider: ^6.1.1
+  shared_preferences: ^2.2.2
+  flutter_3d_controller: ^1.2.1
 
 dev_dependencies:
   flutter_test:
