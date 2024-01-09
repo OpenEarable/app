@@ -4,6 +4,7 @@ import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'Karteikarten.dart';
 
+//Ich hoffe das ich nichts vergessen habe hochzuladen falls sie das gefühl haben ich habe zu viele von den build datein weggelassen geben sie mir gerne bescheid
 
 class MainScreen extends StatefulWidget {
   final OpenEarable _openEarable; //openEarable für jingle ausgabe
