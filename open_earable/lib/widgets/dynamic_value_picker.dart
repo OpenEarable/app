@@ -3,11 +3,11 @@ import 'package:flutter/cupertino.dart';
 import 'dart:io';
 
 class DynamicValuePicker extends StatelessWidget {
-  BuildContext context;
+  final BuildContext context;
   final List<String> options;
   final String currentValue;
   final Function(String) onValueChange;
-  final Function(bool) onBoolChange;
+  final Function(bool) onValueNotZero;
   final bool isConnected;
 
   DynamicValuePicker(
@@ -15,7 +15,7 @@ class DynamicValuePicker extends StatelessWidget {
     this.options,
     this.currentValue,
     this.onValueChange,
-    this.onBoolChange,
+    this.onValueNotZero,
     this.isConnected,
   );
 
@@ -47,9 +47,9 @@ class DynamicValuePicker extends StatelessWidget {
         onChanged: (String? newValue) {
           onValueChange(newValue!);
           if (int.parse(newValue) != 0) {
-            onBoolChange(true);
+            onValueNotZero(true);
           } else {
-            onBoolChange(false);
+            onValueNotZero(false);
           }
         },
         items: options.map((String value) {
@@ -92,9 +92,9 @@ class DynamicValuePicker extends StatelessWidget {
             int? newValueInt = int.tryParse(newValue);
             onValueChange(newValue);
             if (newValueInt != 0) {
-              onBoolChange(true);
+              onValueNotZero(true);
             } else {
-              onBoolChange(false);
+              onValueNotZero(false);
             }
           },
           children: options
