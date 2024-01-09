@@ -9,7 +9,6 @@ Hier finden sich einige wichtige Infos zur Abgabe und der Inbetriebnahme der App
 1. Die vollständige Funktionalität wurde lediglich auf einem iPhone überprüft. Ein Android-Gerät stand nicht zur Verfügung.
 2. In iOS und Android-Simulatoren lief die Anwendung korrekt, die IMU-Earable-Funktionalität konnte mangels Verbindung zum Earable nicht getestet werden.
 3. Der Schrittzähler wurde über simples Joggen am Platz getestet. Leichtes auf und ab bewegen des Earables funktioniert genauso.
-4. Die App wurde lediglich mit der IMU-Frequenz von 30 Hz entwickelt, bitte diese auch zum Testen verwenden.
 
 ## AndroidManifest.xml und Info.plist
 In beiden dieser Dateien wurden Änderungen vorgenommen, sodass die App auf die Callbacks von Spotify aus dem Browser reagieren kann.
@@ -17,6 +16,7 @@ In beiden dieser Dateien wurden Änderungen vorgenommen, sodass die App auf die 
 ## Spotify Zugang
 1. Zur Verwendung dieser App wird ein Spotify Premium Konto benötigt, da sonst keine App im Developer-Portal erstellt werden kann. Sollte dies ein Problem darstellen, schreiben sie mir bitte eine Mail.
 2. Falls ein Spotify Premium Konto vorliegt, muss im Developer-Portal eine App erstellt werden: https://developer.spotify.com/dashboard
+3. Wichtig zu beachten ist, dass ein Nutzer der sich mit der App authentifizieren will in der App registriert sein muss oder der App-Eigentümer sein muss.
 3. Diese App MUSS als Redirect URI den folgenden Wert besitzen, andernfalls wird die Verbindung zur App nicht funktionieren: ekulos-edu-kit-teco-openearable-rythmrunner://callback/
 4. Unter dem Reiter "APIs Used" habe ich Web API, iOS, Web Playback SDK und Android ausgewählt.
 5. Sobald die App korrekt erstellt wurde, kann man über den "Settings" Knopf auf der App-Übersicht eine Client-ID und einen Client-Secret abrufen. Diese beiden Werte müssen in der App über den Knopf "Change Spotify settings" in der Spotify Karte eingetragen werden.
