@@ -11,7 +11,6 @@ import '../model/recording.dart';
 import '../utils/math_utils.dart';
 
 /// Lets the user record new values
-/// Lets the user connect to an OpenEarable device
 class AddRecordingPage extends StatefulWidget {
   /// Callback for when the user saves the new values
   final void Function(Recording) saveRecording;
@@ -113,18 +112,24 @@ class _AddRecordingPageState extends State<AddRecordingPage> {
                       ),
                       RecordingValues(recording: _createRecording()),
                     ],
-                  ))
+                  )),
+              Visibility(
+                  visible: !isConnected,
+                  child: Center(child: Text('not connected')))
             ],
           )),
-      floatingActionButton: _isRecording
-          ? FloatingActionButton.extended(
-              onPressed: _save,
-              label: const Text('Save'),
-              icon: const Icon(Icons.save))
-          : FloatingActionButton.extended(
-              onPressed: _startRecording,
-              label: const Text('Start'),
-              icon: const Icon(Icons.play_circle)),
+      floatingActionButton: Visibility(
+        visible: isConnected,
+        child: _isRecording
+            ? FloatingActionButton.extended(
+                onPressed: _save,
+                label: const Text('Save'),
+                icon: const Icon(Icons.save))
+            : FloatingActionButton.extended(
+                onPressed: _startRecording,
+                label: const Text('Start'),
+                icon: const Icon(Icons.play_circle)),
+      ),
     );
   }
 
