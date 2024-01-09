@@ -105,7 +105,7 @@ class _AddRecordingPageState extends State<AddRecordingPage> {
                             height: MediaQuery.of(context).size.width,
                             child: Flutter3DViewer(
                               controller: controller,
-                              src: 'assets/head.glb',
+                              src: 'assets/nimble_neck/head.glb',
                               //src: 'assets/sheen_chair.glb',
                             ),
                           ),

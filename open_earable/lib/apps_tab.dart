@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:open_earable/apps/nimble_neck/nimble_neck.dart';
 import 'package:open_earable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_earable/apps/posture_tracker/view/posture_tracker_view.dart';
 import 'package:open_earable/apps/recorder.dart';
@@ -44,6 +45,16 @@ class AppsTab extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                     builder: (context) => Recorder(_openEarable)));
+          }),
+      AppInfo(
+          iconData: Icons.person,
+          title: "Nimble Neck",
+          description: "Tracks the mobility of your neck.",
+          onTap: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => NimbleNeck(_openEarable)));
           }),
       // ... similarly for other apps
     ];
