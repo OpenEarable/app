@@ -1,0 +1,8 @@
+Die StarFinder-App funktioniert leider nicht einwandfrei. Sie nutzt die Euler-Winkel-Daten des OpenEarables, die jedoch laut Tobias Röddiger (Übungsleiter) von OpenEarable „nicht optimal implementiert sind und Drift aufweisen“. Dadurch ist der YAW-Wert, der für das Funktionieren der App essenziell ist, nicht zuverlässig. Ich habe viel Zeit investiert, um dieses Problem zu lösen, bis Herr Röddiger am 3. Januar die Ursache auf Discord bekannt gab. Leider hatte ich danach keine Zeit mehr, eine neue, auf anderen Sensoren basierende App zu entwickeln.
+
+Die StarFinder-App ist soweit fertiggestellt; mit einem funktionierenden YAW-Wert müssten nur noch die genauen Daten der Sterne angepasst werden, da ich dies nicht ausreichend testen konnte. Es ist möglich, einen erfolgreichen Ablauf in Richtung eines Sternbildes zu simulieren, indem man in der Datei star_finder_view.dart einen auskommentierten Code aktiviert und so versucht, das Earable in die richtige Richtung zu drehen.
+
+Es tut mir leid, dass die App nicht vollständig funktionsfähig ist.
+
+Mit freundlichen Grüßen,
+Simon
