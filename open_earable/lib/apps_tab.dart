@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:open_earable/apps/mental_performance_tracker/view/configuration_page.dart';
 import 'package:open_earable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_earable/apps/posture_tracker/view/posture_tracker_view.dart';
 import 'package:open_earable/apps/recorder.dart';
@@ -10,11 +11,7 @@ class AppInfo {
   final String description;
   final VoidCallback onTap;
 
-  AppInfo(
-      {required this.iconData,
-      required this.title,
-      required this.description,
-      required this.onTap});
+  AppInfo({required this.iconData, required this.title, required this.description, required this.onTap});
 }
 
 class AppsTab extends StatelessWidget {
@@ -29,22 +26,22 @@ class AppsTab extends StatelessWidget {
           title: "Posture Tracker",
           description: "Get feedback on bad posture.",
           onTap: () {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => PostureTrackerView(
-                        EarableAttitudeTracker(_openEarable), _openEarable)));
+            Navigator.push(context, MaterialPageRoute(builder: (context) => PostureTrackerView(EarableAttitudeTracker(_openEarable), _openEarable)));
           }),
       AppInfo(
           iconData: Icons.fiber_smart_record,
           title: "Recorder",
           description: "Record data from OpenEarable.",
           onTap: () {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => Recorder(_openEarable)));
+            Navigator.push(context, MaterialPageRoute(builder: (context) => Recorder(_openEarable)));
           }),
+      AppInfo(
+          iconData: Icons.school,
+          title: "Mental Performance Tracker",
+          description: "Estimates mental performance based on bodytemperature und time without movement.",
+          onTap: () {
+            Navigator.push(context, MaterialPageRoute(builder: (context) => ConfigPage(_openEarable)));
+          })
       // ... similarly for other apps
     ];
   }
@@ -66,10 +63,8 @@ class AppsTab extends StatelessWidget {
                     leading: Icon(apps[index].iconData, size: 40.0),
                     title: Text(apps[index].title),
                     subtitle: Text(apps[index].description),
-                    trailing: Icon(Icons.arrow_forward_ios,
-                        size: 16.0), // Arrow icon on the right
-                    onTap:
-                        apps[index].onTap, // Callback when the card is tapped
+                    trailing: Icon(Icons.arrow_forward_ios, size: 16.0), // Arrow icon on the right
+                    onTap: apps[index].onTap, // Callback when the card is tapped
                   ),
                 ));
           },
