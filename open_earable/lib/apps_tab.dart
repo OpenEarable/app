@@ -3,6 +3,7 @@ import 'package:open_earable/apps/posture_tracker/model/earable_attitude_tracker
 import 'package:open_earable/apps/posture_tracker/view/posture_tracker_view.dart';
 import 'package:open_earable/apps/recorder.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:open_earable/apps/fever_thermometer/main.dart';
 
 class AppInfo {
   final IconData iconData;
@@ -46,6 +47,20 @@ class AppsTab extends StatelessWidget {
                     builder: (context) => Recorder(_openEarable)));
           }),
       // ... similarly for other apps
+
+      AppInfo(
+          iconData: Icons.thermostat,
+          title: "Fever Thermometer",
+          description: "Measure body temperature.",
+          onTap: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => FeverThermometerMain(_openEarable)
+                )
+            );
+          }
+      )
     ];
   }
 
