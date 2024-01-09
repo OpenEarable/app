@@ -4,6 +4,7 @@ Hier finden sich einige wichtige Infos zur Abgabe und der Inbetriebnahme der App
 ## iOS Deployment und App-ID
 1. Das Installieren auf dem iPhone war mit "edu.kit.teco.openearable" als App-ID nicht möglich. Ich habe es daher hier zu "ekulos.edu.kit.teco.openearable" geändert, dies muss beim Testen berücksichtigt werden.
 2. Ohne Developer-Account war auch der Zugriff auf den Notifications-Dienst nicht möglich. Ich musste diesen entfernen.
+3. Nach einem Update der App inklusive der neuen Commits über Weihnachten hat ein Verbinden mit dem Earable nach einem Neustart der App (ohne stoppen und wieder starten) nicht mehr funktioniert. Dies scheint nur auf iOS der Fall zu sein und stammt nicht von dieser Abgabe (wurde überprüft).
 
 ## Funktionalität
 1. Die vollständige Funktionalität wurde lediglich auf einem iPhone überprüft. Ein Android-Gerät stand nicht zur Verfügung.
