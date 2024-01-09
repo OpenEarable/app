@@ -1,10 +1,6 @@
 import 'dart:math';
-import 'package:flutter/material.dart';
 
-import 'package:open_earable/apps/star_finder/model/attitude.dart';
-
-import 'dart:math';
-
+/// Class storing the Euler Angles
 class EulerAngle {
   double roll;  // Rotation sideways
   double pitch; // Rotation forward or backward
@@ -12,43 +8,45 @@ class EulerAngle {
 
   EulerAngle(this.roll, this.pitch, this.yaw);
 }
+
+ // Class represents a star or celestial object in the sky.
 class StarObject {
+  String name; // Name of the Star Object
+  String description; // Description of the Star Object
+  EulerAngle eulerAngle; // Euler Angle of the Star Object
+  String image; // Image of the Star Object
 
-  IconData icon;
-  String name;
-  String description;
-  EulerAngle eulerAngle;
-  String image;
-
-  StarObject(this.icon, this.name, this.description, this.eulerAngle, this.image);
+  StarObject(this.name, this.description, this.eulerAngle, this.image);
 
 } 
 
+/// List of Star constellations and their data
 class StarObjectList {
   static final List<StarObject> starObjects = [
-    StarObject(Icons.hotel_class, "Little Dipper", "Known for the North Star.", EulerAngle(0.0, -40.0, 50.0),'assets/star_finder/little_dipper.png'),
-    StarObject(Icons.hotel_class, "Orion", "Prominent constellation with a distinctive 'belt' of three stars.",
+    // The Little Dipper doesn't move on the nightsky, so his Euler Angles are still the same
+    StarObject("Little Dipper", "The Little Dipper is well-known, notable for containing the North Star", EulerAngle(0.0, -40.0, 50.0),'assets/star_finder/little_dipper.png'),
+    StarObject("Orion", "Prominent constellation with a distinctive 'belt' of three stars",
      calculateEulerAnglesForStar(CelestialCoordinates(5.60356, -1.20192), now, latitudeOfGermany, longitudeOfGermany), 'assets/star_finder/orion.png'),
-    StarObject(Icons.hotel_class, "Big Dipper", "The most famous star constellation",
+    StarObject("Big Dipper", "The Big Dipper is well-known, resembling a large ladle with seven bright stars",
      calculateEulerAnglesForStar(CelestialCoordinates(11.03069, 6.38242), now, latitudeOfGermany, longitudeOfGermany), 'assets/star_finder/big_dipper.png'),
-    StarObject(Icons.hotel_class, "Andromeda", "Features the closest spiral galaxy to the Milky Way.",
-     calculateEulerAnglesForStar(CelestialCoordinates(1.16217, 3.62056), now, latitudeOfGermany, longitudeOfGermany), 'assets/star_finder/andromeda.png'),
-    StarObject(Icons.hotel_class, "Gemini", "Twins constellation marked by two bright stars.",
-     calculateEulerAnglesForStar(CelestialCoordinates(6.17053, 4.75461), now, latitudeOfGermany, longitudeOfGermany), 'assets/star_finder/gemini.png'),
-    StarObject(Icons.hotel_class, "Cancer", "Faint zodiac constellation housing the Beehive Cluster.",
+    StarObject("Cancer", "Faint zodiac constellation housing the Beehive Cluster",
      calculateEulerAnglesForStar(CelestialCoordinates(8.97478, 1.50053), now, latitudeOfGermany, longitudeOfGermany), 'assets/star_finder/cancer.png'),
-    StarObject(Icons.hotel_class, "Leo", "Resembles a lion, featuring the bright star Regulus.",
+    StarObject("Leo", "Resembles a lion, featuring the bright star Regulus",
      calculateEulerAnglesForStar(CelestialCoordinates(10.33314, 9.84150), now, latitudeOfGermany, longitudeOfGermany), 'assets/star_finder/leo.png'),
-    StarObject(Icons.hotel_class, "Cassiopeia", "W-shaped constellation, easily recognizable in the northern sky.",
+    StarObject("Cassiopeia", "W-shaped constellation, easily recognizable in the northern sky",
      calculateEulerAnglesForStar(CelestialCoordinates(0.94514, 6.71667), now, latitudeOfGermany, longitudeOfGermany), 'assets/star_finder/cassiopeia.png'),
+     StarObject("Gemini", "Twins constellation marked by two bright stars",
+    calculateEulerAnglesForStar(CelestialCoordinates(6.17053, 4.75461), now, latitudeOfGermany, longitudeOfGermany), 'assets/star_finder/gemini.png'),
     
   ];
 }
 
-DateTime now = DateTime.now();
+DateTime now = DateTime.now(); // Time opening the App
 const double latitudeOfGermany = 51.0; // Approximate latitude for Germany
 const double longitudeOfGermany = 10.0; // Approximate longitude for Germany
 
+/// Celestial coordinates are used in astronomy to specify the position of objects in the sky.
+/// This class uses the equatorial coordinate system, which is the standard coordinate system for mapping stars and other celestial bodies.
 class CelestialCoordinates {
   double rightAscension; // in hours
   double declination;    // in degrees
@@ -56,6 +54,7 @@ class CelestialCoordinates {
   CelestialCoordinates(this.rightAscension, this.declination);
 }
 
+/// Calculates actual Euler Angles depending on time, location and Celestial Coordinates
 EulerAngle calculateEulerAnglesForStar(CelestialCoordinates starCoordinates, DateTime time, double latitude, double longitude) {
   // Convert current time to Julian Day
   double jd = timeToJulianDay(time);
@@ -85,6 +84,8 @@ EulerAngle calculateEulerAnglesForStar(CelestialCoordinates starCoordinates, Dat
   return EulerAngle(0, altitude, azimuth); // Assuming roll is 0
 }
 
+/// The Julian Day is a continuous count of days since the beginning of the Julian Period.
+/// It's used in astronomical calculations as a time standard.
 double timeToJulianDay(DateTime time) {
   int year = time.year;
   int month = time.month;
@@ -106,6 +107,9 @@ double timeToJulianDay(DateTime time) {
          day + B - 1524.5;
 }
 
+/// Calculates Local Sidereal Time (LST) based on Julian Day and longitude.
+/// Sidereal Time is used in astronomy to keep track of the direction to observe stars. 
+/// It's based on Earth's rate of rotation measured relative to the fixed stars.
 double calculateLST(double jd, double longitude) {
   double T = (jd - 2451545.0) / 36525.0; // Centuries from J2000.0
   double GMST = 280.46061837 + 360.98564736629 * (jd - 2451545) +
