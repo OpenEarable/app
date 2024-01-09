@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:open_earable/widgets/dynamic_value_picker.dart';
 import 'dart:io';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import '../models/open_earable_settings.dart';
@@ -242,118 +243,17 @@ class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
                 height: 37,
                 child: Container(
                     alignment: Alignment.centerRight,
-                    child: _valuePicker(context, options, currentValue,
-                        changeBool, changeSelection)))),
+                    child: DynamicValuePicker(
+                      context,
+                      options,
+                      currentValue,
+                      changeSelection,
+                      changeBool,
+                      _openEarable.bleManager.connected,
+                    )))),
         SizedBox(width: 8),
         Text("Hz", style: TextStyle(color: Color.fromRGBO(168, 168, 172, 1.0))),
       ],
-    );
-  }
-
-  Widget _valuePicker(
-      BuildContext context,
-      List<String> options,
-      String currentValue,
-      Function(bool?) changeBool,
-      Function(String) changeSelection) {
-    if (Platform.isIOS) {
-      return CupertinoButton(
-        borderRadius: BorderRadius.all(Radius.circular(4.0)),
-        color: Colors.white,
-        padding: EdgeInsets.fromLTRB(8, 0, 0, 0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: <Widget>[
-            Text(
-              currentValue,
-              style: TextStyle(
-                color: _openEarable.bleManager.connected
-                    ? Colors.black
-                    : Colors.grey,
-              ),
-            ),
-          ],
-        ),
-        onPressed: () => _showCupertinoPicker(
-            context, options, currentValue, changeBool, changeSelection),
-      );
-    } else {
-      return DropdownButton<String>(
-        dropdownColor:
-            _openEarable.bleManager.connected ? Colors.white : Colors.grey[200],
-        alignment: Alignment.centerRight,
-        value: currentValue,
-        onChanged: (String? newValue) {
-          setState(() {
-            changeSelection(newValue!);
-            if (int.parse(newValue) != 0) {
-              changeBool(true);
-            } else {
-              changeBool(false);
-            }
-          });
-        },
-        items: options.map((String value) {
-          return DropdownMenuItem<String>(
-            alignment: Alignment.centerRight,
-            value: value,
-            child: Text(
-              value,
-              style: TextStyle(
-                color: _openEarable.bleManager.connected
-                    ? Colors.black
-                    : Colors.grey,
-              ),
-              textAlign: TextAlign.end,
-            ),
-          );
-        }).toList(),
-        underline: Container(),
-        icon: Icon(
-          Icons.arrow_drop_down,
-          color: _openEarable.bleManager.connected ? Colors.black : Colors.grey,
-        ),
-      );
-    }
-  }
-
-  void _showCupertinoPicker(context, List<String> options, String currentValue,
-      Function(bool?) changeBool, Function(String) changeSelection) {
-    showCupertinoModalPopup(
-      context: context,
-      builder: (_) => Container(
-        height: 200,
-        color: Colors.white,
-        child: CupertinoPicker(
-          backgroundColor: _openEarable.bleManager.connected
-              ? Colors.white
-              : Colors.grey[200],
-          itemExtent: 32, // Height of each item
-          onSelectedItemChanged: (int index) {
-            setState(() {
-              String newValue = options[index];
-              changeSelection(newValue);
-              if (int.parse(newValue) != 0) {
-                changeBool(true);
-              } else {
-                changeBool(false);
-              }
-            });
-          },
-          children: options
-              .map((String value) => Center(
-                    child: Text(
-                      value,
-                      style: TextStyle(
-                        color: _openEarable.bleManager.connected
-                            ? Colors.black
-                            : Colors.grey,
-                      ),
-                    ),
-                  ))
-              .toList(),
-        ),
-      ),
     );
   }
 }
