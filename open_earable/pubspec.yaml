@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  shared_preferences: ^2.0.6
+  flutter_tts: ^3.2.2
   open_earable_flutter:
     git: 
       url: https://github.com/OpenEarable/open_earable_flutter.git
