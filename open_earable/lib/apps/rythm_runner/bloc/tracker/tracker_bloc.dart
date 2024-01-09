@@ -62,6 +62,8 @@ class TrackerBloc extends Bloc<TrackerEvent, TrackerState> {
         // Storage for X and Z Axis values
         List<double> _xAxisValues = [];
         List<double> _zAxisValues = [];
+        // Enable IMU
+        _openEarable.sensorManager.writeSensorConfig(OpenEarableSensorConfig(sensorId: 0, samplingRate: 30, latency: 0));
         // Open Subscription for IMU
         _imuSubscription =
             _openEarable.sensorManager.subscribeToSensorData(0).listen((data) {

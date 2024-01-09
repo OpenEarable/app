@@ -144,7 +144,7 @@ class SpotifyBloc extends Bloc<SpotifyEvent, SpotifyState> {
         // Update the device list and emit the Default state with the new settings
         add(UpdateDeviceList());
         emit(SpotifyDefault(newSettings));
-      } on AuthorizationException catch (ex, st) {
+      } catch (ex, st) {
         // Remove the Spotify API Interface, delete stored
         // credentials and emit the error state.
         newSettings = newSettings.copyWithoutSpotifyApi();
@@ -152,7 +152,7 @@ class SpotifyBloc extends Bloc<SpotifyEvent, SpotifyState> {
         print("auth exception: $ex with stacktrace $st");
         emit(SpotifyError(newSettings,
             message:
-                "An error occurred while authenticating with the Spotify API. Please re-connect your account."));
+                "An error occurred while authenticating with the Spotify API. Please re-connect your account: " + ex.toString()));
       }
     });
 
