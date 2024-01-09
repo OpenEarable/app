@@ -3,6 +3,7 @@ import 'package:open_earable/apps/posture_tracker/model/earable_attitude_tracker
 import 'package:open_earable/apps/posture_tracker/view/posture_tracker_view.dart';
 import 'package:open_earable/apps/recorder.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:open_earable/apps/jump_rope_counter/jump_rope_counter_view.dart';
 
 class AppInfo {
   final IconData iconData;
@@ -45,6 +46,16 @@ class AppsTab extends StatelessWidget {
                 MaterialPageRoute(
                     builder: (context) => Recorder(_openEarable)));
           }),
+      AppInfo(
+        iconData: Icons.keyboard_double_arrow_up,
+        title: "Jump Rope Counter",
+        description: "Counter for rope skipping.",
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => JumpRopeCounter(_openEarable)));
+        }),
       // ... similarly for other apps
     ];
   }
