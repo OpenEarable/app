@@ -70,6 +70,7 @@ dependencies:
   lottie: ^2.7.0
   geocoding: ^2.1.1
   flutter_tts: ^3.8.5
+  flutter_ffmpeg: ^0.4.2
 
 dev_dependencies:
   flutter_test:
