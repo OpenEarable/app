@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:open_earable/apps/Karteikarten/main_screen.dart';
 import 'package:open_earable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_earable/apps/posture_tracker/view/posture_tracker_view.dart';
 import 'package:open_earable/apps/recorder.dart';
@@ -19,6 +20,7 @@ class AppInfo {
 
 class AppsTab extends StatelessWidget {
   final OpenEarable _openEarable;
+
 
   AppsTab(this._openEarable);
 
@@ -44,6 +46,16 @@ class AppsTab extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                     builder: (context) => Recorder(_openEarable)));
+          }),
+      AppInfo(
+          iconData: Icons.auto_awesome_motion ,
+          title: "Karteikarten",
+          description: "Karteikarten lernen mit OpenEarable",
+          onTap: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => MainScreen(_openEarable,EarableAttitudeTracker(_openEarable))));
           }),
       // ... similarly for other apps
     ];
