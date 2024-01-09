@@ -30,6 +30,7 @@ class _AddRecordingPageState extends State<AddRecordingPage> {
 
   StreamSubscription? _sensorSubscription;
 
+  var _yawEnabled = true;
   var _isRecording = false;
 
   double _rollDegree = 0;
@@ -81,13 +82,30 @@ class _AddRecordingPageState extends State<AddRecordingPage> {
         ],
       ),
       body: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
           child: Column(
             children: [
               Visibility(
                   visible: isConnected,
                   child: Column(
                     children: [
+                      Visibility(
+                          visible: !_isRecording,
+                          child: Row(
+                            children: [
+                              Expanded(
+                                  child: Text(
+                                      'Enable Yaw\n(Measures might be inaccurate)')),
+                              Switch(
+                                  value: _yawEnabled,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _yawEnabled = value;
+                                    });
+                                  })
+                            ],
+                          )),
+                      Divider(),
                       Text(
                           _isRecording
                               ? 'Move your head in every direction!\nThen click Save!'
@@ -100,8 +118,8 @@ class _AddRecordingPageState extends State<AddRecordingPage> {
                           transform:
                               Matrix4.rotationZ(math.pi * _rollDegree / 180),
                           child: SizedBox(
-                            width: MediaQuery.of(context).size.width,
-                            height: MediaQuery.of(context).size.width,
+                            width: 300,
+                            height: 300,
                             child: Flutter3DViewer(
                               controller: controller,
                               src: 'assets/nimble_neck/head.glb',
@@ -158,7 +176,9 @@ class _AddRecordingPageState extends State<AddRecordingPage> {
         final sensorYawDegree =
             radianToDegree(yaw) - _startYawDegree - yawDegreeCorrection;
 
-        if ((sensorYawDegree - prevYawDegree).abs() > 0.1) {
+        if (!_yawEnabled) {
+          _yawDegree = 0;
+        } else if ((sensorYawDegree - prevYawDegree).abs() > 0.1) {
           _yawDegree = sensorYawDegree;
         }
 
