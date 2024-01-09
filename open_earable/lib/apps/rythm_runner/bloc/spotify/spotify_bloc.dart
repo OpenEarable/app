@@ -120,7 +120,8 @@ class SpotifyBloc extends Bloc<SpotifyEvent, SpotifyState> {
       } on AuthorizationException catch (e) {
         print(
             "authorization exception. can most likely be ignored, related to api issue: $e");
-      } on Error catch (e, st) {
+      } catch (e, st) {
+        emit(SpotifyError(state.spotifySettings, message: "An error occured: " + e.toString()));
         print("error: $e $st");
       }
     });
