@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// Colors used for the arcs around the head
-final Color outerRing = Color.fromARGB(255, 195, 195, 195);
+final Color rightAreaIndicator = Color.fromARGB(255, 195, 195, 195);
 final Color wrongAreaIndicator = Color(0xFF7A7A7A);
 
 /// Colors used for bad stretch directions

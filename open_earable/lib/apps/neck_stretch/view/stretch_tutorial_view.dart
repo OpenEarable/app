@@ -94,6 +94,7 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
             ],
           ),
         ),
+
         /// Card used to explain the tracking colors
         Card(
           color: Theme.of(context).colorScheme.primary,
@@ -102,7 +103,6 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
               ListTile(
                 title: Text("Explaining the Tracking Colors"),
               ),
-
               Padding(
                 padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
                 child: RichText(
@@ -117,7 +117,6 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
                   ),
                 ),
               ),
-
               Padding(
                 padding: EdgeInsets.fromLTRB(24, 0, 24, 0),
                 child: RichText(
@@ -145,7 +144,19 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
                       ),
                       TextSpan(
                         text:
-                            'You are currently stretching, try to gently move your head into the grey area\n\n',
+                            'You are currently stretching, try to gently move your head into the ',
+                      ),
+                      TextSpan(
+                        text: 'light grey ',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: rightAreaIndicator,
+                        ),
+                      ),
+                      TextSpan(
+                        text:
+                        'area\n\n',
                       ),
                     ],
                   ),
@@ -154,6 +165,7 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
             ],
           ),
         ),
+
         /// Example of the Tracker in Main Neck Stretch state
         Card(
           color: Theme.of(context).colorScheme.primary,
@@ -240,6 +252,7 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
             ],
           ),
         ),
+
         /// Card explaining the stretching button
         Card(
           color: Theme.of(context).colorScheme.primary,

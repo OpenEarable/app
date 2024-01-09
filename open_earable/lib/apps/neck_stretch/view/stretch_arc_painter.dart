@@ -21,7 +21,7 @@ class StretchArcPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     Paint circlePaint = Paint()
-      ..color = outerRing
+      ..color = rightAreaIndicator
       ..style = PaintingStyle.stroke
       ..strokeWidth = 5.0;
 
