@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:open_earable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_earable/apps/posture_tracker/view/posture_tracker_view.dart';
 import 'package:open_earable/apps/recorder.dart';
+import 'package:open_earable/apps/jump_height_test/jump_height_test.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:open_earable/apps/gyro_bird/main_view.dart';
 
@@ -47,9 +48,19 @@ class AppsTab extends StatelessWidget {
                     builder: (context) => Recorder(_openEarable)));
           }),
       AppInfo(
+          iconData: Icons.height,
+          title: "Jump Height Test",
+          description: "Test your maximum jump height.",
+          onTap: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => JumpHeightTest(_openEarable)));
+          }),
+      AppInfo(
           iconData: Icons.gamepad_rounded,
           title: "GyroBird",
-          description: "Test your skills.",
+          description: "A Game that utilizes the Gyro Sensor",
           onTap: () {
             Navigator.push(
                 context,
