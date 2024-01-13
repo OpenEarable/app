@@ -85,17 +85,19 @@ class _EarableDataChartState extends State<EarableDataChart> {
       _checkLength(_data);
       SensorData? maxXYZValue = maxBy(_data, (SensorData b) => b.getMax());
       SensorData? minXYZValue = minBy(_data, (SensorData b) => b.getMin());
+
       if (maxXYZValue == null || minXYZValue == null) {
         return;
       }
-      double maxAbsValue =
-          max(maxXYZValue.getMax().abs(), minXYZValue.getMin().abs());
+      double maxY = maxXYZValue!.getMax();
+      double minY = minXYZValue!.getMin();
+      double maxAbsValue = max(maxY.abs(), minY.abs());
       _maxY = (_title == "Pressure" || _title == "Temperature")
-          ? max(0, maxXYZValue.getMax())
+          ? maxY
           : maxAbsValue;
 
       _minY = (_title == "Pressure" || _title == "Temperature")
-          ? min(0, minXYZValue.getMin())
+          ? minY
           : -maxAbsValue;
       _maxX = value.timestamp;
       _minX = _data[0].timestamp;
@@ -225,8 +227,10 @@ class _EarableDataChartState extends State<EarableDataChart> {
               )
             ],
             primaryMeasureAxis: charts.NumericAxisSpec(
-              tickProviderSpec:
-                  charts.BasicNumericTickProviderSpec(desiredTickCount: 7),
+              tickProviderSpec: charts.BasicNumericTickProviderSpec(
+                  desiredTickCount: 7,
+                  zeroBound: false,
+                  dataIsInWholeNumbers: false),
               renderSpec: charts.GridlineRendererSpec(
                 labelStyle: charts.TextStyleSpec(
                   fontSize: 14,
