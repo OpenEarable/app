@@ -16,7 +16,11 @@ echo "🟩 Flutter Precache"
 time flutter precache --ios
 
 echo "🟩 Install Flutter Dependencies"
-cd $CI_WORKSPACE_PATH/open_earable
+echo "$(pwd)"
+echo "$(ls)"
+cd $CI_WORKSPACE_PATH
+echo "$(ls)"
+cd open_earable
 time flutter clean
 time flutter pub get
 time flutter pub upgrade
