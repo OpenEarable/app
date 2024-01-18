@@ -18,7 +18,7 @@ time flutter precache --ios
 echo "🟩 Install Flutter Dependencies"
 echo "$(pwd)"
 echo "$(ls)"
-cd $CI_WORKSPACE_PATH
+cd $CI_WORKSPACE_PATH/repository
 echo "$(ls)"
 cd open_earable
 time flutter clean
