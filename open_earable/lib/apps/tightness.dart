@@ -10,8 +10,6 @@ class TightnessMeter extends StatefulWidget {
   _TightnessMeterState createState() => _TightnessMeterState(_openEarable);
 }
 
-
-
 class _TightnessMeterState extends State<TightnessMeter> {
   final OpenEarable _openEarable;
   StreamSubscription? _imuSubscription;
@@ -93,7 +91,7 @@ class _TightnessMeterState extends State<TightnessMeter> {
   void _isNodTight(DateTime last, DateTime secondToLast) {
     int difference = last.difference(secondToLast).inMilliseconds.abs();
     int expected = _bpmToMilliseconds(bpm);
-    if (_isWithinMargin(difference, expected, 25.0-difficulty)) {
+    if (_isWithinMargin(difference, expected, 25.0 - difficulty)) {
       setState(() {
         streak += 1;
       });
@@ -102,14 +100,13 @@ class _TightnessMeterState extends State<TightnessMeter> {
       setState(() {
         streak = 0;
         tightness = 0;
-
       });
     }
   }
 
   void _updateScore() {
     setState(() {
-      score = score + (((10 * streak) + difficulty) / tightness.abs() ).round();
+      score = score + (((10 * streak) + difficulty) / tightness.abs()).round();
     });
   }
 
@@ -120,7 +117,8 @@ class _TightnessMeterState extends State<TightnessMeter> {
     double lowerBound = expectedInterval - margin;
     double upperBound = expectedInterval + margin;
     setState(() {
-      tightness = math.min(_bpmToMilliseconds(bpm), (givenInterval - expectedInterval));
+      tightness =
+          math.min(_bpmToMilliseconds(bpm), (givenInterval - expectedInterval));
     });
     return givenInterval >= lowerBound && givenInterval <= upperBound;
   }
@@ -155,7 +153,6 @@ class _TightnessMeterState extends State<TightnessMeter> {
     _openEarable.audioPlayer.wavFile(fileName);
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -163,7 +160,8 @@ class _TightnessMeterState extends State<TightnessMeter> {
       appBar: AppBar(
         title: Text('Tightness Meter'),
       ),
-      body: Center(
+      body: SingleChildScrollView(
+          child: Center(
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.only(
@@ -280,59 +278,60 @@ class _TightnessMeterState extends State<TightnessMeter> {
                               bottomLeft: Radius.circular(20.0)),
                         ),
                         child: Slider(
-                        thumbColor: Colors.purple,
-                        activeColor: Colors.grey,
-                        secondaryActiveColor: Colors.purpleAccent,
-                        inactiveColor: Colors.grey,
-                        value: tightness.toDouble(),
-                        min: -_bpmToMilliseconds(bpm).toDouble(),
-                        max: _bpmToMilliseconds(bpm).toDouble(),
-                        divisions: 2000,
-                        label: tightness.toString(),
-                        onChanged: (double value) {
-                          setState(() {
-                          });
-                        }),
+                            thumbColor: Colors.purple,
+                            activeColor: Colors.grey,
+                            secondaryActiveColor: Colors.purpleAccent,
+                            inactiveColor: Colors.grey,
+                            value: tightness.toDouble(),
+                            min: -_bpmToMilliseconds(bpm).toDouble(),
+                            max: _bpmToMilliseconds(bpm).toDouble(),
+                            divisions: 2000,
+                            label: tightness.toString(),
+                            onChanged: (double value) {
+                              setState(() {});
+                            }),
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.only(bottom:20.0),
-                      child: Row(children: [
-                        Spacer(),
-                        Text('Early'),
-                        Spacer(flex: 5),
-                        Text('Tight'),
-                        Spacer(flex: 5),
-                        Text('Late'),
-                        Spacer()
-                      ],
+                      padding: const EdgeInsets.only(bottom: 20.0),
+                      child: Row(
+                        children: [
+                          Spacer(),
+                          Text('Early'),
+                          Spacer(flex: 5),
+                          Text('Tight'),
+                          Spacer(flex: 5),
+                          Text('Late'),
+                          Spacer()
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
-              Card(margin: EdgeInsets.all(20),
+              Card(
+                margin: EdgeInsets.all(20),
                 color: Colors.black,
                 child: Column(
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.all(20),
-                        child: ElevatedButton(
-                          onPressed: startStopMonitoring,
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: Size(1000, 80),
-                            backgroundColor: _monitoring
-                                ? Color(0xfff27777)
-                                : Theme.of(context).colorScheme.secondary,
-                            foregroundColor: Colors.black,
-                          ),
-                          child: Text(
-                            _monitoring ? 'Stop' : 'Start',
-                            style: TextStyle(fontSize: 30),
-                          ),
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.all(20),
+                      child: ElevatedButton(
+                        onPressed: startStopMonitoring,
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: Size(1000, 80),
+                          backgroundColor: _monitoring
+                              ? Color(0xfff27777)
+                              : Theme.of(context).colorScheme.secondary,
+                          foregroundColor: Colors.black,
+                        ),
+                        child: Text(
+                          _monitoring ? 'Stop' : 'Start',
+                          style: TextStyle(fontSize: 30),
                         ),
                       ),
-                    ],
+                    ),
+                  ],
                 ),
               ),
               Card(
@@ -345,8 +344,7 @@ class _TightnessMeterState extends State<TightnessMeter> {
                       child: Row(
                         children: [
                           Spacer(),
-                          Text('BPM',
-                              style: TextStyle(fontSize: 30)),
+                          Text('BPM', style: TextStyle(fontSize: 30)),
                           Spacer(flex: 5),
                           DropdownButton<int>(
                             style: TextStyle(
@@ -354,12 +352,15 @@ class _TightnessMeterState extends State<TightnessMeter> {
                             ),
                             value: bpm,
                             icon: const Icon(Icons.arrow_drop_down),
-                            onChanged: _monitoring ? null :(int? newValue) {
-                              setState(() {
-                                bpm = newValue!;
-                              });
-                            },
-                            items: bpmList.map<DropdownMenuItem<int>>((int value) {
+                            onChanged: _monitoring
+                                ? null
+                                : (int? newValue) {
+                                    setState(() {
+                                      bpm = newValue!;
+                                    });
+                                  },
+                            items:
+                                bpmList.map<DropdownMenuItem<int>>((int value) {
                               return DropdownMenuItem<int>(
                                 value: value,
                                 child: Text(value.toString()),
@@ -372,9 +373,8 @@ class _TightnessMeterState extends State<TightnessMeter> {
                     ),
                     Padding(
                       padding: EdgeInsets.only(top: 20),
-                      child: Text('Sensitivity',
-                          style: TextStyle(fontSize: 20)
-                      ),
+                      child:
+                          Text('Sensitivity', style: TextStyle(fontSize: 20)),
                     ),
                     Padding(
                       padding: EdgeInsets.all(16),
@@ -395,22 +395,21 @@ class _TightnessMeterState extends State<TightnessMeter> {
                                   nodThreshold = value;
                                 });
                               }),
-                          Row(children: [
-                            Spacer(),
-                            Text('Cool Nodding'),
-                            Spacer(flex: 10),
-                            Text('Headbanging'),
-                            Spacer()
-                          ],
+                          Row(
+                            children: [
+                              Spacer(),
+                              Text('Cool Nodding'),
+                              Spacer(flex: 10),
+                              Text('Headbanging'),
+                              Spacer()
+                            ],
                           ),
                         ],
                       ),
                     ),
                     Padding(
                       padding: EdgeInsets.only(top: 10),
-                      child: Text('Difficulty',
-                          style: TextStyle(fontSize: 20)
-                      ),
+                      child: Text('Difficulty', style: TextStyle(fontSize: 20)),
                     ),
                     Padding(
                       padding: EdgeInsets.all(16),
@@ -446,10 +445,11 @@ class _TightnessMeterState extends State<TightnessMeter> {
                   ],
                 ),
               ),
+              SizedBox(height: 40),
             ],
           ),
         ),
-      ),
+      )),
     );
   }
 }
