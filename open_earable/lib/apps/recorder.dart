@@ -26,6 +26,7 @@ class _RecorderState extends State<Recorder> {
   late String _selectedLabel;
   Timer? _timer;
   Duration _duration = Duration();
+  StreamSubscription? _connectionStateSubscription;
   @override
   void initState() {
     super.initState();
@@ -95,6 +96,7 @@ class _RecorderState extends State<Recorder> {
     _timer?.cancel();
     _imuSubscription?.cancel();
     _barometerSubscription?.cancel();
+    _connectionStateSubscription?.cancel();
   }
 
   Future<void> listFilesInDocumentsDirectory() async {
@@ -114,6 +116,10 @@ class _RecorderState extends State<Recorder> {
   }
 
   _setupListeners() {
+    _connectionStateSubscription =
+        _openEarable.bleManager.connectionStateStream.listen((_) {
+      setState(() {}); // rebuild page when connection state changes
+    });
     _imuSubscription =
         _openEarable.sensorManager.subscribeToSensorData(0).listen((data) {
       if (!_recording) {
