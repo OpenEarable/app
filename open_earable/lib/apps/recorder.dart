@@ -236,9 +236,7 @@ class _RecorderState extends State<Recorder> {
         appBar: AppBar(
           title: Text('Recorder'),
         ),
-        body: _openEarable.bleManager.connected
-            ? _recorderWidget()
-            : EarableNotConnectedWarning());
+        body: _recorderWidget());
   }
 
   Widget _recorderWidget() {
@@ -246,54 +244,68 @@ class _RecorderState extends State<Recorder> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: Text(
-              _formatDuration(_duration),
-              style: TextStyle(
-                fontFamily: 'Digital', // This is a common monospaced font
-                fontSize: 80,
-                fontWeight: FontWeight.normal,
-              ),
-            ),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Padding(
-                padding: EdgeInsets.all(16),
-                child: ElevatedButton(
-                  onPressed: startStopRecording,
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: Size(200, 36),
-                    backgroundColor: _recording
-                        ? Color(0xfff27777)
-                        : Theme.of(context).colorScheme.secondary,
-                    foregroundColor: Colors.black,
-                  ),
-                  child: Text(
-                    _recording ? "Stop Recording" : "Start Recording",
-                    style: TextStyle(fontSize: 20),
-                  ),
-                ),
-              ),
-              DropdownButton<String>(
-                value: _selectedLabel,
-                icon: const Icon(Icons.arrow_drop_down),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedLabel = newValue!;
-                  });
-                },
-                items: _labels.map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-              ),
-            ],
-          ),
+          Container(
+              height: 200,
+              child: !_openEarable.bleManager.connected
+                  ? EarableNotConnectedWarning()
+                  : Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                          Padding(
+                            padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                            child: Text(
+                              _formatDuration(_duration),
+                              style: TextStyle(
+                                fontFamily:
+                                    'Digital', // This is a common monospaced font
+                                fontSize: 80,
+                                fontWeight: FontWeight.normal,
+                              ),
+                            ),
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Padding(
+                                padding: EdgeInsets.all(16),
+                                child: ElevatedButton(
+                                  onPressed: startStopRecording,
+                                  style: ElevatedButton.styleFrom(
+                                    minimumSize: Size(200, 36),
+                                    backgroundColor: _recording
+                                        ? Color(0xfff27777)
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .secondary,
+                                    foregroundColor: Colors.black,
+                                  ),
+                                  child: Text(
+                                    _recording
+                                        ? "Stop Recording"
+                                        : "Start Recording",
+                                    style: TextStyle(fontSize: 20),
+                                  ),
+                                ),
+                              ),
+                              DropdownButton<String>(
+                                value: _selectedLabel,
+                                icon: const Icon(Icons.arrow_drop_down),
+                                onChanged: (String? newValue) {
+                                  setState(() {
+                                    _selectedLabel = newValue!;
+                                  });
+                                },
+                                items: _labels.map<DropdownMenuItem<String>>(
+                                    (String value) {
+                                  return DropdownMenuItem<String>(
+                                    value: value,
+                                    child: Text(value),
+                                  );
+                                }).toList(),
+                              ),
+                            ],
+                          ),
+                        ])),
           Text("Recordings", style: TextStyle(fontSize: 20.0)),
           Divider(
             thickness: 2,
