@@ -12,8 +12,10 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:open_earable/controls_tab/models/open_earable_settings.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:app_settings/app_settings.dart';
+import 'ble_controller.dart';
 
-void main() => runApp(MyApp());
+void main() => runApp(ChangeNotifierProvider(
+    create: (context) => BluetoothController(), child: MyApp()));
 
 class MyApp extends StatelessWidget {
   @override
@@ -60,6 +62,8 @@ class _MyHomePageState extends State<MyHomePage> {
     alertOpen = false;
     _checkBLEPermission();
     _openEarable = OpenEarable();
+    Provider.of<BluetoothController>(context, listen: false).openEarable =
+        _openEarable;
     _widgetOptions = <Widget>[
       ControlTab(_openEarable),
       SensorDataTab(_openEarable),

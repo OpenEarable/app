@@ -1,12 +1,47 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
+import 'package:open_earable/ble_controller.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:provider/provider.dart';
 import '../../ble.dart';
 
-class ConnectCard extends StatelessWidget {
+class ConnectCard extends StatefulWidget {
   final OpenEarable _openEarable;
   final int _earableSOC;
-
   ConnectCard(this._openEarable, this._earableSOC);
+
+  @override
+  _ConnectCard createState() =>
+      _ConnectCard(this._openEarable, this._earableSOC);
+}
+
+class _ConnectCard extends State<ConnectCard> {
+  final OpenEarable _openEarable;
+  final int _earableSOC;
+  bool? _autoConnectEnabled = false;
+  StreamSubscription? _scanSubscription;
+
+  _ConnectCard(this._openEarable, this._earableSOC);
+
+  @override
+  void initState() {
+    super.initState();
+    startAutoConnectScan();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _scanSubscription?.cancel();
+  }
+
+  void startAutoConnectScan() {
+    if (_autoConnectEnabled == true) {
+      Provider.of<BluetoothController>(context, listen: false).startScanning();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,6 +62,29 @@ class ConnectCard extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+              Consumer<BluetoothController>(
+                  builder: (context, bleController, child) {
+                List<DiscoveredDevice> devices =
+                    bleController.discoveredDevices;
+                print("notified listeners wihth new devices: $devices");
+                tryAutoconnect(devices, bleController);
+                return Row(
+                  children: [
+                    Checkbox(
+                      checkColor: Theme.of(context).colorScheme.primary,
+                      //fillColor: Theme.of(context).colorScheme.primary,
+                      value: _autoConnectEnabled,
+                      onChanged: (value) => {
+                        setState(() {
+                          _autoConnectEnabled = value;
+                          startAutoConnectScan();
+                        })
+                      },
+                    ),
+                    Text("Connect to OpenEarable automatically")
+                  ],
+                );
+              }),
               SizedBox(height: 5),
               _getEarableInfo(),
               _getConnectButton(context),
@@ -104,5 +162,14 @@ class ConnectCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  void tryAutoconnect(
+      List<DiscoveredDevice> devices, BluetoothController bleController) async {
+    if (_autoConnectEnabled == true &&
+        devices.isNotEmpty &&
+        _openEarable.bleManager.connectingDevice?.name != devices[0].name) {
+      _openEarable.bleManager.connectToDevice(devices[0]);
+    }
   }
 }
