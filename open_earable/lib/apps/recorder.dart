@@ -135,8 +135,12 @@ class _RecorderState extends State<Recorder> {
 
   _setupListeners() {
     _connectionStateSubscription =
-        _openEarable.bleManager.connectionStateStream.listen((_) {
-      setState(() {}); // rebuild page when connection state changes
+        _openEarable.bleManager.connectionStateStream.listen((connected) {
+      setState(() {
+        if (!connected) {
+          _recording = false;
+        }
+      });
     });
     _imuSubscription =
         _openEarable.sensorManager.subscribeToSensorData(0).listen((data) {
