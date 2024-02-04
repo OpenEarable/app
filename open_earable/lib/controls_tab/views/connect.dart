@@ -27,7 +27,6 @@ class _ConnectCard extends State<ConnectCard> {
   void initState() {
     super.initState();
     _getPrefs();
-    _startAutoConnectScan();
   }
 
   @override
@@ -40,6 +39,7 @@ class _ConnectCard extends State<ConnectCard> {
     setState(() {
       _autoConnectEnabled = prefs.getBool("autoConnectEnabled");
     });
+    _startAutoConnectScan();
   }
 
   void _startAutoConnectScan() {
