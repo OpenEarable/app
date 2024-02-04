@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:open_earable/ble_controller.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:provider/provider.dart';
 import '../models/open_earable_settings.dart';
 
 class AudioPlayerCard extends StatefulWidget {
@@ -19,7 +21,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
   late TextEditingController _frequencyTextController;
   late TextEditingController _frequencyVolumeTextController;
   late TextEditingController _waveFormTextController;
-
+  late bool _connected;
   @override
   void initState() {
     super.initState();
@@ -33,10 +35,12 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
         text: "${OpenEarableSettings().selectedFrequencyVolume}");
     _waveFormTextController =
         TextEditingController(text: OpenEarableSettings().selectedWaveForm);
+    _connected =
+        Provider.of<BluetoothController>(context, listen: false).connected;
   }
 
   void updateText() {
-    if (_openEarable.bleManager.connected) {
+    if (_connected) {
       OpenEarableSettings().selectedFilename = _filenameTextController.text;
       OpenEarableSettings().selectedJingle = _jingleTextController.text;
       OpenEarableSettings().selectedFrequency = _frequencyTextController.text;
@@ -160,7 +164,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
             mainAxisSize: MainAxisSize.min,
             children: soundsMap.values.map((String option) {
               return ListTile(
-                onTap: _openEarable.bleManager.connected
+                onTap: _connected
                     ? () {
                         setState(() {
                           textController.text = option;
@@ -179,41 +183,45 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
 
   @override
   Widget build(BuildContext context) {
-    updateText();
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 5.0),
-      child: Card(
-        //Audio Player Card
-        color: Theme.of(context).colorScheme.primary,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Audio Player',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18.0,
-                  fontWeight: FontWeight.bold,
+        padding: const EdgeInsets.symmetric(horizontal: 5.0),
+        child: Selector<BluetoothController, bool>(
+            selector: (_, bleController) => bleController.connected,
+            builder: (context, connected, child) {
+              _connected = connected;
+              updateText();
+              return Card(
+                //Audio Player Card
+                color: Theme.of(context).colorScheme.primary,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Audio Player',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18.0,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      _getFileNameRow(),
+                      _getJingleRow(),
+                      _getFrequencyRow(),
+                      _getButtonRow(),
+                    ],
+                  ),
                 ),
-              ),
-              _getFileNameRow(),
-              _getJingleRow(),
-              _getFrequencyRow(),
-              _getButtonRow(),
-            ],
-          ),
-        ),
-      ),
-    );
+              );
+            }));
   }
 
   Widget _getAudioPlayerRadio(int index) {
     return Radio(
       value: index,
       groupValue: OpenEarableSettings().selectedAudioPlayerRadio,
-      onChanged: !_openEarable.bleManager.connected
+      onChanged: !_connected
           ? null
           : (int? value) {
               setState(() {
@@ -239,23 +247,16 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
             child: TextField(
               controller: _filenameTextController,
               obscureText: false,
-              enabled: _openEarable.bleManager.connected,
-              style: TextStyle(
-                  color: _openEarable.bleManager.connected
-                      ? Colors.black
-                      : Colors.grey),
+              enabled: _connected,
+              style: TextStyle(color: _connected ? Colors.black : Colors.grey),
               decoration: InputDecoration(
                 contentPadding: EdgeInsets.all(10),
                 border: OutlineInputBorder(),
                 floatingLabelBehavior: FloatingLabelBehavior.never,
-                labelStyle: TextStyle(
-                    color: _openEarable.bleManager.connected
-                        ? Colors.black
-                        : Colors.grey),
+                labelStyle:
+                    TextStyle(color: _connected ? Colors.black : Colors.grey),
                 filled: true,
-                fillColor: _openEarable.bleManager.connected
-                    ? Colors.white
-                    : Colors.grey[200],
+                fillColor: _connected ? Colors.white : Colors.grey[200],
               ),
             ),
           ),
@@ -272,7 +273,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
           child: SizedBox(
             height: 37.0,
             child: InkWell(
-              onTap: _openEarable.bleManager.connected
+              onTap: _connected
                   ? () {
                       _showSoundPicker(context, OpenEarableSettings().jingleMap,
                           _jingleTextController);
@@ -313,23 +314,16 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
             child: TextField(
               controller: _frequencyTextController,
               textAlign: TextAlign.end,
-              style: TextStyle(
-                  color: _openEarable.bleManager.connected
-                      ? Colors.black
-                      : Colors.grey),
+              style: TextStyle(color: _connected ? Colors.black : Colors.grey),
               decoration: InputDecoration(
                 contentPadding: EdgeInsets.all(10),
                 floatingLabelBehavior: FloatingLabelBehavior.never,
                 border: OutlineInputBorder(),
                 labelText: '440',
                 filled: true,
-                labelStyle: TextStyle(
-                    color: _openEarable.bleManager.connected
-                        ? Colors.black
-                        : Colors.grey),
-                fillColor: _openEarable.bleManager.connected
-                    ? Colors.white
-                    : Colors.grey[200],
+                labelStyle:
+                    TextStyle(color: _connected ? Colors.black : Colors.grey),
+                fillColor: _connected ? Colors.white : Colors.grey[200],
               ),
               keyboardType: TextInputType.number,
             ),
@@ -340,7 +334,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
           child: Text(
             'Hz',
             style: TextStyle(
-                color: _openEarable.bleManager.connected
+                color: _connected
                     ? Colors.white
                     : Colors.grey), // Set text color to white
           ),
@@ -353,10 +347,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
             controller: _frequencyVolumeTextController,
             textAlign: TextAlign.end,
             autofocus: false,
-            style: TextStyle(
-                color: _openEarable.bleManager.connected
-                    ? Colors.black
-                    : Colors.grey),
+            style: TextStyle(color: _connected ? Colors.black : Colors.grey),
             decoration: InputDecoration(
               contentPadding: EdgeInsets.all(10),
               floatingLabelBehavior: FloatingLabelBehavior.never,
@@ -365,13 +356,9 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
               filled: true,
               isDense: true,
               counterText: "",
-              labelStyle: TextStyle(
-                  color: _openEarable.bleManager.connected
-                      ? Colors.black
-                      : Colors.grey),
-              fillColor: _openEarable.bleManager.connected
-                  ? Colors.white
-                  : Colors.grey[200],
+              labelStyle:
+                  TextStyle(color: _connected ? Colors.black : Colors.grey),
+              fillColor: _connected ? Colors.white : Colors.grey[200],
             ),
             maxLength: 3,
             maxLines: 1,
@@ -383,7 +370,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
           child: Text(
             '%',
             style: TextStyle(
-                color: _openEarable.bleManager.connected
+                color: _connected
                     ? Colors.white
                     : Colors.grey), // Set text color to white
           ),
@@ -393,7 +380,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
           height: 37.0,
           width: 107,
           child: InkWell(
-            onTap: _openEarable.bleManager.connected
+            onTap: _connected
                 ? () {
                     _showSoundPicker(context, OpenEarableSettings().waveFormMap,
                         _waveFormTextController);
@@ -433,9 +420,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
         SizedBox(
           width: 120,
           child: ElevatedButton(
-            onPressed: _openEarable.bleManager.connected
-                ? _setSourceButtonPressed
-                : null,
+            onPressed: _connected ? _setSourceButtonPressed : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: Color(0xff53515b),
               foregroundColor: Colors.white,
@@ -444,8 +429,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
           ),
         ),
         ElevatedButton(
-          onPressed:
-              _openEarable.bleManager.connected ? _playButtonPressed : null,
+          onPressed: _connected ? _playButtonPressed : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: Color(0xff77F2A1),
             foregroundColor: Colors.black,
@@ -453,8 +437,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
           child: Icon(Icons.play_arrow_outlined),
         ),
         ElevatedButton(
-          onPressed:
-              _openEarable.bleManager.connected ? _pauseButtonPressed : null,
+          onPressed: _connected ? _pauseButtonPressed : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: Color(0xffe0f277),
             foregroundColor: Colors.black,
@@ -462,8 +445,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
           child: Icon(Icons.pause),
         ),
         ElevatedButton(
-          onPressed:
-              _openEarable.bleManager.connected ? _stopButtonPressed : null,
+          onPressed: _connected ? _stopButtonPressed : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: Color(0xfff27777),
             foregroundColor: Colors.black,

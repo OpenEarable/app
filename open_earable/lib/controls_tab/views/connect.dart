@@ -6,38 +6,43 @@ import 'package:open_earable/ble_controller.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:provider/provider.dart';
 import '../../ble.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ConnectCard extends StatefulWidget {
   final OpenEarable _openEarable;
-  final int _earableSOC;
-  ConnectCard(this._openEarable, this._earableSOC);
+  ConnectCard(this._openEarable);
 
   @override
-  _ConnectCard createState() =>
-      _ConnectCard(this._openEarable, this._earableSOC);
+  _ConnectCard createState() => _ConnectCard(this._openEarable);
 }
 
 class _ConnectCard extends State<ConnectCard> {
   final OpenEarable _openEarable;
-  final int _earableSOC;
   bool? _autoConnectEnabled = false;
-  StreamSubscription? _scanSubscription;
+  late SharedPreferences prefs;
 
-  _ConnectCard(this._openEarable, this._earableSOC);
+  _ConnectCard(this._openEarable);
 
   @override
   void initState() {
     super.initState();
-    startAutoConnectScan();
+    _getPrefs();
+    _startAutoConnectScan();
   }
 
   @override
   void dispose() {
     super.dispose();
-    _scanSubscription?.cancel();
   }
 
-  void startAutoConnectScan() {
+  Future<void> _getPrefs() async {
+    prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _autoConnectEnabled = prefs.getBool("autoConnectEnabled");
+    });
+  }
+
+  void _startAutoConnectScan() {
     if (_autoConnectEnabled == true) {
       Provider.of<BluetoothController>(context, listen: false).startScanning();
     }
@@ -51,24 +56,22 @@ class _ConnectCard extends State<ConnectCard> {
         color: Theme.of(context).colorScheme.primary,
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Device',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18.0,
-                  fontWeight: FontWeight.bold,
+          child: Consumer<BluetoothController>(
+              builder: (context, bleController, child) {
+            List<DiscoveredDevice> devices = bleController.discoveredDevices;
+            _tryAutoconnect(devices, bleController);
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Device',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18.0,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              Consumer<BluetoothController>(
-                  builder: (context, bleController, child) {
-                List<DiscoveredDevice> devices =
-                    bleController.discoveredDevices;
-                print("notified listeners wihth new devices: $devices");
-                tryAutoconnect(devices, bleController);
-                return Row(
+                Row(
                   children: [
                     Checkbox(
                       checkColor: Theme.of(context).colorScheme.primary,
@@ -77,25 +80,36 @@ class _ConnectCard extends State<ConnectCard> {
                       onChanged: (value) => {
                         setState(() {
                           _autoConnectEnabled = value;
-                          startAutoConnectScan();
+                          _startAutoConnectScan();
+                          if (value != null)
+                            prefs.setBool("autoConnectEnabled", value);
                         })
                       },
                     ),
                     Text("Connect to OpenEarable automatically")
                   ],
-                );
-              }),
-              SizedBox(height: 5),
-              _getEarableInfo(),
-              _getConnectButton(context),
-            ],
-          ),
+                ),
+                SizedBox(height: 5),
+                _getEarableInfo(bleController),
+                _getConnectButton(context),
+              ],
+            );
+          }),
         ),
       ),
     );
   }
 
-  Widget _getEarableInfo() {
+  String _batteryPercentageString(BluetoothController bleController) {
+    int? percentage = bleController.earableSOC;
+    if (percentage == null) {
+      return " (...%)";
+    } else {
+      return " ($percentage%)";
+    }
+  }
+
+  Widget _getEarableInfo(BluetoothController bleController) {
     return Row(
       children: [
         if (_openEarable.bleManager.connected)
@@ -103,7 +117,7 @@ class _ConnectCard extends State<ConnectCard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "${_openEarable.bleManager.connectedDevice?.name ?? ""} (${_earableSOC}%)",
+                "${_openEarable.bleManager.connectedDevice?.name ?? ""}${_batteryPercentageString(bleController)}",
                 style: TextStyle(
                   color: Color.fromRGBO(168, 168, 172, 1.0),
                   fontSize: 15.0,
@@ -164,12 +178,21 @@ class _ConnectCard extends State<ConnectCard> {
     );
   }
 
-  void tryAutoconnect(
+  void _tryAutoconnect(
       List<DiscoveredDevice> devices, BluetoothController bleController) async {
-    if (_autoConnectEnabled == true &&
-        devices.isNotEmpty &&
-        _openEarable.bleManager.connectingDevice?.name != devices[0].name) {
-      _openEarable.bleManager.connectToDevice(devices[0]);
+    if (_autoConnectEnabled != true ||
+        devices.isEmpty ||
+        bleController.connected) {
+      return;
+    }
+    String? lastConnectedDeviceName =
+        prefs.getString("lastConnectedDeviceName");
+    DiscoveredDevice? deviceToConnect = devices.firstWhere(
+        (device) => device.name == lastConnectedDeviceName,
+        orElse: () => devices[0]);
+    if (_openEarable.bleManager.connectingDevice?.name !=
+        deviceToConnect.name) {
+      bleController.connectToDevice(deviceToConnect);
     }
   }
 }

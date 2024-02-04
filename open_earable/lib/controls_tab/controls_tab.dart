@@ -5,7 +5,6 @@ import 'views/connect.dart';
 import 'views/led_color.dart';
 import 'views/audio_player.dart';
 import 'dart:async';
-import 'models/open_earable_settings.dart';
 
 class ControlTab extends StatefulWidget {
   final OpenEarable _openEarable;
@@ -20,8 +19,6 @@ class _ControlTabState extends State<ControlTab> {
 
   StreamSubscription<bool>? _connectionStateSubscription;
   StreamSubscription<dynamic>? _batteryLevelSubscription;
-  bool connected = false;
-  int earableSOC = 0;
   bool earableCharging = false;
 
   @override
@@ -29,41 +26,6 @@ class _ControlTabState extends State<ControlTab> {
     super.dispose();
     _connectionStateSubscription?.cancel();
     _batteryLevelSubscription?.cancel();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _connectionStateSubscription =
-        _openEarable.bleManager.connectionStateStream.listen((connected) {
-      OpenEarableSettings().resetState();
-      setState(() {
-        this.connected = connected;
-
-        if (connected) {
-          getNameAndSOC();
-        }
-      });
-    });
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    connected = _openEarable.bleManager.connected;
-    if (connected) {
-      getNameAndSOC();
-    }
-  }
-
-  void getNameAndSOC() {
-    _batteryLevelSubscription = _openEarable.sensorManager
-        .getBatteryLevelStream()
-        .listen((batteryLevel) {
-      setState(() {
-        earableSOC = batteryLevel[0].toInt();
-      });
-    });
   }
 
   @override
@@ -77,7 +39,7 @@ class _ControlTabState extends State<ControlTab> {
                 SizedBox(
                   height: 5,
                 ),
-                ConnectCard(_openEarable, earableSOC),
+                ConnectCard(_openEarable),
                 SensorConfigurationCard(_openEarable),
                 AudioPlayerCard(_openEarable),
                 LEDColorCard(_openEarable),

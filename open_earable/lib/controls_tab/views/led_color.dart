@@ -3,6 +3,9 @@ import 'package:open_earable/controls_tab/models/open_earable_settings.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'dart:async';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:provider/provider.dart';
+
+import '../../ble_controller.dart';
 
 class LEDColorCard extends StatefulWidget {
   final OpenEarable _openEarable;
@@ -164,59 +167,55 @@ class _LEDColorCardState extends State<LEDColorCard> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: _openEarable.bleManager.connected
-                          ? _openColorPicker
-                          : null, // Open color picker
-                      child: Container(
-                        width: 66,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: OpenEarableSettings().selectedColor,
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 5),
-                    SizedBox(
-                      width: 66,
-                      child: ElevatedButton(
-                        onPressed: _openEarable.bleManager.connected
-                            ? _setLEDColor
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(
-                                0xff53515b), // Set the background color to grey
-                            foregroundColor: Colors.white),
-                        child: Text('Set'),
-                      ),
-                    ),
-                    SizedBox(width: 5),
-                    ElevatedButton(
-                      onPressed: _openEarable.bleManager.connected
-                          ? _startRainbowMode
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                          backgroundColor: Color(
-                              0xff53515b), // Set the background color to grey
-                          foregroundColor: Colors.white),
-                      child: Text("🦄"),
-                    ),
-                    Spacer(),
-                    ElevatedButton(
-                      onPressed: _openEarable.bleManager.connected
-                          ? _turnLEDoff
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xfff27777),
-                        foregroundColor: Colors.black,
-                      ),
-                      child: Text('Off'),
-                    ),
-                  ],
-                ),
+                Selector<BluetoothController, bool>(
+                    selector: (_, bleController) => bleController.connected,
+                    builder: (context, connected, child) => Row(
+                          children: [
+                            GestureDetector(
+                              onTap: connected
+                                  ? _openColorPicker
+                                  : null, // Open color picker
+                              child: Container(
+                                width: 66,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: OpenEarableSettings().selectedColor,
+                                  borderRadius: BorderRadius.circular(5),
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 5),
+                            SizedBox(
+                              width: 66,
+                              child: ElevatedButton(
+                                onPressed: connected ? _setLEDColor : null,
+                                style: ElevatedButton.styleFrom(
+                                    backgroundColor: Color(
+                                        0xff53515b), // Set the background color to grey
+                                    foregroundColor: Colors.white),
+                                child: Text('Set'),
+                              ),
+                            ),
+                            SizedBox(width: 5),
+                            ElevatedButton(
+                              onPressed: connected ? _startRainbowMode : null,
+                              style: ElevatedButton.styleFrom(
+                                  backgroundColor: Color(
+                                      0xff53515b), // Set the background color to grey
+                                  foregroundColor: Colors.white),
+                              child: Text("🦄"),
+                            ),
+                            Spacer(),
+                            ElevatedButton(
+                              onPressed: connected ? _turnLEDoff : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Color(0xfff27777),
+                                foregroundColor: Colors.black,
+                              ),
+                              child: Text('Off'),
+                            ),
+                          ],
+                        )),
               ],
             ),
           ),
