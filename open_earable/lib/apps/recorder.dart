@@ -336,24 +336,30 @@ class _RecorderState extends State<Recorder> {
           itemCount: _recordingFolders.length,
           itemBuilder: (context, index) {
             return ListTile(
+              contentPadding: _recordingFolders[index] is File
+                  ? EdgeInsets.fromLTRB(40, 0, 16, 0)
+                  : null,
               title: Row(
-                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  _recordingFolders[index] is File
-                      ? Container(width: 40)
-                      : Container(),
-                  Text(
+                  Expanded(
+                      child: Text(
                     _recordingFolders[index].path.split("/").last,
                     maxLines: 1,
-                  ),
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: _recordingFolders[index] is File ? 14 : null,
+                    ),
+                  )),
                   Visibility(
-                      visible: _recordingFolders[index] is Directory,
-                      child: Transform.rotate(
-                          angle: _recordingFolders[index].path ==
-                                  _selectedFolder?.path
+                    visible: _recordingFolders[index] is Directory,
+                    child: Transform.rotate(
+                      angle:
+                          _recordingFolders[index].path == _selectedFolder?.path
                               ? 90 * 3.14 / 180
                               : 0,
-                          child: Icon(Icons.arrow_right)))
+                      child: Icon(Icons.arrow_right),
+                    ),
+                  ),
                 ],
               ),
               onTap: () {
