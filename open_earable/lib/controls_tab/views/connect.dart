@@ -18,7 +18,7 @@ class ConnectCard extends StatefulWidget {
 
 class _ConnectCard extends State<ConnectCard> {
   final OpenEarable _openEarable;
-  bool? _autoConnectEnabled = false;
+  bool _autoConnectEnabled = false;
   late SharedPreferences prefs;
 
   _ConnectCard(this._openEarable);
@@ -37,7 +37,7 @@ class _ConnectCard extends State<ConnectCard> {
   Future<void> _getPrefs() async {
     prefs = await SharedPreferences.getInstance();
     setState(() {
-      _autoConnectEnabled = prefs.getBool("autoConnectEnabled");
+      _autoConnectEnabled = prefs.getBool("autoConnectEnabled") ?? false;
     });
     _startAutoConnectScan();
   }
@@ -79,7 +79,7 @@ class _ConnectCard extends State<ConnectCard> {
                       value: _autoConnectEnabled,
                       onChanged: (value) => {
                         setState(() {
-                          _autoConnectEnabled = value;
+                          _autoConnectEnabled = value ?? false;
                           _startAutoConnectScan();
                           if (value != null)
                             prefs.setBool("autoConnectEnabled", value);
