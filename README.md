@@ -10,7 +10,7 @@
   
 <p>
   <a href="https://github.com/OpenEarable/app/releases">
-    ⬇️ Download Android app
+    ⬇️ Download Android beta app
   </a>
 </p>
 

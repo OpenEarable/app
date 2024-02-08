@@ -2,7 +2,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:open_earable/widgets/dynamic_value_picker.dart';
 import 'dart:io';
+import 'package:open_earable/ble_controller.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:provider/provider.dart';
 import '../models/open_earable_settings.dart';
 
 class SensorConfigurationCard extends StatefulWidget {
@@ -164,26 +166,35 @@ class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
                       child: Platform.isIOS
                           ? CupertinoButton(
                               padding: EdgeInsets.zero,
-                              onPressed: _openEarable.bleManager.connected
-                                  ? () => _writeSensorConfigs()
-                                  : null,
-                              color: _openEarable.bleManager.connected
+                              onPressed:
+                                  Provider.of<BluetoothController>(context)
+                                          .connected
+                                      ? () => _writeSensorConfigs()
+                                      : null,
+                              color: Provider.of<BluetoothController>(context)
+                                      .connected
                                   ? CupertinoTheme.of(context).primaryColor
                                   : Colors.grey,
                               child: Text("Set Configuration"),
                             )
                           : ElevatedButton(
-                              onPressed: _openEarable.bleManager.connected
-                                  ? () => _writeSensorConfigs()
-                                  : null,
+                              onPressed:
+                                  Provider.of<BluetoothController>(context)
+                                          .connected
+                                      ? _writeSensorConfigs
+                                      : null,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: _openEarable
-                                        .bleManager.connected
-                                    ? Theme.of(context).colorScheme.secondary
-                                    : Colors.grey,
+                                backgroundColor:
+                                    Provider.of<BluetoothController>(context)
+                                            .connected
+                                        ? Theme.of(context)
+                                            .colorScheme
+                                            .secondary
+                                        : Colors.grey,
                                 foregroundColor: Colors.black,
                                 enableFeedback:
-                                    _openEarable.bleManager.connected,
+                                    Provider.of<BluetoothController>(context)
+                                        .connected,
                               ),
                               child: Text("Set Configuration"),
                             ),
@@ -210,8 +221,9 @@ class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
         Platform.isIOS
             ? CupertinoCheckbox(
                 value: settingSelected,
-                onChanged:
-                    _openEarable.bleManager.connected ? changeBool : null,
+                onChanged: Provider.of<BluetoothController>(context).connected
+                    ? changeBool
+                    : null,
                 activeColor: settingSelected
                     ? CupertinoTheme.of(context).primaryColor
                     : CupertinoTheme.of(context).primaryContrastingColor,
@@ -221,8 +233,9 @@ class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
                 checkColor: Theme.of(context).colorScheme.primary,
                 fillColor: MaterialStateProperty.resolveWith(_getCheckboxColor),
                 value: settingSelected,
-                onChanged:
-                    _openEarable.bleManager.connected ? changeBool : null,
+                onChanged: Provider.of<BluetoothController>(context).connected
+                    ? changeBool
+                    : null,
               ),
         Text(
           sensorName,
@@ -233,7 +246,7 @@ class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
         Spacer(),
         Container(
             decoration: BoxDecoration(
-              color: _openEarable.bleManager.connected
+              color: Provider.of<BluetoothController>(context).connected
                   ? Colors.white
                   : Colors.grey[200],
               borderRadius: BorderRadius.circular(4.0),
@@ -249,7 +262,7 @@ class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
                       currentValue,
                       changeSelection,
                       changeBool,
-                      _openEarable.bleManager.connected,
+                      Provider.of<BluetoothController>(context).connected,
                     )))),
         SizedBox(width: 8),
         Text("Hz", style: TextStyle(color: Color.fromRGBO(168, 168, 172, 1.0))),

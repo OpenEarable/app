@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:open_earable/open_earable_icon_icons.dart';
+import 'package:provider/provider.dart';
 import 'controls_tab/controls_tab.dart';
 import 'sensor_data_tab/sensor_data_tab.dart';
 import 'ble.dart';
@@ -11,8 +12,10 @@ import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:app_settings/app_settings.dart';
+import 'ble_controller.dart';
 
-void main() => runApp(MyApp());
+void main() => runApp(ChangeNotifierProvider(
+    create: (context) => BluetoothController(), child: MyApp()));
 
 class MyApp extends StatelessWidget {
   final ThemeData materialTheme = ThemeData(
@@ -80,6 +83,8 @@ class _MyHomePageState extends State<MyHomePage> {
     alertOpen = false;
     _checkBLEPermission();
     _openEarable = OpenEarable();
+    Provider.of<BluetoothController>(context, listen: false).openEarable =
+        _openEarable;
     _widgetOptions = <Widget>[
       ControlTab(_openEarable),
       SensorDataTab(_openEarable),

@@ -1,14 +1,53 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
+import 'package:open_earable/ble_controller.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:provider/provider.dart';
 import '../../ble.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class ConnectCard extends StatelessWidget {
+class ConnectCard extends StatefulWidget {
   final OpenEarable _openEarable;
-  final int _earableSOC;
+  ConnectCard(this._openEarable);
 
-  ConnectCard(this._openEarable, this._earableSOC);
+  @override
+  _ConnectCard createState() => _ConnectCard(this._openEarable);
+}
+
+class _ConnectCard extends State<ConnectCard> {
+  final OpenEarable _openEarable;
+  bool _autoConnectEnabled = false;
+  late SharedPreferences prefs;
+
+  _ConnectCard(this._openEarable);
+
+  @override
+  void initState() {
+    super.initState();
+    _getPrefs();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+  Future<void> _getPrefs() async {
+    prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _autoConnectEnabled = prefs.getBool("autoConnectEnabled") ?? false;
+    });
+    _startAutoConnectScan();
+  }
+
+  void _startAutoConnectScan() {
+    if (_autoConnectEnabled == true) {
+      Provider.of<BluetoothController>(context, listen: false).startScanning();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,29 +59,60 @@ class ConnectCard extends StatelessWidget {
             : Theme.of(context).colorScheme.primary,
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Device',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18.0,
-                  fontWeight: FontWeight.bold,
+          child: Consumer<BluetoothController>(
+              builder: (context, bleController, child) {
+            List<DiscoveredDevice> devices = bleController.discoveredDevices;
+            _tryAutoconnect(devices, bleController);
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Device',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18.0,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              SizedBox(height: 8),
-              _getEarableInfo(),
-              SizedBox(height: 8),
-              _getConnectButton(context),
-            ],
-          ),
+                Row(
+                  children: [
+                    Checkbox(
+                      checkColor: Theme.of(context).colorScheme.primary,
+                      //fillColor: Theme.of(context).colorScheme.primary,
+                      value: _autoConnectEnabled,
+                      onChanged: (value) => {
+                        setState(() {
+                          _autoConnectEnabled = value ?? false;
+                          _startAutoConnectScan();
+                          if (value != null)
+                            prefs.setBool("autoConnectEnabled", value);
+                        })
+                      },
+                    ),
+                    Text("Connect to OpenEarable automatically")
+                  ],
+                ),
+                SizedBox(height: 5),
+                _getEarableInfo(bleController),
+                _getConnectButton(context),
+              ],
+            );
+          }),
         ),
       ),
     );
   }
 
-  Widget _getEarableInfo() {
+  String _batteryPercentageString(BluetoothController bleController) {
+    int? percentage = bleController.earableSOC;
+    if (percentage == null) {
+      return " (...%)";
+    } else {
+      return " ($percentage%)";
+    }
+  }
+
+  Widget _getEarableInfo(BluetoothController bleController) {
     return Row(
       children: [
         if (_openEarable.bleManager.connected)
@@ -50,7 +120,7 @@ class ConnectCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "${_openEarable.bleManager.connectedDevice?.name ?? ""} (${_earableSOC}%)",
+                "${_openEarable.bleManager.connectedDevice?.name ?? ""}${_batteryPercentageString(bleController)}",
                 style: TextStyle(
                   color: Color.fromRGBO(168, 168, 172, 1.0),
                   fontSize: 15.0,
@@ -113,5 +183,23 @@ class ConnectCard extends StatelessWidget {
   _connectButtonAction(BuildContext context) {
     Navigator.of(context)
         .push(MaterialPageRoute(builder: (context) => BLEPage(_openEarable)));
+  }
+
+  void _tryAutoconnect(
+      List<DiscoveredDevice> devices, BluetoothController bleController) async {
+    if (_autoConnectEnabled != true ||
+        devices.isEmpty ||
+        bleController.connected) {
+      return;
+    }
+    String? lastConnectedDeviceName =
+        prefs.getString("lastConnectedDeviceName");
+    DiscoveredDevice? deviceToConnect = devices.firstWhere(
+        (device) => device.name == lastConnectedDeviceName,
+        orElse: () => devices[0]);
+    if (_openEarable.bleManager.connectingDevice?.name !=
+        deviceToConnect.name) {
+      bleController.connectToDevice(deviceToConnect);
+    }
   }
 }

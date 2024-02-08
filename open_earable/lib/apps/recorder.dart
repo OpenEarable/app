@@ -14,18 +14,22 @@ class Recorder extends StatefulWidget {
 }
 
 class _RecorderState extends State<Recorder> {
-  List<File> _recordings = [];
+  List<FileSystemEntity> _recordingFolders = [];
+  Directory? _selectedFolder;
   final OpenEarable _openEarable;
   bool _recording = false;
   StreamSubscription? _imuSubscription;
   StreamSubscription? _barometerSubscription;
   _RecorderState(this._openEarable);
-  CsvWriter? _csvWriter;
-  late List<String> _csvHeader;
+  CsvWriter? _imuCsvWriter;
+  CsvWriter? _barometerCsvWriter;
+  late List<String> _imuHeader;
+  late List<String> _barometerHeader;
   late List<String> _labels;
   late String _selectedLabel;
   Timer? _timer;
   Duration _duration = Duration();
+  StreamSubscription? _connectionStateSubscription;
   @override
   void initState() {
     super.initState();
@@ -42,7 +46,7 @@ class _RecorderState extends State<Recorder> {
       "Label 8",
     ];
     _selectedLabel = "No Label";
-    _csvHeader = [
+    _imuHeader = [
       "time",
       "sensor_accX[m/s]",
       "sensor_accY[m/s]",
@@ -56,15 +60,21 @@ class _RecorderState extends State<Recorder> {
       "sensor_yaw[°]",
       "sensor_pitch[°]",
       "sensor_roll[°]",
+    ];
+
+    _barometerHeader = [
+      "time",
       "sensor_baro[Pa]",
       "sensor_temp[°C]",
     ];
-    _csvHeader.addAll(
+    _imuHeader.addAll(
+        _labels.sublist(1).map((label) => "label_OpenEarable_${label}"));
+    _barometerHeader.addAll(
         _labels.sublist(1).map((label) => "label_OpenEarable_${label}"));
     if (_openEarable.bleManager.connected) {
       _setupListeners();
     }
-    listFilesInDocumentsDirectory();
+    listSubfoldersInDocumentsDirectory();
   }
 
   void _startTimer() {
@@ -95,25 +105,43 @@ class _RecorderState extends State<Recorder> {
     _timer?.cancel();
     _imuSubscription?.cancel();
     _barometerSubscription?.cancel();
+    _connectionStateSubscription?.cancel();
   }
 
-  Future<void> listFilesInDocumentsDirectory() async {
+  Future<void> listSubfoldersInDocumentsDirectory() async {
     Directory documentsDirectory = await getApplicationDocumentsDirectory();
-    List<FileSystemEntity> files = documentsDirectory.listSync();
-    _recordings.clear();
-    for (var file in files) {
-      if (file is File) {
-        _recordings.add(file);
+    List<FileSystemEntity> subfolders = documentsDirectory.listSync();
+    _recordingFolders.clear();
+    for (var subfolder in subfolders) {
+      if (subfolder is Directory) {
+        _recordingFolders.add(subfolder);
       }
     }
-    _recordings.sort((a, b) {
-      return b.statSync().changed.compareTo(a.statSync().changed);
+    _recordingFolders.sort((a, b) {
+      final folderAName = a.path.split("/").last;
+      final folderBName = b.path.split("/").last;
+      return -folderAName.compareTo(folderBName);
     });
+
+    if (_selectedFolder != null && _selectedFolder!.existsSync()) {
+      List<FileSystemEntity> files = _selectedFolder!.listSync();
+      var index = _recordingFolders
+          .indexWhere((element) => element.path == _selectedFolder!.path);
+      _recordingFolders.insertAll(index + 1, files);
+    }
 
     setState(() {});
   }
 
   _setupListeners() {
+    _connectionStateSubscription =
+        _openEarable.bleManager.connectionStateStream.listen((connected) {
+      setState(() {
+        if (!connected) {
+          _recording = false;
+        }
+      });
+    });
     _imuSubscription =
         _openEarable.sensorManager.subscribeToSensorData(0).listen((data) {
       if (!_recording) {
@@ -151,11 +179,9 @@ class _RecorderState extends State<Recorder> {
         eulerYaw,
         eulerPitch,
         eulerRoll,
-        "",
-        "",
       ];
       imuRow.addAll(_getLabels());
-      _csvWriter?.addData(imuRow);
+      _imuCsvWriter?.addData(imuRow);
     });
 
     _barometerSubscription =
@@ -169,23 +195,11 @@ class _RecorderState extends State<Recorder> {
 
       List<String> barometerRow = [
         timestamp,
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
         pressure,
         temperature,
       ];
       barometerRow.addAll(_getLabels());
-      _csvWriter?.addData(barometerRow);
+      _barometerCsvWriter?.addData(barometerRow);
     });
   }
 
@@ -204,11 +218,17 @@ class _RecorderState extends State<Recorder> {
       setState(() {
         _recording = false;
       });
-      _csvWriter?.cancelTimer();
+      _imuCsvWriter?.cancelTimer();
+      _barometerCsvWriter?.cancelTimer();
       _stopTimer();
     } else {
-      _csvWriter = CsvWriter(listFilesInDocumentsDirectory);
-      _csvWriter?.addData(_csvHeader);
+      DateTime startTime = DateTime.now();
+      _imuCsvWriter =
+          CsvWriter("imu", startTime, listSubfoldersInDocumentsDirectory);
+      _imuCsvWriter?.addData(_imuHeader);
+      _barometerCsvWriter =
+          CsvWriter("baro", startTime, listSubfoldersInDocumentsDirectory);
+      _barometerCsvWriter?.addData(_barometerHeader);
       _startTimer();
       setState(() {
         _recording = true;
@@ -216,17 +236,20 @@ class _RecorderState extends State<Recorder> {
     }
   }
 
-  void deleteFile(File file) {
-    if (file.existsSync()) {
+  void deleteFileSystemEntity(FileSystemEntity entity) {
+    if (entity.existsSync()) {
       try {
-        file.deleteSync();
+        entity.deleteSync(recursive: true);
       } catch (e) {
-        print('Error deleting file: $e');
+        print('Error deleting folder: $e');
       }
     } else {
-      print('File does not exist.');
+      print('Folder does not exist.');
     }
-    listFilesInDocumentsDirectory();
+    if (entity is File && entity.parent.listSync().isEmpty) {
+      deleteFileSystemEntity(entity.parent);
+    }
+    listSubfoldersInDocumentsDirectory();
   }
 
   @override
@@ -236,140 +259,175 @@ class _RecorderState extends State<Recorder> {
         appBar: AppBar(
           title: Text('Recorder'),
         ),
-        body: _openEarable.bleManager.connected
-            ? _recorderWidget()
-            : EarableNotConnectedWarning());
+        body: _recorderWidget());
   }
 
   Widget _recorderWidget() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: Text(
-              _formatDuration(_duration),
-              style: TextStyle(
-                fontFamily: 'Digital', // This is a common monospaced font
-                fontSize: 80,
-                fontWeight: FontWeight.normal,
-              ),
-            ),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Padding(
-                padding: EdgeInsets.all(16),
-                child: ElevatedButton(
-                  onPressed: startStopRecording,
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: Size(200, 36),
-                    backgroundColor: _recording
-                        ? Color(0xfff27777)
-                        : Theme.of(context).colorScheme.secondary,
-                    foregroundColor: Colors.black,
-                  ),
-                  child: Text(
-                    _recording ? "Stop Recording" : "Start Recording",
-                    style: TextStyle(fontSize: 20),
-                  ),
-                ),
-              ),
-              DropdownButton<String>(
-                value: _selectedLabel,
-                icon: const Icon(Icons.arrow_drop_down),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedLabel = newValue!;
-                  });
-                },
-                items: _labels.map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-              ),
-            ],
-          ),
-          Text("Recordings", style: TextStyle(fontSize: 20.0)),
-          Divider(
-            thickness: 2,
-          ),
-          Expanded(
-            child: _recordings.isEmpty
-                ? Stack(
-                    fit: StackFit.expand,
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: [
+        Container(
+            height: 200,
+            child: !_openEarable.bleManager.connected
+                ? EarableNotConnectedWarning()
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Center(
-                        child: Column(
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                          child: Text(
+                            _formatDuration(_duration),
+                            style: TextStyle(
+                              fontFamily:
+                                  'Digital', // This is a common monospaced font
+                              fontSize: 80,
+                              fontWeight: FontWeight.normal,
+                            ),
+                          ),
+                        ),
+                        Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(
-                              Icons.warning,
-                              size: 48,
-                              color: Colors.red,
-                            ),
-                            SizedBox(height: 16),
-                            Center(
-                              child: Text(
-                                "No recordings found",
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
+                            Padding(
+                              padding: EdgeInsets.all(16),
+                              child: ElevatedButton(
+                                onPressed: startStopRecording,
+                                style: ElevatedButton.styleFrom(
+                                  minimumSize: Size(200, 36),
+                                  backgroundColor: _recording
+                                      ? Color(0xfff27777)
+                                      : Theme.of(context).colorScheme.secondary,
+                                  foregroundColor: Colors.black,
                                 ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  )
-                : ListView.builder(
-                    itemCount: _recordings.length,
-                    itemBuilder: (context, index) {
-                      return ListTile(
-                        title: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: FittedBox(
-                                fit: BoxFit.scaleDown,
                                 child: Text(
-                                  _recordings[index].path.split("/").last,
-                                  maxLines: 1,
+                                  _recording
+                                      ? "Stop Recording"
+                                      : "Start Recording",
+                                  style: TextStyle(fontSize: 20),
                                 ),
                               ),
                             ),
-                            IconButton(
-                              icon: Icon(Icons.delete,
-                                  color: (_recording && index == 0)
-                                      ? Color.fromARGB(50, 255, 255, 255)
-                                      : Colors.white),
-                              onPressed: () {
-                                (_recording && index == 0)
-                                    ? null
-                                    : deleteFile(_recordings[index]);
+                            DropdownButton<String>(
+                              value: _selectedLabel,
+                              icon: const Icon(Icons.arrow_drop_down),
+                              onChanged: (String? newValue) {
+                                setState(() {
+                                  _selectedLabel = newValue!;
+                                });
                               },
-                              splashColor: (_recording && index == 0)
-                                  ? Colors.transparent
-                                  : Theme.of(context).splashColor,
+                              items: _labels.map<DropdownMenuItem<String>>(
+                                  (String value) {
+                                return DropdownMenuItem<String>(
+                                  value: value,
+                                  child: Text(value),
+                                );
+                              }).toList(),
                             ),
                           ],
                         ),
-                        onTap: () {
-                          OpenFile.open(_recordings[index].path);
-                        },
-                      );
-                    },
+                      ])),
+        Text("Recordings", style: TextStyle(fontSize: 20.0)),
+        Divider(
+          thickness: 2,
+        ),
+        _noRecordingsWidget(),
+        Expanded(
+            child: ListView.builder(
+          itemCount: _recordingFolders.length,
+          itemBuilder: (context, index) {
+            return ListTile(
+              contentPadding: _recordingFolders[index] is File
+                  ? EdgeInsets.fromLTRB(40, 0, 16, 0)
+                  : null,
+              title: Row(
+                children: [
+                  Expanded(
+                      child: Text(
+                    _recordingFolders[index].path.split("/").last,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: _recordingFolders[index] is File ? 14 : null,
+                    ),
+                  )),
+                  Visibility(
+                    visible: _recordingFolders[index] is Directory,
+                    child: Transform.rotate(
+                      angle:
+                          _recordingFolders[index].path == _selectedFolder?.path
+                              ? 90 * 3.14 / 180
+                              : 0,
+                      child: Icon(Icons.arrow_right),
+                    ),
                   ),
-          )
-        ],
-      ),
+                ],
+              ),
+              onTap: () {
+                if (_recordingFolders[index].path == _selectedFolder?.path) {
+                  _selectedFolder = null;
+                  listSubfoldersInDocumentsDirectory();
+                } else if (_recordingFolders[index] is Directory) {
+                  Directory d = _recordingFolders[index] as Directory;
+                  _selectedFolder = d;
+                  listSubfoldersInDocumentsDirectory();
+                } else if (_recordingFolders[index] is File) {
+                  OpenFile.open(_recordingFolders[index].path);
+                }
+              },
+              trailing: IconButton(
+                icon: Icon(Icons.delete,
+                    color: (_recording && index == 0)
+                        ? Color.fromARGB(50, 255, 255, 255)
+                        : Colors.white),
+                onPressed: () {
+                  (_recording && index == 0)
+                      ? null
+                      : deleteFileSystemEntity(_recordingFolders[index]);
+                },
+                splashColor: (_recording && index == 0)
+                    ? Colors.transparent
+                    : Theme.of(context).splashColor,
+              ),
+              splashColor: Colors.transparent,
+            );
+          },
+        )),
+      ],
     );
+  }
+
+  Widget _noRecordingsWidget() {
+    return Visibility(
+        visible: _recordingFolders.isEmpty,
+        child: Expanded(
+            child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.warning,
+                    size: 48,
+                    color: Colors.red,
+                  ),
+                  SizedBox(height: 16),
+                  Center(
+                    child: Text(
+                      "No recordings found",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        )));
   }
 }
 
@@ -378,14 +436,15 @@ class CsvWriter {
   File? file;
   late Timer _timer;
 
-  CsvWriter(void Function() fileCreationClosure) {
+  CsvWriter(String prefix, DateTime startTime,
+      void Function() folderCreationClosure) {
     if (file == null) {
-      _openFile(fileCreationClosure);
+      _openFile(prefix, startTime, folderCreationClosure);
     }
     _timer = Timer.periodic(Duration(milliseconds: 250), (Timer timer) {
       if (buffer.isNotEmpty) {
         if (file == null) {
-          _openFile(fileCreationClosure);
+          _openFile(prefix, startTime, folderCreationClosure);
         }
         writeBufferToFile();
       }
@@ -400,17 +459,24 @@ class CsvWriter {
     buffer.add(data);
   }
 
-  Future<void> _openFile(void Function() fileCreationClosure) async {
-    DateTime startTime = DateTime.now();
+  Future<void> _openFile(String prefix, DateTime startTime,
+      void Function() folderCreationClosure) async {
     String formattedDate =
         startTime.toUtc().toIso8601String().replaceAll(':', '_');
     formattedDate = "${formattedDate.substring(0, formattedDate.length - 4)}Z";
-    String fileName = 'recording_$formattedDate';
+    String fileName = '${prefix}_recording_$formattedDate';
     String directory = (await getApplicationDocumentsDirectory()).path;
-    String filePath = '$directory/$fileName.csv';
+    String folderPath = '$directory/$formattedDate';
+
+    String filePath = '$folderPath/$fileName.csv';
+    Directory folder = Directory(folderPath);
+    if (!await folder.exists()) {
+      await folder.create(recursive: true);
+      folderCreationClosure();
+    }
     file = File(filePath);
     await file?.create();
-    fileCreationClosure();
+    folderCreationClosure();
   }
 
   void writeBufferToFile() async {

@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:open_earable/ble_controller.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:provider/provider.dart';
 import '../models/open_earable_settings.dart';
 import '../../widgets/dynamic_value_picker.dart';
 
@@ -23,7 +25,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
   late TextEditingController _frequencyTextController;
   late TextEditingController _frequencyVolumeTextController;
   late TextEditingController _waveFormTextController;
-
+  late bool _connected;
   @override
   void initState() {
     super.initState();
@@ -33,10 +35,14 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
         text: "${OpenEarableSettings().selectedFrequency}");
     _frequencyVolumeTextController = TextEditingController(
         text: "${OpenEarableSettings().selectedFrequencyVolume}");
+    _waveFormTextController =
+        TextEditingController(text: OpenEarableSettings().selectedWaveForm);
+    _connected =
+        Provider.of<BluetoothController>(context, listen: false).connected;
   }
 
   void updateText() {
-    if (_openEarable.bleManager.connected) {
+    if (_connected) {
       OpenEarableSettings().selectedFilename = _filenameTextController.text;
       OpenEarableSettings().selectedFrequency = _frequencyTextController.text;
       OpenEarableSettings().selectedFrequencyVolume =
@@ -156,7 +162,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
             mainAxisSize: MainAxisSize.min,
             children: soundsMap.values.map((String option) {
               return ListTile(
-                onTap: _openEarable.bleManager.connected
+                onTap: _connected
                     ? () {
                         setState(() {
                           textController.text = option;
@@ -175,39 +181,43 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
 
   @override
   Widget build(BuildContext context) {
-    updateText();
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 5.0),
-      child: Card(
-        //Audio Player Card
-        color: Platform.isIOS
-            ? CupertinoTheme.of(context).primaryContrastingColor
-            : Theme.of(context).colorScheme.primary,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Audio Player',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18.0,
-                  fontWeight: FontWeight.bold,
+        padding: const EdgeInsets.symmetric(horizontal: 5.0),
+        child: Selector<BluetoothController, bool>(
+            selector: (_, bleController) => bleController.connected,
+            builder: (context, connected, child) {
+              _connected = connected;
+              updateText();
+              return Card(
+                //Audio Player Card
+                color: Platform.isIOS
+                    ? CupertinoTheme.of(context).primaryContrastingColor
+                    : Theme.of(context).colorScheme.primary,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Audio Player',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18.0,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      _getFileNameRow(),
+                      _getJingleRow(),
+                      _getFrequencyRow(),
+                      SizedBox(height: 12),
+                      Platform.isIOS
+                          ? _getCupertinoButtonRow()
+                          : _getMaterialButtonRow(),
+                    ],
+                  ),
                 ),
-              ),
-              _getFileNameRow(),
-              _getJingleRow(),
-              _getFrequencyRow(),
-              SizedBox(height: 12),
-              Platform.isIOS
-                  ? _getCupertinoButtonRow()
-                  : _getMaterialButtonRow(),
-            ],
-          ),
-        ),
-      ),
-    );
+              );
+            }));
   }
 
   Widget _getAudioPlayerRadio(int index) {
@@ -441,9 +451,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
         SizedBox(
           width: 120,
           child: ElevatedButton(
-            onPressed: _openEarable.bleManager.connected
-                ? _setSourceButtonPressed
-                : null,
+            onPressed: _connected ? _setSourceButtonPressed : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: Color(0xff53515b),
               foregroundColor: Colors.white,
@@ -452,8 +460,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
           ),
         ),
         ElevatedButton(
-          onPressed:
-              _openEarable.bleManager.connected ? _playButtonPressed : null,
+          onPressed: _connected ? _playButtonPressed : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: Color(0xff77F2A1),
             foregroundColor: Colors.black,
@@ -461,8 +468,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
           child: Icon(Icons.play_arrow_outlined),
         ),
         ElevatedButton(
-          onPressed:
-              _openEarable.bleManager.connected ? _pauseButtonPressed : null,
+          onPressed: _connected ? _pauseButtonPressed : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: Color(0xffe0f277),
             foregroundColor: Colors.black,
@@ -470,8 +476,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
           child: Icon(Icons.pause),
         ),
         ElevatedButton(
-          onPressed:
-              _openEarable.bleManager.connected ? _stopButtonPressed : null,
+          onPressed: _connected ? _stopButtonPressed : null,
           style: ElevatedButton.styleFrom(
             backgroundColor: Color(0xfff27777),
             foregroundColor: Colors.black,
