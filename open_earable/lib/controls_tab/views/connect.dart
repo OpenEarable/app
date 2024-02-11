@@ -107,7 +107,12 @@ class _ConnectCard extends State<ConnectCard> {
                               })
                             },
                           ),
-                    Text("Connect to OpenEarable automatically")
+                    Text(
+                      "Connect to OpenEarable automatically",
+                      style: TextStyle(
+                        color: Color.fromRGBO(168, 168, 172, 1.0),
+                      ),
+                    )
                   ],
                 ),
                 SizedBox(height: 5),
