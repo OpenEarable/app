@@ -52,6 +52,7 @@ class BluetoothController extends ChangeNotifier {
   void dispose() {
     super.dispose();
     _scanSubscription?.cancel();
+    _scanning = false;
     _connectionStateSubscription?.cancel();
     _batteryLevelSubscription?.cancel();
   }
@@ -66,6 +67,7 @@ class BluetoothController extends ChangeNotifier {
   }
 
   Future<void> startScanning() async {
+    print("SCANNING $_scanning");
     if (_scanning) {
       return;
     }
@@ -79,7 +81,6 @@ class BluetoothController extends ChangeNotifier {
     }
     await _openEarable?.bleManager.startScan();
     _scanSubscription?.cancel();
-    _scanning = false;
     _scanSubscription =
         _openEarable?.bleManager.scanStream.listen((incomingDevice) {
       if (incomingDevice.name.isNotEmpty &&
