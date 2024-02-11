@@ -76,19 +76,37 @@ class _ConnectCard extends State<ConnectCard> {
                 ),
                 Row(
                   children: [
-                    Checkbox(
-                      checkColor: Theme.of(context).colorScheme.primary,
-                      //fillColor: Theme.of(context).colorScheme.primary,
-                      value: _autoConnectEnabled,
-                      onChanged: (value) => {
-                        setState(() {
-                          _autoConnectEnabled = value ?? false;
-                          _startAutoConnectScan();
-                          if (value != null)
-                            prefs.setBool("autoConnectEnabled", value);
-                        })
-                      },
-                    ),
+                    Platform.isIOS
+                        ? CupertinoCheckbox(
+                            value: _autoConnectEnabled,
+                            onChanged: (value) => {
+                              setState(() {
+                                _autoConnectEnabled = value ?? false;
+                                _startAutoConnectScan();
+                                if (value != null)
+                                  prefs.setBool("autoConnectEnabled", value);
+                              })
+                            },
+                            activeColor: _autoConnectEnabled
+                                ? CupertinoTheme.of(context).primaryColor
+                                : CupertinoTheme.of(context)
+                                    .primaryContrastingColor,
+                            checkColor: CupertinoTheme.of(context)
+                                .primaryContrastingColor,
+                          )
+                        : Checkbox(
+                            checkColor: Theme.of(context).colorScheme.primary,
+                            //fillColor: Theme.of(context).colorScheme.primary,
+                            value: _autoConnectEnabled,
+                            onChanged: (value) => {
+                              setState(() {
+                                _autoConnectEnabled = value ?? false;
+                                _startAutoConnectScan();
+                                if (value != null)
+                                  prefs.setBool("autoConnectEnabled", value);
+                              })
+                            },
+                          ),
                     Text("Connect to OpenEarable automatically")
                   ],
                 ),

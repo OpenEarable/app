@@ -228,6 +228,7 @@ class _LEDColorCardState extends State<LEDColorCard> {
                           SizedBox(width: 5),
                           SizedBox(
                             width: 66,
+                            height: 36,
                             child: Platform.isIOS
                                 ? CupertinoButton(
                                     padding: EdgeInsets.zero,
