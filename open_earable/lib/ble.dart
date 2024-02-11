@@ -113,17 +113,28 @@ class _BLEPageState extends State<BLEPage> {
                   textAlign: TextAlign.center,
                 ))),
         Center(
-          child: ElevatedButton(
-            onPressed: Provider.of<BluetoothController>(context, listen: false)
-                .startScanning,
-            style: ButtonStyle(
-              foregroundColor: MaterialStateProperty.all(
-                  Theme.of(context).colorScheme.primary),
-              backgroundColor: MaterialStateProperty.all(
-                  Theme.of(context).colorScheme.secondary),
-            ),
-            child: const Text('Restart Scan'),
-          ),
+          child: Platform.isIOS
+              ? CupertinoButton(
+                  padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
+                  child: Text('Restart Scan'),
+                  color: CupertinoTheme.of(context)
+                      .primaryColor, // iOS equivalent for a prominent button color
+                  onPressed:
+                      Provider.of<BluetoothController>(context, listen: false)
+                          .startScanning,
+                )
+              : ElevatedButton(
+                  onPressed:
+                      Provider.of<BluetoothController>(context, listen: false)
+                          .startScanning,
+                  style: ButtonStyle(
+                    foregroundColor: MaterialStateProperty.all(
+                        Theme.of(context).colorScheme.primary),
+                    backgroundColor: MaterialStateProperty.all(
+                        Theme.of(context).colorScheme.secondary),
+                  ),
+                  child: const Text('Restart Scan'),
+                ),
         )
       ],
     ));
