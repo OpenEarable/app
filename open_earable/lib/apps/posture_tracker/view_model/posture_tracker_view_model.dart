@@ -22,10 +22,7 @@ class PostureTrackerViewModel extends ChangeNotifier {
 
     _attitudeTracker.listen((attitude) {
       _attitude = Attitude(
-        roll: attitude.roll,
-        pitch: attitude.pitch,
-        yaw: attitude.yaw
-      );
+          roll: attitude.roll, pitch: attitude.pitch, yaw: attitude.yaw);
       notifyListeners();
     });
   }
@@ -53,7 +50,7 @@ class PostureTrackerViewModel extends ChangeNotifier {
   @override
   void dispose() {
     stopTracking();
-    _attitudeTracker.cancle();
+    _attitudeTracker.cancel();
     super.dispose();
   }
 }

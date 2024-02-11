@@ -6,8 +6,9 @@ import 'dart:async';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'dart:io';
 import 'package:provider/provider.dart';
-
 import '../../ble_controller.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import '../../global_theme.dart';
 
 class LEDColorCard extends StatefulWidget {
   final OpenEarable _openEarable;
@@ -156,22 +157,34 @@ class _LEDColorCardState extends State<LEDColorCard> {
           return CupertinoAlertDialog(
             title: Text('Pick a color for the RGB LED'),
             content: SingleChildScrollView(
-              child: Material(
-                // Wrap with Material
-                child: ColorPicker(
-                  pickerColor: OpenEarableSettings().selectedColor,
-                  onColorChanged: (color) {
-                    // Your color change logic
-                    setState(() {
-                      OpenEarableSettings().selectedColor = color;
-                    });
-                  },
-                  showLabel: true,
-                  pickerAreaHeightPercent: 0.8,
-                  enableAlpha: false,
-                ),
-              ),
-            ),
+                padding: EdgeInsets.zero,
+                child: Theme(
+                  data: materialTheme,
+                  child: Material(
+                    // Wrap with Material
+                    child: Localizations(
+                      locale:
+                          const Locale('en', 'US'), // Specify the app's locale
+                      delegates: [
+                        GlobalMaterialLocalizations.delegate,
+                        GlobalWidgetsLocalizations.delegate,
+                        GlobalCupertinoLocalizations.delegate,
+                      ],
+                      child: ColorPicker(
+                        pickerColor: OpenEarableSettings().selectedColor,
+                        onColorChanged: (color) {
+                          // Your color change logic
+                          setState(() {
+                            OpenEarableSettings().selectedColor = color;
+                          });
+                        },
+                        showLabel: true,
+                        pickerAreaHeightPercent: 0.8,
+                        enableAlpha: false,
+                      ), // Your widget that contains the DropdownButton
+                    ),
+                  ),
+                )),
             actions: <Widget>[
               CupertinoDialogAction(
                 onPressed: () {

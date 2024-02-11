@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   open_earable_flutter:
     path: ../../open_earable_flutter
   permission_handler: ^11.1.0
@@ -64,7 +66,10 @@ dependencies:
   open_file: ^3.3.2
   provider: ^6.1.1
   shared_preferences: ^2.2.2
-
+  
+dependency_overrides:
+  intl: ^0.18.1
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter

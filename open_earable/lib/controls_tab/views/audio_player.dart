@@ -228,7 +228,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
             ? CupertinoRadio(
                 value: index,
                 groupValue: OpenEarableSettings().selectedAudioPlayerRadio,
-                onChanged: !_openEarable.bleManager.connected
+                onChanged: !_connected
                     ? null
                     : (int? value) {
                         setState(() {
@@ -244,7 +244,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
             : Radio(
                 value: index,
                 groupValue: OpenEarableSettings().selectedAudioPlayerRadio,
-                onChanged: !_openEarable.bleManager.connected
+                onChanged: !_connected
                     ? null
                     : (int? value) {
                         setState(() {
@@ -294,7 +294,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
         obscureText: false,
         placeholder: placeholder,
         style: TextStyle(
-          color: _openEarable.bleManager.connected ? Colors.black : Colors.grey,
+          color: _connected ? Colors.black : Colors.grey,
         ),
         padding: EdgeInsets.fromLTRB(8, 0, 0, 0),
         textAlignVertical: TextAlignVertical.center,
@@ -307,7 +307,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
           borderRadius: BorderRadius.circular(4.0),
         ),
         placeholderStyle: TextStyle(
-          color: _openEarable.bleManager.connected ? Colors.black : Colors.grey,
+          color: _connected ? Colors.black : Colors.grey,
         ),
         keyboardType: keyboardType,
         maxLength: maxLength,
@@ -317,23 +317,16 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
       return TextField(
         controller: textController,
         obscureText: false,
-        enabled: _openEarable.bleManager.connected,
-        style: TextStyle(
-            color:
-                _openEarable.bleManager.connected ? Colors.black : Colors.grey),
+        enabled: _connected,
+        style: TextStyle(color: _connected ? Colors.black : Colors.grey),
         decoration: InputDecoration(
           labelText: placeholder,
           contentPadding: EdgeInsets.all(8),
           border: OutlineInputBorder(),
           floatingLabelBehavior: FloatingLabelBehavior.never,
-          labelStyle: TextStyle(
-              color: _openEarable.bleManager.connected
-                  ? Colors.black
-                  : Colors.grey),
+          labelStyle: TextStyle(color: _connected ? Colors.black : Colors.grey),
           filled: true,
-          fillColor: _openEarable.bleManager.connected
-              ? Colors.white
-              : Colors.grey[200],
+          fillColor: _connected ? Colors.white : Colors.grey[200],
         ),
         keyboardType: keyboardType,
         maxLength: maxLength,
@@ -368,7 +361,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
                   });
                 },
                 (_) => null,
-                _openEarable.bleManager.connected,
+                _connected,
               ),
             ),
           ),
@@ -402,7 +395,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
             child: Text(
               'Hz',
               style: TextStyle(
-                  color: _openEarable.bleManager.connected
+                  color: _connected
                       ? Colors.white
                       : Colors.grey), // Set text color to white
             ),
@@ -418,7 +411,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
             child: Text(
               '%',
               style: TextStyle(
-                  color: _openEarable.bleManager.connected
+                  color: _connected
                       ? Colors.white
                       : Colors.grey), // Set text color to white
             ),
@@ -436,7 +429,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
                   OpenEarableSettings().selectedWaveForm = newValue;
                 },
               );
-            }, (_) => null, _openEarable.bleManager.connected),
+            }, (_) => null, _connected),
           ),
         ],
       )
@@ -495,9 +488,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
           width: 120,
           child: CupertinoButton(
             padding: EdgeInsets.all(0),
-            onPressed: _openEarable.bleManager.connected
-                ? _setSourceButtonPressed
-                : null,
+            onPressed: _connected ? _setSourceButtonPressed : null,
             color: Color(0xff53515b),
             child: Text(
               'Set\nSource',
@@ -509,8 +500,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
         Expanded(
             child: CupertinoButton(
           padding: EdgeInsets.all(0),
-          onPressed:
-              _openEarable.bleManager.connected ? _playButtonPressed : null,
+          onPressed: _connected ? _playButtonPressed : null,
           color: CupertinoTheme.of(context).primaryColor,
           child: Icon(CupertinoIcons.play),
         )),
@@ -518,8 +508,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
         Expanded(
             child: CupertinoButton(
           padding: EdgeInsets.zero,
-          onPressed:
-              _openEarable.bleManager.connected ? _pauseButtonPressed : null,
+          onPressed: _connected ? _pauseButtonPressed : null,
           color: Color(0xffe0f277),
           child: Icon(CupertinoIcons.pause),
         )),
@@ -527,8 +516,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
         Expanded(
             child: CupertinoButton(
           padding: EdgeInsets.zero,
-          onPressed:
-              _openEarable.bleManager.connected ? _stopButtonPressed : null,
+          onPressed: _connected ? _stopButtonPressed : null,
           color: Color(0xfff27777),
           child: Icon(CupertinoIcons.stop),
         )),

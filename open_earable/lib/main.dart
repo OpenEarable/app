@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:open_earable/open_earable_icon_icons.dart';
 import 'package:provider/provider.dart';
 import 'controls_tab/controls_tab.dart';
@@ -13,44 +14,25 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:app_settings/app_settings.dart';
 import 'ble_controller.dart';
+import 'global_theme.dart';
 
 void main() => runApp(ChangeNotifierProvider(
     create: (context) => BluetoothController(), child: MyApp()));
 
 class MyApp extends StatelessWidget {
-  final ThemeData materialTheme = ThemeData(
-      useMaterial3: false,
-      colorScheme: ColorScheme(
-          brightness: Brightness.dark,
-          primary:
-              Color.fromARGB(255, 54, 53, 59), //Color.fromARGB(255, 22, 22, 24)
-          onPrimary: Colors.white,
-          secondary: Color.fromARGB(255, 119, 242, 161),
-          onSecondary: Colors.white,
-          error: Colors.red,
-          onError: Colors.black,
-          background:
-              Color.fromARGB(255, 22, 22, 24), //Color.fromARGB(255, 54, 53, 59)
-          onBackground: Colors.white,
-          surface: Color.fromARGB(255, 22, 22, 24),
-          onSurface: Colors.white),
-      secondaryHeaderColor: Colors.black);
-
-  final CupertinoThemeData cupertinoTheme = CupertinoThemeData(
-    brightness: Brightness.dark,
-    primaryColor: Color.fromARGB(255, 119, 242, 161),
-    primaryContrastingColor: Color.fromARGB(255, 54, 53, 59),
-    barBackgroundColor: Color.fromARGB(255, 22, 22, 24),
-    scaffoldBackgroundColor: Color.fromARGB(255, 22, 22, 24),
-    textTheme: CupertinoTextThemeData(
-      primaryColor: Colors.white,
-    ),
-  );
-
   @override
   Widget build(BuildContext context) {
     if (Platform.isIOS) {
       return CupertinoApp(
+        locale: const Locale('en', 'US'),
+        localizationsDelegates: [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: [
+          const Locale('en', 'US'),
+        ],
         title: '🦻 OpenEarable',
         theme: cupertinoTheme,
         home: MyHomePage(),

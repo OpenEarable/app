@@ -116,7 +116,7 @@ class _BLEPageState extends State<BLEPage> {
           child: Platform.isIOS
               ? CupertinoButton(
                   padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
-                  child: Text('Restart Scan'),
+                  child: const Text('Restart Scan'),
                   color: CupertinoTheme.of(context)
                       .primaryColor, // iOS equivalent for a prominent button color
                   onPressed:

@@ -1,9 +1,13 @@
+import 'dart:io';
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:open_earable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_earable/apps/posture_tracker/view/posture_tracker_view.dart';
 import 'package:open_earable/apps/recorder.dart';
 import 'package:open_earable/apps/jump_height_test/jump_height_test.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'global_theme.dart';
 
 class AppInfo {
   final IconData iconData;
@@ -33,8 +37,12 @@ class AppsTab extends StatelessWidget {
             Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (context) => PostureTrackerView(
-                        EarableAttitudeTracker(_openEarable), _openEarable)));
+                    builder: (context) => Material(
+                        child: Theme(
+                            data: materialTheme,
+                            child: PostureTrackerView(
+                                EarableAttitudeTracker(_openEarable),
+                                _openEarable)))));
           }),
       AppInfo(
           iconData: Icons.fiber_smart_record,
@@ -44,7 +52,10 @@ class AppsTab extends StatelessWidget {
             Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (context) => Recorder(_openEarable)));
+                    builder: (context) => Material(
+                        child: Theme(
+                            data: materialTheme,
+                            child: Recorder(_openEarable)))));
           }),
       AppInfo(
           iconData: Icons.height,
@@ -54,7 +65,9 @@ class AppsTab extends StatelessWidget {
             Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (context) => JumpHeightTest(_openEarable)));
+                    builder: (context) => Theme(
+                        data: materialTheme,
+                        child: Material(child: JumpHeightTest(_openEarable)))));
           }),
       // ... similarly for other apps
     ];
@@ -72,8 +85,12 @@ class AppsTab extends StatelessWidget {
             return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 5),
                 child: Card(
-                  color: Theme.of(context).colorScheme.primary,
+                  color: Platform.isIOS
+                      ? CupertinoTheme.of(context).primaryContrastingColor
+                      : Theme.of(context).colorScheme.primary,
                   child: ListTile(
+                    iconColor: Colors.white,
+                    textColor: Colors.white,
                     leading: Icon(apps[index].iconData, size: 40.0),
                     title: Text(apps[index].title),
                     subtitle: Text(apps[index].description),
