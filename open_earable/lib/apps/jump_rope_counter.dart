@@ -439,14 +439,13 @@ class _JumpRopeCounterState extends State<JumpRopeCounter>
                   label: 'Undo', onPressed: () => delete = false),
             ),
           );
-
+          await snackbarController.closed;
           return delete;
         }
         return true;
       },
       onDismissed: (direction) {
-        setState(() async {
-          await snackbarController.closed;
+        setState(() {
           _recordings.removeAt(index);
           saveJumpRecordings();
         });
