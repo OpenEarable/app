@@ -4,7 +4,6 @@ import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
 import 'interact.dart';
 
-
 /// Homescreen class for the movement timer application.
 class SleepHomeScreen extends StatefulWidget {
   final OpenEarable _openEarable;
@@ -17,7 +16,6 @@ class SleepHomeScreen extends StatefulWidget {
 ///
 /// Needs the [OpenEarable]-Object to interact.
 class _HomeScreenState extends State<SleepHomeScreen> {
-
   final OpenEarable _openEarable;
 
   //Constructor
@@ -26,14 +24,12 @@ class _HomeScreenState extends State<SleepHomeScreen> {
   //Bottom-Navigation-Bar index.
   int _currentIndex = 0;
 
-
-
   //Build main Widget.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Timer App'),
+        title: Text('Powernapper Alarm Clock'),
       ),
 
       //Body for the widget
@@ -44,10 +40,6 @@ class _HomeScreenState extends State<SleepHomeScreen> {
         currentIndex: _currentIndex,
         onTap: _onNavBarItemTapped,
         items: [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
           BottomNavigationBarItem(
             icon: Icon(Icons.timer),
             label: 'Timer',
@@ -66,43 +58,43 @@ class _HomeScreenState extends State<SleepHomeScreen> {
     switch (_currentIndex) {
       case 0:
 
-        //HomeScreenTab
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              //Image-Source
-              Text(
-                'Mit der Powernapping App können Sie einen Timer starten, der ganz automatisch an Ihren Bewegungen erkennt, '
-                    'wann Sie wirklich eingeschlafen sind. Der Timer wird automatisch restartet, wenn Sie sich bewegen, '
-                    'so können Sie effektiv powernappen und eine gemütliche Position finden ohne das schon die Zeit abläuft!',
-                style: TextStyle(fontSize: 24),
-              ),
-              SizedBox(height: 20),
-            ],
-          )
-        );
+        //Timer Tab
+        return TimerScreen(Interact(_openEarable));
       case 1:
 
-        //Timer Tab
-        return Center(
-          child: Text('Wird weitergeleitet...')
-        );
-      case 2:
-
         //Information Tab
-        return Center(
-          child: Text('Diese Sub-App wurde entwickelt von: Philipp Ochs, Matrikelnummer 2284828'),
+        return Column(
+          children: [
+            Spacer(),
+            Padding(
+              padding: const EdgeInsets.all(18.0),
+              child: Text(
+                'Mit der Powernapping App können Sie einen Timer starten, der ganz '
+                'automatisch an Ihren Bewegungen erkennt, wann Sie wirklich eingeschlafen sind. '
+                'Der Timer wird automatisch restartet, wenn Sie sich bewegen, '
+                'so können Sie effektiv powernappen und eine gemütliche Position finden '
+                'ohne dass schon die Zeit abläuft!',
+                style: TextStyle(fontSize: 24),
+              ),
+            ),
+            Spacer(),
+            Padding(
+              padding: const EdgeInsets.all(18.0),
+              child: Text(
+                'Diese Sub-App wurde entwickelt von: Philipp Ochs, Matrikelnummer 2284828',
+                style: TextStyle(fontSize: 16),
+              ),
+            ),
+          ],
         );
+
       default:
 
         //Default
         return Center(
           child: Text('Ungültiger Index'),
         );
-
     }
-    return Container();
   }
 
   ///Navigation-Bar interaction
@@ -111,14 +103,6 @@ class _HomeScreenState extends State<SleepHomeScreen> {
   void _onNavBarItemTapped(int index) {
     setState(() {
       _currentIndex = index;
-      if (index == 1) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => TimerScreen(Interact(_openEarable)),
-          ),
-        );
-      }
     });
   }
 }

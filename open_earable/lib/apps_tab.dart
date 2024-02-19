@@ -39,7 +39,7 @@ class AppsTab extends StatelessWidget {
           }),
       AppInfo(
           iconData: Icons.face_5,
-          title: "Powernapper",
+          title: "Powernapper Alarm Clock",
           description: "Powernapping timer!",
           onTap: () {
             Navigator.push(

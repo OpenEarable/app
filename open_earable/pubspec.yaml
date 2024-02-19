@@ -125,6 +125,7 @@ flutter:
   assets:
     - assets/
     - assets/posture_tracker/
+    - assets/powernapping_timer/
 
   fonts:
     - family:  OpenEarableIcon
