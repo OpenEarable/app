@@ -67,7 +67,6 @@ class BluetoothController extends ChangeNotifier {
   }
 
   Future<void> startScanning() async {
-    print("SCANNING $_scanning");
     if (_scanning) {
       return;
     }
