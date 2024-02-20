@@ -28,7 +28,9 @@ class _HomeScreenState extends State<SleepHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
+        backgroundColor: Theme.of(context).colorScheme.background,
         title: Text('Powernapper Alarm Clock'),
       ),
 
@@ -37,6 +39,7 @@ class _HomeScreenState extends State<SleepHomeScreen> {
 
       //Bottom Navigation Bar
       bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: Theme.of(context).colorScheme.background,
         currentIndex: _currentIndex,
         onTap: _onNavBarItemTapped,
         items: [

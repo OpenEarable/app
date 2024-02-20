@@ -33,6 +33,19 @@ class AppsTab extends StatelessWidget {
   List<AppInfo> sampleApps(BuildContext context) {
     return [
       AppInfo(
+          iconData: Icons.fiber_smart_record,
+          title: "Recorder",
+          description: "Record data from OpenEarable.",
+          onTap: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => Material(
+                        child: Theme(
+                            data: materialTheme,
+                            child: Recorder(_openEarable)))));
+          }),
+      AppInfo(
           iconData: Icons.face_6,
           title: "Posture Tracker",
           description: "Get feedback on bad posture.",
@@ -47,43 +60,6 @@ class AppsTab extends StatelessWidget {
                                 EarableAttitudeTracker(_openEarable),
                                 _openEarable)))));
           }),
-      AppInfo(
-          iconData: Icons.face_5,
-          title: "Powernapper Alarm Clock",
-          description: "Powernapping timer!",
-          onTap: () {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => SleepHomeScreen(_openEarable)));
-          }),
-      AppInfo(
-          iconData: Icons.fiber_smart_record,
-          title: "Recorder",
-          description: "Record data from OpenEarable.",
-          onTap: () {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => Material(
-                        child: Theme(
-                            data: materialTheme,
-                            child: Recorder(_openEarable)))));
-          }),
-      AppInfo(
-          iconData: Icons.music_note,
-          title: "Tightness Meter",
-          description: "Track your headbanging.",
-          onTap: () {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => Material(
-                        child: Theme(
-                            data: materialTheme,
-                            child: TightnessMeter(_openEarable)))));
-          }),
-
       AppInfo(
           iconData: Icons.height,
           title: "Jump Height Test",
@@ -110,6 +86,32 @@ class AppsTab extends StatelessWidget {
                         child: Theme(
                             data: materialTheme,
                             child: JumpRopeCounter(_openEarable)))));
+          }),
+      AppInfo(
+          iconData: Icons.face_5,
+          title: "Powernapper Alarm Clock",
+          description: "Powernapping timer!",
+          onTap: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => Material(
+                        child: Theme(
+                            data: materialTheme,
+                            child: SleepHomeScreen(_openEarable)))));
+          }),
+      AppInfo(
+          iconData: Icons.music_note,
+          title: "Tightness Meter",
+          description: "Track your headbanging.",
+          onTap: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => Material(
+                        child: Theme(
+                            data: materialTheme,
+                            child: TightnessMeter(_openEarable)))));
           }),
       // ... similarly for other apps
     ];
