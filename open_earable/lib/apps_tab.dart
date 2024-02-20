@@ -113,26 +113,6 @@ class AppsTab extends StatelessWidget {
                             data: materialTheme,
                             child: TightnessMeter(_openEarable)))));
           }),
-      AppInfo(
-          iconData: Icons.face_5,
-          title: "Powernapper Alarm Clock",
-          description: "Powernapping timer!",
-          onTap: () {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => SleepHomeScreen(_openEarable)));
-          }),
-      AppInfo(
-          iconData: Icons.music_note,
-          title: "Tightness Meter",
-          description: "Track your headbanging.",
-          onTap: () {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => TightnessMeter(_openEarable)));
-          }),
       // ... similarly for other apps
     ];
   }
