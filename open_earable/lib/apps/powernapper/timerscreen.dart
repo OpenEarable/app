@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:open_earable/apps/ufiiu/movementTracker.dart';
-import 'package:open_earable/apps/ufiiu/sensor_datatypes.dart';
+import 'package:open_earable/apps/powernapper/movementTracker.dart';
+import 'package:open_earable/apps/powernapper/sensor_datatypes.dart';
 import 'package:open_earable/ble_controller.dart';
 import 'package:open_earable/widgets/earable_not_connected_warning.dart';
 import 'package:provider/provider.dart';

@@ -1,12 +1,11 @@
 import 'dart:async';
 
-import 'package:open_earable/apps/ufiiu/interact.dart';
-import 'package:open_earable/apps/ufiiu/sensor_datatypes.dart';
+import 'package:open_earable/apps/powernapper/interact.dart';
+import 'package:open_earable/apps/powernapper/sensor_datatypes.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
 /// Movement Tracker has lgoic for timer & movement validation.
 class MovementTracker {
-
   //Incetaction variables
   final Interact _interact;
   late final OpenEarable _openEarable;
@@ -15,7 +14,6 @@ class MovementTracker {
 
   //Stream Subscription
   StreamSubscription<Map<String, dynamic>>? _subscription;
-
 
   //Constructor
   MovementTracker(this._interact) {
@@ -27,7 +25,6 @@ class MovementTracker {
   /// Input: [minutes] for the time before the ring.
   /// Input: [updateText] as an void callback function for the textupdate.
   void start(int minutes, void Function(SensorDataType s) updateText) {
-
     //Timer (re-)start
     stop();
     _startTimer(minutes);
@@ -36,8 +33,8 @@ class MovementTracker {
     _openEarable.sensorManager.writeSensorConfig(_buildSensorConfig());
 
     //Starts listening to the subscription
-    _subscription = _openEarable.sensorManager.subscribeToSensorData(0).listen((event) {
-
+    _subscription =
+        _openEarable.sensorManager.subscribeToSensorData(0).listen((event) {
       //Display update callback
       updateText(Gyroscope(event));
 
@@ -68,7 +65,7 @@ class MovementTracker {
   ///
   /// Uses the [SensorDataType] to validate update and int [minutes] to restart the timer.
   void _update(SensorDataType dt, int minutes) {
-    if(_validMovement(dt)) {
+    if (_validMovement(dt)) {
       _timer?.cancel();
       _startTimer(minutes);
     }
@@ -78,17 +75,13 @@ class MovementTracker {
   ///
   /// Input: [SensorDataType] with the data to be validated.
   bool _validMovement(SensorDataType dt) {
-
     Gyroscope gyro;
 
-    if(dt is Gyroscope) {
+    if (dt is Gyroscope) {
       gyro = dt;
 
       //Threshold validating for gyroscope data.
-      if(gyro.x.abs() > 5
-      || gyro.y.abs() > 5
-      || gyro.z.abs() > 5
-      ) {
+      if (gyro.x.abs() > 5 || gyro.y.abs() > 5 || gyro.z.abs() > 5) {
         return true;
       }
     }
@@ -97,10 +90,6 @@ class MovementTracker {
 
   ///Sensor Config for the earable.
   OpenEarableSensorConfig _buildSensorConfig() {
-    return OpenEarableSensorConfig(
-      sensorId: 0,
-      samplingRate: 30,
-      latency: 0
-    );
+    return OpenEarableSensorConfig(sensorId: 0, samplingRate: 30, latency: 0);
   }
 }
