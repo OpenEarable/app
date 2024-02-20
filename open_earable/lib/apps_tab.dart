@@ -10,6 +10,7 @@ import 'package:open_earable/apps/jump_height_test/jump_height_test.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'global_theme.dart';
 import 'package:open_earable/apps/jump_rope_counter.dart';
+import 'apps/powernapper/home_screen.dart';
 
 class AppInfo {
   final IconData iconData;
@@ -45,6 +46,16 @@ class AppsTab extends StatelessWidget {
                             child: PostureTrackerView(
                                 EarableAttitudeTracker(_openEarable),
                                 _openEarable)))));
+          }),
+      AppInfo(
+          iconData: Icons.face_5,
+          title: "Powernapper Alarm Clock",
+          description: "Powernapping timer!",
+          onTap: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => SleepHomeScreen(_openEarable)));
           }),
       AppInfo(
           iconData: Icons.fiber_smart_record,
