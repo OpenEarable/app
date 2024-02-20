@@ -4,10 +4,12 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:open_earable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_earable/apps/posture_tracker/view/posture_tracker_view.dart';
+import 'package:open_earable/apps/tightness.dart';
 import 'package:open_earable/apps/recorder.dart';
 import 'package:open_earable/apps/jump_height_test/jump_height_test.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'global_theme.dart';
+import 'package:open_earable/apps/jump_rope_counter.dart';
 
 class AppInfo {
   final IconData iconData;
@@ -58,6 +60,20 @@ class AppsTab extends StatelessWidget {
                             child: Recorder(_openEarable)))));
           }),
       AppInfo(
+          iconData: Icons.music_note,
+          title: "Tightness Meter",
+          description: "Track your headbanging.",
+          onTap: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => Material(
+                        child: Theme(
+                            data: materialTheme,
+                            child: TightnessMeter(_openEarable)))));
+          }),
+
+      AppInfo(
           iconData: Icons.height,
           title: "Jump Height Test",
           description: "Test your maximum jump height.",
@@ -65,9 +81,24 @@ class AppsTab extends StatelessWidget {
             Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (context) => Theme(
-                        data: materialTheme,
-                        child: Material(child: JumpHeightTest(_openEarable)))));
+                    builder: (context) => Material(
+                        child: Theme(
+                            data: materialTheme,
+                            child: Material(
+                                child: JumpHeightTest(_openEarable))))));
+          }),
+      AppInfo(
+          iconData: Icons.keyboard_double_arrow_up,
+          title: "Jump Rope Counter",
+          description: "Counter for rope skipping.",
+          onTap: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => Material(
+                        child: Theme(
+                            data: materialTheme,
+                            child: JumpRopeCounter(_openEarable)))));
           }),
       // ... similarly for other apps
     ];
