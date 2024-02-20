@@ -69,7 +69,9 @@ class _MyHomePageState extends State<MyHomePage> {
         _openEarable;
     _widgetOptions = <Widget>[
       ControlTab(_openEarable),
-      SensorDataTab(_openEarable),
+      Material(
+          child:
+              Theme(data: materialTheme, child: SensorDataTab(_openEarable))),
       AppsTab(_openEarable),
     ];
   }
