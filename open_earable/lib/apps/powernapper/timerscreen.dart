@@ -64,7 +64,7 @@ class TimerScreenState extends State<TimerScreen> {
                     'assets/powernapping_timer/198155.png',
                     width: 150,
                     height: 150,
-                    color: Colors.white,
+                    color: Colors.grey,
                   ),
                   SizedBox(height: 20),
 
