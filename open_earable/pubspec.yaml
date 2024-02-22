@@ -130,8 +130,9 @@ flutter:
   #   - images/a_dot_ham.jpeg
   assets:
     - assets/
-    - assets/posture_tracker/
     - assets/powernapping_timer/
+    - lib/apps/recorder/assets/
+    - lib/apps/posture_tracker/assets/
 
   fonts:
     - family:  OpenEarableIcon

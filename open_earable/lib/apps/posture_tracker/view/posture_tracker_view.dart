@@ -74,15 +74,15 @@ class _PostureTrackerViewState extends State<PostureTrackerView> {
   List<Widget> _createHeadViews(postureTrackerViewModel) {
     return [
       this._buildHeadView(
-          "assets/posture_tracker/Head_Front.png",
-          "assets/posture_tracker/Neck_Front.png",
+          "lib/apps/posture_tracker/assets/Head_Front.png",
+          "lib/apps/posture_tracker/assets/Neck_Front.png",
           Alignment.center.add(Alignment(0, 0.3)),
           postureTrackerViewModel.attitude.roll,
           postureTrackerViewModel.badPostureSettings.rollAngleThreshold
               .toDouble()),
       this._buildHeadView(
-          "assets/posture_tracker/Head_Side.png",
-          "assets/posture_tracker/Neck_Side.png",
+          "lib/apps/posture_tracker/assets/Head_Side.png",
+          "lib/apps/posture_tracker/assets/Neck_Side.png",
           Alignment.center.add(Alignment(0, 0.3)),
           -postureTrackerViewModel.attitude.pitch,
           postureTrackerViewModel.badPostureSettings.pitchAngleThreshold
