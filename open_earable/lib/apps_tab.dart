@@ -33,7 +33,7 @@ class AppsTab extends StatelessWidget {
   List<AppInfo> sampleApps(BuildContext context) {
     return [
       AppInfo(
-          logoPath: "lib/apps/recorder/assets/REC.png",
+          logoPath: "lib/apps/recorder/assets/logo.png",
           title: "Recorder",
           description: "Record data from OpenEarable.",
           onTap: () {
@@ -62,7 +62,7 @@ class AppsTab extends StatelessWidget {
                                 _openEarable)))));
           }),
       AppInfo(
-          logoPath: "lib/apps/recorder/assets/REC.png", //Icons.height,
+          logoPath: "lib/apps/jump_height_test/assets/logo.png", //Icons.height,
           title: "Jump Height Test",
           description: "Test your maximum jump height.",
           onTap: () {
@@ -77,7 +77,7 @@ class AppsTab extends StatelessWidget {
           }),
       AppInfo(
           logoPath:
-              "lib/apps/recorder/assets/REC.png", //iconData: Icons.keyboard_double_arrow_up,
+              "lib/apps/recorder/assets/logo.png", //iconData: Icons.keyboard_double_arrow_up,
           title: "Jump Rope Counter",
           description: "Counter for rope skipping.",
           onTap: () {
@@ -91,7 +91,7 @@ class AppsTab extends StatelessWidget {
           }),
       AppInfo(
           logoPath:
-              "lib/apps/recorder/assets/REC.png", //iconData: Icons.face_5,
+              "lib/apps/recorder/assets/logo.png", //iconData: Icons.face_5,
           title: "Powernapper Alarm Clock",
           description: "Powernapping timer!",
           onTap: () {
@@ -105,7 +105,7 @@ class AppsTab extends StatelessWidget {
           }),
       AppInfo(
           logoPath:
-              "lib/apps/recorder/assets/REC.png", //iconData: Icons.music_note,
+              "lib/apps/recorder/assets/logo.png", //iconData: Icons.music_note,
           title: "Tightness Meter",
           description: "Track your headbanging.",
           onTap: () {
