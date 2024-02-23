@@ -4,7 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:open_earable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_earable/apps/posture_tracker/view/posture_tracker_view.dart';
-import 'package:open_earable/apps/tightness.dart';
+import 'package:open_earable/apps/tightness/tightness.dart';
 import 'package:open_earable/apps/recorder/lib/recorder.dart';
 import 'package:open_earable/apps/jump_height_test/jump_height_test.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
@@ -105,7 +105,7 @@ class AppsTab extends StatelessWidget {
           }),
       AppInfo(
           logoPath:
-              "lib/apps/recorder/assets/logo.png", //iconData: Icons.music_note,
+              "lib/apps/tightness/assets/logo.png", //iconData: Icons.music_note,
           title: "Tightness Meter",
           description: "Track your headbanging.",
           onTap: () {

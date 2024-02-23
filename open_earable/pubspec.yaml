@@ -134,6 +134,7 @@ flutter:
     - lib/apps/recorder/assets/
     - lib/apps/posture_tracker/assets/
     - lib/apps/jump_height_test/assets/
+    - lib/apps/tightness/assets/
 
   fonts:
     - family:  OpenEarableIcon
