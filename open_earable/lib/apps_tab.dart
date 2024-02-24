@@ -9,7 +9,7 @@ import 'package:open_earable/apps/recorder/lib/recorder.dart';
 import 'package:open_earable/apps/jump_height_test/jump_height_test.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'global_theme.dart';
-import 'package:open_earable/apps/jump_rope_counter.dart';
+import 'package:open_earable/apps/jump_rope_counter/jump_rope_counter.dart';
 import 'apps/powernapper/home_screen.dart';
 
 class AppInfo {
@@ -35,7 +35,7 @@ class AppsTab extends StatelessWidget {
       AppInfo(
           logoPath: "lib/apps/recorder/assets/logo.png",
           title: "Recorder",
-          description: "Record data from OpenEarable.",
+          description: "Record data from OpenEarable",
           onTap: () {
             Navigator.push(
                 context,
@@ -49,7 +49,7 @@ class AppsTab extends StatelessWidget {
           logoPath:
               "lib/apps/posture_tracker/assets/logo.png", //iconData: Icons.face_6,
           title: "Posture Tracker",
-          description: "Get feedback on bad posture.",
+          description: "Get feedback on bad posture",
           onTap: () {
             Navigator.push(
                 context,
@@ -64,7 +64,7 @@ class AppsTab extends StatelessWidget {
       AppInfo(
           logoPath: "lib/apps/jump_height_test/assets/logo.png", //Icons.height,
           title: "Jump Height Test",
-          description: "Test your maximum jump height.",
+          description: "Measure the height of your jumps",
           onTap: () {
             Navigator.push(
                 context,
@@ -77,9 +77,9 @@ class AppsTab extends StatelessWidget {
           }),
       AppInfo(
           logoPath:
-              "lib/apps/recorder/assets/logo.png", //iconData: Icons.keyboard_double_arrow_up,
+              "lib/apps/jump_rope_counter/assets/logo.png", //iconData: Icons.keyboard_double_arrow_up,
           title: "Jump Rope Counter",
-          description: "Counter for rope skipping.",
+          description: "Count your rope skips",
           onTap: () {
             Navigator.push(
                 context,
@@ -91,9 +91,9 @@ class AppsTab extends StatelessWidget {
           }),
       AppInfo(
           logoPath:
-              "lib/apps/recorder/assets/logo.png", //iconData: Icons.face_5,
-          title: "Powernapper Alarm Clock",
-          description: "Powernapping timer!",
+              "lib/apps/powernapper/assets/logo.png", //iconData: Icons.face_5,
+          title: "Powernapping",
+          description: "Time starts when you're asleep",
           onTap: () {
             Navigator.push(
                 context,
@@ -107,7 +107,7 @@ class AppsTab extends StatelessWidget {
           logoPath:
               "lib/apps/tightness/assets/logo.png", //iconData: Icons.music_note,
           title: "Tightness Meter",
-          description: "Track your headbanging.",
+          description: "Practice your sense of rythm",
           onTap: () {
             Navigator.push(
                 context,

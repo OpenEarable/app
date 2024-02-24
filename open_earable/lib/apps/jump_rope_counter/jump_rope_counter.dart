@@ -1,7 +1,6 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:open_earable/widgets/earable_not_connected_warning.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'dart:async';
