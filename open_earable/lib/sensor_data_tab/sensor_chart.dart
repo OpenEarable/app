@@ -1,9 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/scheduler.dart';
+import 'package:open_earable/ble_controller.dart';
+import 'package:open_earable/widgets/earable_not_connected_warning.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:charts_flutter/flutter.dart' as charts;
+import 'package:provider/provider.dart';
 import 'package:simple_kalman/simple_kalman.dart';
 import 'package:collection/collection.dart';
 import 'dart:math';
@@ -155,7 +158,9 @@ class _EarableDataChartState extends State<EarableDataChart> {
       _minY = -25;
       _maxY = 25;
     }
-    _setupListeners();
+    if (_openEarable.bleManager.connected) {
+      _setupListeners();
+    }
   }
 
   @override
@@ -172,6 +177,9 @@ class _EarableDataChartState extends State<EarableDataChart> {
 
   @override
   Widget build(BuildContext context) {
+    if (!Provider.of<BluetoothController>(context).connected) {
+      return EarableNotConnectedWarning();
+    }
     if (_title == 'Pressure' || _title == 'Temperature') {
       seriesList = [
         charts.Series<SensorData, int>(
