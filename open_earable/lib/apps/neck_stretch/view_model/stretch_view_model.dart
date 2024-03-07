@@ -39,6 +39,7 @@ class StretchViewModel extends ChangeNotifier {
   /// The model class containing all information and logics needed to start and handle a guided neck stretch
   late NeckStretch _neckStretch;
   late StretchStats _stretchStats;
+
   /// Timer that is used to track the current stretching stats, called every 0.01s
   late Timer _settingsTracker;
 
@@ -82,7 +83,7 @@ class StretchViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
-    _attitudeTracker.cancle();
+    _attitudeTracker.cancel();
     super.dispose();
   }
 

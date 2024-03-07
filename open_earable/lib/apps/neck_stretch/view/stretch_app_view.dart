@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'package:open_earable/apps_tab.dart';
 import 'package:open_earable/apps/posture_tracker/model/attitude_tracker.dart';
 import 'package:open_earable/apps/neck_stretch/view/stretch_tracker_view.dart';
 import 'package:open_earable/apps/neck_stretch/view/stretch_tutorial_view.dart';
@@ -10,6 +9,19 @@ import 'package:open_earable/apps/neck_stretch/view/stretch_settings_view.dart';
 import 'package:open_earable/apps/neck_stretch/view/stretch_stats_view.dart';
 
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+
+class MenuItem {
+  final IconData iconData;
+  final String title;
+  final String description;
+  final VoidCallback onTap;
+
+  MenuItem(
+      {required this.iconData,
+      required this.title,
+      required this.description,
+      required this.onTap});
+}
 
 class StretchAppView extends StatefulWidget {
   final AttitudeTracker _tracker;
@@ -32,9 +44,9 @@ class _StretchAppViewState extends State<StretchAppView> {
     this._viewModel = StretchViewModel(widget._tracker, widget._openEarable);
   }
 
-  List<AppInfo> stretchApps(BuildContext context) {
+  List<MenuItem> stretchApps(BuildContext context) {
     return [
-      AppInfo(
+      MenuItem(
           iconData: Icons.play_circle,
           title: "Start Stretching",
           description: "Dive directly into the guided neck stretch!",
@@ -44,7 +56,7 @@ class _StretchAppViewState extends State<StretchAppView> {
                 MaterialPageRoute(
                     builder: (context) => StretchTrackerView(this._viewModel)));
           }),
-      AppInfo(
+      MenuItem(
           iconData: Icons.info,
           title: "Stretch Stats",
           description: "Your stats about your last stretch.",
@@ -52,10 +64,9 @@ class _StretchAppViewState extends State<StretchAppView> {
             Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (context) =>
-                        StretchStatsView(this._viewModel)));
+                    builder: (context) => StretchStatsView(this._viewModel)));
           }),
-      AppInfo(
+      MenuItem(
           iconData: Icons.help,
           title: "How to use this Tool",
           description: "Short guide to get started with the neck stretch.",
@@ -72,7 +83,7 @@ class _StretchAppViewState extends State<StretchAppView> {
 
   @override
   Widget build(BuildContext context) {
-    List<AppInfo> apps = stretchApps(context);
+    List<MenuItem> apps = stretchApps(context);
 
     return Scaffold(
         appBar: AppBar(

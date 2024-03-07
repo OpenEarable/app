@@ -82,8 +82,8 @@ SPEC CHECKSUMS:
   flutter_native_splash: 52501b97d1c0a5f898d687f1646226c1f93c56ef
   open_file: 02eb5cb6b21264bd3a696876f5afbfb7ca4f4b7d
   OrderedSet: aaeb196f7fef5a9edf55d89760da9176ad40b93c
-  path_provider_foundation: 29f094ae23ebbca9d3d0cec13889cd9060c0e943
-  permission_handler_apple: e76247795d700c14ea09e3a2d8855d41ee80a2e6
+  path_provider_foundation: 3784922295ac71e43754bd15e0653ccfd36a147c
+  permission_handler_apple: 036b856153a2b1f61f21030ff725f3e6fece2b78
   Protobuf: 970f7ee93a3a08e3cf64859b8efd95ee32b4f87f
   reactive_ble_mobile: 9ce6723d37ccf701dbffd202d487f23f5de03b4c
   shared_preferences_foundation: b4c3b4cddf1c21f02770737f147a3f5da9d39695
