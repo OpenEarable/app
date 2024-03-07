@@ -158,18 +158,13 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
             ),
           ),
         ),
-
         ...headViews.map(
           (e) => FractionallySizedBox(
             widthFactor: .6,
             child: e,
           ),
         ),
-        // Used to place the Stretching Button always at the bottom
-        Expanded(
-          child: Container(),
-        ),
-        this._buildStretchButton(neckStretchViewModel),
+        _buildStretchButton(neckStretchViewModel)
       ],
     );
   }
@@ -188,7 +183,7 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
   // Creates the Button used to start the stretch exercise
   Widget _buildStretchButton(StretchViewModel neckStretchViewModel) {
     return Padding(
-      padding: EdgeInsets.all(5),
+      padding: EdgeInsets.all(16),
       child: Column(children: [
         ElevatedButton(
           onPressed: neckStretchViewModel.isAvailable

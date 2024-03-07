@@ -114,23 +114,29 @@ class _StretchAppViewState extends State<StretchAppView> {
                 icon: Icon(Icons.settings)),
           ],
         ),
-        body: ListView.builder(
-            itemCount: apps.length,
-            itemBuilder: (BuildContext context, int index) {
-              return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 5),
-                  child: Card(
-                    color: Theme.of(context).colorScheme.primary,
-                    child: ListTile(
-                      leading: Icon(apps[index].iconData, size: 40.0),
-                      title: Text(apps[index].title),
-                      subtitle: Text(apps[index].description),
-                      trailing: Icon(Icons.arrow_forward_ios, size: 16.0),
-                      // Arrow icon on the right
-                      onTap:
-                          apps[index].onTap, // Callback when the card is tapped
-                    ),
-                  ));
-            }));
+        body: Padding(
+            padding: const EdgeInsets.only(top: 5),
+            child: ListView.builder(
+                itemCount: apps.length,
+                itemBuilder: (BuildContext context, int index) {
+                  return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 5),
+                      child: Card(
+                        color: Theme.of(context).colorScheme.primary,
+                        child: Container(
+                            alignment: Alignment.center,
+                            height: 80,
+                            child: ListTile(
+                              leading: Icon(apps[index].iconData, size: 40.0),
+                              title: Text(apps[index].title),
+                              subtitle: Text(apps[index].description),
+                              trailing:
+                                  Icon(Icons.arrow_forward_ios, size: 16.0),
+                              // Arrow icon on the right
+                              onTap: apps[index]
+                                  .onTap, // Callback when the card is tapped
+                            )),
+                      ));
+                })));
   }
 }
