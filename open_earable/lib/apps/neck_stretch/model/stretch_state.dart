@@ -80,7 +80,6 @@ class StretchStats {
   double leftStretchDuration;
   double rightStretchDuration;
 
-
   StretchStats(
       {this.maxMainAngle = 0,
       this.maxLeftAngle = 0,
@@ -150,13 +149,13 @@ class NeckStretch {
   late bool _resting;
 
   /// Holds the Timer that increments the current Duration
-  var _restDurationTimer;
+  Timer? _restDurationTimer;
 
   /// Stores the rest duration of the current timer
   late Duration _restDuration;
 
   /// Stores the current active timer for state transition
-  var _currentTimer;
+  Timer? _currentTimer;
 
   StretchSettings get settings => _settings;
 
@@ -183,8 +182,8 @@ class NeckStretch {
   void stopStretching() {
     _resting = false;
     _settings.state = NeckStretchState.noStretch;
-    _currentTimer.cancel();
-    _restDurationTimer.cancel();
+    _currentTimer?.cancel();
+    _restDurationTimer?.cancel();
     _restDuration = Duration(seconds: 0);
     _viewModel.stopTracking();
   }
@@ -204,7 +203,7 @@ class NeckStretch {
       /// If we don't restart the timer it results in a weird UI inconsistency
       /// for displaying the _restDuration as then the restDuration is already
       /// counted down when the next Timer hasn't started yet.
-      _restDurationTimer.cancel();
+      _restDurationTimer?.cancel();
       _startCountdown();
       _restDuration = _settings.restingTime;
       _currentTimer = Timer(_settings.restingTime, () {
@@ -241,8 +240,8 @@ class NeckStretch {
         return;
       case NeckStretchState.leftNeckStretch:
         _settings.state = NeckStretchState.doneStretching;
-        _currentTimer.cancel();
-        _restDurationTimer.cancel();
+        _currentTimer?.cancel();
+        _restDurationTimer?.cancel();
         _restDuration = Duration(seconds: 0);
         _viewModel.stopTracking();
         _openEarable.audioPlayer.jingle(2);
