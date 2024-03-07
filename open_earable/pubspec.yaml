@@ -35,6 +35,7 @@ dependencies:
   open_earable_flutter:
     git: 
       url: https://github.com/OpenEarable/open_earable_flutter.git
+  youtube_player_flutter: ^8.1.2
   permission_handler: ^11.1.0
   flutter_reactive_ble: ^5.2.0
   app_settings: ^5.1.1
@@ -130,6 +131,8 @@ flutter:
   #   - images/a_dot_ham.jpeg
   assets:
     - assets/
+    - assets/posture_tracker/
+    - assets/neck_stretch/
     - lib/apps/powernapper/assets/
     - lib/apps/recorder/assets/
     - lib/apps/posture_tracker/assets/

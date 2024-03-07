@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:open_earable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_earable/apps/posture_tracker/view/posture_tracker_view.dart';
+import 'package:open_earable/apps/neck_stretch/view/stretch_app_view.dart';
 import 'package:open_earable/apps/tightness/tightness.dart';
 import 'package:open_earable/apps/recorder/lib/recorder.dart';
 import 'package:open_earable/apps/jump_height_test/jump_height_test.dart';
@@ -116,6 +117,17 @@ class AppsTab extends StatelessWidget {
                         child: Theme(
                             data: materialTheme,
                             child: TightnessMeter(_openEarable)))));
+          }),
+      AppInfo(
+          iconData: Icons.self_improvement,
+          title: "Guided Neck Stretch",
+          description: "Relax your neck with a stretch.",
+          onTap: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => StretchAppView(
+                      EarableAttitudeTracker(_openEarable), _openEarable)));
           }),
       // ... similarly for other apps
     ];
