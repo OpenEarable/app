@@ -119,7 +119,7 @@ class AppsTab extends StatelessWidget {
                             child: TightnessMeter(_openEarable)))));
           }),
       AppInfo(
-          logoPath: "lib/apps/tightness/assets/logo.png",
+          logoPath: "lib/apps/neck_stretch/assets/logo.png",
           title: "Guided Neck Stretch",
           description: "Relax your neck with a stretch.",
           onTap: () {
