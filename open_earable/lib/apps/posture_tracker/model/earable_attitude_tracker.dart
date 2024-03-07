@@ -7,7 +7,7 @@ import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 class EarableAttitudeTracker extends AttitudeTracker {
   final OpenEarable _openEarable;
   StreamSubscription<Map<String, dynamic>>? _subscription;
-  
+
   @override
   bool get isTracking => _subscription != null && !_subscription!.isPaused;
   @override
@@ -21,7 +21,7 @@ class EarableAttitudeTracker extends AttitudeTracker {
     _openEarable.bleManager.connectionStateStream.listen((connected) {
       didChangeAvailability(this);
       if (!connected) {
-        cancle();
+        cancel();
       }
     });
   }
@@ -34,12 +34,12 @@ class EarableAttitudeTracker extends AttitudeTracker {
     }
 
     _openEarable.sensorManager.writeSensorConfig(_buildSensorConfig());
-    _subscription = _openEarable.sensorManager.subscribeToSensorData(0).listen((event) {
+    _subscription =
+        _openEarable.sensorManager.subscribeToSensorData(0).listen((event) {
       updateAttitude(
-        roll: _rollEWMA.update(event["EULER"]["ROLL"]),
-        pitch: _pitchEWMA.update(event["EULER"]["PITCH"]),
-        yaw: _yawEWMA.update(event["EULER"]["YAW"])
-      );
+          roll: _rollEWMA.update(event["EULER"]["ROLL"]),
+          pitch: _pitchEWMA.update(event["EULER"]["PITCH"]),
+          yaw: _yawEWMA.update(event["EULER"]["YAW"]));
     });
   }
 
@@ -49,17 +49,13 @@ class EarableAttitudeTracker extends AttitudeTracker {
   }
 
   @override
-  void cancle() {
+  void cancel() {
     stop();
     _subscription?.cancel();
-    super.cancle();
+    super.cancel();
   }
 
   OpenEarableSensorConfig _buildSensorConfig() {
-    return OpenEarableSensorConfig(
-      sensorId: 0,
-      samplingRate: 30,
-      latency: 0
-    );
+    return OpenEarableSensorConfig(sensorId: 0, samplingRate: 30, latency: 0);
   }
 }

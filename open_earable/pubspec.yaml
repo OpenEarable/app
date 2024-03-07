@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   open_earable_flutter:
     git: 
       url: https://github.com/OpenEarable/open_earable_flutter.git
@@ -41,7 +43,7 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.2
-
+  
   english_words: ^4.0.0
   ditredi: ^2.0.0
   vector_math: ^2.1.4
@@ -65,7 +67,11 @@ dependencies:
   path_provider: ^2.1.1
   open_file: ^3.3.2
   provider: ^6.1.1
-
+  shared_preferences: ^2.2.2
+  
+dependency_overrides:
+  intl: ^0.18.1
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -127,6 +133,12 @@ flutter:
     - assets/
     - assets/posture_tracker/
     - assets/neck_stretch/
+    - lib/apps/powernapper/assets/
+    - lib/apps/recorder/assets/
+    - lib/apps/posture_tracker/assets/
+    - lib/apps/jump_height_test/assets/
+    - lib/apps/tightness/assets/
+    - lib/apps/jump_rope_counter/assets/
 
   fonts:
     - family:  OpenEarableIcon

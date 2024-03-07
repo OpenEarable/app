@@ -5,8 +5,8 @@ set -e
 
 # by default, the execution directory of this script is the ci_scripts directory
 # CI_WORKSPACE is the directory of your cloned repo
-echo "🟩 Navigate from ($PWD) to ($CI_WORKSPACE)"
-cd $CI_WORKSPACE
+echo "🟩 Navigate from ($PWD) to ($CI_WORKSPACE_PATH)"
+cd $CI_WORKSPACE_PATH
 
 echo "🟩 Install Flutter"
 time git clone https://github.com/flutter/flutter.git -b stable $HOME/flutter
@@ -16,7 +16,7 @@ echo "🟩 Flutter Precache"
 time flutter precache --ios
 
 echo "🟩 Install Flutter Dependencies"
-cd open_earable
+cd repository/open_earable
 time flutter clean
 time flutter pub get
 time flutter pub upgrade

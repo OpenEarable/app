@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:open_earable/ble_controller.dart';
+import 'package:open_earable/widgets/earable_not_connected_warning.dart';
+import 'package:provider/provider.dart';
 import 'dart:async';
 import 'package:three_dart/three_dart.dart' as three;
 import 'package:three_dart_jsm/three_dart_jsm.dart' as three_jsm;
@@ -88,52 +91,57 @@ class _Earable3DModelState extends State<Earable3DModel> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          // child: Text(title, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-        ),
-        Expanded(child: LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            width = constraints.maxWidth;
-            height = constraints.maxHeight;
-            Color c = Theme.of(context).colorScheme.background;
-            _sceneBackground = three.Color.fromArray([c.red, c.green, c.blue]);
-            initSize(context);
-            return Column(
-              children: [
-                Stack(
-                  children: [
-                    Container(
-                        width: width,
-                        height: height,
-                        color: Theme.of(context).colorScheme.background,
-                        child: Builder(builder: (BuildContext context) {
-                          if (kIsWeb) {
-                            return three3dRender.isInitialized
-                                ? HtmlElementView(
-                                    viewType:
-                                        three3dRender.textureId!.toString())
-                                : Container();
-                          } else {
-                            return three3dRender.isInitialized
-                                ? Texture(textureId: three3dRender.textureId!)
-                                : Container();
-                          }
-                        })),
-                  ],
-                ),
-              ],
-            );
-          },
-        )),
-        Padding(
-            padding: EdgeInsets.only(bottom: 16),
-            child: Text(
-                "Yaw: ${(_yaw * 180 / pi).toStringAsFixed(1)}°\nPitch: ${(_pitch * 180 / pi).toStringAsFixed(1)}°\nRoll: ${(_roll * 180 / pi).toStringAsFixed(1)}°"))
-      ],
-    );
+    if (!Provider.of<BluetoothController>(context).connected) {
+      return EarableNotConnectedWarning();
+    } else {
+      return Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            // child: Text(title, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          ),
+          Expanded(child: LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              width = constraints.maxWidth;
+              height = constraints.maxHeight;
+              Color c = Theme.of(context).colorScheme.background;
+              _sceneBackground =
+                  three.Color.fromArray([c.red, c.green, c.blue]);
+              initSize(context);
+              return Column(
+                children: [
+                  Stack(
+                    children: [
+                      Container(
+                          width: width,
+                          height: height,
+                          color: Theme.of(context).colorScheme.background,
+                          child: Builder(builder: (BuildContext context) {
+                            if (kIsWeb) {
+                              return three3dRender.isInitialized
+                                  ? HtmlElementView(
+                                      viewType:
+                                          three3dRender.textureId!.toString())
+                                  : Container();
+                            } else {
+                              return three3dRender.isInitialized
+                                  ? Texture(textureId: three3dRender.textureId!)
+                                  : Container();
+                            }
+                          })),
+                    ],
+                  ),
+                ],
+              );
+            },
+          )),
+          Padding(
+              padding: EdgeInsets.only(bottom: 16),
+              child: Text(
+                  "Yaw: ${(_yaw * 180 / pi).toStringAsFixed(1)}°\nPitch: ${(_pitch * 180 / pi).toStringAsFixed(1)}°\nRoll: ${(_roll * 180 / pi).toStringAsFixed(1)}°"))
+        ],
+      );
+    }
   }
 
   // Platform messages are asynchronous, so we initialize in an async method.
