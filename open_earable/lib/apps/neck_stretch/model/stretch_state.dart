@@ -33,11 +33,11 @@ extension NeckStretchStateExtension on NeckStretchState {
   String get assetPathNeckFront {
     switch (this) {
       case NeckStretchState.rightNeckStretch:
-        return 'assets/neck_stretch/Neck_Right_Stretch.png';
+        return 'lib/apps/neck_stretch/assets/Neck_Right_Stretch.png';
       case NeckStretchState.leftNeckStretch:
-        return 'assets/neck_stretch/Neck_Left_Stretch.png';
+        return 'lib/apps/neck_stretch/assets/Neck_Left_Stretch.png';
       default:
-        return 'assets/posture_tracker/Neck_Front.png';
+        return 'lib/apps/neck_stretch/assets/Neck_Front.png';
     }
   }
 
@@ -45,20 +45,20 @@ extension NeckStretchStateExtension on NeckStretchState {
   String get assetPathNeckSide {
     switch (this) {
       case NeckStretchState.mainNeckStretch:
-        return 'assets/neck_stretch/Neck_Main_Stretch.png';
+        return 'lib/apps/neck_stretch/assets/Neck_Main_Stretch.png';
       default:
-        return 'assets/posture_tracker/Neck_Side.png';
+        return 'lib/apps/neck_stretch/assets/Neck_Side.png';
     }
   }
 
   /// Gets the corresponding asset path for the Head Front Image
   String get assetPathHeadFront {
-    return 'assets/posture_tracker/Head_Front.png';
+    return 'lib/apps/neck_stretch/assets/Head_Front.png';
   }
 
   /// Gets the corresponding asset path for the Head Side Image
   String get assetPathHeadSide {
-    return 'assets/posture_tracker/Head_Side.png';
+    return 'lib/apps/neck_stretch/assets/Head_Side.png';
   }
 }
 

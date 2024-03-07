@@ -11,7 +11,6 @@ class SettingsView extends StatefulWidget {
 
   @override
   State<SettingsView> createState() => _SettingsViewState();
-
 }
 
 class _SettingsViewState extends State<SettingsView> {
@@ -39,13 +38,16 @@ class _SettingsViewState extends State<SettingsView> {
             .toString());
     _restingDuration = TextEditingController(
         text: _viewModel.stretchSettings.restingTime.inSeconds.toString());
-    _forwardStretchAngle = TextEditingController(text: _viewModel.stretchSettings.forwardStretchAngle.toString());
-    _sideStretchAngle = TextEditingController(text: _viewModel.stretchSettings.sideStretchAngle.toString());
+    _forwardStretchAngle = TextEditingController(
+        text: _viewModel.stretchSettings.forwardStretchAngle.toString());
+    _sideStretchAngle = TextEditingController(
+        text: _viewModel.stretchSettings.sideStretchAngle.toString());
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(title: const Text("Stretch Settings")),
       body: ChangeNotifierProvider<StretchViewModel>.value(
           value: _viewModel,
@@ -283,7 +285,7 @@ class _SettingsViewState extends State<SettingsView> {
     if (input.contains('-')) return old;
 
     return double.parse(input);
-}
+  }
 
   /// Update the Meditation Settings according to values, if field is empty set that timer Duration to 0
   void _updateMeditationSettings() {
@@ -296,8 +298,10 @@ class _SettingsViewState extends State<SettingsView> {
         _getNewDuration(settings.leftNeckRelaxation, _leftNeckDuration.text);
     settings.restingTime =
         _getNewDuration(settings.restingTime, _restingDuration.text);
-    settings.forwardStretchAngle = _parseAngle(settings.forwardStretchAngle, _forwardStretchAngle.text);
-    settings.sideStretchAngle = _parseAngle(settings.sideStretchAngle, _sideStretchAngle.text);
+    settings.forwardStretchAngle =
+        _parseAngle(settings.forwardStretchAngle, _forwardStretchAngle.text);
+    settings.sideStretchAngle =
+        _parseAngle(settings.sideStretchAngle, _sideStretchAngle.text);
   }
 
   @override

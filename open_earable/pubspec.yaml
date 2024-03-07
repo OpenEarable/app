@@ -131,11 +131,10 @@ flutter:
   #   - images/a_dot_ham.jpeg
   assets:
     - assets/
-    - assets/posture_tracker/
-    - assets/neck_stretch/
     - lib/apps/powernapper/assets/
     - lib/apps/recorder/assets/
     - lib/apps/posture_tracker/assets/
+    - lib/apps/neck_stretch/assets/
     - lib/apps/jump_height_test/assets/
     - lib/apps/tightness/assets/
     - lib/apps/jump_rope_counter/assets/

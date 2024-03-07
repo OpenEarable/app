@@ -36,6 +36,7 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
         value: _viewModel,
         builder: (context, child) => Consumer<StretchViewModel>(
             builder: (context, neckStretchViewModel, child) => Scaffold(
+                  backgroundColor: Theme.of(context).colorScheme.background,
                   appBar: AppBar(
                     /// Override leading back arrow button to stop tracking if
                     /// user stopped stretching
@@ -155,8 +156,7 @@ class _StretchTutorialViewState extends State<StretchTutorialView> {
                         ),
                       ),
                       TextSpan(
-                        text:
-                        'area\n\n',
+                        text: 'area\n\n',
                       ),
                     ],
                   ),

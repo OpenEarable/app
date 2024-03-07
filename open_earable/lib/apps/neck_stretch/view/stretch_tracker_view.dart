@@ -51,6 +51,7 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
         value: _viewModel,
         builder: (context, child) => Consumer<StretchViewModel>(
             builder: (context, neckStretchViewModel, child) => Scaffold(
+                  backgroundColor: Theme.of(context).colorScheme.background,
                   appBar: AppBar(
                     /// Override leading back arrow button to stop tracking if
                     /// user stopped stretching
@@ -65,6 +66,7 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
                     title: const Text("Guided Neck Stretch"),
                     actions: [
                       IconButton(
+
                           /// Settings button, only active when not stretching
                           onPressed: (this._viewModel.stretchState ==
                                       NeckStretchState.noStretch ||
@@ -215,15 +217,21 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
 
       /// Visible Widgets for the main stretch
       _buildStretchViews(
-          NeckStretchState.mainNeckStretch, neckStretchViewModel, 7.0, (neckStretchViewModel.stretchSettings.forwardStretchAngle % 180)),
+          NeckStretchState.mainNeckStretch,
+          neckStretchViewModel,
+          7.0,
+          (neckStretchViewModel.stretchSettings.forwardStretchAngle % 180)),
 
       /// Visible Widgets for the right stretch
       _buildStretchViews(
-          NeckStretchState.rightNeckStretch, neckStretchViewModel, (neckStretchViewModel.stretchSettings.sideStretchAngle % 180), 15.0),
+          NeckStretchState.rightNeckStretch,
+          neckStretchViewModel,
+          (neckStretchViewModel.stretchSettings.sideStretchAngle % 180),
+          15.0),
 
       /// Visible Widgets for the left stretch
-      _buildStretchViews(
-          NeckStretchState.leftNeckStretch, neckStretchViewModel, (neckStretchViewModel.stretchSettings.sideStretchAngle % 180), 15.0),
+      _buildStretchViews(NeckStretchState.leftNeckStretch, neckStretchViewModel,
+          (neckStretchViewModel.stretchSettings.sideStretchAngle % 180), 15.0),
     ];
   }
 

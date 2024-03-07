@@ -25,6 +25,7 @@ class _StretchStatsViewState extends State<StretchStatsView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(title: const Text("Stretch Stats")),
       body: SingleChildScrollView(
         child: Column(
@@ -63,15 +64,18 @@ class _StretchStatsViewState extends State<StretchStatsView> {
                   ),
                   ListTile(
                     title: Text("Main Neck Stretch Duration"),
-                    trailing: Text("${_stats.mainStretchDuration.toStringAsFixed(2)} s"),
+                    trailing: Text(
+                        "${_stats.mainStretchDuration.toStringAsFixed(2)} s"),
                   ),
                   ListTile(
                     title: Text("Right Neck Stretch Duration"),
-                    trailing: Text("${_stats.rightStretchDuration.toStringAsFixed(2)} s"),
+                    trailing: Text(
+                        "${_stats.rightStretchDuration.toStringAsFixed(2)} s"),
                   ),
                   ListTile(
                     title: Text("Left Neck Stretch Duration"),
-                    trailing: Text("${_stats.leftStretchDuration.toStringAsFixed(2)} s"),
+                    trailing: Text(
+                        "${_stats.leftStretchDuration.toStringAsFixed(2)} s"),
                   ),
                 ],
               ),

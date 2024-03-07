@@ -7,6 +7,7 @@ import 'package:open_earable/apps/neck_stretch/view_model/stretch_view_model.dar
 import 'package:open_earable/apps/neck_stretch/model/stretch_state.dart';
 import 'package:open_earable/apps/neck_stretch/view/stretch_settings_view.dart';
 import 'package:open_earable/apps/neck_stretch/view/stretch_stats_view.dart';
+import 'package:open_earable/global_theme.dart';
 
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
@@ -54,7 +55,10 @@ class _StretchAppViewState extends State<StretchAppView> {
             Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (context) => StretchTrackerView(this._viewModel)));
+                    builder: (context) => Material(
+                        child: Theme(
+                            data: materialTheme,
+                            child: StretchTrackerView(this._viewModel)))));
           }),
       MenuItem(
           iconData: Icons.info,
@@ -64,7 +68,10 @@ class _StretchAppViewState extends State<StretchAppView> {
             Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (context) => StretchStatsView(this._viewModel)));
+                    builder: (context) => Material(
+                        child: Theme(
+                            data: materialTheme,
+                            child: StretchStatsView(this._viewModel)))));
           }),
       MenuItem(
           iconData: Icons.help,
@@ -74,8 +81,10 @@ class _StretchAppViewState extends State<StretchAppView> {
             Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (context) =>
-                        StretchTutorialView(this._viewModel)));
+                    builder: (context) => Material(
+                        child: Theme(
+                            data: materialTheme,
+                            child: StretchTutorialView(this._viewModel)))));
           }),
       // ... similarly for other apps
     ];
@@ -86,6 +95,7 @@ class _StretchAppViewState extends State<StretchAppView> {
     List<MenuItem> apps = stretchApps(context);
 
     return Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.background,
         appBar: AppBar(
           title: const Text("Guided Neck Stretch"),
           actions: [
@@ -96,7 +106,10 @@ class _StretchAppViewState extends State<StretchAppView> {
                         this._viewModel.stretchState ==
                             NeckStretchState.doneStretching)
                     ? () => Navigator.of(context).push(MaterialPageRoute(
-                        builder: (context) => SettingsView(this._viewModel)))
+                        builder: (context) => Material(
+                            child: Theme(
+                                data: materialTheme,
+                                child: SettingsView(this._viewModel)))))
                     : null,
                 icon: Icon(Icons.settings)),
           ],
