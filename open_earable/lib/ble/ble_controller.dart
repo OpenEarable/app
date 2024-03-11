@@ -43,6 +43,8 @@ class BluetoothController extends ChangeNotifier {
       _connected = connected;
       if (connected) {
         _getSOC();
+      } else {
+        startScanning();
       }
       notifyListeners();
     });
@@ -67,9 +69,7 @@ class BluetoothController extends ChangeNotifier {
   }
 
   Future<void> startScanning() async {
-    if (_scanning) {
-      return;
-    }
+    _scanSubscription?.cancel();
     _scanning = true;
     _discoveredDevices = [];
     if (_openEarable == null) {
