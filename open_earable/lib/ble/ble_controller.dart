@@ -92,7 +92,8 @@ class BluetoothController extends ChangeNotifier {
   }
 
   void connectToDevice(device) {
-    if (device.name == _openEarable?.bleManager.connectedDevice?.name) {
+    if (device.name == _openEarable?.bleManager.connectedDevice?.name ||
+        device.name == _openEarable?.bleManager.connectingDevice?.name) {
       return;
     }
     _scanSubscription?.cancel();

@@ -379,7 +379,7 @@ packages:
     description:
       path: "."
       ref: HEAD
-      resolved-ref: "35b7a1183efbaf55abe374e1da3a7c4509c385a5"
+      resolved-ref: a12d506db063ea70532e93c8bb441ea62d1f0f10
       url: "https://github.com/OpenEarable/open_earable_flutter.git"
     source: git
     version: "0.0.2"
@@ -547,10 +547,10 @@ packages:
     dependency: "direct main"
     description:
       name: provider
-      sha256: "9a96a0a19b594dbc5bf0f1f27d2bc67d5f95957359b461cd9feb44ed6ae75096"
+      sha256: c8a055ee5ce3fd98d6fc872478b03823ffdb448699c6ebdbbc71d59b596fd48c
       url: "https://pub.dev"
     source: hosted
-    version: "6.1.1"
+    version: "6.1.2"
   reactive_ble_mobile:
     dependency: transitive
     description:
