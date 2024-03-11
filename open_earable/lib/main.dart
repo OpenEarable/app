@@ -3,18 +3,18 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:open_earable/open_earable_icon_icons.dart';
+import 'package:open_earable/shared/open_earable_icon_icons.dart';
 import 'package:provider/provider.dart';
 import 'controls_tab/controls_tab.dart';
 import 'sensor_data_tab/sensor_data_tab.dart';
-import 'ble.dart';
-import 'apps_tab.dart';
+import 'package:open_earable/ble/ble_connect_view.dart';
+import 'package:open_earable/ble/ble_controller.dart';
+import 'apps_tab/apps_tab.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:app_settings/app_settings.dart';
-import 'ble_controller.dart';
-import 'global_theme.dart';
+import 'shared/global_theme.dart';
 
 void main() => runApp(ChangeNotifierProvider(
     create: (context) => BluetoothController(), child: MyApp()));

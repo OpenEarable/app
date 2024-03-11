@@ -1,11 +1,11 @@
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:open_earable/ble_controller.dart';
+import 'package:open_earable/ble/ble_controller.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:provider/provider.dart';
 import '../models/open_earable_settings.dart';
-import '../../widgets/dynamic_value_picker.dart';
+import '../../shared/dynamic_value_picker.dart';
 
 class AudioPlayerCard extends StatefulWidget {
   final OpenEarable _openEarable;
@@ -492,7 +492,8 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
             color: Color(0xff53515b),
             child: Text(
               'Set\nSource',
-              style: TextStyle(color: Colors.white, fontSize: 15),
+              style: TextStyle(
+                  color: _connected ? Colors.white : null, fontSize: 15),
             ),
           ),
         ),

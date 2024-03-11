@@ -1,8 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter/scheduler.dart';
-import 'package:open_earable/ble_controller.dart';
-import 'package:open_earable/widgets/earable_not_connected_warning.dart';
+import 'package:open_earable/ble/ble_controller.dart';
+import 'package:open_earable/shared/earable_not_connected_warning.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:charts_flutter/flutter.dart' as charts;

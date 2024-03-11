@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:open_earable/ble_controller.dart';
-import 'package:open_earable/widgets/earable_not_connected_warning.dart';
+import 'package:open_earable/shared/earable_not_connected_warning.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 import 'package:three_dart/three_dart.dart' as three;
@@ -9,6 +8,7 @@ import 'package:flutter_gl/flutter_gl.dart';
 import 'package:three_dart/three3d/math/euler.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'dart:math';
+import 'package:open_earable/ble/ble_controller.dart';
 
 class Earable3DModel extends StatefulWidget {
   final OpenEarable _openEarable;

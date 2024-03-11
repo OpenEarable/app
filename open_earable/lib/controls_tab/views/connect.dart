@@ -2,11 +2,11 @@ import 'dart:io';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
-import 'package:open_earable/ble_controller.dart';
+import 'package:open_earable/ble/ble_controller.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
-import '../../ble.dart';
+import 'package:open_earable/ble/ble_connect_view.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ConnectCard extends StatefulWidget {

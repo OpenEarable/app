@@ -6,9 +6,9 @@ import 'dart:async';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'dart:io';
 import 'package:provider/provider.dart';
-import '../../ble_controller.dart';
+import 'package:open_earable/ble/ble_controller.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import '../../global_theme.dart';
+import 'package:open_earable/shared/global_theme.dart';
 
 class LEDColorCard extends StatefulWidget {
   final OpenEarable _openEarable;
@@ -246,7 +246,10 @@ class _LEDColorCardState extends State<LEDColorCard> {
                                 ? CupertinoButton(
                                     padding: EdgeInsets.zero,
                                     child: Text('Set',
-                                        style: TextStyle(color: Colors.white)),
+                                        style: TextStyle(
+                                            color: connected
+                                                ? Colors.white
+                                                : null)),
                                     onPressed: _openEarable.bleManager.connected
                                         ? _setLEDColor
                                         : null,

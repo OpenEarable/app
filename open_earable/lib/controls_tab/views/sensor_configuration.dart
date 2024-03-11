@@ -1,8 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:open_earable/widgets/dynamic_value_picker.dart';
+import 'package:open_earable/shared/dynamic_value_picker.dart';
 import 'dart:io';
-import 'package:open_earable/ble_controller.dart';
+import 'package:open_earable/ble/ble_controller.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:provider/provider.dart';
 import '../models/open_earable_settings.dart';
