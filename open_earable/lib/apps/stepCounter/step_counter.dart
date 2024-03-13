@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:open_earable/apps/stepCounter/step_counter_settings.dart';
+import 'package:open_earable/widgets/earable_not_connected_warning.dart';
 import 'dart:async';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
@@ -103,11 +103,11 @@ class _StepCounterState extends State<StepCounter> {
   }
 
   /**
-   * Berachnet die durchschnittliche Geschwindigkeit in Schritte pro Sekunde
+   * Berechnet die durchschnittlichen Schritte pro Minute
    */
-  String _formatAvgSpeed(int steps, Duration duration) {
+  String _formatAvgCadence(int steps, Duration duration) {
     if (duration.inSeconds != 0) {
-      return (steps / duration.inSeconds).toStringAsFixed(2);
+      return (60.0 * steps / duration.inSeconds.toDouble()).toStringAsFixed(2);
     }
     return ""; // Wenn durch 0 geteilt wird
   }
@@ -121,6 +121,7 @@ class _StepCounterState extends State<StepCounter> {
     }
     setState(() {
       _countedSteps = 0;
+      _duration = Duration.zero;
     });
   }
 
@@ -149,6 +150,9 @@ class _StepCounterState extends State<StepCounter> {
    * Ruft die Sensordaten vom Earable ab und verarbeitet dies.
    */
   _setupListeners() {
+    OpenEarableSensorConfig config =
+        OpenEarableSensorConfig(sensorId: 0, samplingRate: 30, latency: 0);
+    _openEarable.sensorManager.writeSensorConfig(config);
     _imuSubscription =
         _openEarable.sensorManager.subscribeToSensorData(0).listen((data) {
       if (!_startStepCount) {
@@ -219,34 +223,7 @@ class _StepCounterState extends State<StepCounter> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
-        title: Text('StepInformation'),
-        actions: [
-          IconButton(
-            onPressed: () async {
-              var result = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => SettingsPage(
-                    widget.stoppedTimeController,
-                    widget.countedStepsController,
-                  ),
-                ),
-              );
-
-              if (result != null) {
-                setState(() {
-                  widget.stoppedTimeController.text =
-                      result['stoppedTime'] ?? '';
-                  widget.countedStepsController.text =
-                      result['countedSteps'] ?? '';
-                  updateValues(result['stoppedTime'] ?? '',
-                      result['countedSteps'] ?? '');
-                });
-              }
-            },
-            icon: Icon(Icons.settings),
-          ),
-        ],
+        title: Text('StepCounter'),
       ),
       // Beschränkt die GUI auf nicht von Betriebssystem verwendeten Bereich. Funktioniert nicht auf jedem Gerät.
       body: SafeArea(
@@ -279,50 +256,55 @@ class _StepCounterState extends State<StepCounter> {
    * Erstellt die GUI im Landscape Modus
    */
   Widget _buildRow() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        Expanded(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
+    return !_openEarable.bleManager.connected
+        ? EarableNotConnectedWarning()
+        : Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildListTile(_formatDuration(_duration), "Stopped Time", 45),
-              _buildListTile(_countedSteps.toString(), "Counted Steps", 45),
-              _buildListTile(_formatAvgSpeed(_countedSteps, _duration),
-                  "Avg. Walking Speed", 45),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    _buildListTile(
+                        _formatDuration(_duration), "Stopped Time", 40),
+                    _buildListTile(
+                        _countedSteps.toString(), "Counted Steps", 40),
+                    _buildListTile(_formatAvgCadence(_countedSteps, _duration),
+                        "Avg. Cadence\n(Steps per Minute)", 40),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildControlButtons(),
+                  ],
+                ),
+              ),
             ],
-          ),
-        ),
-        Expanded(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              _buildControlButtons(),
-              if (!_openEarable.bleManager.connected)
-                _buildText("Not connected to OpenEarable device", 15),
-            ],
-          ),
-        ),
-      ],
-    );
+          );
   }
 
   /**
    * Erstellt die GUI im Portait Modus
    */
   Widget _buildColumn() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.start,
-      children: [
-        _buildListTile(_formatDuration(_duration), "Stopped Time", 45),
-        _buildListTile(_countedSteps.toString(), "Counted Steps", 45),
-        _buildListTile(_formatAvgSpeed(_countedSteps, _duration),
-            "Avg. Walking Speed", 45),
-        _buildControlButtons(),
-        if (!_openEarable.bleManager.connected)
-          _buildText("Not connected to OpenEarable device", 15),
-      ],
-    );
+    return !_openEarable.bleManager.connected
+        ? EarableNotConnectedWarning()
+        : Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              Spacer(),
+              _buildListTile(_formatDuration(_duration), "Stopped Time", 45),
+              _buildListTile(_countedSteps.toString(), "Counted Steps", 45),
+              _buildListTile(_formatAvgCadence(_countedSteps, _duration),
+                  "Avg. Cadence", 45),
+              Spacer(),
+              _buildControlButtons(),
+              Spacer(),
+            ],
+          );
   }
 
   /**
@@ -334,10 +316,10 @@ class _StepCounterState extends State<StepCounter> {
       children: [
         _buildButton(
           onPressed: startStopStepCount,
-          label: _startStepCount ? "Stop StepCounting" : "Start StepCounting",
+          label: _startStepCount ? "Stop Counting" : "Start Counting",
         ),
         _buildButton(
-          onPressed: _resetStepCount,
+          onPressed: _startStepCount ? null : _resetStepCount,
           label: "Reset Steps",
         ),
       ],
@@ -351,11 +333,13 @@ class _StepCounterState extends State<StepCounter> {
       String leadingText, String trailingText, double fontSize) {
     return ListTile(
       contentPadding: EdgeInsets.all(8),
-      title: _buildText(leadingText, fontSize),
-      subtitle: Text(
+      title: Center(child: _buildText(leadingText, fontSize)),
+      subtitle: Center(
+          child: Text(
         trailingText,
         style: TextStyle(fontSize: fontSize * 0.6),
-      ),
+        textAlign: TextAlign.center,
+      )),
     );
   }
 
