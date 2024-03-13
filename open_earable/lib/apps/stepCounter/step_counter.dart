@@ -85,6 +85,7 @@ class _StepCounterState extends State<StepCounter> {
     } else {
       _startTimer();
       setState(() {
+        _countedSteps = 0;
         _startStepCount = true;
       });
     }
@@ -109,20 +110,7 @@ class _StepCounterState extends State<StepCounter> {
     if (duration.inSeconds != 0) {
       return (60.0 * steps / duration.inSeconds.toDouble()).toStringAsFixed(2);
     }
-    return ""; // Wenn durch 0 geteilt wird
-  }
-
-  /**
-   * Setzt den Schrittzähler zurück, falls gerade keine Schritte gezählt werden
-   */
-  void _resetStepCount() {
-    if (_startStepCount) {
-      return;
-    }
-    setState(() {
-      _countedSteps = 0;
-      _duration = Duration.zero;
-    });
+    return "0"; // Wenn durch 0 geteilt wird
   }
 
   /**
@@ -296,10 +284,10 @@ class _StepCounterState extends State<StepCounter> {
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               Spacer(),
-              _buildListTile(_formatDuration(_duration), "Stopped Time", 45),
-              _buildListTile(_countedSteps.toString(), "Counted Steps", 45),
+              _buildListTile(_formatDuration(_duration), "Stopped Time", 60),
+              _buildListTile(_countedSteps.toString(), "Counted Steps", 60),
               _buildListTile(_formatAvgCadence(_countedSteps, _duration),
-                  "Avg. Cadence", 45),
+                  "Avg. Cadence\n(Steps per Minute)", 60),
               Spacer(),
               _buildControlButtons(),
               Spacer(),
@@ -318,10 +306,6 @@ class _StepCounterState extends State<StepCounter> {
           onPressed: startStopStepCount,
           label: _startStepCount ? "Stop Counting" : "Start Counting",
         ),
-        _buildButton(
-          onPressed: _startStepCount ? null : _resetStepCount,
-          label: "Reset Steps",
-        ),
       ],
     );
   }
@@ -337,7 +321,7 @@ class _StepCounterState extends State<StepCounter> {
       subtitle: Center(
           child: Text(
         trailingText,
-        style: TextStyle(fontSize: fontSize * 0.6),
+        style: TextStyle(fontSize: fontSize * 0.5),
         textAlign: TextAlign.center,
       )),
     );
