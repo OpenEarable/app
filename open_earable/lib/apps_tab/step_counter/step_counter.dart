@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:open_earable/ble/ble_controller.dart';
 import 'package:open_earable/shared/earable_not_connected_warning.dart';
 import 'dart:async';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:provider/provider.dart';
 
 /**
  * Erstellt einen naiven Schrittzähler, dieser basiert auf dem erreichen eines Schwellenwerts in der Summe der Beschleunigungswerte (x,y,z).
@@ -215,9 +217,7 @@ class _StepCounterState extends State<StepCounter> {
       ),
       // Beschränkt die GUI auf nicht von Betriebssystem verwendeten Bereich. Funktioniert nicht auf jedem Gerät.
       body: SafeArea(
-        child: _openEarable.bleManager.connected
-            ? _StepCounterWidget()
-            : _StepCounterWidget(),
+        child: _StepCounterWidget();
         // Hier Könnte eine Fehlermeldung eingefügt werden, weil das Earable nicht verbunden ist.
         // Die App ist aber auch teilweise zur Berchnung der Pro Sekunde zurückgelegten Schritte verwendbar.
         // Deshalb wird keine Fehlermeldung auf dem ganzen Bildschrirm ausgegeben.
@@ -244,7 +244,7 @@ class _StepCounterState extends State<StepCounter> {
    * Erstellt die GUI im Landscape Modus
    */
   Widget _buildRow() {
-    return !_openEarable.bleManager.connected
+    return !Provider.of<BluetoothController>(context).connected
         ? EarableNotConnectedWarning()
         : Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -278,7 +278,7 @@ class _StepCounterState extends State<StepCounter> {
    * Erstellt die GUI im Portait Modus
    */
   Widget _buildColumn() {
-    return !_openEarable.bleManager.connected
+    return !Provider.of<BluetoothController>(context).connected
         ? EarableNotConnectedWarning()
         : Column(
             mainAxisAlignment: MainAxisAlignment.start,
