@@ -21,12 +21,14 @@
 </p>
 
 ## Table of Contents
-- [Introduction](#Introduction)
-- [Features](#Features)
-- [Getting Started](#getting-started)
+- [OpenEarable - App v1.3.0](#openearable---app-v130)
+  - [Table of Contents](#table-of-contents)
+  - [Introduction](#introduction)
+  - [Features](#features)
+  - [Getting Started](#getting-started)
     - [Run the app](#run-the-app)
     - [Install the app](#install-the-app)
-- [Contribute your own example app](#contribute-your-own-example-app)
+  - [Contribute your own example app](#contribute-your-own-example-app)
 
 ## Introduction
 
@@ -80,7 +82,8 @@ To get started with the OpenEarable App, you need to have the following:
 
 ## Contribute your own example app
 If you want to contribute your own example app, please follow the steps below:
-1. Create a new folder in the `lib/apps` folder for your app
+1. Create a new folder in the `lib/apps_tab` folder for your app
 2. Develop your app in the new folder
-3. Add an instance of the `AppInfo` class to `sampleApps` property in the `lib/apps/apps_tab.dart` file to include your app in the list of example apps
-4. Create a pull request to this repository
+3. Add an instance of the `AppInfo` class to `sampleApps` property in the `lib/apps_tab/apps_tab.dart` file to include your app in the list of example apps
+4. If your app contains any assets, add the path to your assets to the `pubspec.yaml` file
+5. Create a pull request to this repository

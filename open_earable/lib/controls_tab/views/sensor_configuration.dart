@@ -1,6 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:open_earable/shared/dynamic_value_picker.dart';
+import 'dart:io';
+import 'package:open_earable/ble/ble_controller.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:provider/provider.dart';
 import '../models/open_earable_settings.dart';
 
 class SensorConfigurationCard extends StatefulWidget {
@@ -98,7 +102,9 @@ class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
       padding: const EdgeInsets.symmetric(horizontal: 5.0),
       child: Card(
         //Audio Player Card
-        color: Theme.of(context).colorScheme.primary,
+        color: Platform.isIOS
+            ? CupertinoTheme.of(context).primaryContrastingColor
+            : Theme.of(context).colorScheme.primary,
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -156,20 +162,42 @@ class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
                 children: [
                   Expanded(
                     child: SizedBox(
-                      height: 37.0,
-                      child: ElevatedButton(
-                        onPressed: _openEarable.bleManager.connected
-                            ? _writeSensorConfigs
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _openEarable.bleManager.connected
-                              ? Theme.of(context).colorScheme.secondary
-                              : Colors.grey,
-                          foregroundColor: Colors.black,
-                          enableFeedback: _openEarable.bleManager.connected,
-                        ),
-                        child: Text("Set Configuration"),
-                      ),
+                      height: 37,
+                      child: Platform.isIOS
+                          ? CupertinoButton(
+                              padding: EdgeInsets.zero,
+                              onPressed:
+                                  Provider.of<BluetoothController>(context)
+                                          .connected
+                                      ? () => _writeSensorConfigs()
+                                      : null,
+                              color: Provider.of<BluetoothController>(context)
+                                      .connected
+                                  ? CupertinoTheme.of(context).primaryColor
+                                  : Colors.grey,
+                              child: Text("Set Configuration"),
+                            )
+                          : ElevatedButton(
+                              onPressed:
+                                  Provider.of<BluetoothController>(context)
+                                          .connected
+                                      ? _writeSensorConfigs
+                                      : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    Provider.of<BluetoothController>(context)
+                                            .connected
+                                        ? Theme.of(context)
+                                            .colorScheme
+                                            .secondary
+                                        : Colors.grey,
+                                foregroundColor: Colors.black,
+                                enableFeedback:
+                                    Provider.of<BluetoothController>(context)
+                                        .connected,
+                              ),
+                              child: Text("Set Configuration"),
+                            ),
                     ),
                   ),
                 ],
@@ -190,67 +218,54 @@ class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
       Function(String) changeSelection) {
     return Row(
       children: [
-        Checkbox(
-          checkColor: Theme.of(context).colorScheme.primary,
-          fillColor: MaterialStateProperty.resolveWith(_getCheckboxColor),
-          value: settingSelected,
-          onChanged: _openEarable.bleManager.connected ? changeBool : null,
+        Platform.isIOS
+            ? CupertinoCheckbox(
+                value: settingSelected,
+                onChanged: Provider.of<BluetoothController>(context).connected
+                    ? changeBool
+                    : null,
+                activeColor: settingSelected
+                    ? CupertinoTheme.of(context).primaryColor
+                    : CupertinoTheme.of(context).primaryContrastingColor,
+                checkColor: CupertinoTheme.of(context).primaryContrastingColor,
+              )
+            : Checkbox(
+                checkColor: Theme.of(context).colorScheme.primary,
+                fillColor: MaterialStateProperty.resolveWith(_getCheckboxColor),
+                value: settingSelected,
+                onChanged: Provider.of<BluetoothController>(context).connected
+                    ? changeBool
+                    : null,
+              ),
+        Text(
+          sensorName,
+          style: TextStyle(
+            color: Color.fromRGBO(168, 168, 172, 1.0),
+          ),
         ),
-        Text(sensorName),
         Spacer(),
         Container(
             decoration: BoxDecoration(
-              color: _openEarable.bleManager.connected
+              color: Provider.of<BluetoothController>(context).connected
                   ? Colors.white
                   : Colors.grey[200],
               borderRadius: BorderRadius.circular(4.0),
             ),
             child: SizedBox(
-                height: 37,
                 width: 100,
+                height: 37,
                 child: Container(
                     alignment: Alignment.centerRight,
-                    child: DropdownButton<String>(
-                      dropdownColor: _openEarable.bleManager.connected
-                          ? Colors.white
-                          : Colors.grey[200],
-                      alignment: Alignment.centerRight,
-                      value: currentValue,
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          changeSelection(newValue!);
-                          if (int.parse(newValue) != 0) {
-                            changeBool(true);
-                          } else {
-                            changeBool(false);
-                          }
-                        });
-                      },
-                      items: options.map((String value) {
-                        return DropdownMenuItem<String>(
-                          alignment: Alignment.centerRight,
-                          value: value,
-                          child: Text(
-                            value,
-                            style: TextStyle(
-                              color: _openEarable.bleManager.connected
-                                  ? Colors.black
-                                  : Colors.grey,
-                            ),
-                            textAlign: TextAlign.end,
-                          ),
-                        );
-                      }).toList(),
-                      underline: Container(),
-                      icon: Icon(
-                        Icons.arrow_drop_down,
-                        color: _openEarable.bleManager.connected
-                            ? Colors.black
-                            : Colors.grey,
-                      ),
+                    child: DynamicValuePicker(
+                      context,
+                      options,
+                      currentValue,
+                      changeSelection,
+                      changeBool,
+                      Provider.of<BluetoothController>(context).connected,
                     )))),
         SizedBox(width: 8),
-        Text("Hz"),
+        Text("Hz", style: TextStyle(color: Color.fromRGBO(168, 168, 172, 1.0))),
       ],
     );
   }

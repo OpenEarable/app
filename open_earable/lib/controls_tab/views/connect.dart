@@ -1,43 +1,141 @@
+import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
+import 'package:open_earable/ble/ble_controller.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
-import '../../ble.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:provider/provider.dart';
+import 'package:open_earable/ble/ble_connect_view.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class ConnectCard extends StatelessWidget {
+class ConnectCard extends StatefulWidget {
   final OpenEarable _openEarable;
-  final int _earableSOC;
+  ConnectCard(this._openEarable);
 
-  ConnectCard(this._openEarable, this._earableSOC);
+  @override
+  _ConnectCard createState() => _ConnectCard(this._openEarable);
+}
+
+class _ConnectCard extends State<ConnectCard> {
+  final OpenEarable _openEarable;
+  bool _autoConnectEnabled = false;
+  late SharedPreferences prefs;
+
+  _ConnectCard(this._openEarable);
+
+  @override
+  void initState() {
+    super.initState();
+    _getPrefs();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+  Future<void> _getPrefs() async {
+    prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _autoConnectEnabled = prefs.getBool("autoConnectEnabled") ?? false;
+    });
+    _startAutoConnectScan();
+  }
+
+  void _startAutoConnectScan() {
+    if (_autoConnectEnabled == true) {
+      Provider.of<BluetoothController>(context, listen: false).startScanning();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 5.0),
       child: Card(
-        color: Theme.of(context).colorScheme.primary,
+        color: Platform.isIOS
+            ? CupertinoTheme.of(context).primaryContrastingColor
+            : Theme.of(context).colorScheme.primary,
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Device',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18.0,
-                  fontWeight: FontWeight.bold,
+          child: Consumer<BluetoothController>(
+              builder: (context, bleController, child) {
+            List<DiscoveredDevice> devices = bleController.discoveredDevices;
+            _tryAutoconnect(devices, bleController);
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Device',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18.0,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              SizedBox(height: 5),
-              _getEarableInfo(),
-              _getConnectButton(context),
-            ],
-          ),
+                Row(
+                  children: [
+                    Platform.isIOS
+                        ? CupertinoCheckbox(
+                            value: _autoConnectEnabled,
+                            onChanged: (value) => {
+                              setState(() {
+                                _autoConnectEnabled = value ?? false;
+                                _startAutoConnectScan();
+                                if (value != null)
+                                  prefs.setBool("autoConnectEnabled", value);
+                              })
+                            },
+                            activeColor: _autoConnectEnabled
+                                ? CupertinoTheme.of(context).primaryColor
+                                : CupertinoTheme.of(context)
+                                    .primaryContrastingColor,
+                            checkColor: CupertinoTheme.of(context)
+                                .primaryContrastingColor,
+                          )
+                        : Checkbox(
+                            checkColor: Theme.of(context).colorScheme.primary,
+                            //fillColor: Theme.of(context).colorScheme.primary,
+                            value: _autoConnectEnabled,
+                            onChanged: (value) => {
+                              setState(() {
+                                _autoConnectEnabled = value ?? false;
+                                _startAutoConnectScan();
+                                if (value != null)
+                                  prefs.setBool("autoConnectEnabled", value);
+                              })
+                            },
+                          ),
+                    Text(
+                      "Connect to OpenEarable automatically",
+                      style: TextStyle(
+                        color: Color.fromRGBO(168, 168, 172, 1.0),
+                      ),
+                    )
+                  ],
+                ),
+                SizedBox(height: 5),
+                _getEarableInfo(bleController),
+                _getConnectButton(context),
+              ],
+            );
+          }),
         ),
       ),
     );
   }
 
-  Widget _getEarableInfo() {
+  String _batteryPercentageString(BluetoothController bleController) {
+    int? percentage = bleController.earableSOC;
+    if (percentage == null) {
+      return " (...%)";
+    } else {
+      return " ($percentage%)";
+    }
+  }
+
+  Widget _getEarableInfo(BluetoothController bleController) {
     return Row(
       children: [
         if (_openEarable.bleManager.connected)
@@ -45,14 +143,21 @@ class ConnectCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "${_openEarable.bleManager.connectedDevice?.name ?? ""} (${_earableSOC}%)",
+                "${_openEarable.bleManager.connectedDevice?.name ?? ""}${_batteryPercentageString(bleController)}",
                 style: TextStyle(
                   color: Color.fromRGBO(168, 168, 172, 1.0),
                   fontSize: 15.0,
                 ),
               ),
               Text(
-                "Firmware ${_openEarable.deviceFirmwareVersion ?? "0.0.0"}",
+                "Firmware: ${_openEarable.deviceFirmwareVersion ?? "not available"}",
+                style: TextStyle(
+                  color: Color.fromRGBO(168, 168, 172, 1.0),
+                  fontSize: 15.0,
+                ),
+              ),
+              Text(
+                "Hardware: ${_openEarable.deviceHardwareVersion ?? "not available"}",
                 style: TextStyle(
                   color: Color.fromRGBO(168, 168, 172, 1.0),
                   fontSize: 15.0,
@@ -76,33 +181,48 @@ class ConnectCard extends StatelessWidget {
   Widget _getConnectButton(BuildContext context) {
     return Visibility(
       visible: !_openEarable.bleManager.connected,
-      child: Column(
-        children: [
-          SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: SizedBox(
-                  height: 37.0,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).push(MaterialPageRoute(
-                          builder: (context) => BLEPage(_openEarable)));
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: !_openEarable.bleManager.connected
-                          ? Color(0xff77F2A1)
-                          : Color(0xfff27777),
-                      foregroundColor: Colors.black,
-                    ),
-                    child: Text("Connect"),
+      child: Container(
+          height: 37,
+          width: double.infinity,
+          child: !Platform.isIOS
+              ? ElevatedButton(
+                  onPressed: () => _connectButtonAction(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: !_openEarable.bleManager.connected
+                        ? Color(0xff77F2A1)
+                        : Color(0xfff27777),
+                    foregroundColor: Colors.black,
                   ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+                  child: Text("Connect"),
+                )
+              : CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  color: CupertinoTheme.of(context).primaryColor,
+                  child: Text("Connect"),
+                  onPressed: () => _connectButtonAction(context))),
     );
+  }
+
+  _connectButtonAction(BuildContext context) {
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (context) => BLEPage(_openEarable)));
+  }
+
+  void _tryAutoconnect(
+      List<DiscoveredDevice> devices, BluetoothController bleController) async {
+    if (_autoConnectEnabled != true ||
+        devices.isEmpty ||
+        bleController.connected) {
+      return;
+    }
+    String? lastConnectedDeviceName =
+        prefs.getString("lastConnectedDeviceName");
+    DiscoveredDevice? deviceToConnect = devices.firstWhere(
+        (device) => device.name == lastConnectedDeviceName,
+        orElse: () => devices[0]);
+    if (_openEarable.bleManager.connectingDevice?.name !=
+        deviceToConnect.name) {
+      bleController.connectToDevice(deviceToConnect);
+    }
   }
 }

@@ -1,9 +1,11 @@
 import 'dart:async';
 
-import 'package:flutter/scheduler.dart';
+import 'package:open_earable/ble/ble_controller.dart';
+import 'package:open_earable/shared/earable_not_connected_warning.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:charts_flutter/flutter.dart' as charts;
+import 'package:provider/provider.dart';
 import 'package:simple_kalman/simple_kalman.dart';
 import 'package:collection/collection.dart';
 import 'dart:math';
@@ -34,6 +36,13 @@ class _EarableDataChartState extends State<EarableDataChart> {
   late SimpleKalman kalmanX, kalmanY, kalmanZ;
   late String _sensorName;
   int _numDatapoints = 200;
+  Map<String, String> _units = {
+    "Accelerometer": "m/s\u00B2",
+    "Gyroscope": "°/s",
+    "Magnetometer": "µT",
+    "Pressure": "Pa",
+    "Temperature": "°C"
+  };
   _setupListeners() {
     if (_title == "Pressure" || _title == "Temperature") {
       _dataSubscription =
@@ -85,17 +94,19 @@ class _EarableDataChartState extends State<EarableDataChart> {
       _checkLength(_data);
       SensorData? maxXYZValue = maxBy(_data, (SensorData b) => b.getMax());
       SensorData? minXYZValue = minBy(_data, (SensorData b) => b.getMin());
+
       if (maxXYZValue == null || minXYZValue == null) {
         return;
       }
-      double maxAbsValue =
-          max(maxXYZValue.getMax().abs(), minXYZValue.getMin().abs());
+      double maxY = maxXYZValue!.getMax();
+      double minY = minXYZValue!.getMin();
+      double maxAbsValue = max(maxY.abs(), minY.abs());
       _maxY = (_title == "Pressure" || _title == "Temperature")
-          ? max(0, maxXYZValue.getMax())
+          ? maxY
           : maxAbsValue;
 
       _minY = (_title == "Pressure" || _title == "Temperature")
-          ? min(0, minXYZValue.getMin())
+          ? minY
           : -maxAbsValue;
       _maxX = value.timestamp;
       _minX = _data[0].timestamp;
@@ -146,7 +157,9 @@ class _EarableDataChartState extends State<EarableDataChart> {
       _minY = -25;
       _maxY = 25;
     }
-    _setupListeners();
+    if (_openEarable.bleManager.connected) {
+      _setupListeners();
+    }
   }
 
   @override
@@ -163,10 +176,13 @@ class _EarableDataChartState extends State<EarableDataChart> {
 
   @override
   Widget build(BuildContext context) {
+    if (!Provider.of<BluetoothController>(context).connected) {
+      return EarableNotConnectedWarning();
+    }
     if (_title == 'Pressure' || _title == 'Temperature') {
       seriesList = [
         charts.Series<SensorData, int>(
-          id: '$_title${_data.isNotEmpty ? " (${_data[0].units[_title]})" : ""}',
+          id: '$_title${_data.isNotEmpty ? " (${_units[_title]})" : ""}',
           colorFn: (_, __) => charts.Color.fromHex(code: colors[0]),
           domainFn: (SensorData data, _) => data.timestamp,
           measureFn: (SensorData data, _) => data.values[0],
@@ -176,21 +192,21 @@ class _EarableDataChartState extends State<EarableDataChart> {
     } else {
       seriesList = [
         charts.Series<SensorData, int>(
-          id: 'X${_data.isNotEmpty ? " (${_data[0].units['X']})" : ""}',
+          id: 'X${_data.isNotEmpty ? " (${_units[_title]})" : ""}',
           colorFn: (_, __) => charts.Color.fromHex(code: colors[0]),
           domainFn: (SensorData data, _) => data.timestamp,
           measureFn: (SensorData data, _) => data.values[0],
           data: _data,
         ),
         charts.Series<SensorData, int>(
-          id: 'Y${_data.isNotEmpty ? " (${_data[0].units['Y']})" : ""}',
+          id: 'Y${_data.isNotEmpty ? " (${_units[_title]})" : ""}',
           colorFn: (_, __) => charts.Color.fromHex(code: colors[1]),
           domainFn: (SensorData data, _) => data.timestamp,
           measureFn: (SensorData data, _) => data.values[1],
           data: _data,
         ),
         charts.Series<SensorData, int>(
-          id: 'Z${_data.isNotEmpty ? " (${_data[0].units['Z']})" : ""}',
+          id: 'Z${_data.isNotEmpty ? " (${_units[_title]})" : ""}',
           colorFn: (_, __) => charts.Color.fromHex(code: colors[2]),
           domainFn: (SensorData data, _) => data.timestamp,
           measureFn: (SensorData data, _) => data.values[2],
@@ -225,8 +241,10 @@ class _EarableDataChartState extends State<EarableDataChart> {
               )
             ],
             primaryMeasureAxis: charts.NumericAxisSpec(
-              tickProviderSpec:
-                  charts.BasicNumericTickProviderSpec(desiredTickCount: 7),
+              tickProviderSpec: charts.BasicNumericTickProviderSpec(
+                  desiredTickCount: 7,
+                  zeroBound: false,
+                  dataIsInWholeNumbers: false),
               renderSpec: charts.GridlineRendererSpec(
                 labelStyle: charts.TextStyleSpec(
                   fontSize: 14,

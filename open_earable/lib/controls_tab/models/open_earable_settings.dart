@@ -22,22 +22,22 @@ class OpenEarableSettings {
     "50000",
     "62500"
   ];
-  final Map<int, String> jingleMap = {
-    0: 'IDLE',
-    1: 'NOTIFICATION',
-    2: 'SUCCESS',
-    3: 'ERROR',
-    4: 'ALARM',
-    5: 'PING',
-    6: 'OPEN',
-    7: 'CLOSE',
-    8: 'CLICK',
+  final Map<String, int> jingleMap = {
+    'IDLE': 0,
+    'NOTIFICATION': 1,
+    'SUCCESS': 2,
+    'ERROR': 3,
+    'ALARM': 4,
+    'PING': 5,
+    'OPEN': 6,
+    'CLOSE': 7,
+    'CLICK': 8,
   };
-  final Map<int, String> waveFormMap = {
-    1: 'SINE',
-    2: 'SQUARE',
-    3: 'TRIANGLE',
-    4: 'SAW',
+  final Map<String, int> waveFormMap = {
+    'SINE': 0,
+    'SQUARE': 1,
+    'TRIANGLE': 2,
+    'SAW': 3,
   };
 
   late bool imuSettingSelected;
@@ -64,9 +64,9 @@ class OpenEarableSettings {
     selectedBarometerOption = "0";
     selectedMicrophoneOption = "0";
 
-    selectedAudioPlayerRadio = 3; // no radio is selected
-    selectedJingle = jingleMap[1]!;
-    selectedWaveForm = waveFormMap[1]!;
+    selectedAudioPlayerRadio = 0;
+    selectedJingle = jingleMap.keys.first;
+    selectedWaveForm = waveFormMap.keys.first;
     selectedFilename = "filename.wav";
     selectedFrequency = "440";
     selectedFrequencyVolume = "50";
@@ -76,19 +76,10 @@ class OpenEarableSettings {
   }
 
   int getWaveFormIndex(String value) {
-    return _getKeyFromValue(value, waveFormMap);
+    return waveFormMap[value] ?? 0;
   }
 
   int getJingleIndex(String value) {
-    return _getKeyFromValue(value, jingleMap);
-  }
-
-  int _getKeyFromValue(String value, Map<int, String> map) {
-    for (var entry in map.entries) {
-      if (entry.value == value) {
-        return entry.key;
-      }
-    }
-    return 1;
+    return jingleMap[value] ?? 0;
   }
 }
