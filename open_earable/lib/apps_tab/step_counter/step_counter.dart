@@ -216,12 +216,11 @@ class _StepCounterState extends State<StepCounter> {
         title: Text('StepCounter'),
       ),
       // Beschränkt die GUI auf nicht von Betriebssystem verwendeten Bereich. Funktioniert nicht auf jedem Gerät.
-      body: SafeArea(
-        child: _StepCounterWidget();
-        // Hier Könnte eine Fehlermeldung eingefügt werden, weil das Earable nicht verbunden ist.
-        // Die App ist aber auch teilweise zur Berchnung der Pro Sekunde zurückgelegten Schritte verwendbar.
-        // Deshalb wird keine Fehlermeldung auf dem ganzen Bildschrirm ausgegeben.
-      ),
+      body: SafeArea(child: _StepCounterWidget()
+          // Hier Könnte eine Fehlermeldung eingefügt werden, weil das Earable nicht verbunden ist.
+          // Die App ist aber auch teilweise zur Berchnung der Pro Sekunde zurückgelegten Schritte verwendbar.
+          // Deshalb wird keine Fehlermeldung auf dem ganzen Bildschrirm ausgegeben.
+          ),
     );
   }
 
