@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'dart:io';
 import 'views/sensor_configuration.dart';
+import 'views/sensor_control.dart';
 import 'views/connect.dart';
 import 'views/led_color.dart';
 import 'views/audio_player.dart';
@@ -43,8 +44,8 @@ class _ControlTabState extends State<ControlTab> {
                   height: 5,
                 ),
                 ConnectCard(_openEarable),
-                SensorConfigurationCard(_openEarable),
-                AudioPlayerCard(_openEarable),
+                SensorControlCard(_openEarable),
+                //AudioPlayerCard(_openEarable),
                 LEDColorCard(_openEarable),
               ],
             )));

@@ -57,7 +57,9 @@ class _EarableDataChartState extends State<EarableDataChart> {
             units: data[_sensorName]["units"]);
         _updateData(sensorData);
       });
-    } else {
+    } else if (_title == "Accelerometer" ||
+        _title == "Gyroscope" ||
+        _title == "Magnetometer") {
       kalmanX = SimpleKalman(
           errorMeasure: errorMeasure[_sensorName]!,
           errorEstimate: errorMeasure[_sensorName]!,
@@ -85,6 +87,8 @@ class _EarableDataChartState extends State<EarableDataChart> {
 
         _updateData(xyzValue);
       });
+    } else {
+      // TODO
     }
   }
 
@@ -124,6 +128,12 @@ class _EarableDataChartState extends State<EarableDataChart> {
       return ['#32CD32'];
     } else if (title == "Temperature") {
       return ['#FFA07A'];
+    } else if (title == "Heart Rate") {
+      return ['#FF6347'];
+    } else if (title == "SpO2") {
+      return ['#ADD8E6'];
+    } else if (title == "PPG") {
+      return ['#32CD32', '#B22222'];
     }
   }
 
@@ -142,6 +152,12 @@ class _EarableDataChartState extends State<EarableDataChart> {
         _sensorName = 'GYRO';
       case 'Magnetometer':
         _sensorName = 'MAG';
+      case 'Heart Rate':
+      // TODO
+      case 'SpO2':
+      // TODO
+      case 'PPG':
+      // TODO
     }
     colors = _getColor(_title);
     if (_title == 'Temperature') {
@@ -216,52 +232,59 @@ class _EarableDataChartState extends State<EarableDataChart> {
     }
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.all(8.0),
-        ),
+            padding: EdgeInsets.all(16),
+            child: Text(
+              _title,
+              style: TextStyle(fontSize: 30),
+            )),
         Expanded(
-          child: charts.LineChart(
-            seriesList,
-            animate: false,
-            behaviors: [
-              charts.SeriesLegend(
-                position: charts.BehaviorPosition
-                    .bottom, // To position the legend at the end (bottom). You can change this as per requirement.
-                outsideJustification: charts.OutsideJustification
-                    .middleDrawArea, // To justify the position.
-                horizontalFirst: false, // To stack items horizontally.
-                desiredMaxRows:
-                    1, // Optional if you want to define max rows for the legend.
-                entryTextStyle: charts.TextStyleSpec(
-                  // Optional styling for the text.
-                  color: charts.Color(r: 255, g: 255, b: 255),
-                  fontSize: 12,
-                ),
-              )
-            ],
-            primaryMeasureAxis: charts.NumericAxisSpec(
-              tickProviderSpec: charts.BasicNumericTickProviderSpec(
-                  desiredTickCount: 7,
-                  zeroBound: false,
-                  dataIsInWholeNumbers: false),
-              renderSpec: charts.GridlineRendererSpec(
-                labelStyle: charts.TextStyleSpec(
-                  fontSize: 14,
-                  color: charts.MaterialPalette.white, // Set the color here
-                ),
-              ),
-              viewport: charts.NumericExtents(_minY, _maxY),
-            ),
-            domainAxis: charts.NumericAxisSpec(
-                renderSpec: charts.GridlineRendererSpec(
-                  labelStyle: charts.TextStyleSpec(
-                    fontSize: 14,
-                    color: charts.MaterialPalette.white, // Set the color here
+          child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: charts.LineChart(
+                seriesList,
+                animate: false,
+                behaviors: [
+                  charts.SeriesLegend(
+                    position: charts.BehaviorPosition
+                        .bottom, // To position the legend at the end (bottom). You can change this as per requirement.
+                    outsideJustification: charts.OutsideJustification
+                        .middleDrawArea, // To justify the position.
+                    horizontalFirst: false, // To stack items horizontally.
+                    desiredMaxRows:
+                        1, // Optional if you want to define max rows for the legend.
+                    entryTextStyle: charts.TextStyleSpec(
+                      // Optional styling for the text.
+                      color: charts.Color(r: 255, g: 255, b: 255),
+                      fontSize: 12,
+                    ),
+                  )
+                ],
+                primaryMeasureAxis: charts.NumericAxisSpec(
+                  tickProviderSpec: charts.BasicNumericTickProviderSpec(
+                      desiredTickCount: 7,
+                      zeroBound: false,
+                      dataIsInWholeNumbers: false),
+                  renderSpec: charts.GridlineRendererSpec(
+                    labelStyle: charts.TextStyleSpec(
+                      fontSize: 14,
+                      color: charts.MaterialPalette.white, // Set the color here
+                    ),
                   ),
+                  viewport: charts.NumericExtents(_minY, _maxY),
                 ),
-                viewport: charts.NumericExtents(_minX, _maxX)),
-          ),
+                domainAxis: charts.NumericAxisSpec(
+                    renderSpec: charts.GridlineRendererSpec(
+                      labelStyle: charts.TextStyleSpec(
+                        fontSize: 14,
+                        color:
+                            charts.MaterialPalette.white, // Set the color here
+                      ),
+                    ),
+                    viewport: charts.NumericExtents(_minX, _maxX)),
+              )),
         ),
       ],
     );

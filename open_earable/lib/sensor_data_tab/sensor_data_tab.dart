@@ -30,7 +30,7 @@ class _SensorDataTabState extends State<SensorDataTab>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(vsync: this, length: 6);
+    _tabController = TabController(vsync: this, length: 9);
     if (_openEarable.bleManager.connected) {
       _setupListeners();
     }
@@ -62,16 +62,20 @@ class _SensorDataTabState extends State<SensorDataTab>
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(kToolbarHeight), // Default AppBar height
         child: TabBar(
+          isScrollable: true,
           controller: _tabController,
           indicatorColor: Colors.white, // Color of the underline indicator
           labelColor: Colors.white, // Color of the active tab label
           unselectedLabelColor: Colors.grey, // Color of the inactive tab labels
           tabs: [
-            Tab(text: 'Accel.'),
+            Tab(text: 'Acc.'),
             Tab(text: 'Gyro.'),
-            Tab(text: 'Mag.'),
-            Tab(text: 'Baro.'),
+            Tab(text: 'Magn.'),
+            Tab(text: 'Press.'),
             Tab(text: 'Temp.'),
+            Tab(text: 'HR'),
+            Tab(text: 'SpO2'),
+            Tab(text: 'PPG'),
             Tab(text: '3D'),
           ],
         ),
@@ -84,6 +88,9 @@ class _SensorDataTabState extends State<SensorDataTab>
           EarableDataChart(_openEarable, 'Magnetometer'),
           EarableDataChart(_openEarable, 'Pressure'),
           EarableDataChart(_openEarable, 'Temperature'),
+          EarableDataChart(_openEarable, 'Heart Rate'),
+          EarableDataChart(_openEarable, 'SpO2'),
+          EarableDataChart(_openEarable, 'PPG'),
           Earable3DModel(_openEarable),
         ],
       ),

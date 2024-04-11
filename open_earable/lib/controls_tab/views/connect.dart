@@ -21,8 +21,15 @@ class _ConnectCard extends State<ConnectCard> {
   final OpenEarable _openEarable;
   bool _autoConnectEnabled = false;
   late SharedPreferences prefs;
+  int selectedButton = 0;
 
   _ConnectCard(this._openEarable);
+
+  void selectButton(int index) {
+    setState(() {
+      selectedButton = index;
+    });
+  }
 
   @override
   void initState() {
@@ -52,13 +59,13 @@ class _ConnectCard extends State<ConnectCard> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 5.0),
+      padding: const EdgeInsets.symmetric(horizontal: 0.0),
       child: Card(
         color: Platform.isIOS
             ? CupertinoTheme.of(context).primaryContrastingColor
             : Theme.of(context).colorScheme.primary,
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
           child: Consumer<BluetoothController>(
               builder: (context, bleController, child) {
             List<DiscoveredDevice> devices = bleController.discoveredDevices;
@@ -67,7 +74,7 @@ class _ConnectCard extends State<ConnectCard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Device',
+                  'Devices',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 18.0,
@@ -115,9 +122,35 @@ class _ConnectCard extends State<ConnectCard> {
                     )
                   ],
                 ),
-                SizedBox(height: 5),
-                _getEarableInfo(bleController),
-                _getConnectButton(context),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: <Widget>[
+                    Expanded(
+                        child: Column(children: [
+                      _getEarableSelectButton(
+                        imagePath:
+                            "assets/OpenEarableV2-L.png", // path to your image asset
+                        isSelected: selectedButton == 0,
+                        onPressed: () => selectButton(0),
+                        bleController: bleController,
+                      ),
+                      SizedBox(height: 8),
+                      _getConnectButton(context),
+                    ])),
+                    SizedBox(width: 8),
+                    Expanded(
+                        child: Column(children: [
+                      _getEarableSelectButton(
+                        imagePath: "assets/OpenEarableV2-R.png",
+                        isSelected: selectedButton == 1,
+                        onPressed: () => selectButton(1),
+                        bleController: bleController,
+                      ),
+                      SizedBox(height: 8),
+                      _getConnectButton(context),
+                    ])),
+                  ],
+                ),
               ],
             );
           }),
@@ -129,77 +162,30 @@ class _ConnectCard extends State<ConnectCard> {
   String _batteryPercentageString(BluetoothController bleController) {
     int? percentage = bleController.earableSOC;
     if (percentage == null) {
-      return " (...%)";
+      return " (XX%)";
     } else {
       return " ($percentage%)";
     }
   }
 
-  Widget _getEarableInfo(BluetoothController bleController) {
-    return Row(
-      children: [
-        if (_openEarable.bleManager.connected)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "${_openEarable.bleManager.connectedDevice?.name ?? ""}${_batteryPercentageString(bleController)}",
-                style: TextStyle(
-                  color: Color.fromRGBO(168, 168, 172, 1.0),
-                  fontSize: 15.0,
-                ),
-              ),
-              Text(
-                "Firmware: ${_openEarable.deviceFirmwareVersion ?? "not available"}",
-                style: TextStyle(
-                  color: Color.fromRGBO(168, 168, 172, 1.0),
-                  fontSize: 15.0,
-                ),
-              ),
-              Text(
-                "Hardware: ${_openEarable.deviceHardwareVersion ?? "not available"}",
-                style: TextStyle(
-                  color: Color.fromRGBO(168, 168, 172, 1.0),
-                  fontSize: 15.0,
-                ),
-              ),
-            ],
-          )
-        else
-          Text(
-            "OpenEarable not connected.",
-            style: TextStyle(
-              color: Color.fromRGBO(168, 168, 172, 1.0),
-              fontSize: 15.0,
-              fontStyle: FontStyle.italic,
-            ),
-          ),
-      ],
-    );
-  }
-
   Widget _getConnectButton(BuildContext context) {
-    return Visibility(
-      visible: !_openEarable.bleManager.connected,
-      child: Container(
-          height: 37,
-          width: double.infinity,
-          child: !Platform.isIOS
-              ? ElevatedButton(
-                  onPressed: () => _connectButtonAction(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: !_openEarable.bleManager.connected
-                        ? Color(0xff77F2A1)
-                        : Color(0xfff27777),
-                    foregroundColor: Colors.black,
-                  ),
-                  child: Text("Connect"),
-                )
-              : CupertinoButton(
-                  padding: EdgeInsets.zero,
-                  color: CupertinoTheme.of(context).primaryColor,
-                  child: Text("Connect"),
-                  onPressed: () => _connectButtonAction(context))),
+    return Container(
+      height: 37,
+      width: double.infinity,
+      child: !Platform.isIOS
+          ? ElevatedButton(
+              onPressed: () => _connectButtonAction(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xff77F2A1),
+                foregroundColor: Colors.black,
+              ),
+              child: Text("Connect"),
+            )
+          : CupertinoButton(
+              padding: EdgeInsets.zero,
+              color: CupertinoTheme.of(context).primaryColor,
+              child: Text("Connect"),
+              onPressed: () => _connectButtonAction(context)),
     );
   }
 
@@ -223,6 +209,119 @@ class _ConnectCard extends State<ConnectCard> {
     if (_openEarable.bleManager.connectingDevice?.name !=
         deviceToConnect.name) {
       bleController.connectToDevice(deviceToConnect);
+    }
+  }
+
+  Widget _getEarableSelectButton({
+    required String imagePath,
+    required bool isSelected,
+    required onPressed,
+    required bleController,
+  }) {
+    if (Platform.isIOS) {
+      return CupertinoButton(
+        color: Color.fromARGB(255, 83, 81, 91),
+        onPressed: onPressed,
+        padding:
+            EdgeInsets.zero, // Remove padding to use the entire container space
+        child: Container(
+          padding: EdgeInsets.all(8.0), // Internal padding within the button
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(
+                7.0), // Slightly smaller radius for the inner border
+            border: Border.all(
+              color: isSelected
+                  ? CupertinoTheme.of(context).primaryColor
+                  : Colors.transparent,
+              width: 3,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "${_openEarable.bleManager.connectedDevice?.name ?? "OpenEarable-XXXX"}${_batteryPercentageString(bleController)}",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15.0,
+                ),
+              ),
+              SizedBox(height: 8),
+              Image.asset(imagePath, fit: BoxFit.fill),
+              SizedBox(height: 8),
+              Text(
+                "Firmware: ${_openEarable.deviceFirmwareVersion ?? "X.X.X"}",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15.0,
+                ),
+              ),
+              Text(
+                "Hardware: ${_openEarable.deviceHardwareVersion ?? "X.X.X"}",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15.0,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    } else {
+      return ElevatedButton(
+        onPressed: onPressed,
+        style: ButtonStyle(
+          backgroundColor: MaterialStateProperty.all(
+              Color.fromARGB(255, 83, 81, 91)), // Adjust the color as needed
+          shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10.0),
+              side: BorderSide(
+                color: isSelected
+                    ? Theme.of(context).colorScheme.secondary
+                    : Colors.transparent,
+                width: 3,
+              ),
+            ),
+          ),
+          padding: MaterialStateProperty.all(
+              EdgeInsets.zero), // Adjust padding if necessary
+        ),
+        child: Container(
+          padding: EdgeInsets.all(8.0), // Padding inside the button for content
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "${_openEarable.bleManager.connectedDevice?.name ?? "OpenEarable-XXXX"}${_batteryPercentageString(bleController)}", // Assuming _openEarable and bleController are accessible
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15.0,
+                ),
+              ),
+              SizedBox(height: 8),
+              Image.asset(imagePath, fit: BoxFit.fill),
+              SizedBox(height: 8),
+              Text(
+                "Firmware: ${_openEarable.deviceFirmwareVersion ?? "X.X.X"}",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15.0,
+                ),
+              ),
+              Text(
+                "Hardware: ${_openEarable.deviceHardwareVersion ?? "X.X.X"}",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15.0,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     }
   }
 }
