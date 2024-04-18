@@ -222,7 +222,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
 
   Widget _getAudioPlayerRadio(int index) {
     return SizedBox(
-        height: 37,
+        height: 38,
         width: 44,
         child: Platform.isIOS
             ? CupertinoRadio(
@@ -276,7 +276,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
           _getAudioPlayerRadio(0),
           Expanded(
             child: SizedBox(
-                height: 37.0,
+                height: 38.0,
                 child: _fileNameTextField(
                     _filenameTextController, TextInputType.text, null, null)),
           ),
@@ -321,7 +321,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
         style: TextStyle(color: _connected ? Colors.black : Colors.grey),
         decoration: InputDecoration(
           labelText: placeholder,
-          contentPadding: EdgeInsets.all(8),
+          contentPadding: EdgeInsets.fromLTRB(8, 0, 0, 0),
           border: OutlineInputBorder(),
           floatingLabelBehavior: FloatingLabelBehavior.never,
           labelStyle: TextStyle(color: _connected ? Colors.black : Colors.grey),
@@ -348,23 +348,31 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
       Row(
         children: [
           _getAudioPlayerRadio(1),
-          Expanded(
-            child: SizedBox(
-              height: 37.0,
-              child: DynamicValuePicker(
-                context,
-                OpenEarableSettings().jingleMap.keys.toList(),
-                OpenEarableSettings().selectedJingle,
-                (newValue) {
-                  setState(() {
-                    OpenEarableSettings().selectedJingle = newValue;
-                  });
-                },
-                (_) => null,
-                _connected,
+          Container(
+              decoration: BoxDecoration(
+                color: Provider.of<BluetoothController>(context).connected
+                    ? Colors.white
+                    : Colors.grey[200],
+                borderRadius: BorderRadius.circular(4.0),
               ),
-            ),
-          ),
+              child: SizedBox(
+                  height: 40,
+                  child: Container(
+                    padding: EdgeInsets.fromLTRB(8, 0, 0, 0),
+                    alignment: Alignment.centerRight,
+                    child: DynamicValuePicker(
+                      context,
+                      OpenEarableSettings().jingleMap.keys.toList(),
+                      OpenEarableSettings().selectedJingle,
+                      (newValue) {
+                        setState(() {
+                          OpenEarableSettings().selectedJingle = newValue;
+                        });
+                      },
+                      (_) => null,
+                      _connected,
+                    ),
+                  ))),
         ],
       )
     ]);
@@ -384,7 +392,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
         children: [
           _getAudioPlayerRadio(2),
           SizedBox(
-              height: 37.0,
+              height: 38.0,
               width: 75,
               child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 0),
@@ -402,10 +410,12 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
           ),
           Spacer(),
           SizedBox(
-              height: 37.0,
+              height: 38.0,
               width: 52,
-              child: _fileNameTextField(_frequencyVolumeTextController,
-                  TextInputType.number, "50", 3)),
+              child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 0),
+                  child: _fileNameTextField(_frequencyVolumeTextController,
+                      TextInputType.number, "50", null))),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 5),
             child: Text(
@@ -418,7 +428,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
           ),
           Spacer(),
           SizedBox(
-            height: 37.0,
+            height: 38.0,
             width: 107,
             child: DynamicValuePicker(
                 context,
