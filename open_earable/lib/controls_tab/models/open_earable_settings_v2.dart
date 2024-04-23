@@ -23,6 +23,60 @@ class OpenEarableSettingsV2 {
     "62500"
   ];
 
+  List<String> pulseOximeterOptions = [
+    "0",
+    "30",
+    "40",
+    "50",
+    "60",
+    "70",
+    "80",
+    // SD settings from here
+    "90",
+    "100",
+    "200",
+    "300",
+    "400",
+    "500",
+    "600",
+    "700",
+    "800",
+  ];
+
+  List<String> vitalsOptions = [
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+  ];
+
+  List<String> opticalTemperatureOptions = [
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+    // SD Settings
+    "20",
+    "30",
+    "40",
+    "50",
+    "60"
+  ];
+
   final Map<String, int> jingleMap = {
     'IDLE': 0,
     'NOTIFICATION': 1,
@@ -41,20 +95,35 @@ class OpenEarableSettingsV2 {
     'SAW': 3,
   };
 
-  late bool imuSettingSelected;
-  late bool barometerSettingSelected;
   late bool microphone1SettingSelected;
-  late bool microphone2SettingSelected;
-  late String selectedImuOptionBLE;
-  late String selectedImuOptionSD;
-  late String selectedBarometerOptionBLE;
-  late String selectedBarometerOptionSD;
-
   late String selectedMicrophone1OptionBLE;
   late String selectedMicrophone1OptionSD;
+
+  late bool microphone2SettingSelected;
   late String selectedMicrophone2OptionBLE;
   late String selectedMicrophone2OptionSD;
 
+  late bool imuSettingSelected;
+  late String selectedImuOptionBLE;
+  late String selectedImuOptionSD;
+
+  late bool pulseOximeterSettingSelected;
+  late String selectedPulseOximeterOptionBLE;
+  late String selectedPulseOximeterOptionSD;
+
+  late bool vitalsSettingSelected;
+  late String selectedVitalsOptionBLE;
+  late String selectedVitalsOptionSD;
+
+  late bool opticalTemperatureSettingSelected;
+  late String selectedOpticalTemperatureOptionBLE;
+  late String selectedOpticalTemperatureOptionSD;
+
+  late bool barometerSettingSelected;
+  late String selectedBarometerOptionBLE;
+  late String selectedBarometerOptionSD;
+
+  // Audio Player
   late int selectedAudioPlayerRadio;
   late String selectedJingle;
   late String selectedWaveForm;
@@ -65,18 +134,33 @@ class OpenEarableSettingsV2 {
   late Color selectedColor;
   late bool rainbowModeActive;
   void resetState() {
-    imuSettingSelected = false;
-    barometerSettingSelected = false;
     microphone1SettingSelected = false;
-    microphone2SettingSelected = false;
-    selectedImuOptionBLE = "0";
-    selectedImuOptionSD = "0";
-    selectedBarometerOptionBLE = "0";
-    selectedBarometerOptionSD = "0";
     selectedMicrophone1OptionBLE = "0";
     selectedMicrophone1OptionSD = "0";
+
+    microphone2SettingSelected = false;
     selectedMicrophone2OptionBLE = "0";
     selectedMicrophone2OptionSD = "0";
+
+    imuSettingSelected = false;
+    selectedImuOptionBLE = "0";
+    selectedImuOptionSD = "0";
+
+    pulseOximeterSettingSelected = false;
+    selectedPulseOximeterOptionBLE = "0";
+    selectedPulseOximeterOptionSD = "0";
+
+    vitalsSettingSelected = false;
+    selectedVitalsOptionBLE = "0";
+    selectedVitalsOptionSD = "0";
+
+    opticalTemperatureSettingSelected = false;
+    selectedOpticalTemperatureOptionBLE = "0";
+    selectedOpticalTemperatureOptionSD = "0";
+
+    barometerSettingSelected = false;
+    selectedBarometerOptionBLE = "0";
+    selectedBarometerOptionSD = "0";
 
     selectedAudioPlayerRadio = 0;
     selectedJingle = jingleMap.keys.first;

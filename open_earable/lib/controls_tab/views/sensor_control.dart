@@ -174,42 +174,65 @@ class _SensorControlCardState extends State<SensorControlCard> {
               SizedBox(height: 4),
               _sensorConfigurationRow(
                   "Pulse Oximeter\n(Red/Infrared)",
-                  OpenEarableSettingsV2().imuAndBarometerOptions,
-                  OpenEarableSettingsV2().imuSettingSelected,
-                  OpenEarableSettingsV2().selectedImuOptionBLE,
-                  OpenEarableSettingsV2().selectedImuOptionSD,
+                  OpenEarableSettingsV2().pulseOximeterOptions,
+                  OpenEarableSettingsV2().pulseOximeterSettingSelected,
+                  OpenEarableSettingsV2().selectedPulseOximeterOptionBLE,
+                  OpenEarableSettingsV2().selectedPulseOximeterOptionSD,
                   (bool? newValue) {
                 if (newValue != null) {
                   setState(() {
-                    OpenEarableSettingsV2().imuSettingSelected = newValue;
+                    OpenEarableSettingsV2().pulseOximeterSettingSelected =
+                        newValue;
                   });
                 }
               }, (String newValue) {
-                OpenEarableSettingsV2().selectedImuOptionBLE = newValue;
+                OpenEarableSettingsV2().selectedPulseOximeterOptionBLE =
+                    newValue;
               }, (String newValue) {
-                OpenEarableSettingsV2().selectedImuOptionSD = newValue;
+                OpenEarableSettingsV2().selectedPulseOximeterOptionSD =
+                    newValue;
               }),
               SizedBox(height: 4),
               _sensorConfigurationRow(
                   "Heart Rate,\nSpO2",
-                  OpenEarableSettingsV2().imuAndBarometerOptions,
-                  OpenEarableSettingsV2().imuSettingSelected,
-                  OpenEarableSettingsV2().selectedImuOptionBLE,
-                  OpenEarableSettingsV2().selectedImuOptionSD,
+                  OpenEarableSettingsV2().vitalsOptions,
+                  OpenEarableSettingsV2().vitalsSettingSelected,
+                  OpenEarableSettingsV2().selectedVitalsOptionBLE,
+                  OpenEarableSettingsV2().selectedVitalsOptionSD,
                   (bool? newValue) {
                 if (newValue != null) {
                   setState(() {
-                    OpenEarableSettingsV2().imuSettingSelected = newValue;
+                    OpenEarableSettingsV2().vitalsSettingSelected = newValue;
                   });
                 }
               }, (String newValue) {
-                OpenEarableSettingsV2().selectedImuOptionBLE = newValue;
+                OpenEarableSettingsV2().selectedVitalsOptionBLE = newValue;
               }, (String newValue) {
-                OpenEarableSettingsV2().selectedImuOptionSD = newValue;
+                OpenEarableSettingsV2().selectedVitalsOptionSD = newValue;
               }),
               SizedBox(height: 4),
               _sensorConfigurationRow(
-                  "Temperature,\nPressure",
+                  "Optical Temp.\n(Surface)",
+                  OpenEarableSettingsV2().opticalTemperatureOptions,
+                  OpenEarableSettingsV2().opticalTemperatureSettingSelected,
+                  OpenEarableSettingsV2().selectedOpticalTemperatureOptionBLE,
+                  OpenEarableSettingsV2().selectedOpticalTemperatureOptionSD,
+                  (bool? newValue) {
+                if (newValue != null) {
+                  setState(() {
+                    OpenEarableSettingsV2().opticalTemperatureSettingSelected =
+                        newValue;
+                  });
+                }
+              }, (String newValue) {
+                OpenEarableSettingsV2().selectedOpticalTemperatureOptionBLE =
+                    newValue;
+              }, (String newValue) {
+                OpenEarableSettingsV2().selectedBarometerOptionSD = newValue;
+              }),
+              SizedBox(height: 4),
+              _sensorConfigurationRow(
+                  "Pressure,\nTemp. (Ambient)",
                   OpenEarableSettingsV2().imuAndBarometerOptions,
                   OpenEarableSettingsV2().barometerSettingSelected,
                   OpenEarableSettingsV2().selectedBarometerOptionBLE,
