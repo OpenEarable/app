@@ -22,7 +22,7 @@ class BluetoothController extends ChangeNotifier {
   List<DiscoveredDevice> _discoveredDevices = [];
   List<DiscoveredDevice> get discoveredDevices => _discoveredDevices;
 
-  bool _scanning = false;
+  //bool _scanning = false;
 
   bool _connected = false;
   bool get connected => _connected;
@@ -54,7 +54,7 @@ class BluetoothController extends ChangeNotifier {
   void dispose() {
     super.dispose();
     _scanSubscription?.cancel();
-    _scanning = false;
+    //_scanning = false;
     _connectionStateSubscription?.cancel();
     _batteryLevelSubscription?.cancel();
   }
@@ -70,7 +70,7 @@ class BluetoothController extends ChangeNotifier {
 
   Future<void> startScanning() async {
     _scanSubscription?.cancel();
-    _scanning = true;
+    //_scanning = true;
     _discoveredDevices = [];
     if (_openEarable == null) {
       return;
@@ -97,7 +97,7 @@ class BluetoothController extends ChangeNotifier {
       return;
     }
     _scanSubscription?.cancel();
-    _scanning = false;
+    //_scanning = false;
     _openEarable?.bleManager.connectToDevice(device);
     prefs.setString("lastConnectedDeviceName", device.name);
   }

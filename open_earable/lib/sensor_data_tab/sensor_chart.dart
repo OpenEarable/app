@@ -102,8 +102,8 @@ class _EarableDataChartState extends State<EarableDataChart> {
       if (maxXYZValue == null || minXYZValue == null) {
         return;
       }
-      double maxY = maxXYZValue!.getMax();
-      double minY = minXYZValue!.getMin();
+      double maxY = maxXYZValue.getMax();
+      double minY = minXYZValue.getMin();
       double maxAbsValue = max(maxY.abs(), minY.abs());
       _maxY = (_title == "Pressure" || _title == "Temperature")
           ? maxY

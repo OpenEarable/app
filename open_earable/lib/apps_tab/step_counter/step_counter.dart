@@ -12,9 +12,6 @@ import 'package:provider/provider.dart';
 class StepCounter extends StatefulWidget {
   final OpenEarable _openEarable;
 
-  TextEditingController stoppedTimeController = TextEditingController();
-  TextEditingController countedStepsController = TextEditingController();
-
   StepCounter(this._openEarable);
 
   @override

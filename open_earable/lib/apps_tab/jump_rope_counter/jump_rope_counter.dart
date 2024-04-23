@@ -51,9 +51,6 @@ class _JumpRopeCounterState extends State<JumpRopeCounter>
   /// Number of jumps.
   int _jumps = 0;
 
-  /// Average jump height.
-  double _avgJumpHeight = 0.0;
-
   /// Gravitational acceleration.
   final double _gravity = 9.81;
 
@@ -157,7 +154,6 @@ class _JumpRopeCounterState extends State<JumpRopeCounter>
   /// Resets all counters to 0.
   void _resetCounter() {
     _jumps = 0;
-    _avgJumpHeight = 0.0;
   }
 
   /// Saves the result of the recording.

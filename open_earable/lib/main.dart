@@ -84,8 +84,8 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> _checkBLEPermission() async {
     PermissionStatus status = await Permission.bluetoothConnect.request();
-    PermissionStatus status2 = await Permission.location.request();
-    PermissionStatus status3 = await Permission.bluetoothScan.request();
+    await Permission.location.request();
+    await Permission.bluetoothScan.request();
     if (status.isGranted) {
       print("BLE is working");
     }
