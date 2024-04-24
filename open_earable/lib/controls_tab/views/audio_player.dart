@@ -369,7 +369,6 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
                           OpenEarableSettings().selectedJingle = newValue;
                         });
                       },
-                      (_) => null,
                       _connected,
                     ),
                   ))),
@@ -439,7 +438,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
                   OpenEarableSettings().selectedWaveForm = newValue;
                 },
               );
-            }, (_) => null, _connected),
+            }, _connected),
           ),
         ],
       )

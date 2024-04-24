@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class OpenEarableSettingsV2 {
   static final OpenEarableSettingsV2 _instance =
@@ -10,174 +11,180 @@ class OpenEarableSettingsV2 {
     resetState();
   }
 
-  List<String> imuAndBarometerOptions = ["0", "10", "20", "30"];
-
-  List<String> microphoneOptions = [
-    "0",
-    "8000",
-    "11025",
-    "16000",
-    "22050",
-    "44100",
-    "48000",
-    "62500"
+  List<List<String>> _imuOptions = [
+    ["0", "10", "20", "30", "40", "50", "60", "70", "80"],
+    ["90", "100", "200", "300", "400", "500", "600", "700", "800"]
   ];
 
-  List<String> pulseOximeterOptions = [
-    "0",
-    "30",
-    "40",
-    "50",
-    "60",
-    "70",
-    "80",
-    // SD settings from here
-    "90",
-    "100",
-    "200",
-    "300",
-    "400",
-    "500",
-    "600",
-    "700",
-    "800",
+  List<List<String>> _barometerOptions = [
+    ["0", "10", "20", "30", "40", "50", "60", "70", "80"],
+    ["90", "100", "200", "300"]
   ];
 
-  List<String> vitalsOptions = [
-    "0",
-    "1",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "8",
-    "9",
-    "10",
+  List<List<String>> _microphoneOptions = [
+    // BLE Options
+    [
+      "0",
+      "8000",
+      "11025",
+      "16000",
+      "22050",
+      "44100",
+      "48000",
+    ],
+    // additional SD options
+    ["62500"]
   ];
 
-  List<String> opticalTemperatureOptions = [
-    "0",
-    "1",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "8",
-    "9",
-    "10",
-    // SD Settings
-    "20",
-    "30",
-    "40",
-    "50",
-    "60"
+  List<List<String>> _pulseOximeterOptions = [
+    [
+      "0",
+      "30",
+      "40",
+      "50",
+      "60",
+      "70",
+      "80",
+    ],
+    [
+      "90",
+      "100",
+      "200",
+      "300",
+      "400",
+      "500",
+      "600",
+      "700",
+      "800",
+    ]
   ];
 
-  final Map<String, int> jingleMap = {
-    'IDLE': 0,
-    'NOTIFICATION': 1,
-    'SUCCESS': 2,
-    'ERROR': 3,
-    'ALARM': 4,
-    'PING': 5,
-    'OPEN': 6,
-    'CLOSE': 7,
-    'CLICK': 8,
-  };
-  final Map<String, int> waveFormMap = {
-    'SINE': 0,
-    'SQUARE': 1,
-    'TRIANGLE': 2,
-    'SAW': 3,
-  };
+  List<List<String>> _vitalsOptions = [
+    [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+    ],
+    []
+  ];
 
-  late bool microphone1SettingSelected;
-  late String selectedMicrophone1OptionBLE;
-  late String selectedMicrophone1OptionSD;
+  List<List<String>> _opticalTemperatureOptions = [
+    [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+    ],
+    ["20", "30", "40", "50", "60"]
+  ];
 
-  late bool microphone2SettingSelected;
-  late String selectedMicrophone2OptionBLE;
-  late String selectedMicrophone2OptionSD;
-
-  late bool imuSettingSelected;
-  late String selectedImuOptionBLE;
-  late String selectedImuOptionSD;
-
-  late bool pulseOximeterSettingSelected;
-  late String selectedPulseOximeterOptionBLE;
-  late String selectedPulseOximeterOptionSD;
-
-  late bool vitalsSettingSelected;
-  late String selectedVitalsOptionBLE;
-  late String selectedVitalsOptionSD;
-
-  late bool opticalTemperatureSettingSelected;
-  late String selectedOpticalTemperatureOptionBLE;
-  late String selectedOpticalTemperatureOptionSD;
-
-  late bool barometerSettingSelected;
-  late String selectedBarometerOptionBLE;
-  late String selectedBarometerOptionSD;
-
-  // Audio Player
-  late int selectedAudioPlayerRadio;
-  late String selectedJingle;
-  late String selectedWaveForm;
-  late String selectedFilename;
-  late String selectedFrequency;
-  late String selectedFrequencyVolume;
+  late SensorSettings microphone1Settings;
+  late SensorSettings microphone2Settings;
+  late SensorSettings imuSettings;
+  late SensorSettings pulseOximeterSettings;
+  late SensorSettings vitalsSettings;
+  late SensorSettings opticalTemperatureSettings;
+  late SensorSettings barometerSettings;
 
   late Color selectedColor;
   late bool rainbowModeActive;
   void resetState() {
-    microphone1SettingSelected = false;
-    selectedMicrophone1OptionBLE = "0";
-    selectedMicrophone1OptionSD = "0";
+    microphone1Settings = SensorSettings(
+        frequencyOptionsBLE: _microphoneOptions[0],
+        additionalOptionsSD: _microphoneOptions[1]);
 
-    microphone2SettingSelected = false;
-    selectedMicrophone2OptionBLE = "0";
-    selectedMicrophone2OptionSD = "0";
+    microphone2Settings = SensorSettings(
+        frequencyOptionsBLE: _microphoneOptions[0],
+        additionalOptionsSD: _microphoneOptions[1]);
 
-    imuSettingSelected = false;
-    selectedImuOptionBLE = "0";
-    selectedImuOptionSD = "0";
+    imuSettings = SensorSettings(
+        frequencyOptionsBLE: _imuOptions[0],
+        additionalOptionsSD: _imuOptions[1]);
 
-    pulseOximeterSettingSelected = false;
-    selectedPulseOximeterOptionBLE = "0";
-    selectedPulseOximeterOptionSD = "0";
+    pulseOximeterSettings = SensorSettings(
+        frequencyOptionsBLE: _pulseOximeterOptions[0],
+        additionalOptionsSD: _pulseOximeterOptions[1]);
 
-    vitalsSettingSelected = false;
-    selectedVitalsOptionBLE = "0";
-    selectedVitalsOptionSD = "0";
+    vitalsSettings = SensorSettings(
+        frequencyOptionsBLE: _vitalsOptions[0],
+        additionalOptionsSD: _vitalsOptions[1]);
 
-    opticalTemperatureSettingSelected = false;
-    selectedOpticalTemperatureOptionBLE = "0";
-    selectedOpticalTemperatureOptionSD = "0";
+    opticalTemperatureSettings = SensorSettings(
+        frequencyOptionsBLE: _opticalTemperatureOptions[0],
+        additionalOptionsSD: _opticalTemperatureOptions[1]);
 
-    barometerSettingSelected = false;
-    selectedBarometerOptionBLE = "0";
-    selectedBarometerOptionSD = "0";
-
-    selectedAudioPlayerRadio = 0;
-    selectedJingle = jingleMap.keys.first;
-    selectedWaveForm = waveFormMap.keys.first;
-    selectedFilename = "filename.wav";
-    selectedFrequency = "440";
-    selectedFrequencyVolume = "50";
+    barometerSettings = SensorSettings(
+        frequencyOptionsBLE: _barometerOptions[0],
+        additionalOptionsSD: _barometerOptions[1]);
 
     selectedColor = Colors.deepPurple;
     rainbowModeActive = false;
   }
+}
 
-  int getWaveFormIndex(String value) {
-    return waveFormMap[value] ?? 0;
+class SensorSettings extends ChangeNotifier {
+  late List<String> frequencyOptionsBLE;
+  late List<String> frequencyOptionsSD;
+  late bool sensorSelected;
+  late String selectedOptionBLE;
+  late String selectedOptionSD;
+
+  SensorSettings(
+      {required frequencyOptionsBLE,
+      required additionalOptionsSD,
+      sensorSelected = false,
+      selectedOptionBLE = "0",
+      selectedOptionSD = "0"}) {
+    this.frequencyOptionsBLE = frequencyOptionsBLE;
+    this.frequencyOptionsSD = frequencyOptionsBLE + additionalOptionsSD;
+    this.sensorSelected = sensorSelected;
+    this.selectedOptionBLE = selectedOptionBLE;
+    this.selectedOptionSD = selectedOptionSD;
+  }
+  void updateSensorSelected(bool? selected) {
+    if (selected == null) {
+      return;
+    }
+    this.sensorSelected = selected;
+    notifyListeners();
   }
 
-  int getJingleIndex(String value) {
-    return jingleMap[value] ?? 0;
+  void updateSelectedBLEOption(String option) {
+    this.selectedOptionBLE = option;
+    _onValueChanged();
+    notifyListeners();
+  }
+
+  void updateSelectedSDOption(String option) {
+    this.selectedOptionSD = option;
+    _onValueChanged();
+    notifyListeners();
+  }
+
+  void _onValueChanged() {
+    if (this.sensorSelected) {
+      if (this.selectedOptionBLE == "0" && this.selectedOptionSD == "0") {
+        updateSensorSelected(false);
+      }
+    } else {
+      if (this.selectedOptionBLE != "0" || this.selectedOptionSD != "0") {
+        updateSensorSelected(true);
+      }
+    }
   }
 }

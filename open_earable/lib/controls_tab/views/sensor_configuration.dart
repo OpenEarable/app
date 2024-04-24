@@ -261,7 +261,6 @@ class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
                       options,
                       currentValue,
                       changeSelection,
-                      changeBool,
                       Provider.of<BluetoothController>(context).connected,
                     )))),
         SizedBox(width: 8),

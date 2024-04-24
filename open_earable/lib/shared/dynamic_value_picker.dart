@@ -7,7 +7,6 @@ class DynamicValuePicker extends StatelessWidget {
   final List<String> options;
   final String currentValue;
   final Function(String) onValueChange;
-  final Function(bool) onValueNotZero;
   final bool isConnected;
 
   DynamicValuePicker(
@@ -15,7 +14,6 @@ class DynamicValuePicker extends StatelessWidget {
     this.options,
     this.currentValue,
     this.onValueChange,
-    this.onValueNotZero,
     this.isConnected,
   );
 
@@ -46,11 +44,6 @@ class DynamicValuePicker extends StatelessWidget {
         value: currentValue,
         onChanged: (String? newValue) {
           onValueChange(newValue!);
-          if (int.parse(newValue) != 0) {
-            onValueNotZero(true);
-          } else {
-            onValueNotZero(false);
-          }
         },
         items: options.map((String value) {
           return DropdownMenuItem<String>(
@@ -89,13 +82,7 @@ class DynamicValuePicker extends StatelessWidget {
           itemExtent: 32, // Height of each item
           onSelectedItemChanged: (int index) {
             String newValue = options[index];
-            int? newValueInt = int.tryParse(newValue);
             onValueChange(newValue);
-            if (newValueInt != 0) {
-              onValueNotZero(true);
-            } else {
-              onValueNotZero(false);
-            }
           },
           children: options
               .map((String value) => Center(
