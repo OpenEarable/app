@@ -8,6 +8,7 @@ class DynamicValuePicker extends StatelessWidget {
   final String currentValue;
   final Function(String) onValueChange;
   final bool isConnected;
+  final bool isFakeDisabled;
 
   DynamicValuePicker(
     this.context,
@@ -15,6 +16,7 @@ class DynamicValuePicker extends StatelessWidget {
     this.currentValue,
     this.onValueChange,
     this.isConnected,
+    this.isFakeDisabled,
   );
 
   @override
@@ -22,7 +24,10 @@ class DynamicValuePicker extends StatelessWidget {
     if (Platform.isIOS) {
       return CupertinoButton(
         borderRadius: BorderRadius.all(Radius.circular(4.0)),
-        color: Colors.white,
+        disabledColor: Colors.grey[200]!,
+        color: this.isFakeDisabled || !isConnected
+            ? CupertinoColors.systemGrey
+            : CupertinoColors.white,
         padding: EdgeInsets.fromLTRB(8, 0, 0, 0),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -30,21 +35,26 @@ class DynamicValuePicker extends StatelessWidget {
             Text(
               currentValue,
               style: TextStyle(
-                color: isConnected ? Colors.black : Colors.grey,
+                color: this.isFakeDisabled || !isConnected
+                    ? Colors.grey[700]
+                    : Colors.black,
               ),
             ),
           ],
         ),
-        onPressed: () => _showCupertinoPicker(),
+        onPressed: () => isConnected ? _showCupertinoPicker() : null,
       );
     } else {
       return DropdownButton<String>(
-        dropdownColor: isConnected ? Colors.white : Colors.grey[200],
+        dropdownColor:
+            this.isFakeDisabled || !isConnected ? Colors.grey : Colors.white,
         alignment: Alignment.centerRight,
         value: currentValue,
-        onChanged: (String? newValue) {
-          onValueChange(newValue!);
-        },
+        onChanged: isConnected
+            ? (String? newValue) {
+                onValueChange(newValue!);
+              }
+            : null,
         items: options.map((String value) {
           return DropdownMenuItem<String>(
             alignment: Alignment.centerRight,
@@ -52,7 +62,9 @@ class DynamicValuePicker extends StatelessWidget {
             child: Text(
               value,
               style: TextStyle(
-                color: isConnected ? Colors.black : Colors.grey,
+                color: this.isFakeDisabled || !isConnected
+                    ? Colors.grey[700]
+                    : Colors.black,
               ),
               textAlign: TextAlign.end,
             ),

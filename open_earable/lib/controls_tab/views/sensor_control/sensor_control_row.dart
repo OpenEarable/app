@@ -26,7 +26,7 @@ class _SensorControlRow extends State<SensorControlRow> {
             ? CupertinoCheckbox(
                 value: sensorSettings.sensorSelected,
                 onChanged: Provider.of<BluetoothController>(context).connected
-                    ? sensorSettings.updateSensorSelected
+                    ? (value) => sensorSettings.sensorSelected = value ?? false
                     : null,
                 activeColor: Provider.of<SensorSettings>(context, listen: true)
                         .sensorSelected
@@ -39,7 +39,7 @@ class _SensorControlRow extends State<SensorControlRow> {
                 fillColor: MaterialStateProperty.resolveWith(_getCheckboxColor),
                 value: sensorSettings.sensorSelected,
                 onChanged: Provider.of<BluetoothController>(context).connected
-                    ? sensorSettings.updateSensorSelected
+                    ? (value) => sensorSettings.sensorSelected = value ?? false
                     : null,
               ),
         Text(
@@ -69,6 +69,7 @@ class _SensorControlRow extends State<SensorControlRow> {
                         sensorSettings.updateSelectedBLEOption(newValue);
                       },
                       Provider.of<BluetoothController>(context).connected,
+                      sensorSettings.isFakeDisabledBLE,
                     )))),
         SizedBox(width: 8),
         Container(
@@ -91,6 +92,7 @@ class _SensorControlRow extends State<SensorControlRow> {
                         sensorSettings.updateSelectedSDOption(newValue);
                       },
                       Provider.of<BluetoothController>(context).connected,
+                      sensorSettings.isFakeDisabledSD,
                     )))),
         SizedBox(width: 8),
         Text("Hz", style: TextStyle(color: Color.fromRGBO(168, 168, 172, 1.0))),

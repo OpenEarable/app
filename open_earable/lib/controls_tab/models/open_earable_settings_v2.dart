@@ -112,6 +112,9 @@ class OpenEarableSettingsV2 {
         frequencyOptionsBLE: _microphoneOptions[0],
         additionalOptionsSD: _microphoneOptions[1]);
 
+    microphone1Settings.relatedSettings = microphone2Settings;
+    microphone2Settings.relatedSettings = microphone1Settings;
+
     imuSettings = SensorSettings(
         frequencyOptionsBLE: _imuOptions[0],
         additionalOptionsSD: _imuOptions[1]);
@@ -143,47 +146,79 @@ class SensorSettings extends ChangeNotifier {
   late bool sensorSelected;
   late String selectedOptionBLE;
   late String selectedOptionSD;
+  late bool isFakeDisabledBLE;
+  late bool isFakeDisabledSD;
+  SensorSettings? relatedSettings;
 
   SensorSettings(
       {required frequencyOptionsBLE,
       required additionalOptionsSD,
       sensorSelected = false,
       selectedOptionBLE = "0",
-      selectedOptionSD = "0"}) {
+      selectedOptionSD = "0",
+      isFakeDisabledBLE = false,
+      isFakeDisabledSD = false,
+      this.relatedSettings}) {
     this.frequencyOptionsBLE = frequencyOptionsBLE;
     this.frequencyOptionsSD = frequencyOptionsBLE + additionalOptionsSD;
     this.sensorSelected = sensorSelected;
     this.selectedOptionBLE = selectedOptionBLE;
     this.selectedOptionSD = selectedOptionSD;
-  }
-  void updateSensorSelected(bool? selected) {
-    if (selected == null) {
-      return;
-    }
-    this.sensorSelected = selected;
-    notifyListeners();
+    this.isFakeDisabledBLE = isFakeDisabledBLE;
+    this.isFakeDisabledSD = isFakeDisabledSD;
   }
 
   void updateSelectedBLEOption(String option) {
     this.selectedOptionBLE = option;
-    _onValueChanged();
+    if (relatedSettings != null) {
+      if (option != "0") {
+        this.isFakeDisabledBLE = false;
+        this.selectedOptionSD = "0";
+        this.isFakeDisabledSD = true;
+        relatedSettings!.selectedOptionBLE = "0";
+        relatedSettings!.isFakeDisabledBLE = true;
+        relatedSettings!.isFakeDisabledSD = false;
+      } else {
+        this.isFakeDisabledSD = false;
+        if (relatedSettings!.selectedOptionSD == "0") {
+          relatedSettings!.isFakeDisabledBLE = false;
+        }
+      }
+      relatedSettings!.notifyListeners();
+      relatedSettings!.onValuesChanged();
+    }
     notifyListeners();
+    onValuesChanged();
   }
 
   void updateSelectedSDOption(String option) {
     this.selectedOptionSD = option;
-    _onValueChanged();
+    if (relatedSettings != null) {
+      if (option != "0") {
+        this.isFakeDisabledSD = false;
+        this.selectedOptionBLE = "0";
+        this.isFakeDisabledBLE = true;
+        if (relatedSettings!.selectedOptionSD == "0") {
+          relatedSettings!.isFakeDisabledBLE = false;
+        }
+      } else if (relatedSettings!.selectedOptionBLE == "0") {
+        this.isFakeDisabledBLE = false;
+      }
+      relatedSettings!.notifyListeners();
+      relatedSettings!.onValuesChanged();
+    }
     notifyListeners();
+    onValuesChanged();
   }
 
-  void _onValueChanged() {
+  void onValuesChanged() {
     if (this.sensorSelected) {
       if (this.selectedOptionBLE == "0" && this.selectedOptionSD == "0") {
-        updateSensorSelected(false);
+        this.sensorSelected = false;
       }
     } else {
       if (this.selectedOptionBLE != "0" || this.selectedOptionSD != "0") {
-        updateSensorSelected(true);
+        this.sensorSelected = true;
       }
     }
   }

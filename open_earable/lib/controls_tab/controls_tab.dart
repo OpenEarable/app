@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'dart:io';
-import 'views/sensor_control.dart';
+import 'views/sensor_control/sensor_control.dart';
 import 'views/connect.dart';
 import 'views/led_color.dart';
 import 'dart:async';

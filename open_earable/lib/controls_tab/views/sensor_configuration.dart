@@ -257,12 +257,12 @@ class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
                 child: Container(
                     alignment: Alignment.centerRight,
                     child: DynamicValuePicker(
-                      context,
-                      options,
-                      currentValue,
-                      changeSelection,
-                      Provider.of<BluetoothController>(context).connected,
-                    )))),
+                        context,
+                        options,
+                        currentValue,
+                        changeSelection,
+                        Provider.of<BluetoothController>(context).connected,
+                        false)))),
         SizedBox(width: 8),
         Text("Hz", style: TextStyle(color: Color.fromRGBO(168, 168, 172, 1.0))),
       ],

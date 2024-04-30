@@ -370,6 +370,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
                         });
                       },
                       _connected,
+                      false,
                     ),
                   ))),
         ],
@@ -438,7 +439,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
                   OpenEarableSettings().selectedWaveForm = newValue;
                 },
               );
-            }, _connected),
+            }, _connected, false),
           ),
         ],
       )
