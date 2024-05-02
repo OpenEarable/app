@@ -11,27 +11,36 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:open_earable/shared/global_theme.dart';
 
 class LEDColorCard extends StatefulWidget {
-  final OpenEarable _openEarable;
-  LEDColorCard(this._openEarable);
-
   @override
-  _LEDColorCardState createState() => _LEDColorCardState(_openEarable);
+  _LEDColorCardState createState() => _LEDColorCardState();
 }
 
 class _LEDColorCardState extends State<LEDColorCard> {
-  final OpenEarable _openEarable;
-  _LEDColorCardState(this._openEarable);
-
   Timer? rainbowTimer;
+  late OpenEarable _openEarableLeft;
+  late OpenEarable _openEarableRight;
 
   @override
   void initState() {
     super.initState();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _openEarableLeft =
+        Provider.of<BluetoothController>(context).openEarableLeft;
+    _openEarableRight =
+        Provider.of<BluetoothController>(context).openEarableRight;
+  }
+
   void _setLEDColor() {
     _stopRainbowMode();
-    _openEarable.rgbLed.writeLedColor(
+    _openEarableLeft.rgbLed.writeLedColor(
+        r: OpenEarableSettings().selectedColor.red,
+        g: OpenEarableSettings().selectedColor.green,
+        b: OpenEarableSettings().selectedColor.blue);
+    _openEarableRight.rgbLed.writeLedColor(
         r: OpenEarableSettings().selectedColor.red,
         g: OpenEarableSettings().selectedColor.green,
         b: OpenEarableSettings().selectedColor.blue);
@@ -39,7 +48,8 @@ class _LEDColorCardState extends State<LEDColorCard> {
 
   void _turnLEDoff() {
     _stopRainbowMode();
-    _openEarable.rgbLed.writeLedColor(r: 0, g: 0, b: 0);
+    _openEarableLeft.rgbLed.writeLedColor(r: 0, g: 0, b: 0);
+    _openEarableRight.rgbLed.writeLedColor(r: 0, g: 0, b: 0);
   }
 
   void _startRainbowMode() {
@@ -52,7 +62,9 @@ class _LEDColorCardState extends State<LEDColorCard> {
 
     rainbowTimer = Timer.periodic(Duration(milliseconds: 300), (Timer timer) {
       Map<String, int> rgbValue = _hslToRgb(h, 1, 0.5);
-      _openEarable.rgbLed.writeLedColor(
+      _openEarableLeft.rgbLed.writeLedColor(
+          r: rgbValue['r']!, g: rgbValue['g']!, b: rgbValue['b']!);
+      _openEarableRight.rgbLed.writeLedColor(
           r: rgbValue['r']!, g: rgbValue['g']!, b: rgbValue['b']!);
 
       h += increment;
@@ -250,15 +262,11 @@ class _LEDColorCardState extends State<LEDColorCard> {
                                             color: connected
                                                 ? Colors.white
                                                 : null)),
-                                    onPressed: _openEarable.bleManager.connected
-                                        ? _setLEDColor
-                                        : null,
+                                    onPressed: connected ? _setLEDColor : null,
                                     color: Color(0xff53515b),
                                   )
                                 : ElevatedButton(
-                                    onPressed: _openEarable.bleManager.connected
-                                        ? _setLEDColor
-                                        : null,
+                                    onPressed: connected ? _setLEDColor : null,
                                     style: ElevatedButton.styleFrom(
                                         backgroundColor: Color(
                                             0xff53515b), // Set the background color to grey
@@ -273,17 +281,13 @@ class _LEDColorCardState extends State<LEDColorCard> {
                               child: Platform.isIOS
                                   ? CupertinoButton(
                                       onPressed:
-                                          _openEarable.bleManager.connected
-                                              ? _startRainbowMode
-                                              : null,
+                                          connected ? _startRainbowMode : null,
                                       color: Color(0xff53515b),
                                       padding: EdgeInsets.zero,
                                       child: Text("🦄"))
                                   : ElevatedButton(
                                       onPressed:
-                                          _openEarable.bleManager.connected
-                                              ? _startRainbowMode
-                                              : null,
+                                          connected ? _startRainbowMode : null,
                                       style: ElevatedButton.styleFrom(
                                           backgroundColor: Color(
                                               0xff53515b), // Set the background color to grey
@@ -296,16 +300,12 @@ class _LEDColorCardState extends State<LEDColorCard> {
                             height: 36,
                             child: Platform.isIOS
                                 ? CupertinoButton(
-                                    onPressed: _openEarable.bleManager.connected
-                                        ? _turnLEDoff
-                                        : null,
+                                    onPressed: connected ? _turnLEDoff : null,
                                     padding: EdgeInsets.zero,
                                     color: Color(0xfff27777),
                                     child: Text('Off'))
                                 : ElevatedButton(
-                                    onPressed: _openEarable.bleManager.connected
-                                        ? _turnLEDoff
-                                        : null,
+                                    onPressed: connected ? _turnLEDoff : null,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Color(0xfff27777),
                                       foregroundColor: Colors.black,

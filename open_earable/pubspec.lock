@@ -21,18 +21,18 @@ packages:
     dependency: transitive
     description:
       name: archive
-      sha256: "22600aa1e926be775fa5fe7e6894e7fb3df9efda8891c73f70fb3262399a432d"
+      sha256: "0763b45fa9294197a2885c8567927e2830ade852e5c896fd4ab7e0e348d0f373"
       url: "https://pub.dev"
     source: hosted
-    version: "3.4.10"
+    version: "3.5.0"
   args:
     dependency: transitive
     description:
       name: args
-      sha256: eef6c46b622e0494a36c5a12d10d77fb4e855501a91c1b9ef9339326e58f0596
+      sha256: "7cf60b9f0cc88203c5a190b4cd62a99feea42759a7fa695010eb5de1c0b2252a"
       url: "https://pub.dev"
     source: hosted
-    version: "2.4.2"
+    version: "2.5.0"
   async:
     dependency: transitive
     description:
@@ -125,10 +125,10 @@ packages:
     dependency: "direct main"
     description:
       name: cupertino_icons
-      sha256: d57953e10f9f8327ce64a508a355f0b1ec902193f66288e8cb5070e7c47eeb2d
+      sha256: ba631d1c7f7bef6b729a622b7b752645a2d076dba9976925b8f25725a30e1ee6
       url: "https://pub.dev"
     source: hosted
-    version: "1.0.6"
+    version: "1.0.8"
   english_words:
     dependency: "direct main"
     description:
@@ -233,10 +233,10 @@ packages:
     dependency: transitive
     description:
       name: functional_data
-      sha256: aefdec4365452283b2a7cf420a3169654d51d3e9553069a22d76680d7a9d7c3d
+      sha256: "76d17dc707c40e552014f5a49c0afcc3f1e3f05e800cd6b7872940bfe41a5039"
       url: "https://pub.dev"
     source: hosted
-    version: "1.1.1"
+    version: "1.2.0"
   html:
     dependency: transitive
     description:
@@ -322,7 +322,7 @@ packages:
     description:
       path: "."
       ref: HEAD
-      resolved-ref: a12d506db063ea70532e93c8bb441ea62d1f0f10
+      resolved-ref: "38b23b4acb873b273b70c66e10f373bb3bbffed6"
       url: "https://github.com/OpenEarable/open_earable_flutter.git"
     source: git
     version: "0.0.2"
@@ -346,18 +346,18 @@ packages:
     dependency: "direct main"
     description:
       name: path_provider
-      sha256: b27217933eeeba8ff24845c34003b003b2b22151de3c908d0e679e8fe1aa078b
+      sha256: c9e7d3a4cd1410877472158bee69963a4579f78b68c65a2b7d40d1a7a88bb161
       url: "https://pub.dev"
     source: hosted
-    version: "2.1.2"
+    version: "2.1.3"
   path_provider_android:
     dependency: transitive
     description:
       name: path_provider_android
-      sha256: "477184d672607c0a3bf68fbbf601805f92ef79c82b64b4d6eb318cbca4c48668"
+      sha256: a248d8146ee5983446bf03ed5ea8f6533129a12b11f12057ad1b4a67a2b3b41d
       url: "https://pub.dev"
     source: hosted
-    version: "2.2.2"
+    version: "2.2.4"
   path_provider_foundation:
     dependency: transitive
     description:
@@ -394,10 +394,10 @@ packages:
     dependency: "direct main"
     description:
       name: permission_handler
-      sha256: "74e962b7fad7ff75959161bb2c0ad8fe7f2568ee82621c9c2660b751146bfe44"
+      sha256: "18bf33f7fefbd812f37e72091a15575e72d5318854877e0e4035a24ac1113ecb"
       url: "https://pub.dev"
     source: hosted
-    version: "11.3.0"
+    version: "11.3.1"
   permission_handler_android:
     dependency: transitive
     description:
@@ -410,10 +410,10 @@ packages:
     dependency: transitive
     description:
       name: permission_handler_apple
-      sha256: bdafc6db74253abb63907f4e357302e6bb786ab41465e8635f362ee71fd8707b
+      sha256: e9ad66020b89ff1b63908f247c2c6f931c6e62699b756ef8b3c4569350cd8662
       url: "https://pub.dev"
     source: hosted
-    version: "9.4.0"
+    version: "9.4.4"
   permission_handler_html:
     dependency: transitive
     description:
@@ -426,10 +426,10 @@ packages:
     dependency: transitive
     description:
       name: permission_handler_platform_interface
-      sha256: "23dfba8447c076ab5be3dee9ceb66aad345c4a648f0cac292c77b1eb0e800b78"
+      sha256: "48d4fcf201a1dad93ee869ab0d4101d084f49136ec82a8a06ed9cfeacab9fd20"
       url: "https://pub.dev"
     source: hosted
-    version: "4.2.0"
+    version: "4.2.1"
   permission_handler_windows:
     dependency: transitive
     description:
@@ -462,14 +462,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.8"
-  pointycastle:
-    dependency: transitive
-    description:
-      name: pointycastle
-      sha256: "43ac87de6e10afabc85c445745a7b799e04de84cebaa4fd7bf55a5e1e9604d29"
-      url: "https://pub.dev"
-    source: hosted
-    version: "3.7.4"
   protobuf:
     dependency: transitive
     description:
@@ -506,18 +498,18 @@ packages:
     dependency: "direct main"
     description:
       name: shared_preferences
-      sha256: "81429e4481e1ccfb51ede496e916348668fd0921627779233bd24cc3ff6abd02"
+      sha256: d3bbe5553a986e83980916ded2f0b435ef2e1893dfaa29d5a7a790d0eca12180
       url: "https://pub.dev"
     source: hosted
-    version: "2.2.2"
+    version: "2.2.3"
   shared_preferences_android:
     dependency: transitive
     description:
       name: shared_preferences_android
-      sha256: "8568a389334b6e83415b6aae55378e158fbc2314e074983362d20c562780fb06"
+      sha256: "1ee8bf911094a1b592de7ab29add6f826a7331fb854273d55918693d5364a1f2"
       url: "https://pub.dev"
     source: hosted
-    version: "2.2.1"
+    version: "2.2.2"
   shared_preferences_foundation:
     dependency: transitive
     description:
@@ -639,18 +631,18 @@ packages:
     dependency: transitive
     description:
       name: url_launcher
-      sha256: "0ecc004c62fd3ed36a2ffcbe0dd9700aee63bd7532d0b642a488b1ec310f492e"
+      sha256: "6ce1e04375be4eed30548f10a315826fd933c1e493206eab82eed01f438c8d2e"
       url: "https://pub.dev"
     source: hosted
-    version: "6.2.5"
+    version: "6.2.6"
   url_launcher_android:
     dependency: transitive
     description:
       name: url_launcher_android
-      sha256: d4ed0711849dd8e33eb2dd69c25db0d0d3fdc37e0a62e629fe32f57a22db2745
+      sha256: "360a6ed2027f18b73c8d98e159dda67a61b7f2e0f6ec26e86c3ada33b0621775"
       url: "https://pub.dev"
     source: hosted
-    version: "6.3.0"
+    version: "6.3.1"
   url_launcher_ios:
     dependency: transitive
     description:

@@ -25,7 +25,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
   late TextEditingController _frequencyTextController;
   late TextEditingController _frequencyVolumeTextController;
   late TextEditingController _waveFormTextController;
-  late bool _connected;
+
   @override
   void initState() {
     super.initState();
@@ -37,12 +37,10 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
         text: "${OpenEarableSettings().selectedFrequencyVolume}");
     _waveFormTextController =
         TextEditingController(text: OpenEarableSettings().selectedWaveForm);
-    _connected =
-        Provider.of<BluetoothController>(context, listen: false).connected;
   }
 
-  void updateText() {
-    if (_connected) {
+  void updateText(bool connected) {
+    if (connected) {
       OpenEarableSettings().selectedFilename = _filenameTextController.text;
       OpenEarableSettings().selectedFrequency = _frequencyTextController.text;
       OpenEarableSettings().selectedFrequencyVolume =
@@ -162,7 +160,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
             mainAxisSize: MainAxisSize.min,
             children: soundsMap.values.map((String option) {
               return ListTile(
-                onTap: _connected
+                onTap: Provider.of<BluetoothController>(context).connected
                     ? () {
                         setState(() {
                           textController.text = option;
@@ -186,8 +184,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
         child: Selector<BluetoothController, bool>(
             selector: (_, bleController) => bleController.connected,
             builder: (context, connected, child) {
-              _connected = connected;
-              updateText();
+              updateText(connected);
               return Card(
                 //Audio Player Card
                 color: Platform.isIOS
@@ -211,8 +208,8 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
                       _getFrequencyRow(),
                       SizedBox(height: 12),
                       Platform.isIOS
-                          ? _getCupertinoButtonRow()
-                          : _getMaterialButtonRow(),
+                          ? _getCupertinoButtonRow(connected)
+                          : _getMaterialButtonRow(connected),
                     ],
                   ),
                 ),
@@ -221,44 +218,51 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
   }
 
   Widget _getAudioPlayerRadio(int index) {
-    return SizedBox(
-        height: 38,
-        width: 44,
-        child: Platform.isIOS
-            ? CupertinoRadio(
-                value: index,
-                groupValue: OpenEarableSettings().selectedAudioPlayerRadio,
-                onChanged: !_connected
-                    ? null
-                    : (int? value) {
-                        setState(() {
-                          OpenEarableSettings().selectedAudioPlayerRadio =
-                              value ?? 0;
-                        });
-                      },
-                activeColor: CupertinoTheme.of(context).primaryColor,
-                fillColor: CupertinoTheme.of(context).primaryContrastingColor,
-                inactiveColor:
-                    CupertinoTheme.of(context).primaryContrastingColor,
-              )
-            : Radio(
-                value: index,
-                groupValue: OpenEarableSettings().selectedAudioPlayerRadio,
-                onChanged: !_connected
-                    ? null
-                    : (int? value) {
-                        setState(() {
-                          OpenEarableSettings().selectedAudioPlayerRadio =
-                              value ?? 0;
-                        });
-                      },
-                fillColor: MaterialStateProperty.resolveWith((states) {
-                  if (states.contains(MaterialState.selected)) {
-                    return Theme.of(context).colorScheme.secondary;
-                  }
-                  return Colors.grey;
-                }),
-              ));
+    return Selector<BluetoothController, bool>(
+        selector: (_, bleController) => bleController.connected,
+        builder: (context, connected, child) {
+          return SizedBox(
+              height: 38,
+              width: 44,
+              child: Platform.isIOS
+                  ? CupertinoRadio(
+                      value: index,
+                      groupValue:
+                          OpenEarableSettings().selectedAudioPlayerRadio,
+                      onChanged: !connected
+                          ? null
+                          : (int? value) {
+                              setState(() {
+                                OpenEarableSettings().selectedAudioPlayerRadio =
+                                    value ?? 0;
+                              });
+                            },
+                      activeColor: CupertinoTheme.of(context).primaryColor,
+                      fillColor:
+                          CupertinoTheme.of(context).primaryContrastingColor,
+                      inactiveColor:
+                          CupertinoTheme.of(context).primaryContrastingColor,
+                    )
+                  : Radio(
+                      value: index,
+                      groupValue:
+                          OpenEarableSettings().selectedAudioPlayerRadio,
+                      onChanged: !connected
+                          ? null
+                          : (int? value) {
+                              setState(() {
+                                OpenEarableSettings().selectedAudioPlayerRadio =
+                                    value ?? 0;
+                              });
+                            },
+                      fillColor: MaterialStateProperty.resolveWith((states) {
+                        if (states.contains(MaterialState.selected)) {
+                          return Theme.of(context).colorScheme.secondary;
+                        }
+                        return Colors.grey;
+                      }),
+                    ));
+        });
   }
 
   Widget _getFileNameRow() {
@@ -287,52 +291,57 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
 
   Widget _fileNameTextField(TextEditingController textController,
       TextInputType keyboardType, String? placeholder, int? maxLength) {
-    if (Platform.isIOS) {
-      return CupertinoTextField(
-        cursorColor: Colors.blue,
-        controller: textController,
-        obscureText: false,
-        placeholder: placeholder,
-        style: TextStyle(
-          color: _connected ? Colors.black : Colors.grey,
-        ),
-        padding: EdgeInsets.fromLTRB(8, 0, 0, 0),
-        textAlignVertical: TextAlignVertical.center,
-        textInputAction: TextInputAction.done,
-        onSubmitted: (_) {
-          FocusScope.of(context).requestFocus(FocusNode());
-        },
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(4.0),
-        ),
-        placeholderStyle: TextStyle(
-          color: _connected ? Colors.black : Colors.grey,
-        ),
-        keyboardType: keyboardType,
-        maxLength: maxLength,
-        maxLines: 1,
-      );
-    } else {
-      return TextField(
-        controller: textController,
-        obscureText: false,
-        enabled: _connected,
-        style: TextStyle(color: _connected ? Colors.black : Colors.grey),
-        decoration: InputDecoration(
-          labelText: placeholder,
-          contentPadding: EdgeInsets.fromLTRB(8, 0, 0, 0),
-          border: OutlineInputBorder(),
-          floatingLabelBehavior: FloatingLabelBehavior.never,
-          labelStyle: TextStyle(color: _connected ? Colors.black : Colors.grey),
-          filled: true,
-          fillColor: _connected ? Colors.white : Colors.grey[200],
-        ),
-        keyboardType: keyboardType,
-        maxLength: maxLength,
-        maxLines: 1,
-      );
-    }
+    return Selector<BluetoothController, bool>(
+        selector: (_, controller) => controller.connected,
+        builder: (context, connected, child) {
+          if (Platform.isIOS) {
+            return CupertinoTextField(
+              cursorColor: Colors.blue,
+              controller: textController,
+              obscureText: false,
+              placeholder: placeholder,
+              style: TextStyle(
+                color: connected ? Colors.black : Colors.grey,
+              ),
+              padding: EdgeInsets.fromLTRB(8, 0, 0, 0),
+              textAlignVertical: TextAlignVertical.center,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) {
+                FocusScope.of(context).requestFocus(FocusNode());
+              },
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(4.0),
+              ),
+              placeholderStyle: TextStyle(
+                color: connected ? Colors.black : Colors.grey,
+              ),
+              keyboardType: keyboardType,
+              maxLength: maxLength,
+              maxLines: 1,
+            );
+          } else {
+            return TextField(
+              controller: textController,
+              obscureText: false,
+              enabled: connected,
+              style: TextStyle(color: connected ? Colors.black : Colors.grey),
+              decoration: InputDecoration(
+                labelText: placeholder,
+                contentPadding: EdgeInsets.fromLTRB(8, 0, 0, 0),
+                border: OutlineInputBorder(),
+                floatingLabelBehavior: FloatingLabelBehavior.never,
+                labelStyle:
+                    TextStyle(color: connected ? Colors.black : Colors.grey),
+                filled: true,
+                fillColor: connected ? Colors.white : Colors.grey[200],
+              ),
+              keyboardType: keyboardType,
+              maxLength: maxLength,
+              maxLines: 1,
+            );
+          }
+        });
   }
 
   Widget _getJingleRow() {
@@ -369,7 +378,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
                           OpenEarableSettings().selectedJingle = newValue;
                         });
                       },
-                      _connected,
+                      Provider.of<BluetoothController>(context).connected,
                       false,
                     ),
                   ))),
@@ -403,7 +412,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
             child: Text(
               'Hz',
               style: TextStyle(
-                  color: _connected
+                  color: Provider.of<BluetoothController>(context).connected
                       ? Colors.white
                       : Colors.grey), // Set text color to white
             ),
@@ -421,7 +430,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
             child: Text(
               '%',
               style: TextStyle(
-                  color: _connected
+                  color: Provider.of<BluetoothController>(context).connected
                       ? Colors.white
                       : Colors.grey), // Set text color to white
             ),
@@ -439,14 +448,14 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
                   OpenEarableSettings().selectedWaveForm = newValue;
                 },
               );
-            }, _connected, false),
+            }, Provider.of<BluetoothController>(context).connected, false),
           ),
         ],
       )
     ]);
   }
 
-  Widget _getMaterialButtonRow() {
+  Widget _getMaterialButtonRow(bool _connected) {
     return Row(
       mainAxisAlignment:
           MainAxisAlignment.spaceBetween, // Align buttons to the space between
@@ -490,7 +499,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     );
   }
 
-  Widget _getCupertinoButtonRow() {
+  Widget _getCupertinoButtonRow(bool _connected) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [

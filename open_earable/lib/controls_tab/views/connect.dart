@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:open_earable/ble/ble_controller.dart';
+import 'package:open_earable/controls_tab/models/open_earable_settings_v2.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
@@ -10,24 +11,23 @@ import 'package:open_earable/ble/ble_connect_view.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ConnectCard extends StatefulWidget {
-  final OpenEarable _openEarable;
-  ConnectCard(this._openEarable);
+  ConnectCard();
 
   @override
-  _ConnectCard createState() => _ConnectCard(this._openEarable);
+  _ConnectCard createState() => _ConnectCard();
 }
 
 class _ConnectCard extends State<ConnectCard> {
-  final OpenEarable _openEarable;
+  late OpenEarable _openEarableLeft;
+  late OpenEarable _openEarableRight;
   bool _autoConnectEnabled = false;
   late SharedPreferences prefs;
-  int selectedButton = 0;
 
-  _ConnectCard(this._openEarable);
+  _ConnectCard();
 
   void selectButton(int index) {
     setState(() {
-      selectedButton = index;
+      OpenEarableSettingsV2().selectedButtonIndex = index;
     });
   }
 
@@ -35,6 +35,15 @@ class _ConnectCard extends State<ConnectCard> {
   void initState() {
     super.initState();
     _getPrefs();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _openEarableLeft =
+        Provider.of<BluetoothController>(context).openEarableLeft;
+    _openEarableRight =
+        Provider.of<BluetoothController>(context).openEarableRight;
   }
 
   @override
@@ -52,12 +61,19 @@ class _ConnectCard extends State<ConnectCard> {
 
   void _startAutoConnectScan() {
     if (_autoConnectEnabled == true) {
-      Provider.of<BluetoothController>(context, listen: false).startScanning();
+      Provider.of<BluetoothController>(context, listen: false)
+          .startScanning(_openEarableLeft);
+      Provider.of<BluetoothController>(context, listen: false)
+          .startScanning(_openEarableRight);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    _openEarableLeft = Provider.of<BluetoothController>(context, listen: false)
+        .openEarableLeft;
+    _openEarableRight = Provider.of<BluetoothController>(context, listen: false)
+        .openEarableRight;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 0.0),
       child: Card(
@@ -128,26 +144,31 @@ class _ConnectCard extends State<ConnectCard> {
                     Expanded(
                         child: Column(children: [
                       _getEarableSelectButton(
-                        imagePath:
-                            "assets/OpenEarableV2-L.png", // path to your image asset
-                        isSelected: selectedButton == 0,
-                        onPressed: () => selectButton(0),
-                        bleController: bleController,
-                      ),
+                          imagePath:
+                              "assets/OpenEarableV2-L.png", // path to your image asset
+                          isSelected:
+                              OpenEarableSettingsV2().selectedButtonIndex == 0,
+                          onPressed: () => selectButton(0),
+                          bleController: bleController,
+                          openEarable: _openEarableLeft,
+                          percentage: bleController.earableSOCLeft),
                       SizedBox(height: 8),
-                      _getConnectButton(context),
+                      _getConnectButton(context, "Left"),
                     ])),
                     SizedBox(width: 8),
                     Expanded(
                         child: Column(children: [
                       _getEarableSelectButton(
                         imagePath: "assets/OpenEarableV2-R.png",
-                        isSelected: selectedButton == 1,
+                        isSelected:
+                            OpenEarableSettingsV2().selectedButtonIndex == 1,
                         onPressed: () => selectButton(1),
                         bleController: bleController,
+                        openEarable: _openEarableRight,
+                        percentage: bleController.earableSOCRight,
                       ),
                       SizedBox(height: 8),
-                      _getConnectButton(context),
+                      _getConnectButton(context, "Right"),
                     ])),
                   ],
                 ),
@@ -159,8 +180,7 @@ class _ConnectCard extends State<ConnectCard> {
     );
   }
 
-  String _batteryPercentageString(BluetoothController bleController) {
-    int? percentage = bleController.earableSOC;
+  String _batteryPercentageString(int? percentage) {
     if (percentage == null) {
       return " (XX%)";
     } else {
@@ -168,13 +188,13 @@ class _ConnectCard extends State<ConnectCard> {
     }
   }
 
-  Widget _getConnectButton(BuildContext context) {
+  Widget _getConnectButton(BuildContext context, String side) {
     return Container(
       height: 37,
       width: double.infinity,
       child: !Platform.isIOS
           ? ElevatedButton(
-              onPressed: () => _connectButtonAction(context),
+              onPressed: () => _connectButtonAction(context, side),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Color(0xff77F2A1),
                 foregroundColor: Colors.black,
@@ -185,13 +205,14 @@ class _ConnectCard extends State<ConnectCard> {
               padding: EdgeInsets.zero,
               color: CupertinoTheme.of(context).primaryColor,
               child: Text("Connect"),
-              onPressed: () => _connectButtonAction(context)),
+              onPressed: () => _connectButtonAction(context, side)),
     );
   }
 
-  _connectButtonAction(BuildContext context) {
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (context) => BLEPage(_openEarable)));
+  _connectButtonAction(BuildContext context, String side) {
+    Navigator.of(context).push(MaterialPageRoute(
+        builder: (context) =>
+            BLEPage(side == "Left" ? _openEarableLeft : _openEarableRight)));
   }
 
   void _tryAutoconnect(
@@ -201,22 +222,33 @@ class _ConnectCard extends State<ConnectCard> {
         bleController.connected) {
       return;
     }
-    String? lastConnectedDeviceName =
-        prefs.getString("lastConnectedDeviceName");
-    DiscoveredDevice? deviceToConnect = devices.firstWhere(
-        (device) => device.name == lastConnectedDeviceName,
-        orElse: () => devices[0]);
-    if (_openEarable.bleManager.connectingDevice?.name !=
-        deviceToConnect.name) {
-      bleController.connectToDevice(deviceToConnect);
+    String? lastConnectedDeviceNameLeft =
+        prefs.getString("lastConnectedDeviceNameLeft");
+    String? lastConnectedDeviceNameRight =
+        prefs.getString("lastConnectedDeviceNameRight");
+    DiscoveredDevice? deviceToConnectLeft = devices.firstWhere(
+        (device) => device.name == lastConnectedDeviceNameLeft,
+        orElse: () => devices.first);
+    DiscoveredDevice? deviceToConnectRight = devices.firstWhere(
+        (device) => device.name == lastConnectedDeviceNameRight,
+        orElse: () => devices.last);
+    if (_openEarableLeft.bleManager.connectingDevice?.name !=
+        deviceToConnectLeft.name) {
+      bleController.connectToDevice(deviceToConnectLeft, _openEarableLeft);
+    }
+    if (_openEarableRight.bleManager.connectingDevice?.name !=
+        deviceToConnectRight) {
+      bleController.connectToDevice(deviceToConnectRight, _openEarableRight);
     }
   }
 
   Widget _getEarableSelectButton({
+    required OpenEarable openEarable,
     required String imagePath,
     required bool isSelected,
     required onPressed,
-    required bleController,
+    required BluetoothController bleController,
+    required int? percentage,
   }) {
     if (Platform.isIOS) {
       return CupertinoButton(
@@ -241,7 +273,7 @@ class _ConnectCard extends State<ConnectCard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "${_openEarable.bleManager.connectedDevice?.name ?? "OpenEarable-XXXX"}${_batteryPercentageString(bleController)}",
+                "${openEarable.bleManager.connectedDevice?.name ?? "OpenEarable-XXXX"}${_batteryPercentageString(percentage)}",
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 15.0,
@@ -251,14 +283,14 @@ class _ConnectCard extends State<ConnectCard> {
               Image.asset(imagePath, fit: BoxFit.fill),
               SizedBox(height: 8),
               Text(
-                "Firmware: ${_openEarable.deviceFirmwareVersion ?? "X.X.X"}",
+                "Firmware: ${openEarable.deviceFirmwareVersion ?? "X.X.X"}",
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 15.0,
                 ),
               ),
               Text(
-                "Hardware: ${_openEarable.deviceHardwareVersion ?? "X.X.X"}",
+                "Hardware: ${openEarable.deviceHardwareVersion ?? "X.X.X"}",
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 15.0,
@@ -295,7 +327,7 @@ class _ConnectCard extends State<ConnectCard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "${_openEarable.bleManager.connectedDevice?.name ?? "OpenEarable-XXXX"}${_batteryPercentageString(bleController)}", // Assuming _openEarable and bleController are accessible
+                "${openEarable.bleManager.connectedDevice?.name ?? "OpenEarable-XXXX"}${_batteryPercentageString(percentage)}", // Assuming _openEarable and bleController are accessible
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 15.0,
@@ -305,14 +337,14 @@ class _ConnectCard extends State<ConnectCard> {
               Image.asset(imagePath, fit: BoxFit.fill),
               SizedBox(height: 8),
               Text(
-                "Firmware: ${_openEarable.deviceFirmwareVersion ?? "X.X.X"}",
+                "Firmware: ${openEarable.deviceFirmwareVersion ?? "X.X.X"}",
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 15.0,
                 ),
               ),
               Text(
-                "Hardware: ${_openEarable.deviceHardwareVersion ?? "X.X.X"}",
+                "Hardware: ${openEarable.deviceHardwareVersion ?? "X.X.X"}",
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 15.0,

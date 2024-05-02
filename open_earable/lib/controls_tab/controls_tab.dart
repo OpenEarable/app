@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:open_earable/ble/ble_controller.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:provider/provider.dart';
 import 'dart:io';
 import 'views/sensor_control/sensor_control.dart';
 import 'views/connect.dart';
@@ -7,16 +9,11 @@ import 'views/led_color.dart';
 import 'dart:async';
 
 class ControlTab extends StatefulWidget {
-  final OpenEarable _openEarable;
-  ControlTab(this._openEarable);
   @override
-  _ControlTabState createState() => _ControlTabState(_openEarable);
+  _ControlTabState createState() => _ControlTabState();
 }
 
 class _ControlTabState extends State<ControlTab> {
-  final OpenEarable _openEarable;
-  _ControlTabState(this._openEarable);
-
   StreamSubscription<bool>? _connectionStateSubscription;
   StreamSubscription<dynamic>? _batteryLevelSubscription;
   bool earableCharging = false;
@@ -41,10 +38,10 @@ class _ControlTabState extends State<ControlTab> {
                 SizedBox(
                   height: 5,
                 ),
-                ConnectCard(_openEarable),
-                SensorControlCard(_openEarable),
+                ConnectCard(),
+                SensorControlCard(),
                 //AudioPlayerCard(_openEarable),
-                LEDColorCard(_openEarable),
+                LEDColorCard(),
               ],
             )));
   }

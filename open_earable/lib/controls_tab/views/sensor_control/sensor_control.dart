@@ -8,18 +8,13 @@ import 'package:provider/provider.dart';
 import '../../models/open_earable_settings_v2.dart';
 
 class SensorControlCard extends StatefulWidget {
-  final OpenEarable _openEarable;
-  SensorControlCard(this._openEarable);
+  SensorControlCard();
 
   @override
-  _SensorControlCardState createState() =>
-      _SensorControlCardState(_openEarable);
+  _SensorControlCardState createState() => _SensorControlCardState();
 }
 
 class _SensorControlCardState extends State<SensorControlCard> {
-  final OpenEarable _openEarable;
-  _SensorControlCardState(this._openEarable);
-
   void initState() {
     super.initState();
   }
@@ -46,45 +41,48 @@ class _SensorControlCardState extends State<SensorControlCard> {
   }
 
   Future<void> _writeSensorConfigs() async {
-    double? imuSamplingRate =
-        double.tryParse(OpenEarableSettingsV2().imuSettings.selectedOptionBLE);
-    double? barometerSamplingRate = double.tryParse(
-        OpenEarableSettingsV2().barometerSettings.selectedOptionBLE);
-    double? microphone1SamplingRate = double.tryParse(
-        OpenEarableSettingsV2().microphone1Settings.selectedOptionBLE);
-    double? microphone2SamplingRate = double.tryParse(
-        OpenEarableSettingsV2().microphone2Settings.selectedOptionBLE);
-    double? pulseOximeterSamplingRate = double.tryParse(
-        OpenEarableSettingsV2().pulseOximeterSettings.selectedOptionBLE);
+    OpenEarable leftOpenEarable =
+        Provider.of<BluetoothController>(context).openEarableLeft;
+    OpenEarable rightOpenEarable =
+        Provider.of<BluetoothController>(context).openEarableRight;
 
-    OpenEarableSensorConfig imuConfig = OpenEarableSensorConfig(
-        sensorId: 0,
-        samplingRate: OpenEarableSettingsV2().imuSettings.sensorSelected
-            ? imuSamplingRate!
-            : 0,
-        latency: 0);
-    OpenEarableSensorConfig barometerConfig = OpenEarableSensorConfig(
-        sensorId: 1,
-        samplingRate: OpenEarableSettingsV2().barometerSettings.sensorSelected
-            ? barometerSamplingRate!
-            : 0,
-        latency: 0);
-    OpenEarableSensorConfig microphoneConfig = OpenEarableSensorConfig(
-        sensorId: 2,
-        samplingRate: OpenEarableSettingsV2().microphone1Settings.sensorSelected
-            ? microphone1SamplingRate!
-            : 0,
-        latency: 0);
-    OpenEarableSensorConfig microphone2Config = OpenEarableSensorConfig(
-        sensorId: 3,
-        samplingRate: OpenEarableSettingsV2().microphone2Settings.sensorSelected
-            ? microphone2SamplingRate!
-            : 0,
-        latency: 0);
-    await _openEarable.sensorManager.writeSensorConfig(imuConfig);
-    await _openEarable.sensorManager.writeSensorConfig(barometerConfig);
-    await _openEarable.sensorManager.writeSensorConfig(microphoneConfig);
-    await _openEarable.sensorManager.writeSensorConfig(microphone2Config);
+    OpenEarableSettingsV2 settings = OpenEarableSettingsV2();
+
+    OpenEarableSensorConfig imuConfig =
+        settings.imuSettings.getSensorConfigBLE();
+    await leftOpenEarable.sensorManager.writeSensorConfig(imuConfig);
+    await rightOpenEarable.sensorManager.writeSensorConfig(imuConfig);
+
+    OpenEarableSensorConfig barometerConfig =
+        settings.barometerSettings.getSensorConfigBLE();
+    await leftOpenEarable.sensorManager.writeSensorConfig(barometerConfig);
+    await rightOpenEarable.sensorManager.writeSensorConfig(barometerConfig);
+
+    OpenEarableSensorConfig opticalTemperatureSensorConfig =
+        settings.opticalTemperatureSettings.getSensorConfigBLE();
+    await leftOpenEarable.sensorManager
+        .writeSensorConfig(opticalTemperatureSensorConfig);
+    await rightOpenEarable.sensorManager
+        .writeSensorConfig(opticalTemperatureSensorConfig);
+
+    OpenEarableSensorConfig microphone1Config =
+        settings.microphone1Settings.getSensorConfigBLE();
+    await leftOpenEarable.sensorManager.writeSensorConfig(microphone1Config);
+    await rightOpenEarable.sensorManager.writeSensorConfig(microphone1Config);
+    OpenEarableSensorConfig microphone2Config =
+        settings.microphone2Settings.getSensorConfigBLE();
+    await leftOpenEarable.sensorManager.writeSensorConfig(microphone2Config);
+    await rightOpenEarable.sensorManager.writeSensorConfig(microphone2Config);
+
+    OpenEarableSensorConfig pulseOximeterConfig =
+        settings.pulseOximeterSettings.getSensorConfigBLE();
+    await leftOpenEarable.sensorManager.writeSensorConfig(pulseOximeterConfig);
+    await rightOpenEarable.sensorManager.writeSensorConfig(pulseOximeterConfig);
+
+    OpenEarableSensorConfig vitalsConfig =
+        settings.vitalsSettings.getSensorConfigBLE();
+    await leftOpenEarable.sensorManager.writeSensorConfig(vitalsConfig);
+    await rightOpenEarable.sensorManager.writeSensorConfig(vitalsConfig);
   }
 
   @override

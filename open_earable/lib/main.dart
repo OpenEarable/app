@@ -54,7 +54,6 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _selectedIndex = 0;
-  late OpenEarable _openEarable;
   final flutterReactiveBle = FlutterReactiveBle();
   late bool alertOpen;
   late List<Widget> _widgetOptions;
@@ -64,15 +63,19 @@ class _MyHomePageState extends State<MyHomePage> {
     super.initState();
     alertOpen = false;
     _checkBLEPermission();
-    _openEarable = OpenEarable();
-    Provider.of<BluetoothController>(context, listen: false).openEarable =
-        _openEarable;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!alertOpen) {
+      Provider.of<BluetoothController>(context, listen: false).setupListeners();
+    }
     _widgetOptions = <Widget>[
-      ControlTab(_openEarable),
-      Material(
-          child:
-              Theme(data: materialTheme, child: SensorDataTab(_openEarable))),
-      AppsTab(_openEarable),
+      ControlTab(),
+      Material(child: Theme(data: materialTheme, child: SensorDataTab())),
+      AppsTab(Provider.of<BluetoothController>(context)
+          .openEarableLeft), // TODO support two earables for apps
     ];
   }
 
@@ -227,7 +230,9 @@ class _MyHomePageState extends State<MyHomePage> {
                 onPressed: () {
                   Navigator.of(context).push(
                     CupertinoPageRoute(
-                        builder: (context) => BLEPage(_openEarable)),
+                        builder: (context) => BLEPage(Provider.of<
+                                BluetoothController>(context)
+                            .openEarableLeft)), // TODO This needs to be changed later
                   );
                 },
               ),
@@ -261,7 +266,9 @@ class _MyHomePageState extends State<MyHomePage> {
                   color: Theme.of(context).colorScheme.secondary),
               onPressed: () {
                 Navigator.of(context).push(MaterialPageRoute(
-                    builder: (context) => BLEPage(_openEarable)));
+                    builder: (context) => BLEPage(Provider.of<
+                            BluetoothController>(context)
+                        .openEarableLeft))); // TODO This needs to be changed later
               },
             ),
           ],

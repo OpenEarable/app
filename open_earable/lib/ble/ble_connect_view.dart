@@ -21,7 +21,8 @@ class _BLEPageState extends State<BLEPage> {
   void initState() {
     super.initState();
     _openEarable = widget.openEarable;
-    Provider.of<BluetoothController>(context, listen: false).startScanning();
+    Provider.of<BluetoothController>(context, listen: false)
+        .startScanning(_openEarable);
   }
 
   @override
@@ -86,7 +87,8 @@ class _BLEPageState extends State<BLEPage> {
                                   horizontal: -4, vertical: -4),
                               trailing: _buildTrailingWidget(device.id),
                               onTap: () {
-                                controller.connectToDevice(device);
+                                controller.connectToDevice(
+                                    device, _openEarable);
                               },
                             )),
                         if (index != controller.discoveredDevices.length - 1)
@@ -119,14 +121,14 @@ class _BLEPageState extends State<BLEPage> {
                   child: const Text('Restart Scan'),
                   color: CupertinoTheme.of(context)
                       .primaryColor, // iOS equivalent for a prominent button color
-                  onPressed:
+                  onPressed: () =>
                       Provider.of<BluetoothController>(context, listen: false)
-                          .startScanning,
+                          .startScanning(_openEarable),
                 )
               : ElevatedButton(
-                  onPressed:
+                  onPressed: () =>
                       Provider.of<BluetoothController>(context, listen: false)
-                          .startScanning,
+                          .startScanning(_openEarable),
                   style: ButtonStyle(
                     foregroundColor: MaterialStateProperty.all(
                         Theme.of(context).colorScheme.primary),

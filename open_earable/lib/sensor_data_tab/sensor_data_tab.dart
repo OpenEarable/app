@@ -1,21 +1,22 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:open_earable/ble/ble_controller.dart';
+import 'package:open_earable/controls_tab/models/open_earable_settings_v2.dart';
 import 'package:open_earable/sensor_data_tab/earable_3d_model.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:open_earable/sensor_data_tab/sensor_chart.dart';
+import 'package:provider/provider.dart';
 
 class SensorDataTab extends StatefulWidget {
-  final OpenEarable _openEarable;
-  SensorDataTab(this._openEarable);
   @override
-  _SensorDataTabState createState() => _SensorDataTabState(_openEarable);
+  _SensorDataTabState createState() => _SensorDataTabState();
 }
 
 class _SensorDataTabState extends State<SensorDataTab>
     with SingleTickerProviderStateMixin {
   //late EarableModel _earableModel;
-  final OpenEarable _openEarable;
+  late OpenEarable _currentOpenEarable;
   late TabController _tabController;
 
   StreamSubscription? _batteryLevelSubscription;
@@ -25,25 +26,36 @@ class _SensorDataTabState extends State<SensorDataTab>
   List<SensorData> magnetometerData = [];
   List<SensorData> barometerData = [];
 
-  _SensorDataTabState(this._openEarable);
-
   @override
   void initState() {
     super.initState();
     _tabController = TabController(vsync: this, length: 9);
-    if (_openEarable.bleManager.connected) {
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (OpenEarableSettingsV2().selectedButtonIndex == 0) {
+      _currentOpenEarable =
+          Provider.of<BluetoothController>(context).openEarableLeft;
+    } else {
+      _currentOpenEarable =
+          Provider.of<BluetoothController>(context).openEarableLeft;
+    }
+    if (_currentOpenEarable.bleManager.connected) {
       _setupListeners();
     }
   }
 
   int lastTimestamp = 0;
   _setupListeners() {
-    _batteryLevelSubscription =
-        _openEarable.sensorManager.getBatteryLevelStream().listen((data) {
+    _batteryLevelSubscription = _currentOpenEarable.sensorManager
+        .getBatteryLevelStream()
+        .listen((data) {
       print("Battery level is ${data[0]}");
     });
     _buttonStateSubscription =
-        _openEarable.sensorManager.getButtonStateStream().listen((data) {
+        _currentOpenEarable.sensorManager.getButtonStateStream().listen((data) {
       print("Button State is ${data[0]}");
     });
   }
@@ -83,15 +95,15 @@ class _SensorDataTabState extends State<SensorDataTab>
       body: TabBarView(
         controller: _tabController,
         children: [
-          EarableDataChart(_openEarable, 'Accelerometer'),
-          EarableDataChart(_openEarable, 'Gyroscope'),
-          EarableDataChart(_openEarable, 'Magnetometer'),
-          EarableDataChart(_openEarable, 'Pressure'),
-          EarableDataChart(_openEarable, 'Temperature'),
-          EarableDataChart(_openEarable, 'Heart Rate'),
-          EarableDataChart(_openEarable, 'SpO2'),
-          EarableDataChart(_openEarable, 'PPG'),
-          Earable3DModel(_openEarable),
+          EarableDataChart(_currentOpenEarable, 'Accelerometer'),
+          EarableDataChart(_currentOpenEarable, 'Gyroscope'),
+          EarableDataChart(_currentOpenEarable, 'Magnetometer'),
+          EarableDataChart(_currentOpenEarable, 'Pressure'),
+          EarableDataChart(_currentOpenEarable, 'Temperature'),
+          EarableDataChart(_currentOpenEarable, 'Heart Rate'),
+          EarableDataChart(_currentOpenEarable, 'SpO2'),
+          EarableDataChart(_currentOpenEarable, 'PPG'),
+          Earable3DModel(_currentOpenEarable),
         ],
       ),
     );

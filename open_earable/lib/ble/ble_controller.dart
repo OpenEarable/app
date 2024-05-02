@@ -14,37 +14,62 @@ class BluetoothController extends ChangeNotifier {
   }
 
   String _openEarableName = "OpenEarable";
-  OpenEarable? _openEarable;
+  OpenEarable get openEarableLeft => _openEarableLeft;
+  OpenEarable get openEarableRight => _openEarableRight;
+  OpenEarable _openEarableLeft = OpenEarable();
+  OpenEarable _openEarableRight = OpenEarable();
   StreamSubscription? _scanSubscription;
-  StreamSubscription? _connectionStateSubscription;
-  StreamSubscription? _batteryLevelSubscription;
+  StreamSubscription? _connectionStateSubscriptionLeft;
+  StreamSubscription? _connectionStateSubscriptionRight;
+
+  StreamSubscription? _batteryLevelSubscriptionLeft;
+  StreamSubscription? _batteryLevelSubscriptionRight;
 
   List<DiscoveredDevice> _discoveredDevices = [];
   List<DiscoveredDevice> get discoveredDevices => _discoveredDevices;
 
   //bool _scanning = false;
 
-  bool _connected = false;
-  bool get connected => _connected;
+  bool get connected => _connectedLeft || _connectedRight;
 
-  int? _earableSOC = null;
-  int? get earableSOC => _earableSOC;
+  bool _connectedLeft = false;
+  bool get connectedLeft => _connectedLeft;
+
+  bool _connectedRight = false;
+  bool get connectedRight => _connectedRight;
+
+  int? _earableSOCLeft = null;
+  int? get earableSOCLeft => _earableSOCLeft;
+
+  int? _earableSOCRight = null;
+  int? get earableSOCRight => _earableSOCRight;
 
   Future<void> _initializeSharedPreferences() async {
     prefs = await SharedPreferences.getInstance();
   }
 
-  void set openEarable(OpenEarable openEarable) {
-    _openEarable = openEarable;
-    _connectionStateSubscription?.cancel();
+  void setupListeners() {
+    _connectionStateSubscriptionLeft?.cancel();
+    _connectionStateSubscriptionRight?.cancel();
 
-    _connectionStateSubscription =
-        _openEarable?.bleManager.connectionStateStream.listen((connected) {
-      _connected = connected;
+    _connectionStateSubscriptionLeft =
+        _openEarableLeft.bleManager.connectionStateStream.listen((connected) {
+      _connectedLeft = connected;
       if (connected) {
-        _getSOC();
+        _getSOCLeft();
       } else {
-        startScanning();
+        //startScanning(_openEarableLeft);
+      }
+      notifyListeners();
+    });
+
+    _connectionStateSubscriptionRight =
+        _openEarableRight.bleManager.connectionStateStream.listen((connected) {
+      _connectedRight = connected;
+      if (connected) {
+        _getSOCRight();
+      } else {
+        //startScanning(_openEarableRight);
       }
       notifyListeners();
     });
@@ -55,33 +80,40 @@ class BluetoothController extends ChangeNotifier {
     super.dispose();
     _scanSubscription?.cancel();
     //_scanning = false;
-    _connectionStateSubscription?.cancel();
-    _batteryLevelSubscription?.cancel();
+    _connectionStateSubscriptionLeft?.cancel();
+    _connectionStateSubscriptionRight?.cancel();
+    _batteryLevelSubscriptionLeft?.cancel();
+    _batteryLevelSubscriptionRight?.cancel();
   }
 
-  void _getSOC() {
-    _batteryLevelSubscription = _openEarable?.sensorManager
+  void _getSOCLeft() {
+    _batteryLevelSubscriptionLeft = _openEarableLeft.sensorManager
         .getBatteryLevelStream()
         .listen((batteryLevel) {
-      _earableSOC = batteryLevel[0].toInt();
+      _earableSOCLeft = batteryLevel[0].toInt();
       notifyListeners();
     });
   }
 
-  Future<void> startScanning() async {
+  void _getSOCRight() {
+    _batteryLevelSubscriptionRight = _openEarableRight.sensorManager
+        .getBatteryLevelStream()
+        .listen((batteryLevel) {
+      _earableSOCRight = batteryLevel[0].toInt();
+      notifyListeners();
+    });
+  }
+
+  Future<StreamSubscription> startScanning(OpenEarable openEarable) async {
     _scanSubscription?.cancel();
     //_scanning = true;
     _discoveredDevices = [];
-    if (_openEarable == null) {
-      return;
+
+    if (openEarable.bleManager.connectedDevice != null) {
+      discoveredDevices.add((openEarable.bleManager.connectedDevice)!);
     }
-    if (_openEarable?.bleManager.connectedDevice != null) {
-      discoveredDevices.add((_openEarable?.bleManager.connectedDevice)!);
-    }
-    await _openEarable?.bleManager.startScan();
-    _scanSubscription?.cancel();
-    _scanSubscription =
-        _openEarable?.bleManager.scanStream.listen((incomingDevice) {
+    await openEarable.bleManager.startScan();
+    return openEarable.bleManager.scanStream.listen((incomingDevice) {
       if (incomingDevice.name.isNotEmpty &&
           incomingDevice.name.contains(_openEarableName) &&
           !discoveredDevices.any((device) => device.id == incomingDevice.id)) {
@@ -91,14 +123,14 @@ class BluetoothController extends ChangeNotifier {
     });
   }
 
-  void connectToDevice(device) {
-    if (device.name == _openEarable?.bleManager.connectedDevice?.name ||
-        device.name == _openEarable?.bleManager.connectingDevice?.name) {
+  void connectToDevice(device, OpenEarable openEarable) {
+    if (device.name == openEarable.bleManager.connectedDevice?.name ||
+        device.name == openEarable.bleManager.connectingDevice?.name) {
       return;
     }
-    _scanSubscription?.cancel();
+
     //_scanning = false;
-    _openEarable?.bleManager.connectToDevice(device);
+    openEarable.bleManager.connectToDevice(device);
     prefs.setString("lastConnectedDeviceName", device.name);
   }
 }

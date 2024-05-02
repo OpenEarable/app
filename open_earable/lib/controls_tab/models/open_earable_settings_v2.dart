@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 
 class OpenEarableSettingsV2 {
   static final OpenEarableSettingsV2 _instance =
@@ -102,38 +102,46 @@ class OpenEarableSettingsV2 {
   late SensorSettings barometerSettings;
 
   late Color selectedColor;
+  int selectedButtonIndex = 0;
   late bool rainbowModeActive;
   void resetState() {
     microphone1Settings = SensorSettings(
         frequencyOptionsBLE: _microphoneOptions[0],
-        additionalOptionsSD: _microphoneOptions[1]);
+        additionalOptionsSD: _microphoneOptions[1],
+        sensorID: 2);
 
     microphone2Settings = SensorSettings(
         frequencyOptionsBLE: _microphoneOptions[0],
-        additionalOptionsSD: _microphoneOptions[1]);
+        additionalOptionsSD: _microphoneOptions[1],
+        sensorID: 3);
 
     microphone1Settings.relatedSettings = microphone2Settings;
     microphone2Settings.relatedSettings = microphone1Settings;
 
     imuSettings = SensorSettings(
         frequencyOptionsBLE: _imuOptions[0],
-        additionalOptionsSD: _imuOptions[1]);
+        additionalOptionsSD: _imuOptions[1],
+        sensorID: 0);
 
     pulseOximeterSettings = SensorSettings(
         frequencyOptionsBLE: _pulseOximeterOptions[0],
-        additionalOptionsSD: _pulseOximeterOptions[1]);
+        additionalOptionsSD: _pulseOximeterOptions[1],
+        sensorID: 4);
 
     vitalsSettings = SensorSettings(
         frequencyOptionsBLE: _vitalsOptions[0],
-        additionalOptionsSD: _vitalsOptions[1]);
+        additionalOptionsSD: _vitalsOptions[1],
+        sensorID: 5);
 
     opticalTemperatureSettings = SensorSettings(
         frequencyOptionsBLE: _opticalTemperatureOptions[0],
-        additionalOptionsSD: _opticalTemperatureOptions[1]);
+        additionalOptionsSD: _opticalTemperatureOptions[1],
+        sensorID: 6);
 
     barometerSettings = SensorSettings(
         frequencyOptionsBLE: _barometerOptions[0],
-        additionalOptionsSD: _barometerOptions[1]);
+        additionalOptionsSD: _barometerOptions[1],
+        sensorID: 1);
 
     selectedColor = Colors.deepPurple;
     rainbowModeActive = false;
@@ -148,11 +156,13 @@ class SensorSettings extends ChangeNotifier {
   late String selectedOptionSD;
   late bool isFakeDisabledBLE;
   late bool isFakeDisabledSD;
+  late int sensorID;
   SensorSettings? relatedSettings;
 
   SensorSettings(
       {required frequencyOptionsBLE,
       required additionalOptionsSD,
+      required sensorID,
       sensorSelected = false,
       selectedOptionBLE = "0",
       selectedOptionSD = "0",
@@ -166,6 +176,13 @@ class SensorSettings extends ChangeNotifier {
     this.selectedOptionSD = selectedOptionSD;
     this.isFakeDisabledBLE = isFakeDisabledBLE;
     this.isFakeDisabledSD = isFakeDisabledSD;
+  }
+
+  getSensorConfigBLE() {
+    double? samplingRate =
+        sensorSelected ? double.tryParse(selectedOptionBLE) : 0;
+    OpenEarableSensorConfig(
+        sensorId: sensorID, samplingRate: samplingRate ?? 0, latency: 0);
   }
 
   void updateSelectedBLEOption(String option) {
