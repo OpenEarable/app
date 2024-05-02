@@ -58,6 +58,7 @@ class BluetoothController extends ChangeNotifier {
       if (connected) {
         _getSOCLeft();
       } else {
+        print("SCANNING FROM LEFT SUBSC");
         //startScanning(_openEarableLeft);
       }
       notifyListeners();
@@ -69,6 +70,7 @@ class BluetoothController extends ChangeNotifier {
       if (connected) {
         _getSOCRight();
       } else {
+        print("SCANNING FROM RIGHT SUBSC");
         //startScanning(_openEarableRight);
       }
       notifyListeners();
@@ -104,7 +106,8 @@ class BluetoothController extends ChangeNotifier {
     });
   }
 
-  Future<StreamSubscription> startScanning(OpenEarable openEarable) async {
+  void startScanning(OpenEarable openEarable) async {
+    print("startScanning called");
     _scanSubscription?.cancel();
     //_scanning = true;
     _discoveredDevices = [];
@@ -113,7 +116,8 @@ class BluetoothController extends ChangeNotifier {
       discoveredDevices.add((openEarable.bleManager.connectedDevice)!);
     }
     await openEarable.bleManager.startScan();
-    return openEarable.bleManager.scanStream.listen((incomingDevice) {
+    _scanSubscription =
+        openEarable.bleManager.scanStream.listen((incomingDevice) {
       if (incomingDevice.name.isNotEmpty &&
           incomingDevice.name.contains(_openEarableName) &&
           !discoveredDevices.any((device) => device.id == incomingDevice.id)) {
@@ -128,7 +132,7 @@ class BluetoothController extends ChangeNotifier {
         device.name == openEarable.bleManager.connectingDevice?.name) {
       return;
     }
-
+    print("CONNECTING");
     //_scanning = false;
     openEarable.bleManager.connectToDevice(device);
     prefs.setString("lastConnectedDeviceName", device.name);
