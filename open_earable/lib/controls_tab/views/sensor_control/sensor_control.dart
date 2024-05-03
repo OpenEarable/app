@@ -99,13 +99,48 @@ class _SensorControlCardState extends State<SensorControlCard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Sensor Control',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18.0,
-                  fontWeight: FontWeight.bold,
-                ),
+              Row(
+                children: [
+                  Text(
+                    'Sensor Control',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18.0,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Spacer(), // This matches the Spacer in your DynamicValuePicker row
+                  SizedBox(
+                    width: 70,
+                    height: 37,
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: Text("BLE",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              color: Color.fromRGBO(168, 168, 172, 1.0))),
+                    ),
+                  ),
+                  SizedBox(
+                      width:
+                          8), // Space between the first title and the second title
+                  SizedBox(
+                    width: 70,
+                    height: 37,
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: Text("SD",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              color: Color.fromRGBO(168, 168, 172, 1.0))),
+                    ),
+                  ),
+                  SizedBox(width: 8), // Space before the "Hz" label
+                  Text("Hz",
+                      textAlign: TextAlign.left,
+                      style:
+                          TextStyle(color: Color.fromRGBO(168, 168, 172, 0))),
+                ],
               ),
               ChangeNotifierProvider<SensorSettings>(
                   create: (_) => OpenEarableSettingsV2().microphone1Settings,
