@@ -176,12 +176,13 @@ class SensorSettings extends ChangeNotifier {
     this.selectedOptionSD = selectedOptionSD;
     this.isFakeDisabledBLE = isFakeDisabledBLE;
     this.isFakeDisabledSD = isFakeDisabledSD;
+    this.sensorID = sensorID;
   }
 
-  getSensorConfigBLE() {
+  OpenEarableSensorConfig getSensorConfigBLE() {
     double? samplingRate =
         sensorSelected ? double.tryParse(selectedOptionBLE) : 0;
-    OpenEarableSensorConfig(
+    return OpenEarableSensorConfig(
         sensorId: sensorID, samplingRate: samplingRate ?? 0, latency: 0);
   }
 

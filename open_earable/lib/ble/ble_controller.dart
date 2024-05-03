@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
+import 'package:open_earable/controls_tab/models/open_earable_settings_v2.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -58,8 +59,7 @@ class BluetoothController extends ChangeNotifier {
       if (connected) {
         _getSOCLeft();
       } else {
-        print("SCANNING FROM LEFT SUBSC");
-        //startScanning(_openEarableLeft);
+        startScanning(_openEarableLeft);
       }
       notifyListeners();
     });
@@ -70,8 +70,7 @@ class BluetoothController extends ChangeNotifier {
       if (connected) {
         _getSOCRight();
       } else {
-        print("SCANNING FROM RIGHT SUBSC");
-        //startScanning(_openEarableRight);
+        startScanning(_openEarableRight);
       }
       notifyListeners();
     });
@@ -132,9 +131,11 @@ class BluetoothController extends ChangeNotifier {
         device.name == openEarable.bleManager.connectingDevice?.name) {
       return;
     }
-    print("CONNECTING");
-    //_scanning = false;
+    _scanSubscription?.cancel();
     openEarable.bleManager.connectToDevice(device);
-    prefs.setString("lastConnectedDeviceName", device.name);
+    String side =
+        OpenEarableSettingsV2().selectedButtonIndex == 0 ? "Left" : "Right";
+    prefs.setString("lastConnectedDeviceName" + side, device.name);
+    notifyListeners();
   }
 }

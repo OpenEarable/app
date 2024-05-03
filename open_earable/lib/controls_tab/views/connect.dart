@@ -60,7 +60,6 @@ class _ConnectCard extends State<ConnectCard> {
   }
 
   void _startAutoConnectScan() {
-    return;
     if (_autoConnectEnabled == true) {
       Provider.of<BluetoothController>(context, listen: false)
           .startScanning(_openEarableLeft);
@@ -218,7 +217,6 @@ class _ConnectCard extends State<ConnectCard> {
 
   void _tryAutoconnect(
       List<DiscoveredDevice> devices, BluetoothController bleController) async {
-    return;
     if (_autoConnectEnabled != true ||
         devices.isEmpty ||
         bleController.connected) {
