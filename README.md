@@ -1,4 +1,4 @@
-# OpenEarable - App v1.3.0
+# OpenEarable - App v2.0.0
 
 [OpenEarable](https://open-earable.teco.edu) is a new, open-source, Arduino-based platform for ear-based sensing applications. It provides a versatile prototyping platform with support for various sensors and actuators, making it suitable for earable research and development.
 
@@ -21,7 +21,7 @@
 </p>
 
 ## Table of Contents
-- [OpenEarable - App v1.3.0](#openearable---app-v130)
+- [OpenEarable - App v2.0.0](#openearable---app-v200)
   - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
   - [Features](#features)
@@ -36,10 +36,9 @@ This App is designed to control the OpenEarable device and work as an example pr
 
 <div style="overflow-x: scroll;">
     <div style="display: flex; flex-direction: row;">
-        <img width="400" style="margin-right: 10px;" src="screenshots/iOS Home Screenshot.jpg">
-        <img width="400" style="margin-right: 10px;" src="screenshots/iOS Scan Screenshot.jpg">
-        <img width="400" style="margin-right: 10px;" src="screenshots/iOS Sensors Screenshot.jpg">
-        <img width="400" src="screenshots/iOS Apps Screenshot.jpg">
+        <img width="400" style="margin-right: 10px;" src="screenshots/V2 iOS Home Screenshot.PNG">
+        <img width="400" style="margin-right: 10px;" src="screenshots/V2 iOS Sensors Screenshot.PNG">
+        <img width="400" src="screenshots/V2 iOS Apps Screenshot.PNG">
     </div>
 </div>
 
