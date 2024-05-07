@@ -12,7 +12,7 @@ import 'dart:math';
 import 'dart:core';
 
 class EarableDataChart extends StatefulWidget {
-  final OpenEarable _openEarable;
+  OpenEarable _openEarable;
   final String _title;
   EarableDataChart(this._openEarable, this._title);
   @override
@@ -21,7 +21,7 @@ class EarableDataChart extends StatefulWidget {
 }
 
 class _EarableDataChartState extends State<EarableDataChart> {
-  final OpenEarable _openEarable;
+  OpenEarable _openEarable;
   final String _title;
   late List<SensorData> _data;
   StreamSubscription? _dataSubscription;
@@ -44,6 +44,10 @@ class _EarableDataChartState extends State<EarableDataChart> {
     "Temperature": "°C"
   };
   _setupListeners() {
+    _dataSubscription?.cancel();
+    if (!_openEarable.bleManager.connected) {
+      return;
+    }
     if (_title == "Pressure" || _title == "Temperature") {
       _dataSubscription =
           _openEarable.sensorManager.subscribeToSensorData(1).listen((data) {
@@ -138,6 +142,18 @@ class _EarableDataChartState extends State<EarableDataChart> {
   }
 
   @override
+  void didUpdateWidget(covariant EarableDataChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget._openEarable != widget._openEarable) {
+      setState(() {
+        _data.clear();
+        _openEarable = widget._openEarable;
+      });
+      _setupListeners();
+    }
+  }
+
+  @override
   void initState() {
     super.initState();
     _data = [];
@@ -192,7 +208,7 @@ class _EarableDataChartState extends State<EarableDataChart> {
 
   @override
   Widget build(BuildContext context) {
-    if (!Provider.of<BluetoothController>(context).connected) {
+    if (!_openEarable.bleManager.connected) {
       return EarableNotConnectedWarning();
     }
     if (_title == 'Pressure' || _title == 'Temperature') {

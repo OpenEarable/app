@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:open_earable/controls_tab/models/open_earable_settings_v2.dart';
 
 class EarableNotConnectedWarning extends StatelessWidget {
   @override
@@ -18,7 +19,10 @@ class EarableNotConnectedWarning extends StatelessWidget {
               SizedBox(height: 16),
               Center(
                 child: Text(
-                  "Not connected to\nOpenEarable device",
+                  "Not connected to\nOpenEarable " +
+                      (OpenEarableSettingsV2().selectedButtonIndex == 0
+                          ? "(left)"
+                          : "(right)"),
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,

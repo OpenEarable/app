@@ -29,6 +29,8 @@ class _ConnectCard extends State<ConnectCard> {
     setState(() {
       OpenEarableSettingsV2().selectedButtonIndex = index;
     });
+    Provider.of<BluetoothController>(context, listen: false)
+        .updateCurrentOpenEarable();
   }
 
   @override

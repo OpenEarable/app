@@ -10,15 +10,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 class BluetoothController extends ChangeNotifier {
   late SharedPreferences prefs;
 
-  BluetoothController() {
-    _initializeSharedPreferences();
-  }
-
   String _openEarableName = "OpenEarable";
   OpenEarable get openEarableLeft => _openEarableLeft;
   OpenEarable get openEarableRight => _openEarableRight;
   OpenEarable _openEarableLeft = OpenEarable();
   OpenEarable _openEarableRight = OpenEarable();
+
+  late OpenEarable _currentOpenEarable;
+  OpenEarable get currentOpenEarable => _currentOpenEarable;
+
   StreamSubscription? _scanSubscription;
   StreamSubscription? _connectionStateSubscriptionLeft;
   StreamSubscription? _connectionStateSubscriptionRight;
@@ -28,6 +28,18 @@ class BluetoothController extends ChangeNotifier {
 
   List<DiscoveredDevice> _discoveredDevices = [];
   List<DiscoveredDevice> get discoveredDevices => _discoveredDevices;
+
+  BluetoothController() {
+    _initializeSharedPreferences();
+    updateCurrentOpenEarable();
+  }
+
+  void updateCurrentOpenEarable() {
+    _currentOpenEarable = OpenEarableSettingsV2().selectedButtonIndex == 0
+        ? _openEarableLeft
+        : _openEarableRight;
+    notifyListeners();
+  }
 
   //bool _scanning = false;
 
@@ -106,7 +118,6 @@ class BluetoothController extends ChangeNotifier {
   }
 
   void startScanning(OpenEarable openEarable) async {
-    print("startScanning called");
     _scanSubscription?.cancel();
     //_scanning = true;
     _discoveredDevices = [];

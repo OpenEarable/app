@@ -66,10 +66,7 @@ class _SensorControlRow extends State<SensorControlRow> {
                       sensorSettings.frequencyOptionsBLE,
                       sensorSettings.selectedOptionBLE,
                       (newValue) {
-                        print("Setting imu setting value to $newValue");
                         sensorSettings.updateSelectedBLEOption(newValue);
-                        print(
-                            "HERE: ${OpenEarableSettingsV2().imuSettings.selectedOptionBLE}");
                       },
                       Provider.of<BluetoothController>(context).connected,
                       sensorSettings.isFakeDisabledBLE,
