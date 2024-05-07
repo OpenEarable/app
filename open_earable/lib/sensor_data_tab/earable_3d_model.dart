@@ -14,7 +14,7 @@ class Earable3DModel extends StatefulWidget {
 
 class _Earable3DModelState extends State<Earable3DModel> {
   WebViewController? _controller;
-  final OpenEarable _openEarable;
+  OpenEarable _openEarable;
   _Earable3DModelState(this._openEarable);
   StreamSubscription? _imuSubscription;
   double _pitch = 0;
@@ -33,6 +33,17 @@ class _Earable3DModelState extends State<Earable3DModel> {
   }
 
   @override
+  void didUpdateWidget(covariant Earable3DModel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget._openEarable != widget._openEarable) {
+      setState(() {
+        _openEarable = widget._openEarable;
+      });
+      _setupListeners();
+    }
+  }
+
+  @override
   void dispose() {
     super.dispose();
     _imuSubscription?.cancel();
@@ -40,6 +51,7 @@ class _Earable3DModelState extends State<Earable3DModel> {
 
   int lastTimestamp = 0;
   _setupListeners() {
+    _imuSubscription?.cancel();
     _imuSubscription =
         _openEarable.sensorManager.subscribeToSensorData(0).listen((data) {
       setState(() {
