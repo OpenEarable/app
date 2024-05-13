@@ -21,13 +21,12 @@ class _BLEPageState extends State<BLEPage> {
   void initState() {
     super.initState();
     _openEarable = widget.openEarable;
-    print("SCANNING FROM BLE PAGE");
-    Provider.of<BluetoothController>(context, listen: false)
-        .startScanning(_openEarable);
   }
 
   @override
   Widget build(BuildContext context) {
+    Provider.of<BluetoothController>(context, listen: false)
+        .startScanning(_openEarable);
     return Platform.isIOS
         ? CupertinoPageScaffold(
             navigationBar: CupertinoNavigationBar(middle: Text(_pageTitle)),

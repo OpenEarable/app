@@ -40,20 +40,12 @@ class _ConnectCard extends State<ConnectCard> {
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _openEarableLeft =
-        Provider.of<BluetoothController>(context).openEarableLeft;
-    _openEarableRight =
-        Provider.of<BluetoothController>(context).openEarableRight;
-  }
-
-  @override
   void dispose() {
     super.dispose();
   }
 
   Future<void> _getPrefs() async {
+    _autoConnectEnabled = false;
     prefs = await SharedPreferences.getInstance();
     setState(() {
       _autoConnectEnabled = prefs.getBool("autoConnectEnabled") ?? false;
@@ -61,12 +53,10 @@ class _ConnectCard extends State<ConnectCard> {
     _startAutoConnectScan();
   }
 
-  void _startAutoConnectScan() {
-    if (_autoConnectEnabled == true) {
-      Provider.of<BluetoothController>(context, listen: false)
-          .startScanning(_openEarableLeft);
-      Provider.of<BluetoothController>(context, listen: false)
-          .startScanning(_openEarableRight);
+  void _startAutoConnectScan() async {
+    if (_autoConnectEnabled) {
+      Provider.of<BluetoothController>(context, listen: false).startScanning(
+          _openEarableLeft); // Scanning on one earable is sufficient to connect to both
     }
   }
 
@@ -104,13 +94,13 @@ class _ConnectCard extends State<ConnectCard> {
                     Platform.isIOS
                         ? CupertinoCheckbox(
                             value: _autoConnectEnabled,
-                            onChanged: (value) => {
+                            onChanged: (value) {
                               setState(() {
                                 _autoConnectEnabled = value ?? false;
-                                _startAutoConnectScan();
-                                if (value != null)
-                                  prefs.setBool("autoConnectEnabled", value);
-                              })
+                              });
+                              _startAutoConnectScan();
+                              if (value != null)
+                                prefs.setBool("autoConnectEnabled", value);
                             },
                             activeColor: _autoConnectEnabled
                                 ? CupertinoTheme.of(context).primaryColor
@@ -123,13 +113,13 @@ class _ConnectCard extends State<ConnectCard> {
                             checkColor: Theme.of(context).colorScheme.primary,
                             //fillColor: Theme.of(context).colorScheme.primary,
                             value: _autoConnectEnabled,
-                            onChanged: (value) => {
+                            onChanged: (value) {
                               setState(() {
                                 _autoConnectEnabled = value ?? false;
-                                _startAutoConnectScan();
-                                if (value != null)
-                                  prefs.setBool("autoConnectEnabled", value);
-                              })
+                              });
+                              _startAutoConnectScan();
+                              if (value != null)
+                                prefs.setBool("autoConnectEnabled", value);
                             },
                           ),
                     Text(
@@ -219,9 +209,7 @@ class _ConnectCard extends State<ConnectCard> {
 
   void _tryAutoconnect(
       List<DiscoveredDevice> devices, BluetoothController bleController) async {
-    if (_autoConnectEnabled != true ||
-        devices.isEmpty ||
-        bleController.connected) {
+    if (_autoConnectEnabled != true || devices.isEmpty) {
       return;
     }
     String? lastConnectedDeviceNameLeft =
@@ -238,8 +226,9 @@ class _ConnectCard extends State<ConnectCard> {
         deviceToConnectLeft.name) {
       bleController.connectToDevice(deviceToConnectLeft, _openEarableLeft);
     }
-    if (_openEarableRight.bleManager.connectingDevice?.name !=
-        deviceToConnectRight) {
+    if (deviceToConnectLeft != deviceToConnectRight &&
+        _openEarableRight.bleManager.connectingDevice?.name !=
+            deviceToConnectRight) {
       bleController.connectToDevice(deviceToConnectRight, _openEarableRight);
     }
   }

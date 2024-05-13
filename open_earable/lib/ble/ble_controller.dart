@@ -117,7 +117,7 @@ class BluetoothController extends ChangeNotifier {
     });
   }
 
-  void startScanning(OpenEarable openEarable) async {
+  Future<void> startScanning(OpenEarable openEarable) async {
     _scanSubscription?.cancel();
     //_scanning = true;
     _discoveredDevices = [];
@@ -147,6 +147,5 @@ class BluetoothController extends ChangeNotifier {
     String side =
         OpenEarableSettingsV2().selectedButtonIndex == 0 ? "Left" : "Right";
     prefs.setString("lastConnectedDeviceName" + side, device.name);
-    notifyListeners();
   }
 }
