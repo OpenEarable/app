@@ -28,7 +28,7 @@ class _SensorDataTabState extends State<SensorDataTab>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(vsync: this, length: 9);
+    _tabController = TabController(vsync: this, length: 10);
   }
 
   int lastTimestamp = 0;
@@ -67,7 +67,8 @@ class _SensorDataTabState extends State<SensorDataTab>
               Tab(text: 'Gyro.'),
               Tab(text: 'Magn.'),
               Tab(text: 'Press.'),
-              Tab(text: 'Temp.'),
+              Tab(text: 'Temp. (A.)'),
+              Tab(text: 'Temp. (S.)'),
               Tab(text: 'HR'),
               Tab(text: 'SpO2'),
               Tab(text: 'PPG'),
@@ -82,14 +83,17 @@ class _SensorDataTabState extends State<SensorDataTab>
               return TabBarView(
                 controller: _tabController,
                 children: [
-                  EarableDataChart(currentOpenEarable, 'Accelerometer'),
-                  EarableDataChart(currentOpenEarable, 'Gyroscope'),
-                  EarableDataChart(currentOpenEarable, 'Magnetometer'),
-                  EarableDataChart(currentOpenEarable, 'Pressure'),
-                  EarableDataChart(currentOpenEarable, 'Temperature'),
-                  EarableDataChart(currentOpenEarable, 'Heart Rate'),
-                  EarableDataChart(currentOpenEarable, 'SpO2'),
-                  EarableDataChart(currentOpenEarable, 'PPG'),
+                  EarableDataChart(currentOpenEarable, 'ACC', 'Accelerometer'),
+                  EarableDataChart(currentOpenEarable, 'GYRO', 'Gyroscope'),
+                  EarableDataChart(currentOpenEarable, 'MAG', 'Magnetometer'),
+                  EarableDataChart(currentOpenEarable, 'BARO', 'Pressure'),
+                  EarableDataChart(
+                      currentOpenEarable, 'TEMP', 'Temperature (Ambient)'),
+                  EarableDataChart(
+                      currentOpenEarable, 'OPTTEMP', 'Temperature (Surface)'),
+                  EarableDataChart(currentOpenEarable, 'PULSOX', 'Heart Rate'),
+                  EarableDataChart(currentOpenEarable, 'PULSOX', 'SpO2'),
+                  EarableDataChart(currentOpenEarable, 'PPG', 'PPG'),
                   Earable3DModel(currentOpenEarable),
                 ],
               );

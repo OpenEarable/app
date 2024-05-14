@@ -13,19 +13,21 @@ import 'dart:core';
 
 class EarableDataChart extends StatefulWidget {
   OpenEarable _openEarable;
-  final String _title;
-  EarableDataChart(this._openEarable, this._title);
+  final String _groupName;
+  final String _chartTitle;
+  EarableDataChart(this._openEarable, this._groupName, this._chartTitle);
   @override
   _EarableDataChartState createState() =>
-      _EarableDataChartState(_openEarable, _title);
+      _EarableDataChartState(_openEarable, _groupName, _chartTitle);
 }
 
 class _EarableDataChartState extends State<EarableDataChart> {
   OpenEarable _openEarable;
-  final String _title;
+  final String _sensorName;
+  final String _chartTitle;
   late List<SensorData> _data;
   StreamSubscription? _dataSubscription;
-  _EarableDataChartState(this._openEarable, this._title);
+  _EarableDataChartState(this._openEarable, this._sensorName, this._chartTitle);
   late int _minX = 0;
   late int _maxX = 0;
   late List<String> colors;
@@ -34,36 +36,48 @@ class _EarableDataChartState extends State<EarableDataChart> {
   late double _maxY;
   final errorMeasure = {"ACC": 5.0, "GYRO": 10.0, "MAG": 25.0};
   late SimpleKalman kalmanX, kalmanY, kalmanZ;
-  late String _sensorName;
   int _numDatapoints = 200;
   Map<String, String> _units = {
-    "Accelerometer": "m/s\u00B2",
-    "Gyroscope": "°/s",
-    "Magnetometer": "µT",
-    "Pressure": "Pa",
-    "Temperature": "°C"
+    "ACC": "m/s\u00B2",
+    "GYRO": "°/s",
+    "MAG": "µT",
+    "BARO": "Pa",
+    "TEMP": "°C",
+    "OPTTEMP": "°C",
+    "PPG": "nm",
   };
   _setupListeners() {
     _dataSubscription?.cancel();
     if (!_openEarable.bleManager.connected) {
       return;
     }
-    if (_title == "Pressure" || _title == "Temperature") {
+    if (_sensorName == "BARO") {
+      _createSingleDataSubscription("Pressure");
+    } else if (_sensorName == "TEMP") {
+      _createSingleDataSubscription("Temperature");
+    } else if (_sensorName == "PULSOX") {
+      if (_chartTitle == "SpO2") {
+        _createSingleDataSubscription("SpO2");
+      } else {
+        _createSingleDataSubscription("HeartRate");
+      }
+    } else if (_sensorName == "OPTTEMP") {
+      _createSingleDataSubscription("Temperature");
+    } else if (_sensorName == "PPG") {
+      _dataSubscription?.cancel();
       _dataSubscription =
           _openEarable.sensorManager.subscribeToSensorData(1).listen((data) {
-        //units.addAll(data["TEMP"]["units"]);
         int timestamp = data["timestamp"];
         SensorData sensorData = SensorData(
             name: _sensorName,
             timestamp: timestamp,
-            values: [data[_sensorName][_title]],
-            //temperature: data["TEMP"]["Temperature"],
+            values: [data[_sensorName]["Red"], data[_sensorName]["InfraRed"]],
             units: data[_sensorName]["units"]);
         _updateData(sensorData);
       });
-    } else if (_title == "Accelerometer" ||
-        _title == "Gyroscope" ||
-        _title == "Magnetometer") {
+    } else if (_sensorName == "ACC" ||
+        _sensorName == "GYRO" ||
+        _sensorName == "MAG") {
       kalmanX = SimpleKalman(
           errorMeasure: errorMeasure[_sensorName]!,
           errorEstimate: errorMeasure[_sensorName]!,
@@ -76,11 +90,12 @@ class _EarableDataChartState extends State<EarableDataChart> {
           errorMeasure: errorMeasure[_sensorName]!,
           errorEstimate: errorMeasure[_sensorName]!,
           q: 0.9);
+      _dataSubscription?.cancel();
       _dataSubscription =
           _openEarable.sensorManager.subscribeToSensorData(0).listen((data) {
         int timestamp = data["timestamp"];
         SensorData xyzValue = SensorData(
-            name: _title,
+            name: _sensorName,
             timestamp: timestamp,
             values: [
               kalmanX.filtered(data[_sensorName]["X"]),
@@ -91,9 +106,23 @@ class _EarableDataChartState extends State<EarableDataChart> {
 
         _updateData(xyzValue);
       });
-    } else {
-      // TODO
     }
+  }
+
+  _createSingleDataSubscription(String componentName) {
+    _dataSubscription?.cancel();
+    _dataSubscription =
+        _openEarable.sensorManager.subscribeToSensorData(1).listen((data) {
+      //units.addAll(data["TEMP"]["units"]);
+      int timestamp = data["timestamp"];
+      SensorData sensorData = SensorData(
+          name: _sensorName,
+          timestamp: timestamp,
+          values: [data[_sensorName][componentName]],
+          //temperature: data["TEMP"]["Temperature"],
+          units: data[_sensorName]["units"]);
+      _updateData(sensorData);
+    });
   }
 
   _updateData(SensorData value) {
@@ -109,13 +138,11 @@ class _EarableDataChartState extends State<EarableDataChart> {
       double maxY = maxXYZValue.getMax();
       double minY = minXYZValue.getMin();
       double maxAbsValue = max(maxY.abs(), minY.abs());
-      _maxY = (_title == "Pressure" || _title == "Temperature")
-          ? maxY
-          : maxAbsValue;
+      bool isIMUChart =
+          _sensorName == "ACC" || _sensorName == "GYRO" || _sensorName == "MAG";
 
-      _minY = (_title == "Pressure" || _title == "Temperature")
-          ? minY
-          : -maxAbsValue;
+      _maxY = isIMUChart ? maxAbsValue : maxY;
+      _minY = isIMUChart ? -maxAbsValue : minY;
       _maxX = value.timestamp;
       _minX = _data[0].timestamp;
     });
@@ -130,7 +157,8 @@ class _EarableDataChartState extends State<EarableDataChart> {
       return ['#F08080', '#98FB98', '#ADD8E6'];
     } else if (title == "Pressure") {
       return ['#32CD32'];
-    } else if (title == "Temperature") {
+    } else if (title == "Temperature (Ambient)" ||
+        title == "Temperature (Surface)") {
       return ['#FFA07A'];
     } else if (title == "Heart Rate") {
       return ['#FF6347'];
@@ -157,32 +185,14 @@ class _EarableDataChartState extends State<EarableDataChart> {
   void initState() {
     super.initState();
     _data = [];
-    switch (_title) {
-      case 'Pressure':
-        _sensorName = 'BARO';
-      case 'Temperature':
-        _sensorName = 'TEMP';
-      case 'Accelerometer':
-        _sensorName = 'ACC';
-      case 'Gyroscope':
-        _sensorName = 'GYRO';
-      case 'Magnetometer':
-        _sensorName = 'MAG';
-      case 'Heart Rate':
-      // TODO
-      case 'SpO2':
-      // TODO
-      case 'PPG':
-      // TODO
-    }
-    colors = _getColor(_title);
-    if (_title == 'Temperature') {
+    colors = _getColor(_chartTitle);
+    if (_sensorName == 'TEMP' || _sensorName == 'OPTTEMP') {
       _minY = 0;
       _maxY = 30;
-    } else if (_title == 'Pressure') {
+    } else if (_sensorName == 'BARO') {
       _minY = 0;
       _maxY = 130000;
-    } else if (_title == "Magnetometer") {
+    } else if (_sensorName == "MAG") {
       _minY = -200;
       _maxY = 200;
     } else {
@@ -211,37 +221,54 @@ class _EarableDataChartState extends State<EarableDataChart> {
     if (!_openEarable.bleManager.connected) {
       return EarableNotConnectedWarning();
     }
-    if (_title == 'Pressure' || _title == 'Temperature') {
+    if (_sensorName == 'ACC' || _sensorName == 'GYRO' || _sensorName == 'MAG') {
       seriesList = [
         charts.Series<SensorData, int>(
-          id: '$_title${_data.isNotEmpty ? " (${_units[_title]})" : ""}',
-          colorFn: (_, __) => charts.Color.fromHex(code: colors[0]),
-          domainFn: (SensorData data, _) => data.timestamp,
-          measureFn: (SensorData data, _) => data.values[0],
-          data: _data,
-        ),
-      ];
-    } else {
-      seriesList = [
-        charts.Series<SensorData, int>(
-          id: 'X${_data.isNotEmpty ? " (${_units[_title]})" : ""}',
+          id: 'X${_data.isNotEmpty ? " (${_units[_sensorName]})" : ""}',
           colorFn: (_, __) => charts.Color.fromHex(code: colors[0]),
           domainFn: (SensorData data, _) => data.timestamp,
           measureFn: (SensorData data, _) => data.values[0],
           data: _data,
         ),
         charts.Series<SensorData, int>(
-          id: 'Y${_data.isNotEmpty ? " (${_units[_title]})" : ""}',
+          id: 'Y${_data.isNotEmpty ? " (${_units[_sensorName]})" : ""}',
           colorFn: (_, __) => charts.Color.fromHex(code: colors[1]),
           domainFn: (SensorData data, _) => data.timestamp,
           measureFn: (SensorData data, _) => data.values[1],
           data: _data,
         ),
         charts.Series<SensorData, int>(
-          id: 'Z${_data.isNotEmpty ? " (${_units[_title]})" : ""}',
+          id: 'Z${_data.isNotEmpty ? " (${_units[_sensorName]})" : ""}',
           colorFn: (_, __) => charts.Color.fromHex(code: colors[2]),
           domainFn: (SensorData data, _) => data.timestamp,
           measureFn: (SensorData data, _) => data.values[2],
+          data: _data,
+        ),
+      ];
+    } else if (_sensorName == "PPG") {
+      seriesList = [
+        charts.Series<SensorData, int>(
+          id: 'Red${_data.isNotEmpty ? " (${_units[_sensorName]})" : ""}',
+          colorFn: (_, __) => charts.Color.fromHex(code: colors[0]),
+          domainFn: (SensorData data, _) => data.timestamp,
+          measureFn: (SensorData data, _) => data.values[0],
+          data: _data,
+        ),
+        charts.Series<SensorData, int>(
+          id: 'Infrared${_data.isNotEmpty ? " (${_units[_sensorName]})" : ""}',
+          colorFn: (_, __) => charts.Color.fromHex(code: colors[1]),
+          domainFn: (SensorData data, _) => data.timestamp,
+          measureFn: (SensorData data, _) => data.values[1],
+          data: _data,
+        ),
+      ];
+    } else {
+      seriesList = [
+        charts.Series<SensorData, int>(
+          id: '$_chartTitle${_data.isNotEmpty ? " (${_units[_sensorName]})" : ""}',
+          colorFn: (_, __) => charts.Color.fromHex(code: colors[0]),
+          domainFn: (SensorData data, _) => data.timestamp,
+          measureFn: (SensorData data, _) => data.values[0],
           data: _data,
         ),
       ];
@@ -253,7 +280,7 @@ class _EarableDataChartState extends State<EarableDataChart> {
         Padding(
             padding: EdgeInsets.all(16),
             child: Text(
-              _title,
+              _chartTitle,
               style: TextStyle(fontSize: 30),
             )),
         Expanded(
