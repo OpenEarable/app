@@ -71,6 +71,7 @@ class BluetoothController extends ChangeNotifier {
       if (connected) {
         _getSOCLeft();
       } else {
+        _earableSOCLeft = null;
         startScanning(_openEarableLeft);
       }
       notifyListeners();
@@ -82,6 +83,7 @@ class BluetoothController extends ChangeNotifier {
       if (connected) {
         _getSOCRight();
       } else {
+        _earableSOCRight = null;
         startScanning(_openEarableRight);
       }
       notifyListeners();
