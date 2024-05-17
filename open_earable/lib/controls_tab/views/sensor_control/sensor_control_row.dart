@@ -7,7 +7,7 @@ import 'dart:io';
 import 'package:open_earable/ble/ble_controller.dart';
 
 class SensorControlRow extends StatefulWidget {
-  String _sensorName;
+  final String _sensorName;
   SensorControlRow(this._sensorName);
   @override
   _SensorControlRow createState() => _SensorControlRow(_sensorName);

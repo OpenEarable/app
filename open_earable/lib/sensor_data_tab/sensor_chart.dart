@@ -1,18 +1,16 @@
 import 'dart:async';
 
-import 'package:open_earable/ble/ble_controller.dart';
 import 'package:open_earable/shared/earable_not_connected_warning.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:charts_flutter/flutter.dart' as charts;
-import 'package:provider/provider.dart';
 import 'package:simple_kalman/simple_kalman.dart';
 import 'package:collection/collection.dart';
 import 'dart:math';
 import 'dart:core';
 
 class EarableDataChart extends StatefulWidget {
-  OpenEarable _openEarable;
+  final OpenEarable _openEarable;
   final String _groupName;
   final String _chartTitle;
   EarableDataChart(this._openEarable, this._groupName, this._chartTitle);

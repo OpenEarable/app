@@ -126,6 +126,7 @@ class BluetoothController extends ChangeNotifier {
 
     if (openEarable.bleManager.connectedDevice != null) {
       discoveredDevices.add((openEarable.bleManager.connectedDevice)!);
+      notifyListeners();
     }
     await openEarable.bleManager.startScan();
     _scanSubscription =
@@ -139,15 +140,19 @@ class BluetoothController extends ChangeNotifier {
     });
   }
 
-  void connectToDevice(device, OpenEarable openEarable) {
+  void connectToDevice(device, OpenEarable openEarable, int earableIndex) {
     if (device.name == openEarable.bleManager.connectedDevice?.name ||
         device.name == openEarable.bleManager.connectingDevice?.name) {
       return;
     }
     _scanSubscription?.cancel();
     openEarable.bleManager.connectToDevice(device);
-    String side =
-        OpenEarableSettingsV2().selectedButtonIndex == 0 ? "Left" : "Right";
+    String side = earableIndex == 0 ? "Left" : "Right";
+    String otherSide = earableIndex != 0 ? "Left" : "Right";
+    if (prefs.getString("lastConnectedDeviceName" + otherSide) == device.name) {
+      prefs.setString("lastConnectedDeviceName" + otherSide, "");
+    }
     prefs.setString("lastConnectedDeviceName" + side, device.name);
+    notifyListeners();
   }
 }

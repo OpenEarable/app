@@ -3,11 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:open_earable/ble/ble_controller.dart';
+import 'package:open_earable/ble/ble_tab_bar_page.dart';
 import 'package:open_earable/controls_tab/models/open_earable_settings_v2.dart';
 import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
-import 'package:open_earable/ble/ble_connect_view.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ConnectCard extends StatefulWidget {
@@ -67,109 +67,118 @@ class _ConnectCard extends State<ConnectCard> {
     _openEarableRight = Provider.of<BluetoothController>(context, listen: false)
         .openEarableRight;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 0.0),
-      child: Card(
-        color: Platform.isIOS
-            ? CupertinoTheme.of(context).primaryContrastingColor
-            : Theme.of(context).colorScheme.primary,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-          child: Consumer<BluetoothController>(
-              builder: (context, bleController, child) {
-            List<DiscoveredDevice> devices = bleController.discoveredDevices;
-            _tryAutoconnect(devices, bleController);
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Devices',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18.0,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Row(
+        padding: const EdgeInsets.symmetric(horizontal: 0.0),
+        child: Card(
+            color: Platform.isIOS
+                ? CupertinoTheme.of(context).primaryContrastingColor
+                : Theme.of(context).colorScheme.primary,
+            child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Platform.isIOS
-                        ? CupertinoCheckbox(
-                            value: _autoConnectEnabled,
-                            onChanged: (value) {
-                              setState(() {
-                                _autoConnectEnabled = value ?? false;
-                              });
-                              _startAutoConnectScan();
-                              if (value != null)
-                                prefs.setBool("autoConnectEnabled", value);
-                            },
-                            activeColor: _autoConnectEnabled
-                                ? CupertinoTheme.of(context).primaryColor
-                                : CupertinoTheme.of(context)
+                    Selector<BluetoothController, List<DiscoveredDevice>>(
+                        selector: (context, bleController) =>
+                            bleController.discoveredDevices,
+                        builder: (context, devices, child) {
+                          _tryAutoconnect(devices);
+                          return Text(
+                            'Devices',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18.0,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          );
+                        }),
+                    Row(
+                      children: [
+                        Platform.isIOS
+                            ? CupertinoCheckbox(
+                                value: _autoConnectEnabled,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _autoConnectEnabled = value ?? false;
+                                  });
+                                  _startAutoConnectScan();
+                                  if (value != null)
+                                    prefs.setBool("autoConnectEnabled", value);
+                                },
+                                activeColor: _autoConnectEnabled
+                                    ? CupertinoTheme.of(context).primaryColor
+                                    : CupertinoTheme.of(context)
+                                        .primaryContrastingColor,
+                                checkColor: CupertinoTheme.of(context)
                                     .primaryContrastingColor,
-                            checkColor: CupertinoTheme.of(context)
-                                .primaryContrastingColor,
-                          )
-                        : Checkbox(
-                            checkColor: Theme.of(context).colorScheme.primary,
-                            //fillColor: Theme.of(context).colorScheme.primary,
-                            value: _autoConnectEnabled,
-                            onChanged: (value) {
-                              setState(() {
-                                _autoConnectEnabled = value ?? false;
-                              });
-                              _startAutoConnectScan();
-                              if (value != null)
-                                prefs.setBool("autoConnectEnabled", value);
-                            },
+                              )
+                            : Checkbox(
+                                checkColor:
+                                    Theme.of(context).colorScheme.primary,
+                                //fillColor: Theme.of(context).colorScheme.primary,
+                                value: _autoConnectEnabled,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _autoConnectEnabled = value ?? false;
+                                  });
+                                  _startAutoConnectScan();
+                                  if (value != null)
+                                    prefs.setBool("autoConnectEnabled", value);
+                                },
+                              ),
+                        Text(
+                          "Connect to OpenEarable automatically",
+                          style: TextStyle(
+                            color: Color.fromRGBO(168, 168, 172, 1.0),
                           ),
-                    Text(
-                      "Connect to OpenEarable automatically",
-                      style: TextStyle(
-                        color: Color.fromRGBO(168, 168, 172, 1.0),
-                      ),
-                    )
+                        )
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: <Widget>[
+                        Expanded(
+                            child: Column(children: [
+                          Selector<BluetoothController, int?>(
+                              selector: (context, bleController) =>
+                                  bleController.earableSOCLeft,
+                              builder: (context, socLeft, child) {
+                                return _getEarableSelectButton(
+                                    imagePath:
+                                        "assets/OpenEarableV2-L.png", // path to your image asset
+                                    isSelected: OpenEarableSettingsV2()
+                                            .selectedButtonIndex ==
+                                        0,
+                                    onPressed: () => selectButton(0),
+                                    openEarable: _openEarableLeft,
+                                    percentage: socLeft);
+                              }),
+                          SizedBox(height: 8),
+                          _getConnectButton(context, "Left"),
+                        ])),
+                        SizedBox(width: 8),
+                        Expanded(
+                            child: Column(children: [
+                          Selector<BluetoothController, int?>(
+                              selector: (context, bleController) =>
+                                  bleController.earableSOCRight,
+                              builder: (context, socRight, child) {
+                                return _getEarableSelectButton(
+                                  imagePath: "assets/OpenEarableV2-R.png",
+                                  isSelected: OpenEarableSettingsV2()
+                                          .selectedButtonIndex ==
+                                      1,
+                                  onPressed: () => selectButton(1),
+                                  openEarable: _openEarableRight,
+                                  percentage: socRight,
+                                );
+                              }),
+                          SizedBox(height: 8),
+                          _getConnectButton(context, "Right"),
+                        ])),
+                      ],
+                    ),
                   ],
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: <Widget>[
-                    Expanded(
-                        child: Column(children: [
-                      _getEarableSelectButton(
-                          imagePath:
-                              "assets/OpenEarableV2-L.png", // path to your image asset
-                          isSelected:
-                              OpenEarableSettingsV2().selectedButtonIndex == 0,
-                          onPressed: () => selectButton(0),
-                          bleController: bleController,
-                          openEarable: _openEarableLeft,
-                          percentage: bleController.earableSOCLeft),
-                      SizedBox(height: 8),
-                      _getConnectButton(context, "Left"),
-                    ])),
-                    SizedBox(width: 8),
-                    Expanded(
-                        child: Column(children: [
-                      _getEarableSelectButton(
-                        imagePath: "assets/OpenEarableV2-R.png",
-                        isSelected:
-                            OpenEarableSettingsV2().selectedButtonIndex == 1,
-                        onPressed: () => selectButton(1),
-                        bleController: bleController,
-                        openEarable: _openEarableRight,
-                        percentage: bleController.earableSOCRight,
-                      ),
-                      SizedBox(height: 8),
-                      _getConnectButton(context, "Right"),
-                    ])),
-                  ],
-                ),
-              ],
-            );
-          }),
-        ),
-      ),
-    );
+                ))));
   }
 
   String _batteryPercentageString(int? percentage) {
@@ -202,34 +211,63 @@ class _ConnectCard extends State<ConnectCard> {
   }
 
   _connectButtonAction(BuildContext context, String side) {
-    Navigator.of(context).push(MaterialPageRoute(
-        builder: (context) =>
-            BLEPage(side == "Left" ? _openEarableLeft : _openEarableRight)));
+    Navigator.of(context).push(Platform.isIOS
+        ? CupertinoPageRoute(
+            builder: (context) => BLETabBarPage(index: side == "Left" ? 0 : 1))
+        : MaterialPageRoute(
+            builder: (context) =>
+                BLETabBarPage(index: side == "Left" ? 0 : 1)));
   }
 
-  void _tryAutoconnect(
-      List<DiscoveredDevice> devices, BluetoothController bleController) async {
+  void _tryAutoconnect(List<DiscoveredDevice> devices) async {
     if (_autoConnectEnabled != true || devices.isEmpty) {
       return;
     }
+    bool leftConnectSuccessful = true;
+    bool rightConnectSuccessful = true;
+    BluetoothController bleController =
+        Provider.of<BluetoothController>(context, listen: false);
+    List<DiscoveredDevice> devicesCopy = List.from(devices);
     String? lastConnectedDeviceNameLeft =
         prefs.getString("lastConnectedDeviceNameLeft");
     String? lastConnectedDeviceNameRight =
         prefs.getString("lastConnectedDeviceNameRight");
-    DiscoveredDevice? deviceToConnectLeft = devices.firstWhere(
-        (device) => device.name == lastConnectedDeviceNameLeft,
-        orElse: () => devices.first);
-    DiscoveredDevice? deviceToConnectRight = devices.firstWhere(
-        (device) => device.name == lastConnectedDeviceNameRight,
-        orElse: () => devices.last);
-    if (_openEarableLeft.bleManager.connectingDevice?.name !=
-        deviceToConnectLeft.name) {
-      bleController.connectToDevice(deviceToConnectLeft, _openEarableLeft);
+    try {
+      DiscoveredDevice? deviceToConnectLeft = devicesCopy
+          .firstWhere((device) => device.name == lastConnectedDeviceNameLeft);
+      if (_openEarableLeft.bleManager.connectingDevice?.name !=
+          deviceToConnectLeft.name) {
+        bleController.connectToDevice(deviceToConnectLeft, _openEarableLeft, 0);
+      }
+      devicesCopy.remove(deviceToConnectLeft);
+    } on StateError catch (_) {
+      leftConnectSuccessful = false;
     }
-    if (deviceToConnectLeft != deviceToConnectRight &&
-        _openEarableRight.bleManager.connectingDevice?.name !=
-            deviceToConnectRight) {
-      bleController.connectToDevice(deviceToConnectRight, _openEarableRight);
+    try {
+      DiscoveredDevice? deviceToConnectRight = devicesCopy
+          .firstWhere((device) => device.name == lastConnectedDeviceNameRight);
+      if (_openEarableRight.bleManager.connectingDevice?.name !=
+          deviceToConnectRight.name) {
+        bleController.connectToDevice(
+            deviceToConnectRight, _openEarableRight, 1);
+      }
+      devicesCopy.remove(deviceToConnectRight);
+    } on StateError catch (_) {
+      rightConnectSuccessful = false;
+    }
+
+    if (!leftConnectSuccessful) {
+      DiscoveredDevice? leftDevice = devicesCopy.firstOrNull;
+      if (leftDevice != null) {
+        bleController.connectToDevice(leftDevice, _openEarableLeft, 0);
+      }
+      devicesCopy.remove(leftDevice);
+    }
+    if (!rightConnectSuccessful) {
+      DiscoveredDevice? rightDevice = devicesCopy.firstOrNull;
+      if (rightDevice != null) {
+        bleController.connectToDevice(rightDevice, _openEarableRight, 1);
+      }
     }
   }
 
@@ -238,7 +276,6 @@ class _ConnectCard extends State<ConnectCard> {
     required String imagePath,
     required bool isSelected,
     required onPressed,
-    required BluetoothController bleController,
     required int? percentage,
   }) {
     if (Platform.isIOS) {

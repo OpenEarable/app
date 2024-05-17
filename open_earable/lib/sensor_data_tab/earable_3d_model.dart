@@ -51,6 +51,9 @@ class _Earable3DModelState extends State<Earable3DModel> {
 
   int lastTimestamp = 0;
   _setupListeners() {
+    if (!_openEarable.bleManager.connected) {
+      return;
+    }
     _imuSubscription?.cancel();
     _imuSubscription =
         _openEarable.sensorManager.subscribeToSensorData(0).listen((data) {

@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:open_earable/ble/ble_tab_bar_page.dart';
+import 'package:open_earable/controls_tab/models/open_earable_settings_v2.dart';
 import 'package:open_earable/shared/open_earable_icon_icons.dart';
 import 'package:provider/provider.dart';
 import 'controls_tab/controls_tab.dart';
@@ -228,12 +230,15 @@ class _MyHomePageState extends State<MyHomePage> {
                   color: CupertinoTheme.of(context).primaryColor,
                 ),
                 onPressed: () {
-                  Navigator.of(context).push(
-                    CupertinoPageRoute(
-                        builder: (context) => BLEPage(Provider.of<
-                                BluetoothController>(context)
-                            .openEarableLeft)), // TODO This needs to be changed later
-                  );
+                  Navigator.of(context).push(Platform.isIOS
+                      ? CupertinoPageRoute(
+                          builder: (context) => BLETabBarPage(
+                              index:
+                                  OpenEarableSettingsV2().selectedButtonIndex))
+                      : MaterialPageRoute(
+                          builder: (context) => BLETabBarPage(
+                              index: OpenEarableSettingsV2()
+                                  .selectedButtonIndex)));
                 },
               ),
             ),
@@ -265,10 +270,14 @@ class _MyHomePageState extends State<MyHomePage> {
               icon: Icon(Icons.bluetooth,
                   color: Theme.of(context).colorScheme.secondary),
               onPressed: () {
-                Navigator.of(context).push(MaterialPageRoute(
-                    builder: (context) => BLEPage(Provider.of<
-                            BluetoothController>(context)
-                        .openEarableLeft))); // TODO This needs to be changed later
+                Navigator.of(context).push(Platform.isIOS
+                    ? CupertinoPageRoute(
+                        builder: (context) => BLETabBarPage(
+                            index: OpenEarableSettingsV2().selectedButtonIndex))
+                    : MaterialPageRoute(
+                        builder: (context) => BLETabBarPage(
+                            index:
+                                OpenEarableSettingsV2().selectedButtonIndex)));
               },
             ),
           ],
