@@ -336,30 +336,32 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
   }
 
   Widget _getJingleRow() {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Padding(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
           padding: EdgeInsets.fromLTRB(44, 8, 0, 0),
           child: Text(
             "Jingle",
             style: TextStyle(
               color: Color.fromRGBO(168, 168, 172, 1.0),
             ),
-          )),
-      Row(
-        children: [
-          _getAudioPlayerRadio(1),
-          Container(
-              decoration: BoxDecoration(
-                color: Provider.of<BluetoothController>(context).connected
-                    ? Colors.white
-                    : Colors.grey[200],
-                borderRadius: BorderRadius.circular(4.0),
-              ),
-              child: SizedBox(
+          ),
+        ),
+        Row(
+          children: [
+            _getAudioPlayerRadio(1),
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Provider.of<BluetoothController>(context).connected
+                      ? Colors.white
+                      : Colors.grey[200],
+                  borderRadius: BorderRadius.circular(4.0),
+                ),
+                child: SizedBox(
                   height: 40,
                   child: Container(
-                    padding: EdgeInsets.fromLTRB(8, 0, 0, 0),
-                    alignment: Alignment.centerRight,
                     child: DynamicValuePicker(
                       context,
                       OpenEarableSettings().jingleMap.keys.toList(),
@@ -372,10 +374,14 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
                       (_) => null,
                       _connected,
                     ),
-                  ))),
-        ],
-      )
-    ]);
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 
   Widget _getFrequencyRow() {
