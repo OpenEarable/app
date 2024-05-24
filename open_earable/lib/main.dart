@@ -230,15 +230,31 @@ class _MyHomePageState extends State<MyHomePage> {
                   color: CupertinoTheme.of(context).primaryColor,
                 ),
                 onPressed: () {
-                  Navigator.of(context).push(Platform.isIOS
-                      ? CupertinoPageRoute(
-                          builder: (context) => BLETabBarPage(
-                              index:
-                                  OpenEarableSettingsV2().selectedButtonIndex))
-                      : MaterialPageRoute(
-                          builder: (context) => BLETabBarPage(
-                              index: OpenEarableSettingsV2()
-                                  .selectedButtonIndex)));
+                  if (Provider.of<BluetoothController>(context, listen: false)
+                      .isV2) {
+                    Navigator.of(context).push(Platform.isIOS
+                        ? CupertinoPageRoute(
+                            builder: (context) => BLETabBarPage(
+                                index: OpenEarableSettingsV2()
+                                    .selectedButtonIndex))
+                        : MaterialPageRoute(
+                            builder: (context) => BLETabBarPage(
+                                index: OpenEarableSettingsV2()
+                                    .selectedButtonIndex)));
+                  } else {
+                    Navigator.of(context).push(MaterialPageRoute(
+                        builder: (context) => Scaffold(
+                            backgroundColor:
+                                Theme.of(context).colorScheme.background,
+                            appBar: AppBar(
+                              title: Text("Bluetooth Devices"),
+                            ),
+                            body: BLEPage(
+                                Provider.of<BluetoothController>(context,
+                                        listen: false)
+                                    .openEarableLeft,
+                                0))));
+                  }
                 },
               ),
             ),

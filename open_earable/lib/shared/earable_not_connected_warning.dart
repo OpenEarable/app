@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:open_earable/ble/ble_controller.dart';
 import 'package:open_earable/controls_tab/models/open_earable_settings_v2.dart';
+import 'package:provider/provider.dart';
 
 class EarableNotConnectedWarning extends StatelessWidget {
   @override

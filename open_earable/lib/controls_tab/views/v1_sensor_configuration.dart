@@ -7,22 +7,14 @@ import 'package:open_earable_flutter/src/open_earable_flutter.dart';
 import 'package:provider/provider.dart';
 import '../models/open_earable_settings.dart';
 
-class SensorConfigurationCard extends StatefulWidget {
-  final OpenEarable _openEarable;
-  SensorConfigurationCard(this._openEarable);
-
+class V1SensorConfigurationCard extends StatefulWidget {
   @override
-  _SensorConfigurationCardState createState() =>
-      _SensorConfigurationCardState(_openEarable);
+  _V1SensorConfigurationCardState createState() =>
+      _V1SensorConfigurationCardState();
 }
 
-class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
-  final OpenEarable _openEarable;
-  _SensorConfigurationCardState(this._openEarable);
-
-  void initState() {
-    super.initState();
-  }
+class _V1SensorConfigurationCardState extends State<V1SensorConfigurationCard> {
+  late OpenEarable _openEarable;
 
   Color _getCheckboxColor(Set<MaterialState> states) {
     const Set<MaterialState> interactiveStates = <MaterialState>{
@@ -98,6 +90,8 @@ class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
 
   @override
   Widget build(BuildContext context) {
+    _openEarable = Provider.of<BluetoothController>(context, listen: false)
+        .openEarableLeft;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 5.0),
       child: Card(
@@ -257,12 +251,13 @@ class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
                 child: Container(
                     alignment: Alignment.centerRight,
                     child: DynamicValuePicker(
-                        context,
-                        options,
-                        currentValue,
-                        changeSelection,
-                        Provider.of<BluetoothController>(context).connected,
-                        false)))),
+                      context,
+                      options,
+                      currentValue,
+                      changeSelection,
+                      Provider.of<BluetoothController>(context).connected,
+                      false,
+                    )))),
         SizedBox(width: 8),
         Text("Hz", style: TextStyle(color: Color.fromRGBO(168, 168, 172, 1.0))),
       ],

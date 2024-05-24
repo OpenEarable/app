@@ -146,38 +146,34 @@ class _SensorControlCardState extends State<SensorControlCard> {
                           TextStyle(color: Color.fromRGBO(168, 168, 172, 0))),
                 ],
               ),
-              ChangeNotifierProvider<SensorSettings>(
-                  create: (_) => OpenEarableSettingsV2().microphone1Settings,
+              ChangeNotifierProvider<SensorSettings>.value(
+                  value: OpenEarableSettingsV2().microphone1Settings,
                   child: SensorControlRow("Microphone 1")),
               SizedBox(height: 4),
-              ChangeNotifierProvider<SensorSettings>(
-                  create: (context) =>
-                      OpenEarableSettingsV2().microphone2Settings,
+              ChangeNotifierProvider<SensorSettings>.value(
+                  value: OpenEarableSettingsV2().microphone2Settings,
                   child: SensorControlRow("Microphone 2")),
               Divider(
                 color: Color.fromRGBO(168, 168, 172, 1.0),
               ),
-              ChangeNotifierProvider<SensorSettings>(
-                  create: (context) => OpenEarableSettingsV2().imuSettings,
+              ChangeNotifierProvider<SensorSettings>.value(
+                  value: OpenEarableSettingsV2().imuSettings,
                   child: SensorControlRow("9-Axis IMU")),
               SizedBox(height: 4),
-              ChangeNotifierProvider<SensorSettings>(
-                  create: (context) =>
-                      OpenEarableSettingsV2().pulseOximeterSettings,
+              ChangeNotifierProvider<SensorSettings>.value(
+                  value: OpenEarableSettingsV2().pulseOximeterSettings,
                   child: SensorControlRow("Pulse Oximeter\n(Red/Infrared)")),
               SizedBox(height: 4),
-              ChangeNotifierProvider<SensorSettings>(
-                  create: (context) => OpenEarableSettingsV2().vitalsSettings,
+              ChangeNotifierProvider<SensorSettings>.value(
+                  value: OpenEarableSettingsV2().vitalsSettings,
                   child: SensorControlRow("Heart Rate,\nSpO2")),
               SizedBox(height: 4),
-              ChangeNotifierProvider<SensorSettings>(
-                  create: (context) =>
-                      OpenEarableSettingsV2().opticalTemperatureSettings,
+              ChangeNotifierProvider<SensorSettings>.value(
+                  value: OpenEarableSettingsV2().opticalTemperatureSettings,
                   child: SensorControlRow("Optical Temp.\n(Surface)")),
               SizedBox(height: 4),
-              ChangeNotifierProvider<SensorSettings>(
-                  create: (context) =>
-                      OpenEarableSettingsV2().barometerSettings,
+              ChangeNotifierProvider<SensorSettings>.value(
+                  value: OpenEarableSettingsV2().barometerSettings,
                   child: SensorControlRow("Pressure,\nTemp. (Ambient)")),
               SizedBox(height: 8),
               Row(

@@ -32,8 +32,7 @@ class _SensorControlRow extends State<SensorControlRow> {
                         });
                       }
                     : null,
-                activeColor: Provider.of<SensorSettings>(context, listen: true)
-                        .sensorSelected
+                activeColor: sensorSettings.sensorSelected
                     ? CupertinoTheme.of(context).primaryColor
                     : CupertinoTheme.of(context).primaryContrastingColor,
                 checkColor: CupertinoTheme.of(context).primaryContrastingColor,

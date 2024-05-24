@@ -16,6 +16,9 @@ class BluetoothController extends ChangeNotifier {
   OpenEarable _openEarableLeft = OpenEarable();
   OpenEarable _openEarableRight = OpenEarable();
 
+  bool _isV2 = false;
+  bool get isV2 => _isV2;
+
   late OpenEarable _currentOpenEarable;
   OpenEarable get currentOpenEarable => _currentOpenEarable;
 
@@ -67,6 +70,7 @@ class BluetoothController extends ChangeNotifier {
 
     _connectionStateSubscriptionLeft =
         _openEarableLeft.bleManager.connectionStateStream.listen((connected) {
+      _isV2 = _openEarableLeft.deviceHardwareVersion?.substring(0, 1) == "1";
       _connectedLeft = connected;
       if (connected) {
         _getSOCLeft();
