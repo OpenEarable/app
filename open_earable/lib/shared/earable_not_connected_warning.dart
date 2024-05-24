@@ -21,10 +21,17 @@ class EarableNotConnectedWarning extends StatelessWidget {
               SizedBox(height: 16),
               Center(
                 child: Text(
-                  "Not connected to\nOpenEarable " +
-                      (OpenEarableSettingsV2().selectedButtonIndex == 0
-                          ? "(left)"
-                          : "(right)"),
+                  "Not connected to\nOpenEarable" +
+                      ((Provider.of<BluetoothController>(context)
+                                          .openEarableLeft
+                                          .deviceHardwareVersion ??
+                                      "1")
+                                  .substring(0, 1) ==
+                              "1"
+                          ? ""
+                          : (OpenEarableSettingsV2().selectedButtonIndex == 0
+                              ? " (left)"
+                              : " (right)")),
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,

@@ -204,13 +204,25 @@ class _ConnectCard extends State<V1ConnectCard> {
   }
 
   _connectButtonAction(BuildContext context) {
-    Navigator.of(context).push(MaterialPageRoute(
-        builder: (context) => Scaffold(
-            backgroundColor: Theme.of(context).colorScheme.background,
-            appBar: AppBar(
-              title: Text("Bluetooth Devices"),
-            ),
-            body: BLEPage(_openEarable, 0))));
+    Navigator.of(context).push(Platform.isIOS
+        ? CupertinoPageRoute(
+            builder: (context) => CupertinoPageScaffold(
+                backgroundColor:
+                    CupertinoTheme.of(context).scaffoldBackgroundColor,
+                navigationBar: CupertinoNavigationBar(
+                  middle: Text("Bluetooth Devices"),
+                ),
+                child: BLEPage(
+                    Provider.of<BluetoothController>(context, listen: false)
+                        .openEarableLeft,
+                    0)))
+        : MaterialPageRoute(
+            builder: (context) => Scaffold(
+                backgroundColor: Theme.of(context).colorScheme.background,
+                appBar: AppBar(
+                  title: Text("Bluetooth Devices"),
+                ),
+                body: BLEPage(_openEarable, 0))));
   }
 
   void _tryAutoconnect(

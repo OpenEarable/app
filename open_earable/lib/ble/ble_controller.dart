@@ -70,7 +70,7 @@ class BluetoothController extends ChangeNotifier {
 
     _connectionStateSubscriptionLeft =
         _openEarableLeft.bleManager.connectionStateStream.listen((connected) {
-      _isV2 = _openEarableLeft.deviceHardwareVersion?.substring(0, 1) == "1";
+      _isV2 = _openEarableLeft.deviceHardwareVersion?.substring(0, 1) == "2";
       _connectedLeft = connected;
       if (connected) {
         _getSOCLeft();
@@ -157,6 +157,8 @@ class BluetoothController extends ChangeNotifier {
       prefs.setString("lastConnectedDeviceName" + otherSide, "");
     }
     prefs.setString("lastConnectedDeviceName" + side, device.name);
-    notifyListeners();
+    Future.microtask(() {
+      notifyListeners();
+    });
   }
 }

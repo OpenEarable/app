@@ -242,18 +242,31 @@ class _MyHomePageState extends State<MyHomePage> {
                                 index: OpenEarableSettingsV2()
                                     .selectedButtonIndex)));
                   } else {
-                    Navigator.of(context).push(MaterialPageRoute(
-                        builder: (context) => Scaffold(
-                            backgroundColor:
-                                Theme.of(context).colorScheme.background,
-                            appBar: AppBar(
-                              title: Text("Bluetooth Devices"),
-                            ),
-                            body: BLEPage(
-                                Provider.of<BluetoothController>(context,
-                                        listen: false)
-                                    .openEarableLeft,
-                                0))));
+                    Navigator.of(context).push(Platform.isIOS
+                        ? CupertinoPageRoute(
+                            builder: (context) => CupertinoPageScaffold(
+                                backgroundColor: CupertinoTheme.of(context)
+                                    .scaffoldBackgroundColor,
+                                navigationBar: CupertinoNavigationBar(
+                                  middle: Text("Bluetooth Devices"),
+                                ),
+                                child: BLEPage(
+                                    Provider.of<BluetoothController>(context,
+                                            listen: false)
+                                        .openEarableLeft,
+                                    0)))
+                        : MaterialPageRoute(
+                            builder: (context) => Scaffold(
+                                backgroundColor:
+                                    Theme.of(context).colorScheme.background,
+                                appBar: AppBar(
+                                  title: Text("Bluetooth Devices"),
+                                ),
+                                body: BLEPage(
+                                    Provider.of<BluetoothController>(context,
+                                            listen: false)
+                                        .openEarableLeft,
+                                    0))));
                   }
                 },
               ),
