@@ -60,7 +60,7 @@ class _SensorControlRow extends State<SensorControlRow> {
             decoration: BoxDecoration(
               color: Provider.of<BluetoothController>(context).connected
                   ? Colors.white
-                  : Colors.grey[200],
+                  : Colors.grey,
               borderRadius: BorderRadius.circular(4.0),
             ),
             child: SizedBox(
@@ -83,7 +83,7 @@ class _SensorControlRow extends State<SensorControlRow> {
             decoration: BoxDecoration(
               color: Provider.of<BluetoothController>(context).connected
                   ? Colors.white
-                  : Colors.grey[200],
+                  : Colors.grey,
               borderRadius: BorderRadius.circular(4.0),
             ),
             child: SizedBox(
