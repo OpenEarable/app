@@ -301,7 +301,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
               obscureText: false,
               placeholder: placeholder,
               style: TextStyle(
-                color: connected ? Colors.black : Colors.grey,
+                color: connected ? Colors.black : Colors.grey[700],
               ),
               padding: EdgeInsets.fromLTRB(8, 0, 0, 0),
               textAlignVertical: TextAlignVertical.center,
@@ -310,7 +310,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
                 FocusScope.of(context).requestFocus(FocusNode());
               },
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: connected ? Colors.white : Colors.grey,
                 borderRadius: BorderRadius.circular(4.0),
               ),
               placeholderStyle: TextStyle(
@@ -325,16 +325,17 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
               controller: textController,
               obscureText: false,
               enabled: connected,
-              style: TextStyle(color: connected ? Colors.black : Colors.grey),
+              style:
+                  TextStyle(color: connected ? Colors.black : Colors.grey[700]),
               decoration: InputDecoration(
                 labelText: placeholder,
                 contentPadding: EdgeInsets.fromLTRB(8, 0, 0, 0),
                 border: OutlineInputBorder(),
                 floatingLabelBehavior: FloatingLabelBehavior.never,
-                labelStyle:
-                    TextStyle(color: connected ? Colors.black : Colors.grey),
+                labelStyle: TextStyle(
+                    color: connected ? Colors.black : Colors.grey[700]),
                 filled: true,
-                fillColor: connected ? Colors.white : Colors.grey[200],
+                fillColor: connected ? Colors.white : Colors.grey,
               ),
               keyboardType: keyboardType,
               maxLength: maxLength,
@@ -365,7 +366,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
                 decoration: BoxDecoration(
                   color: Provider.of<BluetoothController>(context).connected
                       ? Colors.white
-                      : Colors.grey[200],
+                      : Colors.grey,
                   borderRadius: BorderRadius.circular(4.0),
                 ),
                 child: SizedBox(
@@ -442,20 +443,27 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
             ),
           ),
           Spacer(),
-          SizedBox(
-            height: 38.0,
-            width: 107,
-            child: DynamicValuePicker(
-                context,
-                OpenEarableSettings().waveFormMap.keys.toList(),
-                OpenEarableSettings().selectedWaveForm, (newValue) {
-              setState(
-                () {
-                  OpenEarableSettings().selectedWaveForm = newValue;
-                },
-              );
-            }, Provider.of<BluetoothController>(context).connected, false),
-          ),
+          Container(
+              decoration: BoxDecoration(
+                color: Provider.of<BluetoothController>(context).connected
+                    ? Colors.white
+                    : Colors.grey,
+                borderRadius: BorderRadius.circular(4.0),
+              ),
+              child: SizedBox(
+                height: 38.0,
+                width: 107,
+                child: DynamicValuePicker(
+                    context,
+                    OpenEarableSettings().waveFormMap.keys.toList(),
+                    OpenEarableSettings().selectedWaveForm, (newValue) {
+                  setState(
+                    () {
+                      OpenEarableSettings().selectedWaveForm = newValue;
+                    },
+                  );
+                }, Provider.of<BluetoothController>(context).connected, false),
+              )),
         ],
       )
     ]);

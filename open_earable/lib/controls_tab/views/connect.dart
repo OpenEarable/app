@@ -67,7 +67,7 @@ class _ConnectCard extends State<ConnectCard> {
     _openEarableRight = Provider.of<BluetoothController>(context, listen: false)
         .openEarableRight;
     return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 0.0),
+        padding: const EdgeInsets.symmetric(horizontal: 5.0),
         child: Card(
             color: Platform.isIOS
                 ? CupertinoTheme.of(context).primaryContrastingColor

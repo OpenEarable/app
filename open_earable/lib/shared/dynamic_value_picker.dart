@@ -46,8 +46,7 @@ class DynamicValuePicker extends StatelessWidget {
       );
     } else {
       return DropdownButton<String>(
-        dropdownColor:
-            this.isFakeDisabled || !isConnected ? Colors.grey : Colors.white,
+        dropdownColor: Colors.white,
         alignment: Alignment.centerRight,
         value: currentValue,
         onChanged: isConnected
@@ -73,7 +72,7 @@ class DynamicValuePicker extends StatelessWidget {
         underline: Container(),
         icon: Icon(
           Icons.arrow_drop_down,
-          color: isConnected ? Colors.black : Colors.grey,
+          color: isConnected ? Colors.black : Colors.grey[700],
         ),
       );
     }
