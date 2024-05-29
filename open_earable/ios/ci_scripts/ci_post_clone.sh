@@ -4,7 +4,6 @@
 set -e
 
 FLUTTER_URL="https://storage.googleapis.com/flutter_infra_release/releases/stable/macos/flutter_macos_arm64_3.16.0-stable.zip"
-FLUTTER_DIR="$HOME/flutter"
 
 # by default, the execution directory of this script is the ci_scripts directory
 # CI_WORKSPACE is the directory of your cloned repo
@@ -12,22 +11,10 @@ echo "🟩 Navigate from ($PWD) to ($CI_WORKSPACE_PATH)"
 cd $CI_WORKSPACE_PATH
 
 echo "🟩 Install Flutter"
-mkdir -p $FLUTTER_DIR
-cd $FLUTTER_DIR
+cd $HOME
 time curl -L $FLUTTER_URL -o flutter.zip
 unzip flutter.zip
 export PATH="$PATH:$HOME/flutter/bin"
-
-echo "🟩PATH"
-echo $PATH
-
-source ~/.bashrc
-. ~/.bashrc
-source ~/.zshrc
-. ~/.zshrc
-
-echo "🟩PATH"
-echo $PATH
 
 echo "🟩 Verify Flutter Installation"
 flutter --version
