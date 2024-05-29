@@ -18,8 +18,13 @@ time curl -L $FLUTTER_URL -o flutter.zip
 unzip flutter.zip
 export PATH="$PATH:$HOME/flutter/bin"
 
+source ~/.bashrc
+
+echo "🟩 Verify Flutter Installation"
+flutter --version
+
 echo "🟩PATH"
-echo PATH
+echo $PATH
 
 echo "🟩 Flutter Precache"
 time flutter precache --ios
