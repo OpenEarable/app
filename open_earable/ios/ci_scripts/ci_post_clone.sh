@@ -5,11 +5,6 @@ set -e
 
 FLUTTER_URL="https://storage.googleapis.com/flutter_infra_release/releases/stable/macos/flutter_macos_3.16.0-stable.zip"
 
-# by default, the execution directory of this script is the ci_scripts directory
-# CI_WORKSPACE is the directory of your cloned repo
-echo "🟩 Navigate from ($PWD) to ($CI_WORKSPACE_PATH)"
-cd $CI_WORKSPACE_PATH
-
 echo "🟩 Install Flutter"
 cd $HOME
 time curl -L $FLUTTER_URL -o flutter.zip
@@ -21,6 +16,11 @@ flutter --version
 
 echo "🟩 Flutter Precache"
 time flutter precache --ios
+
+# by default, the execution directory of this script is the ci_scripts directory
+# CI_WORKSPACE is the directory of your cloned repo
+echo "🟩 Navigate from ($PWD) to ($CI_WORKSPACE_PATH)"
+cd $CI_WORKSPACE_PATH
 
 echo "🟩 Install Flutter Dependencies"
 cd repository/open_earable
