@@ -30,7 +30,7 @@ jobs:
       - working-directory: ./open_earable
         run: flutter pub get
       - working-directory: ./open_earable
-        run: flutter build apk
+        run: flutter build apk --debug
       - uses: actions/upload-artifact@v1
         with:
           name: release-apk

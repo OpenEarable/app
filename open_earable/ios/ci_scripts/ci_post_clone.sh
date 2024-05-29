@@ -13,9 +13,13 @@ cd $CI_WORKSPACE_PATH
 
 echo "🟩 Install Flutter"
 mkdir -p $FLUTTER_DIR
-time curl -L $FLUTTER_URL -o /tmp/flutter.zip
-time unzip /tmp/flutter.zip -d $FLUTTER_DIR
+cd $FLUTTER_DIR
+time curl -L $FLUTTER_URL -o flutter.zip
+unzip flutter.zip
 export PATH="$PATH:$HOME/flutter/bin"
+
+echo "🟩PATH"
+echo PATH
 
 echo "🟩 Flutter Precache"
 time flutter precache --ios
