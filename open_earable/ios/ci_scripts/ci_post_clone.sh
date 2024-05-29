@@ -15,6 +15,7 @@ echo "🟩 Install Flutter"
 mkdir -p $FLUTTER_DIR
 time curl -L $FLUTTER_URL -o /tmp/flutter.tar.xz
 time tar -xf /tmp/flutter.tar.xz -C $FLUTTER_DIR --strip-components=1
+chmod +x $FLUTTER_DIR/bin/cache/dart-sdk/bin/dart
 export PATH="$PATH:$HOME/flutter/bin"
 
 echo "🟩 Flutter Precache"
