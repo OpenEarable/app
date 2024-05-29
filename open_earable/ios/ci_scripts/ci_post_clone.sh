@@ -3,7 +3,7 @@
 # Fail this script if any subcommand fails.
 set -e
 
-FLUTTER_URL="https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.16.0-stable.tar.xz"
+FLUTTER_URL="https://storage.googleapis.com/flutter_infra_release/releases/stable/macos/flutter_macos_3.16.0-stable.zip"
 FLUTTER_DIR="$HOME/flutter"
 
 # by default, the execution directory of this script is the ci_scripts directory
@@ -13,9 +13,8 @@ cd $CI_WORKSPACE_PATH
 
 echo "🟩 Install Flutter"
 mkdir -p $FLUTTER_DIR
-time curl -L $FLUTTER_URL -o /tmp/flutter.tar.xz
-time tar -xf /tmp/flutter.tar.xz -C $FLUTTER_DIR --strip-components=1
-chmod +x $FLUTTER_DIR/bin/cache/dart-sdk/bin/dart
+time curl -L $FLUTTER_URL -o /tmp/flutter.zip
+time unzip /tmp/flutter.zip -d $FLUTTER_DIR
 export PATH="$PATH:$HOME/flutter/bin"
 
 echo "🟩 Flutter Precache"

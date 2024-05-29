@@ -16,6 +16,16 @@ jobs:
       - uses: subosito/flutter-action@v1
         with:
           channel: 'beta'
+          
+      - name: Set up Flutter 3.16.0
+        run: |
+          FLUTTER_URL="https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.16.0-stable.tar.xz"
+          FLUTTER_DIR="$HOME/flutter"
+          mkdir -p $FLUTTER_DIR
+          curl -L $FLUTTER_URL -o /tmp/flutter.tar.xz
+          tar -xf /tmp/flutter.tar.xz -C $FLUTTER_DIR --strip-components=1
+          chmod +x $FLUTTER_DIR/bin/cache/dart-sdk/bin/dart
+          echo "$FLUTTER_DIR/bin" >> $GITHUB_PATH
         
       - working-directory: ./open_earable
         run: flutter pub get
