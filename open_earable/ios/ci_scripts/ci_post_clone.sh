@@ -3,7 +3,7 @@
 # Fail this script if any subcommand fails.
 set -e
 
-FLUTTER_URL="https://storage.googleapis.com/flutter_infra_release/releases/stable/macos/flutter_macos_3.16.0-stable.zip"
+FLUTTER_URL="https://storage.googleapis.com/flutter_infra_release/releases/stable/macos/flutter_macos_arm64_3.16.0-stable.zip"
 FLUTTER_DIR="$HOME/flutter"
 
 # by default, the execution directory of this script is the ci_scripts directory
