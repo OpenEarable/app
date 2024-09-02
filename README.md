@@ -4,7 +4,7 @@
 
 <p>
   <a href="https://testflight.apple.com/join/Kht3e1Cb">
-    ⬇️ Download iOS beta app
+    ⬇️ Download iOS app
   </a> 
 </p>
   
