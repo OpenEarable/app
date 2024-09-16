@@ -60,6 +60,14 @@ dependencies:
 dependency_overrides:
   intl: ^0.18.1
   
+  # This is needed as of 09.09.2024, because XCode Cloud fails building without this fix.
+  # Refer to: https://github.com/pichillilorenzo/flutter_inappwebview/issues/2221
+  flutter_inappwebview_ios:
+    git:
+      url: https://github.com/pichillilorenzo/flutter_inappwebview.git
+      ref: 27fd339172572fe1b16cdcdae235b2a88f432e3c
+      path: flutter_inappwebview_ios
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter
