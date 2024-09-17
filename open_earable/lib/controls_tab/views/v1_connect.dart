@@ -54,9 +54,7 @@ class _ConnectCard extends State<V1ConnectCard> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 5.0),
       child: Card(
-        color: Platform.isIOS
-            ? CupertinoTheme.of(context).primaryContrastingColor
-            : Theme.of(context).colorScheme.primary,
+        color: Theme.of(context).colorScheme.primary,
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Consumer<BluetoothController>(
@@ -76,37 +74,19 @@ class _ConnectCard extends State<V1ConnectCard> {
                 ),
                 Row(
                   children: [
-                    Platform.isIOS
-                        ? CupertinoCheckbox(
-                            value: _autoConnectEnabled,
-                            onChanged: (value) => {
-                              setState(() {
-                                _autoConnectEnabled = value ?? false;
-                                _startAutoConnectScan();
-                                if (value != null)
-                                  prefs.setBool("autoConnectEnabled", value);
-                              })
-                            },
-                            activeColor: _autoConnectEnabled
-                                ? CupertinoTheme.of(context).primaryColor
-                                : CupertinoTheme.of(context)
-                                    .primaryContrastingColor,
-                            checkColor: CupertinoTheme.of(context)
-                                .primaryContrastingColor,
-                          )
-                        : Checkbox(
-                            checkColor: Theme.of(context).colorScheme.primary,
-                            //fillColor: Theme.of(context).colorScheme.primary,
-                            value: _autoConnectEnabled,
-                            onChanged: (value) => {
-                              setState(() {
-                                _autoConnectEnabled = value ?? false;
-                                _startAutoConnectScan();
-                                if (value != null)
-                                  prefs.setBool("autoConnectEnabled", value);
-                              })
-                            },
-                          ),
+                    Checkbox(
+                      checkColor: Theme.of(context).colorScheme.primary,
+                      //fillColor: Theme.of(context).colorScheme.primary,
+                      value: _autoConnectEnabled,
+                      onChanged: (value) => {
+                        setState(() {
+                          _autoConnectEnabled = value ?? false;
+                          _startAutoConnectScan();
+                          if (value != null)
+                            prefs.setBool("autoConnectEnabled", value);
+                        })
+                      },
+                    ),
                     Text(
                       "Connect to OpenEarable automatically",
                       style: TextStyle(
@@ -184,45 +164,27 @@ class _ConnectCard extends State<V1ConnectCard> {
       child: Container(
           height: 37,
           width: double.infinity,
-          child: !Platform.isIOS
-              ? ElevatedButton(
-                  onPressed: () => _connectButtonAction(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: !_openEarable.bleManager.connected
-                        ? Color(0xff77F2A1)
-                        : Color(0xfff27777),
-                    foregroundColor: Colors.black,
-                  ),
-                  child: Text("Connect"),
-                )
-              : CupertinoButton(
-                  padding: EdgeInsets.zero,
-                  color: CupertinoTheme.of(context).primaryColor,
-                  child: Text("Connect"),
-                  onPressed: () => _connectButtonAction(context))),
+          child: ElevatedButton(
+            onPressed: () => _connectButtonAction(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: !_openEarable.bleManager.connected
+                  ? Color(0xff77F2A1)
+                  : Color(0xfff27777),
+              foregroundColor: Colors.black,
+            ),
+            child: Text("Connect"),
+          )),
     );
   }
 
   _connectButtonAction(BuildContext context) {
-    Navigator.of(context).push(Platform.isIOS
-        ? CupertinoPageRoute(
-            builder: (context) => CupertinoPageScaffold(
-                backgroundColor:
-                    CupertinoTheme.of(context).scaffoldBackgroundColor,
-                navigationBar: CupertinoNavigationBar(
-                  middle: Text("Bluetooth Devices"),
-                ),
-                child: BLEPage(
-                    Provider.of<BluetoothController>(context, listen: false)
-                        .openEarableLeft,
-                    0)))
-        : MaterialPageRoute(
-            builder: (context) => Scaffold(
-                backgroundColor: Theme.of(context).colorScheme.background,
-                appBar: AppBar(
-                  title: Text("Bluetooth Devices"),
-                ),
-                body: BLEPage(_openEarable, 0))));
+    Navigator.of(context).push(MaterialPageRoute(
+        builder: (context) => Scaffold(
+            backgroundColor: Theme.of(context).colorScheme.background,
+            appBar: AppBar(
+              title: Text("Bluetooth Devices"),
+            ),
+            body: BLEPage(_openEarable, 0))));
   }
 
   void _tryAutoconnect(
