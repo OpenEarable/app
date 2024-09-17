@@ -9,6 +9,7 @@ import '../../shared/dynamic_value_picker.dart';
 
 class AudioPlayerCard extends StatefulWidget {
   final OpenEarable _openEarable;
+
   AudioPlayerCard(this._openEarable);
 
   @override
@@ -17,6 +18,7 @@ class AudioPlayerCard extends StatefulWidget {
 
 class _AudioPlayerCardState extends State<AudioPlayerCard> {
   final OpenEarable _openEarable;
+
   _AudioPlayerCardState(this._openEarable);
 
   late TextEditingController _filenameTextController;
@@ -187,9 +189,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
               updateText(connected);
               return Card(
                 //Audio Player Card
-                color: Platform.isIOS
-                    ? CupertinoTheme.of(context).primaryContrastingColor
-                    : Theme.of(context).colorScheme.primary,
+                color: Theme.of(context).colorScheme.primary,
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -207,9 +207,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
                       _getJingleRow(),
                       _getFrequencyRow(),
                       SizedBox(height: 12),
-                      Platform.isIOS
-                          ? _getCupertinoButtonRow(connected)
-                          : _getMaterialButtonRow(connected),
+                      _getMaterialButtonRow(connected),
                     ],
                   ),
                 ),
@@ -224,44 +222,24 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
           return SizedBox(
               height: 38,
               width: 44,
-              child: Platform.isIOS
-                  ? CupertinoRadio(
-                      value: index,
-                      groupValue:
-                          OpenEarableSettings().selectedAudioPlayerRadio,
-                      onChanged: !connected
-                          ? null
-                          : (int? value) {
-                              setState(() {
-                                OpenEarableSettings().selectedAudioPlayerRadio =
-                                    value ?? 0;
-                              });
-                            },
-                      activeColor: CupertinoTheme.of(context).primaryColor,
-                      fillColor:
-                          CupertinoTheme.of(context).primaryContrastingColor,
-                      inactiveColor:
-                          CupertinoTheme.of(context).primaryContrastingColor,
-                    )
-                  : Radio(
-                      value: index,
-                      groupValue:
-                          OpenEarableSettings().selectedAudioPlayerRadio,
-                      onChanged: !connected
-                          ? null
-                          : (int? value) {
-                              setState(() {
-                                OpenEarableSettings().selectedAudioPlayerRadio =
-                                    value ?? 0;
-                              });
-                            },
-                      fillColor: MaterialStateProperty.resolveWith((states) {
-                        if (states.contains(MaterialState.selected)) {
-                          return Theme.of(context).colorScheme.secondary;
-                        }
-                        return Colors.grey;
-                      }),
-                    ));
+              child: Radio(
+                value: index,
+                groupValue: OpenEarableSettings().selectedAudioPlayerRadio,
+                onChanged: !connected
+                    ? null
+                    : (int? value) {
+                        setState(() {
+                          OpenEarableSettings().selectedAudioPlayerRadio =
+                              value ?? 0;
+                        });
+                      },
+                fillColor: MaterialStateProperty.resolveWith((states) {
+                  if (states.contains(MaterialState.selected)) {
+                    return Theme.of(context).colorScheme.secondary;
+                  }
+                  return Colors.grey;
+                }),
+              ));
         });
   }
 
@@ -294,54 +272,26 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     return Selector<BluetoothController, bool>(
         selector: (_, controller) => controller.connected,
         builder: (context, connected, child) {
-          if (Platform.isIOS) {
-            return CupertinoTextField(
-              cursorColor: Colors.blue,
-              controller: textController,
-              obscureText: false,
-              placeholder: placeholder,
-              style: TextStyle(
-                color: connected ? Colors.black : Colors.grey[700],
-              ),
-              padding: EdgeInsets.fromLTRB(8, 0, 0, 0),
-              textAlignVertical: TextAlignVertical.center,
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) {
-                FocusScope.of(context).requestFocus(FocusNode());
-              },
-              decoration: BoxDecoration(
-                color: connected ? Colors.white : Colors.grey,
-                borderRadius: BorderRadius.circular(4.0),
-              ),
-              placeholderStyle: TextStyle(
-                color: connected ? Colors.black : Colors.grey,
-              ),
-              keyboardType: keyboardType,
-              maxLength: maxLength,
-              maxLines: 1,
-            );
-          } else {
-            return TextField(
-              controller: textController,
-              obscureText: false,
-              enabled: connected,
-              style:
+          return TextField(
+            controller: textController,
+            obscureText: false,
+            enabled: connected,
+            style:
+                TextStyle(color: connected ? Colors.black : Colors.grey[700]),
+            decoration: InputDecoration(
+              labelText: placeholder,
+              contentPadding: EdgeInsets.fromLTRB(8, 0, 0, 0),
+              border: OutlineInputBorder(),
+              floatingLabelBehavior: FloatingLabelBehavior.never,
+              labelStyle:
                   TextStyle(color: connected ? Colors.black : Colors.grey[700]),
-              decoration: InputDecoration(
-                labelText: placeholder,
-                contentPadding: EdgeInsets.fromLTRB(8, 0, 0, 0),
-                border: OutlineInputBorder(),
-                floatingLabelBehavior: FloatingLabelBehavior.never,
-                labelStyle: TextStyle(
-                    color: connected ? Colors.black : Colors.grey[700]),
-                filled: true,
-                fillColor: connected ? Colors.white : Colors.grey,
-              ),
-              keyboardType: keyboardType,
-              maxLength: maxLength,
-              maxLines: 1,
-            );
-          }
+              filled: true,
+              fillColor: connected ? Colors.white : Colors.grey,
+            ),
+            keyboardType: keyboardType,
+            maxLength: maxLength,
+            maxLines: 1,
+          );
         });
   }
 

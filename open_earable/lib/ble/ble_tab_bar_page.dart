@@ -7,6 +7,7 @@ import 'package:open_earable/ble/ble_controller.dart';
 
 class BLETabBarPage extends StatefulWidget {
   final int index;
+
   BLETabBarPage({int this.index = 0});
 
   @override
@@ -66,103 +67,55 @@ class _BLETabBarPageState extends State<BLETabBarPage>
 
   @override
   Widget build(BuildContext context) {
-    return Platform.isIOS
-        ? CupertinoPageScaffold(
-            backgroundColor: CupertinoTheme.of(context).scaffoldBackgroundColor,
-            navigationBar: CupertinoNavigationBar(
-              middle: Text("Bluetooth Devices"),
-              leading: CupertinoNavigationBarBackButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-              ),
-            ),
-            child: CupertinoTabScaffold(
-              controller: _cupertinoTabController,
-              tabBar: CupertinoTabBar(
-                items: [
-                  BottomNavigationBarItem(
-                    label: 'Left Earable',
-                    icon: ImageIcon(
-                        AssetImage('assets/OpenEarableIconLeft.png'),
-                        size: 40.0),
-                  ),
-                  BottomNavigationBarItem(
-                    label: 'Right Earable',
-                    icon: ImageIcon(
-                      AssetImage('assets/OpenEarableIconRight.png'),
-                      size: 40.0,
-                    ),
-                  ),
-                ],
-              ),
-              tabBuilder: (BuildContext context, int index) {
-                return CupertinoTabView(
-                  builder: (context) {
-                    return index == 0
-                        ? BLEPage(
-                            Provider.of<BluetoothController>(context)
-                                .openEarableLeft,
-                            0)
-                        : BLEPage(
-                            Provider.of<BluetoothController>(context)
-                                .openEarableRight,
-                            1);
-                  },
-                );
-              },
-            ))
-        : Scaffold(
+    return Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.background,
+        appBar: AppBar(
+          title: Text("Bluetooth Devices"),
+        ),
+        body: DefaultTabController(
+          length: 2,
+          child: Scaffold(
             backgroundColor: Theme.of(context).colorScheme.background,
-            appBar: AppBar(
-              title: Text("Bluetooth Devices"),
+            body: TabBarView(
+              controller: _tabController,
+              physics:
+                  NeverScrollableScrollPhysics(), // Disable swipe to change tabs
+              children: [
+                BLEPage(
+                    Provider.of<BluetoothController>(context).openEarableLeft,
+                    0),
+                BLEPage(
+                    Provider.of<BluetoothController>(context).openEarableRight,
+                    1),
+              ],
             ),
-            body: DefaultTabController(
-              length: 2,
-              child: Scaffold(
-                backgroundColor: Theme.of(context).colorScheme.background,
-                body: TabBarView(
-                  controller: _tabController,
-                  physics:
-                      NeverScrollableScrollPhysics(), // Disable swipe to change tabs
-                  children: [
-                    BLEPage(
-                        Provider.of<BluetoothController>(context)
-                            .openEarableLeft,
-                        0),
-                    BLEPage(
-                        Provider.of<BluetoothController>(context)
-                            .openEarableRight,
-                        1),
-                  ],
+            bottomNavigationBar: BottomNavigationBar(
+              backgroundColor: Theme.of(context).colorScheme.background,
+              currentIndex: _tabController.index,
+              onTap: (index) {
+                setState(() {
+                  _tabController.index = index;
+                });
+              },
+              items: [
+                BottomNavigationBarItem(
+                  label: 'Left Earable',
+                  icon: ImageIcon(
+                    AssetImage('assets/OpenEarableIconLeft.png'),
+                    size: 40.0,
+                  ),
                 ),
-                bottomNavigationBar: BottomNavigationBar(
-                  backgroundColor: Theme.of(context).colorScheme.background,
-                  currentIndex: _tabController.index,
-                  onTap: (index) {
-                    setState(() {
-                      _tabController.index = index;
-                    });
-                  },
-                  items: [
-                    BottomNavigationBarItem(
-                      label: 'Left Earable',
-                      icon: ImageIcon(
-                        AssetImage('assets/OpenEarableIconLeft.png'),
-                        size: 40.0,
-                      ),
-                    ),
-                    BottomNavigationBarItem(
-                      label: 'Right Earable',
-                      icon: ImageIcon(
-                        AssetImage('assets/OpenEarableIconRight.png'),
-                        size: 40.0,
-                      ),
-                    ),
-                  ],
+                BottomNavigationBarItem(
+                  label: 'Right Earable',
+                  icon: ImageIcon(
+                    AssetImage('assets/OpenEarableIconRight.png'),
+                    size: 40.0,
+                  ),
                 ),
-              ),
-            ));
+              ],
+            ),
+          ),
+        ));
   }
 }
 
