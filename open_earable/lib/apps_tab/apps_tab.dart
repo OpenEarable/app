@@ -48,8 +48,8 @@ class AppsTab extends StatelessWidget {
                             child: Recorder(_openEarable)))));
           }),
       AppInfo(
-          logoPath:
-              "lib/apps_tab/posture_tracker/assets/logo.png", //iconData: Icons.face_6,
+          logoPath: "lib/apps_tab/posture_tracker/assets/logo.png",
+          //iconData: Icons.face_6,
           title: "Posture Tracker",
           description: "Get feedback on bad posture",
           onTap: () {
@@ -79,8 +79,8 @@ class AppsTab extends StatelessWidget {
                                 child: JumpHeightTest(_openEarable))))));
           }),
       AppInfo(
-          logoPath:
-              "lib/apps_tab/jump_rope_counter/assets/logo.png", //iconData: Icons.keyboard_double_arrow_up,
+          logoPath: "lib/apps_tab/jump_rope_counter/assets/logo.png",
+          //iconData: Icons.keyboard_double_arrow_up,
           title: "Jump Rope Counter",
           description: "Count your rope skips",
           onTap: () {
@@ -120,8 +120,8 @@ class AppsTab extends StatelessWidget {
                             child: SleepHomeScreen(_openEarable)))));
           }),
       AppInfo(
-          logoPath:
-              "lib/apps_tab/tightness/assets/logo.png", //iconData: Icons.music_note,
+          logoPath: "lib/apps_tab/tightness/assets/logo.png",
+          //iconData: Icons.music_note,
           title: "Tightness Meter",
           description: "Practice your sense of rythm",
           onTap: () {
@@ -164,9 +164,7 @@ class AppsTab extends StatelessWidget {
             return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 5),
                 child: Card(
-                  color: Platform.isIOS
-                      ? CupertinoTheme.of(context).primaryContrastingColor
-                      : Theme.of(context).colorScheme.primary,
+                  color: Theme.of(context).colorScheme.primary,
                   child: ListTile(
                     iconColor: Colors.white,
                     textColor: Colors.white,
@@ -179,8 +177,8 @@ class AppsTab extends StatelessWidget {
                                 fit: BoxFit.cover))),
                     title: Text(apps[index].title),
                     subtitle: Text(apps[index].description),
-                    trailing: Icon(Icons.arrow_forward_ios,
-                        size: 16.0), // Arrow icon on the right
+                    trailing: Icon(Icons.arrow_forward_ios, size: 16.0),
+                    // Arrow icon on the right
                     onTap:
                         apps[index].onTap, // Callback when the card is tapped
                   ),

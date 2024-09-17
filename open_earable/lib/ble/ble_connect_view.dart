@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 class BLEPage extends StatefulWidget {
   final OpenEarable openEarable;
   final int earableIndex;
+
   BLEPage(this.openEarable, this.earableIndex);
 
   @override
@@ -16,6 +17,7 @@ class BLEPage extends StatefulWidget {
 
 class _BLEPageState extends State<BLEPage> {
   late OpenEarable _openEarable;
+
   @override
   void initState() {
     super.initState();
@@ -56,8 +58,8 @@ class _BLEPageState extends State<BLEPage> {
                   ),
                   child: ListView.builder(
                     padding: EdgeInsets.zero,
-                    physics:
-                        const NeverScrollableScrollPhysics(), // Disable scrolling,
+                    physics: const NeverScrollableScrollPhysics(),
+                    // Disable scrolling,
                     shrinkWrap: true,
                     itemCount: controller.discoveredDevices.length,
                     itemBuilder: (BuildContext context, int index) {
@@ -101,28 +103,18 @@ class _BLEPageState extends State<BLEPage> {
                   textAlign: TextAlign.center,
                 ))),
         Center(
-          child: Platform.isIOS
-              ? CupertinoButton(
-                  padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
-                  child: const Text('Restart Scan'),
-                  color: CupertinoTheme.of(context)
-                      .primaryColor, // iOS equivalent for a prominent button color
-                  onPressed: () =>
-                      Provider.of<BluetoothController>(context, listen: false)
-                          .startScanning(_openEarable),
-                )
-              : ElevatedButton(
-                  onPressed: () =>
-                      Provider.of<BluetoothController>(context, listen: false)
-                          .startScanning(_openEarable),
-                  style: ButtonStyle(
-                    foregroundColor: MaterialStateProperty.all(
-                        Theme.of(context).colorScheme.primary),
-                    backgroundColor: MaterialStateProperty.all(
-                        Theme.of(context).colorScheme.secondary),
-                  ),
-                  child: const Text('Restart Scan'),
-                ),
+          child: ElevatedButton(
+            onPressed: () =>
+                Provider.of<BluetoothController>(context, listen: false)
+                    .startScanning(_openEarable),
+            style: ButtonStyle(
+              foregroundColor: MaterialStateProperty.all(
+                  Theme.of(context).colorScheme.primary),
+              backgroundColor: MaterialStateProperty.all(
+                  Theme.of(context).colorScheme.secondary),
+            ),
+            child: const Text('Restart Scan'),
+          ),
         )
       ],
     ));
@@ -132,17 +124,13 @@ class _BLEPageState extends State<BLEPage> {
     if (_openEarable.bleManager.connectedDevice?.id == id) {
       return Icon(
           size: 24,
-          Platform.isIOS ? CupertinoIcons.check_mark : Icons.check,
-          color: Platform.isIOS
-              ? CupertinoTheme.of(context).primaryColor
-              : Theme.of(context).colorScheme.secondary);
+          Icons.check,
+          color: Theme.of(context).colorScheme.secondary);
     } else if (_openEarable.bleManager.connectingDevice?.id == id) {
       return SizedBox(
           height: 24,
           width: 24,
-          child: Platform.isIOS
-              ? CupertinoActivityIndicator()
-              : CircularProgressIndicator(strokeWidth: 2));
+          child: CircularProgressIndicator(strokeWidth: 2));
     }
     return const SizedBox.shrink();
   }
