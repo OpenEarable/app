@@ -21,61 +21,36 @@ class DynamicValuePicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (Platform.isIOS) {
-      return CupertinoButton(
-        borderRadius: BorderRadius.all(Radius.circular(4.0)),
-        disabledColor: Colors.grey[200]!,
-        color: this.isFakeDisabled || !isConnected
-            ? CupertinoColors.systemGrey
-            : CupertinoColors.white,
-        padding: EdgeInsets.fromLTRB(8, 0, 0, 0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: <Widget>[
-            Text(
-              currentValue,
-              style: TextStyle(
-                color: this.isFakeDisabled || !isConnected
-                    ? Colors.grey[700]
-                    : Colors.black,
-              ),
+    return DropdownButton<String>(
+      dropdownColor: Colors.white,
+      alignment: Alignment.centerRight,
+      value: currentValue,
+      onChanged: isConnected
+          ? (String? newValue) {
+              onValueChange(newValue!);
+            }
+          : null,
+      items: options.map((String value) {
+        return DropdownMenuItem<String>(
+          alignment: Alignment.centerRight,
+          value: value,
+          child: Text(
+            value,
+            style: TextStyle(
+              color: this.isFakeDisabled || !isConnected
+                  ? Colors.grey[700]
+                  : Colors.black,
             ),
-          ],
-        ),
-        onPressed: () => isConnected ? _showCupertinoPicker() : null,
-      );
-    } else {
-      return DropdownButton<String>(
-        dropdownColor: Colors.white,
-        alignment: Alignment.centerRight,
-        value: currentValue,
-        onChanged: isConnected
-            ? (String? newValue) {
-                onValueChange(newValue!);
-              }
-            : null,
-        items: options.map((String value) {
-          return DropdownMenuItem<String>(
-            alignment: Alignment.centerRight,
-            value: value,
-            child: Text(
-              value,
-              style: TextStyle(
-                color: this.isFakeDisabled || !isConnected
-                    ? Colors.grey[700]
-                    : Colors.black,
-              ),
-              textAlign: TextAlign.end,
-            ),
-          );
-        }).toList(),
-        underline: Container(),
-        icon: Icon(
-          Icons.arrow_drop_down,
-          color: isConnected ? Colors.black : Colors.grey[700],
-        ),
-      );
-    }
+            textAlign: TextAlign.end,
+          ),
+        );
+      }).toList(),
+      underline: Container(),
+      icon: Icon(
+        Icons.arrow_drop_down,
+        color: isConnected ? Colors.black : Colors.grey[700],
+      ),
+    );
   }
 
   void _showCupertinoPicker() {
@@ -90,7 +65,8 @@ class DynamicValuePicker extends StatelessWidget {
         child: CupertinoPicker(
           scrollController: scrollController,
           backgroundColor: isConnected ? Colors.white : Colors.grey[200],
-          itemExtent: 32, // Height of each item
+          itemExtent: 32,
+          // Height of each item
           onSelectedItemChanged: (int index) {
             String newValue = options[index];
             onValueChange(newValue);

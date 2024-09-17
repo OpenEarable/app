@@ -69,9 +69,7 @@ class _ConnectCard extends State<ConnectCard> {
     return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 5.0),
         child: Card(
-            color: Platform.isIOS
-                ? CupertinoTheme.of(context).primaryContrastingColor
-                : Theme.of(context).colorScheme.primary,
+            color: Theme.of(context).colorScheme.primary,
             child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                 child: Column(
@@ -93,38 +91,19 @@ class _ConnectCard extends State<ConnectCard> {
                         }),
                     Row(
                       children: [
-                        Platform.isIOS
-                            ? CupertinoCheckbox(
-                                value: _autoConnectEnabled,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _autoConnectEnabled = value ?? false;
-                                  });
-                                  _startAutoConnectScan();
-                                  if (value != null)
-                                    prefs.setBool("autoConnectEnabled", value);
-                                },
-                                activeColor: _autoConnectEnabled
-                                    ? CupertinoTheme.of(context).primaryColor
-                                    : CupertinoTheme.of(context)
-                                        .primaryContrastingColor,
-                                checkColor: CupertinoTheme.of(context)
-                                    .primaryContrastingColor,
-                              )
-                            : Checkbox(
-                                checkColor:
-                                    Theme.of(context).colorScheme.primary,
-                                //fillColor: Theme.of(context).colorScheme.primary,
-                                value: _autoConnectEnabled,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _autoConnectEnabled = value ?? false;
-                                  });
-                                  _startAutoConnectScan();
-                                  if (value != null)
-                                    prefs.setBool("autoConnectEnabled", value);
-                                },
-                              ),
+                        Checkbox(
+                          checkColor: Theme.of(context).colorScheme.primary,
+                          //fillColor: Theme.of(context).colorScheme.primary,
+                          value: _autoConnectEnabled,
+                          onChanged: (value) {
+                            setState(() {
+                              _autoConnectEnabled = value ?? false;
+                            });
+                            _startAutoConnectScan();
+                            if (value != null)
+                              prefs.setBool("autoConnectEnabled", value);
+                          },
+                        ),
                         Text(
                           "Connect to OpenEarable automatically",
                           style: TextStyle(
@@ -143,8 +122,8 @@ class _ConnectCard extends State<ConnectCard> {
                                   bleController.earableSOCLeft,
                               builder: (context, socLeft, child) {
                                 return _getEarableSelectButton(
-                                    imagePath:
-                                        "assets/OpenEarableV2-L.png", // path to your image asset
+                                    imagePath: "assets/OpenEarableV2-L.png",
+                                    // path to your image asset
                                     isSelected: OpenEarableSettingsV2()
                                             .selectedButtonIndex ==
                                         0,
@@ -191,32 +170,21 @@ class _ConnectCard extends State<ConnectCard> {
 
   Widget _getConnectButton(BuildContext context, String side) {
     return Container(
-      height: 37,
-      width: double.infinity,
-      child: !Platform.isIOS
-          ? ElevatedButton(
-              onPressed: () => _connectButtonAction(context, side),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xff77F2A1),
-                foregroundColor: Colors.black,
-              ),
-              child: Text("Connect"),
-            )
-          : CupertinoButton(
-              padding: EdgeInsets.zero,
-              color: CupertinoTheme.of(context).primaryColor,
-              child: Text("Connect"),
-              onPressed: () => _connectButtonAction(context, side)),
-    );
+        height: 37,
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: () => _connectButtonAction(context, side),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Color(0xff77F2A1),
+            foregroundColor: Colors.black,
+          ),
+          child: Text("Connect"),
+        ));
   }
 
   _connectButtonAction(BuildContext context, String side) {
-    Navigator.of(context).push(Platform.isIOS
-        ? CupertinoPageRoute(
-            builder: (context) => BLETabBarPage(index: side == "Left" ? 0 : 1))
-        : MaterialPageRoute(
-            builder: (context) =>
-                BLETabBarPage(index: side == "Left" ? 0 : 1)));
+    Navigator.of(context).push(MaterialPageRoute(
+        builder: (context) => BLETabBarPage(index: side == "Left" ? 0 : 1)));
   }
 
   void _tryAutoconnect(List<DiscoveredDevice> devices) async {
@@ -278,110 +246,59 @@ class _ConnectCard extends State<ConnectCard> {
     required onPressed,
     required int? percentage,
   }) {
-    if (Platform.isIOS) {
-      return CupertinoButton(
-        color: Color.fromARGB(255, 83, 81, 91),
-        onPressed: onPressed,
-        padding:
-            EdgeInsets.zero, // Remove padding to use the entire container space
-        child: Container(
-          padding: EdgeInsets.all(8.0), // Internal padding within the button
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(
-                7.0), // Slightly smaller radius for the inner border
-            border: Border.all(
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ButtonStyle(
+        backgroundColor: MaterialStateProperty.all(
+            Color.fromARGB(255, 83, 81, 91)), // Adjust the color as needed
+        shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.0),
+            side: BorderSide(
               color: isSelected
-                  ? CupertinoTheme.of(context).primaryColor
+                  ? Theme.of(context).colorScheme.secondary
                   : Colors.transparent,
               width: 3,
             ),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "${openEarable.bleManager.connectedDevice?.name ?? "OpenEarable-XXXX"}${_batteryPercentageString(percentage)}",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 15.0,
-                ),
-              ),
-              SizedBox(height: 8),
-              Image.asset(imagePath, fit: BoxFit.fill),
-              SizedBox(height: 8),
-              Text(
-                "Firmware: ${openEarable.deviceFirmwareVersion ?? "X.X.X"}",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 15.0,
-                ),
-              ),
-              Text(
-                "Hardware: ${openEarable.deviceHardwareVersion ?? "X.X.X"}",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 15.0,
-                ),
-              ),
-            ],
-          ),
         ),
-      );
-    } else {
-      return ElevatedButton(
-        onPressed: onPressed,
-        style: ButtonStyle(
-          backgroundColor: MaterialStateProperty.all(
-              Color.fromARGB(255, 83, 81, 91)), // Adjust the color as needed
-          shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-            RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10.0),
-              side: BorderSide(
-                color: isSelected
-                    ? Theme.of(context).colorScheme.secondary
-                    : Colors.transparent,
-                width: 3,
+        padding: MaterialStateProperty.all(
+            EdgeInsets.zero), // Adjust padding if necessary
+      ),
+      child: Container(
+        padding: EdgeInsets.all(8.0), // Padding inside the button for content
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "${openEarable.bleManager.connectedDevice?.name ?? "OpenEarable-XXXX"}${_batteryPercentageString(percentage)}",
+              // Assuming _openEarable and bleController are accessible
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 15.0,
               ),
             ),
-          ),
-          padding: MaterialStateProperty.all(
-              EdgeInsets.zero), // Adjust padding if necessary
+            SizedBox(height: 8),
+            Image.asset(imagePath, fit: BoxFit.fill),
+            SizedBox(height: 8),
+            Text(
+              "Firmware: ${openEarable.deviceFirmwareVersion ?? "X.X.X"}",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 15.0,
+              ),
+            ),
+            Text(
+              "Hardware: ${openEarable.deviceHardwareVersion ?? "X.X.X"}",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 15.0,
+              ),
+            ),
+          ],
         ),
-        child: Container(
-          padding: EdgeInsets.all(8.0), // Padding inside the button for content
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "${openEarable.bleManager.connectedDevice?.name ?? "OpenEarable-XXXX"}${_batteryPercentageString(percentage)}", // Assuming _openEarable and bleController are accessible
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 15.0,
-                ),
-              ),
-              SizedBox(height: 8),
-              Image.asset(imagePath, fit: BoxFit.fill),
-              SizedBox(height: 8),
-              Text(
-                "Firmware: ${openEarable.deviceFirmwareVersion ?? "X.X.X"}",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 15.0,
-                ),
-              ),
-              Text(
-                "Hardware: ${openEarable.deviceHardwareVersion ?? "X.X.X"}",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 15.0,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
+      ),
+    );
   }
 }

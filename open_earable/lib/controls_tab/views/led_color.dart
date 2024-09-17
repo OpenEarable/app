@@ -217,9 +217,7 @@ class _LEDColorCardState extends State<LEDColorCard> {
         padding: const EdgeInsets.symmetric(horizontal: 5.0),
         child: Card(
             //LED Color Picker Card
-            color: Platform.isIOS
-                ? CupertinoTheme.of(context).primaryContrastingColor
-                : Theme.of(context).colorScheme.primary,
+            color: Theme.of(context).colorScheme.primary,
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -254,64 +252,39 @@ class _LEDColorCardState extends State<LEDColorCard> {
                           SizedBox(
                             width: 66,
                             height: 36,
-                            child: Platform.isIOS
-                                ? CupertinoButton(
-                                    padding: EdgeInsets.zero,
-                                    child: Text('Set',
-                                        style: TextStyle(
-                                            color: connected
-                                                ? Colors.white
-                                                : null)),
-                                    onPressed: connected ? _setLEDColor : null,
-                                    color: Color(0xff53515b),
-                                  )
-                                : ElevatedButton(
-                                    onPressed: connected ? _setLEDColor : null,
-                                    style: ElevatedButton.styleFrom(
-                                        backgroundColor: Color(
-                                            0xff53515b), // Set the background color to grey
-                                        foregroundColor: Colors.white),
-                                    child: Text('Set'),
-                                  ),
+                            child: ElevatedButton(
+                              onPressed: connected ? _setLEDColor : null,
+                              style: ElevatedButton.styleFrom(
+                                  backgroundColor: Color(0xff53515b),
+                                  // Set the background color to grey
+                                  foregroundColor: Colors.white),
+                              child: Text('Set'),
+                            ),
                           ),
                           SizedBox(width: 5),
                           SizedBox(
                               width: 66,
                               height: 36,
-                              child: Platform.isIOS
-                                  ? CupertinoButton(
-                                      onPressed:
-                                          connected ? _startRainbowMode : null,
-                                      color: Color(0xff53515b),
-                                      padding: EdgeInsets.zero,
-                                      child: Text("🦄"))
-                                  : ElevatedButton(
-                                      onPressed:
-                                          connected ? _startRainbowMode : null,
-                                      style: ElevatedButton.styleFrom(
-                                          backgroundColor: Color(
-                                              0xff53515b), // Set the background color to grey
-                                          foregroundColor: Colors.white),
-                                      child: Text("🦄"),
-                                    )),
+                              child: ElevatedButton(
+                                onPressed: connected ? _startRainbowMode : null,
+                                style: ElevatedButton.styleFrom(
+                                    backgroundColor: Color(0xff53515b),
+                                    // Set the background color to grey
+                                    foregroundColor: Colors.white),
+                                child: Text("🦄"),
+                              )),
                           Spacer(),
                           SizedBox(
                             width: 66,
                             height: 36,
-                            child: Platform.isIOS
-                                ? CupertinoButton(
-                                    onPressed: connected ? _turnLEDoff : null,
-                                    padding: EdgeInsets.zero,
-                                    color: Color(0xfff27777),
-                                    child: Text('Off'))
-                                : ElevatedButton(
-                                    onPressed: connected ? _turnLEDoff : null,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Color(0xfff27777),
-                                      foregroundColor: Colors.black,
-                                    ),
-                                    child: Text('Off'),
-                                  ),
+                            child: ElevatedButton(
+                              onPressed: connected ? _turnLEDoff : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Color(0xfff27777),
+                                foregroundColor: Colors.black,
+                              ),
+                              child: Text('Off'),
+                            ),
                           )
                         ],
                       ),
