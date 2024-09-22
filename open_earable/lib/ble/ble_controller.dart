@@ -2,9 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:open_earable/controls_tab/models/open_earable_settings_v2.dart';
-import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class BluetoothController extends ChangeNotifier {

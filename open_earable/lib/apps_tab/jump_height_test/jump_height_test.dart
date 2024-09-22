@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:open_earable/apps_tab/jump_height_test/jump_height_chart.dart';
 import 'dart:async';
-import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:simple_kalman/simple_kalman.dart';
 import 'dart:math';
 import 'package:open_earable/shared/earable_not_connected_warning.dart';

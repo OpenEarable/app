@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:open_earable/apps_tab/powernapper/interact.dart';
 import 'package:open_earable/apps_tab/powernapper/sensor_datatypes.dart';
-import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart';
 
 /// Movement Tracker has lgoic for timer & movement validation.
 class MovementTracker {
