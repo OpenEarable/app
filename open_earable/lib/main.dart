@@ -1,21 +1,13 @@
-import 'dart:io';
 import 'dart:async';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:open_earable/ble/ble_tab_bar_page.dart';
 import 'package:open_earable/controls_tab/models/open_earable_settings_v2.dart';
 import 'package:open_earable/shared/open_earable_icon_icons.dart';
 import 'package:provider/provider.dart';
 import 'controls_tab/controls_tab.dart';
 import 'sensor_data_tab/sensor_data_tab.dart';
-import 'package:open_earable/ble/ble_connect_view.dart';
 import 'package:open_earable/ble/ble_controller.dart';
 import 'apps_tab/apps_tab.dart';
-import 'package:open_earable_flutter/src/open_earable_flutter.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
-import 'package:app_settings/app_settings.dart';
 import 'shared/global_theme.dart';
 
 void main() => runApp(ChangeNotifierProvider(
@@ -39,7 +31,6 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _selectedIndex = 0;
-  final flutterReactiveBle = FlutterReactiveBle();
   late bool alertOpen;
   late List<Widget> _widgetOptions;
   StreamSubscription? blePermissionSubscription;
@@ -48,7 +39,6 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState() {
     super.initState();
     alertOpen = false;
-    _checkBLEPermission();
   }
 
   @override
@@ -69,61 +59,6 @@ class _MyHomePageState extends State<MyHomePage> {
   dispose() {
     super.dispose();
     blePermissionSubscription?.cancel();
-  }
-
-  Future<void> _checkBLEPermission() async {
-    PermissionStatus status = await Permission.bluetoothConnect.request();
-    await Permission.location.request();
-    await Permission.bluetoothScan.request();
-    if (status.isGranted) {
-      print("BLE is working");
-    }
-    blePermissionSubscription =
-        flutterReactiveBle.statusStream.listen((status) {
-      if (status != BleStatus.ready &&
-          status != BleStatus.unknown &&
-          alertOpen == false) {
-        alertOpen = true;
-        _showBluetoothAlert(context);
-      }
-    });
-  }
-
-  void _showBluetoothAlert(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("Bluetooth disabled"),
-          content: Text(
-              "Please make sure your device's bluetooth and location services are turned on and this app has been granted permission to use them in the app's settings.\nThis alert can only be closed if these requirements are fulfilled."),
-          actions: <Widget>[
-            TextButton(
-              child: Text(
-                'Open App Settings',
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.onBackground),
-              ),
-              onPressed: () {
-                AppSettings.openAppSettings();
-              },
-            ),
-            TextButton(
-              child: Text('OK',
-                  style: TextStyle(
-                      color: Theme.of(context).colorScheme.onBackground)),
-              onPressed: () {
-                if (flutterReactiveBle.status == BleStatus.ready) {
-                  alertOpen = false;
-                  Navigator.of(context).pop();
-                }
-              },
-            ),
-          ],
-        );
-      },
-    );
   }
 
   void _onItemTapped(int index) {
