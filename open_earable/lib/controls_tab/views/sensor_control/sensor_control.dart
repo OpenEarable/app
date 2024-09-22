@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:open_earable/ble/ble_controller.dart';
 import 'sensor_control_row.dart';
-import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:provider/provider.dart';
 import '../../models/open_earable_settings_v2.dart';
 
