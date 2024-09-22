@@ -9,7 +9,7 @@ import 'package:open_earable/apps_tab/step_counter/step_counter.dart';
 import 'package:open_earable/apps_tab/tightness/tightness.dart';
 import 'package:open_earable/apps_tab/recorder/lib/recorder.dart';
 import 'package:open_earable/apps_tab/jump_height_test/jump_height_test.dart';
-import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart';
 import '../shared/global_theme.dart';
 import 'package:open_earable/apps_tab/jump_rope_counter/jump_rope_counter.dart';
 import 'powernapper/home_screen.dart';
