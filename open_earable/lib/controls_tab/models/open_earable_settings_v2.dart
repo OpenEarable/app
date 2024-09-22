@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart';
 
 class OpenEarableSettingsV2 {
   static final OpenEarableSettingsV2 _instance =

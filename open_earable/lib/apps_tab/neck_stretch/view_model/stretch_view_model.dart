@@ -4,7 +4,7 @@ import "package:flutter/material.dart";
 import 'package:open_earable/apps_tab/posture_tracker/model/attitude.dart';
 import 'package:open_earable/apps_tab/posture_tracker/model/attitude_tracker.dart';
 import 'package:open_earable/apps_tab/neck_stretch/model/stretch_state.dart';
-import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart';
 
 class StretchViewModel extends ChangeNotifier {
   Attitude _attitude = Attitude();
