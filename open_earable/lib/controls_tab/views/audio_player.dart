@@ -31,6 +31,8 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     super.initState();
     _filenameTextController = TextEditingController(
         text: "${OpenEarableSettings().selectedFilename}");
+    _jingleTextController = TextEditingController(
+        text: "${OpenEarableSettings().selectedJingle}");
     _frequencyTextController = TextEditingController(
         text: "${OpenEarableSettings().selectedFrequency}");
     _frequencyVolumeTextController = TextEditingController(
