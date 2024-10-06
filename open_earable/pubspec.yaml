@@ -37,7 +37,6 @@ dependencies:
       url: https://github.com/OpenEarable/open_earable_flutter.git
   youtube_player_flutter: ^9.0.3
   permission_handler: ^11.3.1
-  flutter_reactive_ble: ^5.3.1
   app_settings: ^5.1.1
 
   # The following adds the Cupertino Icons font to your application.
