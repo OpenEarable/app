@@ -31,9 +31,7 @@ class _ControlTabState extends State<ControlTab> {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
         child: GestureDetector(
-            onTap: () => Platform.isIOS
-                ? FocusScope.of(context).requestFocus(FocusNode())
-                : FocusScope.of(context).unfocus(),
+            onTap: () => FocusScope.of(context).unfocus(),
             child: Selector<BluetoothController, bool>(
                 selector: (context, controller) => controller.isV2,
                 builder: (context, isV2, child) {

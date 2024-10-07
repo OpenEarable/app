@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:open_earable/apps_tab/neck_stretch/view_model/stretch_view_model.dart';
-import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart';
 
 /// Enum for the neck stretch states
 enum NeckStretchState {

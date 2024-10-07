@@ -35,9 +35,9 @@ dependencies:
   open_earable_flutter:
     git: 
       url: https://github.com/OpenEarable/open_earable_flutter.git
-  youtube_player_flutter: ^9.0.3
+      ref: web_compatibility
+  youtube_player_flutter: 9.0.0
   permission_handler: ^11.3.1
-  flutter_reactive_ble: ^5.3.1
   app_settings: ^5.1.1
 
   # The following adds the Cupertino Icons font to your application.
@@ -101,7 +101,7 @@ flutter_native_splash:
   # IMPORTANT NOTE: These parameter do not affect the configuration of Android 12 and later, which
   # handle splash screens differently that prior versions of Android.  Android 12 and later must be
   # configured specifically in the android_12 section below.
-  
+
   # color or background_image is the only required parameter.  Use color to set the background
   # of your splash screen to a solid color.  Use background_image to set the background of your
   # splash screen to a png image.  This is useful for gradients. The image will be stretch to the

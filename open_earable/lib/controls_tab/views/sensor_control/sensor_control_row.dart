@@ -8,47 +8,36 @@ import 'package:open_earable/ble/ble_controller.dart';
 
 class SensorControlRow extends StatefulWidget {
   final String _sensorName;
+
   SensorControlRow(this._sensorName);
+
   @override
   _SensorControlRow createState() => _SensorControlRow(_sensorName);
 }
 
 class _SensorControlRow extends State<SensorControlRow> {
   String _sensorName;
+
   _SensorControlRow(this._sensorName);
+
   @override
   Widget build(BuildContext context) {
     SensorSettings sensorSettings =
         Provider.of<SensorSettings>(context, listen: true);
     return Row(
       children: [
-        Platform.isIOS
-            ? CupertinoCheckbox(
-                value: sensorSettings.sensorSelected,
-                onChanged: Provider.of<BluetoothController>(context).connected
-                    ? (value) {
-                        setState(() {
-                          sensorSettings.sensorSelected = value ?? false;
-                        });
-                      }
-                    : null,
-                activeColor: sensorSettings.sensorSelected
-                    ? CupertinoTheme.of(context).primaryColor
-                    : CupertinoTheme.of(context).primaryContrastingColor,
-                checkColor: CupertinoTheme.of(context).primaryContrastingColor,
-              )
-            : Checkbox(
-                checkColor: Theme.of(context).colorScheme.primary,
-                fillColor: MaterialStateProperty.resolveWith(_getCheckboxColor),
-                value: sensorSettings.sensorSelected,
-                onChanged: Provider.of<BluetoothController>(context).connected
-                    ? (value) {
-                        setState(() {
-                          sensorSettings.sensorSelected = value ?? false;
-                        });
-                      }
-                    : null,
-              ),
+        Checkbox(
+          checkColor: Theme.of(context).colorScheme.primary,
+          fillColor: MaterialStateProperty.resolveWith(_getCheckboxColor),
+          value: sensorSettings.sensorSelected,
+          onChanged: Provider.of<BluetoothController>(context).connected
+              ? (value) {
+                  setState(() {
+                    sensorSettings.sensorSelected = value ?? false;
+                  });
+                }
+              : null,
+        ),
         Text(
           _sensorName,
           style: TextStyle(

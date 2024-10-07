@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:open_earable/apps_tab/posture_tracker/model/attitude_tracker.dart';
 import 'package:open_earable/apps_tab/posture_tracker/model/ewma.dart';
-import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart';
 
 class EarableAttitudeTracker extends AttitudeTracker {
   final OpenEarable _openEarable;
