@@ -8,7 +8,7 @@ import 'package:open_earable/apps_tab/posture_tracker/view/settings_view.dart';
 import 'package:open_earable/apps_tab/posture_tracker/view_model/posture_tracker_view_model.dart';
 import 'package:provider/provider.dart';
 
-import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart';
 
 class PostureTrackerView extends StatefulWidget {
   final AttitudeTracker _tracker;

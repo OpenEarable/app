@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:open_earable/ble/ble_controller.dart';
 import 'package:open_earable/shared/earable_not_connected_warning.dart';
 import 'dart:async';
-import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:provider/provider.dart';
 
 /**

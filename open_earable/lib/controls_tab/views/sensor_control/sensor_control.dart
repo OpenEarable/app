@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:open_earable/ble/ble_controller.dart';
 import 'sensor_control_row.dart';
-import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:provider/provider.dart';
 import '../../models/open_earable_settings_v2.dart';
 
@@ -95,9 +95,7 @@ class _SensorControlCardState extends State<SensorControlCard> {
       padding: const EdgeInsets.symmetric(horizontal: 5.0),
       child: Card(
         //Audio Player Card
-        color: Platform.isIOS
-            ? CupertinoTheme.of(context).primaryContrastingColor
-            : Theme.of(context).colorScheme.primary,
+        color: Theme.of(context).colorScheme.primary,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
           child: Column(
@@ -113,7 +111,8 @@ class _SensorControlCardState extends State<SensorControlCard> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  Spacer(), // This matches the Spacer in your DynamicValuePicker row
+                  Spacer(),
+                  // This matches the Spacer in your DynamicValuePicker row
                   SizedBox(
                     width: 70,
                     height: 37,
@@ -125,9 +124,8 @@ class _SensorControlCardState extends State<SensorControlCard> {
                               color: Color.fromRGBO(168, 168, 172, 1.0))),
                     ),
                   ),
-                  SizedBox(
-                      width:
-                          8), // Space between the first title and the second title
+                  SizedBox(width: 8),
+                  // Space between the first title and the second title
                   SizedBox(
                     width: 70,
                     height: 37,
@@ -139,45 +137,42 @@ class _SensorControlCardState extends State<SensorControlCard> {
                               color: Color.fromRGBO(168, 168, 172, 1.0))),
                     ),
                   ),
-                  SizedBox(width: 8), // Space before the "Hz" label
+                  SizedBox(width: 8),
+                  // Space before the "Hz" label
                   Text("Hz",
                       textAlign: TextAlign.left,
                       style:
                           TextStyle(color: Color.fromRGBO(168, 168, 172, 0))),
                 ],
               ),
-              ChangeNotifierProvider<SensorSettings>(
-                  create: (_) => OpenEarableSettingsV2().microphone1Settings,
+              ChangeNotifierProvider<SensorSettings>.value(
+                  value: OpenEarableSettingsV2().microphone1Settings,
                   child: SensorControlRow("Microphone 1")),
               SizedBox(height: 4),
-              ChangeNotifierProvider<SensorSettings>(
-                  create: (context) =>
-                      OpenEarableSettingsV2().microphone2Settings,
+              ChangeNotifierProvider<SensorSettings>.value(
+                  value: OpenEarableSettingsV2().microphone2Settings,
                   child: SensorControlRow("Microphone 2")),
               Divider(
                 color: Color.fromRGBO(168, 168, 172, 1.0),
               ),
-              ChangeNotifierProvider<SensorSettings>(
-                  create: (context) => OpenEarableSettingsV2().imuSettings,
+              ChangeNotifierProvider<SensorSettings>.value(
+                  value: OpenEarableSettingsV2().imuSettings,
                   child: SensorControlRow("9-Axis IMU")),
               SizedBox(height: 4),
-              ChangeNotifierProvider<SensorSettings>(
-                  create: (context) =>
-                      OpenEarableSettingsV2().pulseOximeterSettings,
+              ChangeNotifierProvider<SensorSettings>.value(
+                  value: OpenEarableSettingsV2().pulseOximeterSettings,
                   child: SensorControlRow("Pulse Oximeter\n(Red/Infrared)")),
               SizedBox(height: 4),
-              ChangeNotifierProvider<SensorSettings>(
-                  create: (context) => OpenEarableSettingsV2().vitalsSettings,
+              ChangeNotifierProvider<SensorSettings>.value(
+                  value: OpenEarableSettingsV2().vitalsSettings,
                   child: SensorControlRow("Heart Rate,\nSpO2")),
               SizedBox(height: 4),
-              ChangeNotifierProvider<SensorSettings>(
-                  create: (context) =>
-                      OpenEarableSettingsV2().opticalTemperatureSettings,
+              ChangeNotifierProvider<SensorSettings>.value(
+                  value: OpenEarableSettingsV2().opticalTemperatureSettings,
                   child: SensorControlRow("Optical Temp.\n(Surface)")),
               SizedBox(height: 4),
-              ChangeNotifierProvider<SensorSettings>(
-                  create: (context) =>
-                      OpenEarableSettingsV2().barometerSettings,
+              ChangeNotifierProvider<SensorSettings>.value(
+                  value: OpenEarableSettingsV2().barometerSettings,
                   child: SensorControlRow("Pressure,\nTemp. (Ambient)")),
               SizedBox(height: 8),
               Row(
@@ -185,41 +180,24 @@ class _SensorControlCardState extends State<SensorControlCard> {
                   Expanded(
                     child: SizedBox(
                       height: 37,
-                      child: Platform.isIOS
-                          ? CupertinoButton(
-                              padding: EdgeInsets.zero,
-                              onPressed:
-                                  Provider.of<BluetoothController>(context)
-                                          .connected
-                                      ? () => _writeSensorConfigs()
-                                      : null,
-                              color: Provider.of<BluetoothController>(context)
+                      child: ElevatedButton(
+                        onPressed:
+                            Provider.of<BluetoothController>(context).connected
+                                ? _writeSensorConfigs
+                                : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              Provider.of<BluetoothController>(context)
                                       .connected
-                                  ? CupertinoTheme.of(context).primaryColor
+                                  ? Theme.of(context).colorScheme.secondary
                                   : Colors.grey,
-                              child: Text("Set Configuration"),
-                            )
-                          : ElevatedButton(
-                              onPressed:
-                                  Provider.of<BluetoothController>(context)
-                                          .connected
-                                      ? _writeSensorConfigs
-                                      : null,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor:
-                                    Provider.of<BluetoothController>(context)
-                                            .connected
-                                        ? Theme.of(context)
-                                            .colorScheme
-                                            .secondary
-                                        : Colors.grey,
-                                foregroundColor: Colors.black,
-                                enableFeedback:
-                                    Provider.of<BluetoothController>(context)
-                                        .connected,
-                              ),
-                              child: Text("Set Configuration"),
-                            ),
+                          foregroundColor: Colors.black,
+                          enableFeedback:
+                              Provider.of<BluetoothController>(context)
+                                  .connected,
+                        ),
+                        child: Text("Set Configuration"),
+                      ),
                     ),
                   ),
                 ],

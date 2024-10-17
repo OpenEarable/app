@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:open_earable/shared/earable_not_connected_warning.dart';
 import 'dart:async';
 import 'dart:io';
-import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 

@@ -2,9 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:open_earable/controls_tab/models/open_earable_settings_v2.dart';
-import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class BluetoothController extends ChangeNotifier {
@@ -15,6 +14,9 @@ class BluetoothController extends ChangeNotifier {
   OpenEarable get openEarableRight => _openEarableRight;
   OpenEarable _openEarableLeft = OpenEarable();
   OpenEarable _openEarableRight = OpenEarable();
+
+  bool _isV2 = false;
+  bool get isV2 => _isV2;
 
   late OpenEarable _currentOpenEarable;
   OpenEarable get currentOpenEarable => _currentOpenEarable;
@@ -67,6 +69,7 @@ class BluetoothController extends ChangeNotifier {
 
     _connectionStateSubscriptionLeft =
         _openEarableLeft.bleManager.connectionStateStream.listen((connected) {
+      _isV2 = _openEarableLeft.deviceHardwareVersion?.substring(0, 1) == "2";
       _connectedLeft = connected;
       if (connected) {
         _getSOCLeft();
@@ -153,6 +156,8 @@ class BluetoothController extends ChangeNotifier {
       prefs.setString("lastConnectedDeviceName" + otherSide, "");
     }
     prefs.setString("lastConnectedDeviceName" + side, device.name);
-    notifyListeners();
+    Future.microtask(() {
+      notifyListeners();
+    });
   }
 }

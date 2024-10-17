@@ -2,7 +2,7 @@ import 'dart:math';
 
 import 'package:open_earable/apps_tab/posture_tracker/model/attitude.dart';
 import 'package:open_earable/apps_tab/posture_tracker/model/attitude_tracker.dart';
-import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart';
 
 class BadPostureSettings {
   bool isActive;

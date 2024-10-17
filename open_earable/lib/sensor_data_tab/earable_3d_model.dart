@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:math';
-import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
@@ -74,7 +74,7 @@ class _Earable3DModelState extends State<Earable3DModel> {
           child: ModelViewer(
               cameraControls: false,
               backgroundColor: Theme.of(context).colorScheme.background,
-              src: 'assets/OpenEarableV2-L.glb',
+              src: 'assets/OpenEarableV1.glb',
               alt: 'A 3D model of an astronaut',
               interactionPrompt: InteractionPrompt.none,
               autoRotate: false,

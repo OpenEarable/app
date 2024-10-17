@@ -1,4 +1,4 @@
-import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart';
 
 ///Interaction class for the earable. All actions executed on the earable are accessible through this class.
 ///For example rings or led colors.

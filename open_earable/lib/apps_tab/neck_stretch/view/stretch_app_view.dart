@@ -9,7 +9,7 @@ import 'package:open_earable/apps_tab/neck_stretch/view/stretch_settings_view.da
 import 'package:open_earable/apps_tab/neck_stretch/view/stretch_stats_view.dart';
 import 'package:open_earable/shared/global_theme.dart';
 
-import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart';
 
 class MenuItem {
   final IconData iconData;

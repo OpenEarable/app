@@ -3,26 +3,18 @@ import 'package:flutter/material.dart';
 import 'package:open_earable/shared/dynamic_value_picker.dart';
 import 'dart:io';
 import 'package:open_earable/ble/ble_controller.dart';
-import 'package:open_earable_flutter/src/open_earable_flutter.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:provider/provider.dart';
 import '../models/open_earable_settings.dart';
 
-class SensorConfigurationCard extends StatefulWidget {
-  final OpenEarable _openEarable;
-  SensorConfigurationCard(this._openEarable);
-
+class V1SensorConfigurationCard extends StatefulWidget {
   @override
-  _SensorConfigurationCardState createState() =>
-      _SensorConfigurationCardState(_openEarable);
+  _V1SensorConfigurationCardState createState() =>
+      _V1SensorConfigurationCardState();
 }
 
-class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
-  final OpenEarable _openEarable;
-  _SensorConfigurationCardState(this._openEarable);
-
-  void initState() {
-    super.initState();
-  }
+class _V1SensorConfigurationCardState extends State<V1SensorConfigurationCard> {
+  late OpenEarable _openEarable;
 
   Color _getCheckboxColor(Set<MaterialState> states) {
     const Set<MaterialState> interactiveStates = <MaterialState>{
@@ -98,13 +90,13 @@ class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
 
   @override
   Widget build(BuildContext context) {
+    _openEarable = Provider.of<BluetoothController>(context, listen: false)
+        .openEarableLeft;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 5.0),
       child: Card(
         //Audio Player Card
-        color: Platform.isIOS
-            ? CupertinoTheme.of(context).primaryContrastingColor
-            : Theme.of(context).colorScheme.primary,
+        color: Theme.of(context).colorScheme.primary,
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -163,41 +155,24 @@ class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
                   Expanded(
                     child: SizedBox(
                       height: 37,
-                      child: Platform.isIOS
-                          ? CupertinoButton(
-                              padding: EdgeInsets.zero,
-                              onPressed:
-                                  Provider.of<BluetoothController>(context)
-                                          .connected
-                                      ? () => _writeSensorConfigs()
-                                      : null,
-                              color: Provider.of<BluetoothController>(context)
+                      child: ElevatedButton(
+                        onPressed:
+                            Provider.of<BluetoothController>(context).connected
+                                ? _writeSensorConfigs
+                                : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              Provider.of<BluetoothController>(context)
                                       .connected
-                                  ? CupertinoTheme.of(context).primaryColor
+                                  ? Theme.of(context).colorScheme.secondary
                                   : Colors.grey,
-                              child: Text("Set Configuration"),
-                            )
-                          : ElevatedButton(
-                              onPressed:
-                                  Provider.of<BluetoothController>(context)
-                                          .connected
-                                      ? _writeSensorConfigs
-                                      : null,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor:
-                                    Provider.of<BluetoothController>(context)
-                                            .connected
-                                        ? Theme.of(context)
-                                            .colorScheme
-                                            .secondary
-                                        : Colors.grey,
-                                foregroundColor: Colors.black,
-                                enableFeedback:
-                                    Provider.of<BluetoothController>(context)
-                                        .connected,
-                              ),
-                              child: Text("Set Configuration"),
-                            ),
+                          foregroundColor: Colors.black,
+                          enableFeedback:
+                              Provider.of<BluetoothController>(context)
+                                  .connected,
+                        ),
+                        child: Text("Set Configuration"),
+                      ),
                     ),
                   ),
                 ],
@@ -218,25 +193,14 @@ class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
       Function(String) changeSelection) {
     return Row(
       children: [
-        Platform.isIOS
-            ? CupertinoCheckbox(
-                value: settingSelected,
-                onChanged: Provider.of<BluetoothController>(context).connected
-                    ? changeBool
-                    : null,
-                activeColor: settingSelected
-                    ? CupertinoTheme.of(context).primaryColor
-                    : CupertinoTheme.of(context).primaryContrastingColor,
-                checkColor: CupertinoTheme.of(context).primaryContrastingColor,
-              )
-            : Checkbox(
-                checkColor: Theme.of(context).colorScheme.primary,
-                fillColor: MaterialStateProperty.resolveWith(_getCheckboxColor),
-                value: settingSelected,
-                onChanged: Provider.of<BluetoothController>(context).connected
-                    ? changeBool
-                    : null,
-              ),
+        Checkbox(
+          checkColor: Theme.of(context).colorScheme.primary,
+          fillColor: MaterialStateProperty.resolveWith(_getCheckboxColor),
+          value: settingSelected,
+          onChanged: Provider.of<BluetoothController>(context).connected
+              ? changeBool
+              : null,
+        ),
         Text(
           sensorName,
           style: TextStyle(
@@ -248,7 +212,7 @@ class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
             decoration: BoxDecoration(
               color: Provider.of<BluetoothController>(context).connected
                   ? Colors.white
-                  : Colors.grey[200],
+                  : Colors.grey,
               borderRadius: BorderRadius.circular(4.0),
             ),
             child: SizedBox(
@@ -257,12 +221,13 @@ class _SensorConfigurationCardState extends State<SensorConfigurationCard> {
                 child: Container(
                     alignment: Alignment.centerRight,
                     child: DynamicValuePicker(
-                        context,
-                        options,
-                        currentValue,
-                        changeSelection,
-                        Provider.of<BluetoothController>(context).connected,
-                        false)))),
+                      context,
+                      options,
+                      currentValue,
+                      changeSelection,
+                      Provider.of<BluetoothController>(context).connected,
+                      false,
+                    )))),
         SizedBox(width: 8),
         Text("Hz", style: TextStyle(color: Color.fromRGBO(168, 168, 172, 1.0))),
       ],

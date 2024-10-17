@@ -5,31 +5,38 @@ import 'package:open_earable/ble/ble_controller.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:provider/provider.dart';
 
-class BLEPage extends StatefulWidget {
+class V1BLEPage extends StatefulWidget {
   final OpenEarable openEarable;
-  final int earableIndex;
 
-  BLEPage(this.openEarable, this.earableIndex);
+  V1BLEPage(this.openEarable);
 
   @override
-  _BLEPageState createState() => _BLEPageState();
+  _V1BLEPageState createState() => _V1BLEPageState();
 }
 
-class _BLEPageState extends State<BLEPage> {
+class _V1BLEPageState extends State<V1BLEPage> {
+  final String _pageTitle = "Bluetooth Devices";
   late OpenEarable _openEarable;
 
   @override
   void initState() {
     super.initState();
     _openEarable = widget.openEarable;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<BluetoothController>(context, listen: false)
-          .startScanning(_openEarable);
-    });
+    Provider.of<BluetoothController>(context, listen: false)
+        .startScanning(_openEarable);
   }
 
   @override
   Widget build(BuildContext context) {
+    return Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.background,
+        appBar: AppBar(
+          title: Text(_pageTitle),
+        ),
+        body: _getBody());
+  }
+
+  Widget _getBody() {
     return SingleChildScrollView(
         child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -76,7 +83,7 @@ class _BLEPageState extends State<BLEPage> {
                               trailing: _buildTrailingWidget(device.id),
                               onTap: () {
                                 controller.connectToDevice(
-                                    device, _openEarable, widget.earableIndex);
+                                    device, _openEarable, 0);
                               },
                             )),
                         if (index != controller.discoveredDevices.length - 1)
