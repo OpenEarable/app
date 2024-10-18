@@ -11,6 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
       - run: (cd open_earable && flutter build web --dart-define=BUILD_COMMIT=$(git
           rev-parse --short HEAD) --dart-define=BUILD_BRANCH=$(git rev-parse
           --abbrev-ref HEAD))
