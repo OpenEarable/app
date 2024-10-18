@@ -13,6 +13,12 @@
     ⬇️ Download Android beta app
   </a>
 </p>
+  
+<p>
+  <a href="https://open-earable-web.web.app">
+    ↗️ Open Web app
+  </a> (Needs Web Bluetooth support)
+</p>
 
 <p>
   <a href="https://forms.gle/R3LMcqtyKwVH7PZB9">
