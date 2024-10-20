@@ -35,7 +35,7 @@ dependencies:
   open_earable_flutter:
     git: 
       url: https://github.com/OpenEarable/open_earable_flutter.git
-  youtube_player_flutter: ^9.0.3
+  youtube_player_flutter: ^9.1.1
   permission_handler: ^11.3.1
   app_settings: ^5.1.1
 
@@ -44,7 +44,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   
   english_words: ^4.0.0
-  model_viewer_plus: ^1.8.0
+  model_viewer_plus: 1.8.0
   vector_math: ^2.1.4
   flutter_native_splash: ^2.4.1
   simple_kalman: ^1.0.2
@@ -58,21 +58,10 @@ dependencies:
   collection: ^1.18.0
   webview_flutter: ^4.9.0
   intl: ^0.18.1
-  
+
 dependency_overrides:
   intl: ^0.18.1
-  # This is needed as of 09.09.2024, because XCode Cloud fails building without this fix.
-  # Refer to: https://github.com/pichillilorenzo/flutter_inappwebview/issues/2221
-  flutter_inappwebview_ios:
-    git:
-      url: https://github.com/pichillilorenzo/flutter_inappwebview
-      ref: master
-      path: flutter_inappwebview_ios
-  flutter_inappwebview_macos:
-    git:
-      url: https://github.com/pichillilorenzo/flutter_inappwebview
-      ref: master
-      path: flutter_inappwebview_macos
+  web: 0.5.1
   
 dev_dependencies:
   flutter_test:
