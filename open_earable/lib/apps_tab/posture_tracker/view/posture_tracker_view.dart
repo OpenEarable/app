@@ -14,7 +14,7 @@ class PostureTrackerView extends StatefulWidget {
   final AttitudeTracker _tracker;
   final OpenEarable _openEarable;
 
-  PostureTrackerView(this._tracker, this._openEarable);
+  const PostureTrackerView(this._tracker, this._openEarable, {super.key});
 
   @override
   State<PostureTrackerView> createState() => _PostureTrackerViewState();
@@ -25,7 +25,7 @@ class _PostureTrackerViewState extends State<PostureTrackerView> {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider<PostureTrackerViewModel>(
         create: (context) => PostureTrackerViewModel(widget._tracker,
-            BadPostureReminder(widget._openEarable, widget._tracker)),
+            BadPostureReminder(widget._openEarable, widget._tracker),),
         builder: (context, child) => Consumer<PostureTrackerViewModel>(
             builder: (context, postureTrackerViewModel, child) => Scaffold(
                   appBar: AppBar(
@@ -35,15 +35,15 @@ class _PostureTrackerViewState extends State<PostureTrackerView> {
                           onPressed: () => Navigator.of(context).push(
                               MaterialPageRoute(
                                   builder: (context) =>
-                                      SettingsView(postureTrackerViewModel))),
-                          icon: Icon(Icons.settings)),
+                                      SettingsView(postureTrackerViewModel),),),
+                          icon: Icon(Icons.settings),),
                     ],
                   ),
                   body: Center(
                     child: this._buildContentView(postureTrackerViewModel),
                   ),
-                  backgroundColor: Theme.of(context).colorScheme.background,
-                )));
+                  backgroundColor: Theme.of(context).colorScheme.surface,
+                ),),);
   }
 
   Widget _buildContentView(PostureTrackerViewModel postureTrackerViewModel) {
@@ -52,13 +52,13 @@ class _PostureTrackerViewState extends State<PostureTrackerView> {
       ...headViews.map((e) => FractionallySizedBox(
             widthFactor: .7,
             child: e,
-          )),
+          ),),
       this._buildTrackingButton(postureTrackerViewModel),
-    ]);
+    ],);
   }
 
   Widget _buildHeadView(String headAssetPath, String neckAssetPath,
-      AlignmentGeometry headAlignment, double roll, double angleThreshold) {
+      AlignmentGeometry headAlignment, double roll, double angleThreshold,) {
     return Padding(
       padding: const EdgeInsets.all(5),
       child: PostureRollView(
@@ -79,14 +79,14 @@ class _PostureTrackerViewState extends State<PostureTrackerView> {
           Alignment.center.add(Alignment(0, 0.3)),
           postureTrackerViewModel.attitude.roll,
           postureTrackerViewModel.badPostureSettings.rollAngleThreshold
-              .toDouble()),
+              .toDouble(),),
       this._buildHeadView(
           "lib/apps_tab/posture_tracker/assets/Head_Side.png",
           "lib/apps_tab/posture_tracker/assets/Neck_Side.png",
           Alignment.center.add(Alignment(0, 0.3)),
           -postureTrackerViewModel.attitude.pitch,
           postureTrackerViewModel.badPostureSettings.pitchAngleThreshold
-              .toDouble()),
+              .toDouble(),),
     ];
   }
 
@@ -122,7 +122,7 @@ class _PostureTrackerViewState extends State<PostureTrackerView> {
             fontSize: 12,
           ),
         ),
-      )
-    ]);
+      ),
+    ],);
   }
 }

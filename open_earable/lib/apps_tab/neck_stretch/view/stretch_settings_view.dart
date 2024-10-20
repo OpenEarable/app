@@ -7,7 +7,7 @@ import 'dart:core';
 class SettingsView extends StatefulWidget {
   final StretchViewModel _viewModel;
 
-  SettingsView(this._viewModel);
+  const SettingsView(this._viewModel, {super.key});
 
   @override
   State<SettingsView> createState() => _SettingsViewState();
@@ -26,35 +26,35 @@ class _SettingsViewState extends State<SettingsView> {
   @override
   void initState() {
     super.initState();
-    this._viewModel = widget._viewModel;
+    _viewModel = widget._viewModel;
     _mainNeckDuration = TextEditingController(
         text:
-            _viewModel.stretchSettings.mainNeckRelaxation.inSeconds.toString());
+            _viewModel.stretchSettings.mainNeckRelaxation.inSeconds.toString(),);
     _leftNeckDuration = TextEditingController(
         text:
-            _viewModel.stretchSettings.leftNeckRelaxation.inSeconds.toString());
+            _viewModel.stretchSettings.leftNeckRelaxation.inSeconds.toString(),);
     _rightNeckDuration = TextEditingController(
         text: _viewModel.stretchSettings.rightNeckRelaxation.inSeconds
-            .toString());
+            .toString(),);
     _restingDuration = TextEditingController(
-        text: _viewModel.stretchSettings.restingTime.inSeconds.toString());
+        text: _viewModel.stretchSettings.restingTime.inSeconds.toString(),);
     _forwardStretchAngle = TextEditingController(
-        text: _viewModel.stretchSettings.forwardStretchAngle.toString());
+        text: _viewModel.stretchSettings.forwardStretchAngle.toString(),);
     _sideStretchAngle = TextEditingController(
-        text: _viewModel.stretchSettings.sideStretchAngle.toString());
+        text: _viewModel.stretchSettings.sideStretchAngle.toString(),);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(title: const Text("Stretch Settings")),
       body: ChangeNotifierProvider<StretchViewModel>.value(
           value: _viewModel,
           builder: (context, child) => Consumer<StretchViewModel>(
                 builder: (context, postureTrackerViewModel, child) =>
                     _buildSettingsView(),
-              )),
+              ),),
     );
   }
 
@@ -71,7 +71,7 @@ class _SettingsViewState extends State<SettingsView> {
                   ? "Tracking"
                   : _viewModel.isAvailable
                       ? "Available"
-                      : "Unavailable"),
+                      : "Unavailable",),
             ),
           ),
           Card(
@@ -98,7 +98,7 @@ class _SettingsViewState extends State<SettingsView> {
                           labelText: 'Seconds',
                           filled: true,
                           labelStyle: TextStyle(color: Colors.black),
-                          fillColor: Colors.white),
+                          fillColor: Colors.white,),
                       keyboardType: TextInputType.number,
                       onChanged: (_) {
                         _updateMeditationSettings();
@@ -122,7 +122,7 @@ class _SettingsViewState extends State<SettingsView> {
                           labelText: 'Seconds',
                           filled: true,
                           labelStyle: TextStyle(color: Colors.black),
-                          fillColor: Colors.white),
+                          fillColor: Colors.white,),
                       keyboardType: TextInputType.number,
                       onChanged: (_) {
                         _updateMeditationSettings();
@@ -146,7 +146,7 @@ class _SettingsViewState extends State<SettingsView> {
                           labelText: 'Seconds',
                           filled: true,
                           labelStyle: TextStyle(color: Colors.black),
-                          fillColor: Colors.white),
+                          fillColor: Colors.white,),
                       keyboardType: TextInputType.number,
                       onChanged: (_) {
                         _updateMeditationSettings();
@@ -171,7 +171,7 @@ class _SettingsViewState extends State<SettingsView> {
                           labelText: 'Seconds',
                           filled: true,
                           labelStyle: TextStyle(color: Colors.black),
-                          fillColor: Colors.white),
+                          fillColor: Colors.white,),
                       keyboardType: TextInputType.number,
                       onChanged: (_) {
                         _updateMeditationSettings();
@@ -206,7 +206,7 @@ class _SettingsViewState extends State<SettingsView> {
                           labelText: 'Angle',
                           filled: true,
                           labelStyle: TextStyle(color: Colors.black),
-                          fillColor: Colors.white),
+                          fillColor: Colors.white,),
                       keyboardType: TextInputType.number,
                       onChanged: (_) {
                         _updateMeditationSettings();
@@ -230,7 +230,7 @@ class _SettingsViewState extends State<SettingsView> {
                           labelText: 'Angle',
                           filled: true,
                           labelStyle: TextStyle(color: Colors.black),
-                          fillColor: Colors.white),
+                          fillColor: Colors.white,),
                       keyboardType: TextInputType.number,
                       onChanged: (_) {
                         _updateMeditationSettings();
@@ -260,10 +260,10 @@ class _SettingsViewState extends State<SettingsView> {
                       : () => _viewModel.startTracking(),
                   child: Text(_viewModel.isTracking
                       ? "Calibrate as Main Posture"
-                      : "Start Calibration"),
+                      : "Start Calibration",),
                 ),
-              )
-            ]),
+              ),
+            ],),
           ),
         ],
       ),

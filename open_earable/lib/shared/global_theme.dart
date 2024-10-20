@@ -11,8 +11,6 @@ final ThemeData materialTheme = ThemeData(
     onSecondary: Colors.white,
     error: Colors.red,
     onError: Colors.black,
-    background: Color.fromARGB(255, 22, 22, 24),
-    onBackground: Colors.white,
     surface: Color.fromARGB(255, 22, 22, 24),
     onSurface: Colors.white,
   ),

@@ -4,6 +4,8 @@ import 'package:open_earable/controls_tab/models/open_earable_settings_v2.dart';
 import 'package:provider/provider.dart';
 
 class EarableNotConnectedWarning extends StatelessWidget {
+  const EarableNotConnectedWarning({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -21,8 +23,7 @@ class EarableNotConnectedWarning extends StatelessWidget {
               SizedBox(height: 16),
               Center(
                 child: Text(
-                  "Not connected to\nOpenEarable" +
-                      ((Provider.of<BluetoothController>(context)
+                  "Not connected to\nOpenEarable${(Provider.of<BluetoothController>(context)
                                           .openEarableLeft
                                           .deviceHardwareVersion ??
                                       "1")
@@ -31,7 +32,7 @@ class EarableNotConnectedWarning extends StatelessWidget {
                           ? ""
                           : (OpenEarableSettingsV2().selectedButtonIndex == 0
                               ? " (left)"
-                              : " (right)")),
+                              : " (right)")}",
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,

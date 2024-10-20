@@ -11,9 +11,11 @@ import 'apps_tab/apps_tab.dart';
 import 'shared/global_theme.dart';
 
 void main() => runApp(ChangeNotifierProvider(
-    create: (context) => BluetoothController(), child: MyApp()));
+    create: (context) => BluetoothController(), child: MyApp(),),);
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -25,8 +27,10 @@ class MyApp extends StatelessWidget {
 }
 
 class MyHomePage extends StatefulWidget {
+  const MyHomePage({super.key});
+
   @override
-  _MyHomePageState createState() => _MyHomePageState();
+  State<MyHomePage> createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
@@ -51,12 +55,12 @@ class _MyHomePageState extends State<MyHomePage> {
       ControlTab(),
       Material(child: Theme(data: materialTheme, child: SensorDataTab())),
       AppsTab(Provider.of<BluetoothController>(context)
-          .openEarableLeft), // TODO support two earables for apps
+          .openEarableLeft,), // TODO support two earables for apps
     ];
   }
 
   @override
-  dispose() {
+  void dispose() {
     super.dispose();
     blePermissionSubscription?.cancel();
   }
@@ -70,7 +74,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: Center(
             child: Row(
@@ -85,22 +89,22 @@ class _MyHomePageState extends State<MyHomePage> {
             SizedBox(width: 8),
             Text('OpenEarable'),
           ],
-        )),
+        ),),
         actions: <Widget>[
           IconButton(
             icon: Icon(Icons.bluetooth,
-                color: Theme.of(context).colorScheme.secondary),
+                color: Theme.of(context).colorScheme.secondary,),
             onPressed: () {
               Navigator.of(context).push(MaterialPageRoute(
                   builder: (context) => BLETabBarPage(
-                      index: OpenEarableSettingsV2().selectedButtonIndex)));
+                      index: OpenEarableSettingsV2().selectedButtonIndex,),),);
             },
           ),
         ],
       ),
       body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Theme.of(context).colorScheme.background,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: Padding(

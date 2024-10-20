@@ -5,7 +5,7 @@ import 'package:open_earable/apps_tab/neck_stretch/view_model/stretch_view_model
 class StretchStatsView extends StatefulWidget {
   final StretchViewModel _viewModel;
 
-  StretchStatsView(this._viewModel);
+  const StretchStatsView(this._viewModel, {super.key});
 
   @override
   State<StretchStatsView> createState() => _StretchStatsViewState();
@@ -19,13 +19,13 @@ class _StretchStatsViewState extends State<StretchStatsView> {
   @override
   void initState() {
     super.initState();
-    this._stats = widget._viewModel.stretchStats;
+    _stats = widget._viewModel.stretchStats;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(title: const Text("Stretch Stats")),
       body: SingleChildScrollView(
         child: Column(
@@ -40,17 +40,17 @@ class _StretchStatsViewState extends State<StretchStatsView> {
                   ListTile(
                     title: Text("Main Stretch Max Angle:"),
                     trailing: Text(
-                        "${(_stats.maxMainAngle * 180 / 3.14).abs().toStringAsFixed(0)}°"),
+                        "${(_stats.maxMainAngle * 180 / 3.14).abs().toStringAsFixed(0)}°",),
                   ),
                   ListTile(
                     title: Text("Right Stretch Max Angle:"),
                     trailing: Text(
-                        "${(_stats.maxRightAngle * 180 / 3.14).abs().toStringAsFixed(0)}°"),
+                        "${(_stats.maxRightAngle * 180 / 3.14).abs().toStringAsFixed(0)}°",),
                   ),
                   ListTile(
                     title: Text("Left Stretch Max Angle:"),
                     trailing: Text(
-                        "${(_stats.maxLeftAngle * 180 / 3.14).abs().toStringAsFixed(0)}°"),
+                        "${(_stats.maxLeftAngle * 180 / 3.14).abs().toStringAsFixed(0)}°",),
                   ),
                 ],
               ),
@@ -65,17 +65,17 @@ class _StretchStatsViewState extends State<StretchStatsView> {
                   ListTile(
                     title: Text("Main Neck Stretch Duration"),
                     trailing: Text(
-                        "${_stats.mainStretchDuration.toStringAsFixed(2)} s"),
+                        "${_stats.mainStretchDuration.toStringAsFixed(2)} s",),
                   ),
                   ListTile(
                     title: Text("Right Neck Stretch Duration"),
                     trailing: Text(
-                        "${_stats.rightStretchDuration.toStringAsFixed(2)} s"),
+                        "${_stats.rightStretchDuration.toStringAsFixed(2)} s",),
                   ),
                   ListTile(
                     title: Text("Left Neck Stretch Duration"),
                     trailing: Text(
-                        "${_stats.leftStretchDuration.toStringAsFixed(2)} s"),
+                        "${_stats.leftStretchDuration.toStringAsFixed(2)} s",),
                   ),
                 ],
               ),

@@ -33,8 +33,8 @@ class StretchViewModel extends ChangeNotifier {
   set stretchSettings(StretchSettings settings) =>
       _neckStretch.settings = settings;
 
-  AttitudeTracker _attitudeTracker;
-  OpenEarable _openEarable;
+  final AttitudeTracker _attitudeTracker;
+  final OpenEarable _openEarable;
 
   /// The model class containing all information and logics needed to start and handle a guided neck stretch
   late NeckStretch _neckStretch;
@@ -48,12 +48,12 @@ class StretchViewModel extends ChangeNotifier {
       notifyListeners();
     };
 
-    this._neckStretch = NeckStretch(_openEarable, this);
-    this._stretchStats = StretchStats();
+    _neckStretch = NeckStretch(_openEarable, this);
+    _stretchStats = StretchStats();
 
     _attitudeTracker.listen((attitude) {
       _attitude = Attitude(
-          roll: attitude.roll, pitch: attitude.pitch, yaw: attitude.yaw);
+          roll: attitude.roll, pitch: attitude.pitch, yaw: attitude.yaw,);
       notifyListeners();
     });
   }
@@ -62,7 +62,7 @@ class StretchViewModel extends ChangeNotifier {
   void startTracking() {
     _attitudeTracker.start();
     _stretchStats.clear();
-    _settingsTracker = Timer.periodic(new Duration(milliseconds: 10), (timer) {
+    _settingsTracker = Timer.periodic(Duration(milliseconds: 10), (timer) {
       _trackStretchStats();
     });
     notifyListeners();
@@ -90,7 +90,7 @@ class StretchViewModel extends ChangeNotifier {
   /// Track the stretch stats according to current stretch state
   void _trackStretchStats() {
     /// If you are resting, don't track, only last refresh
-    if (this.isResting) {
+    if (isResting) {
       return;
     }
     const toAngle = 180 / 3.14;

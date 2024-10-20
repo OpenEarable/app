@@ -6,21 +6,18 @@ import 'interact.dart';
 
 /// Homescreen class for the movement timer application.
 class SleepHomeScreen extends StatefulWidget {
-  final OpenEarable _openEarable;
-  SleepHomeScreen(this._openEarable);
+  final OpenEarable openEarable;
+
+  const SleepHomeScreen(this.openEarable, {super.key});
+
   @override
-  _HomeScreenState createState() => _HomeScreenState(_openEarable);
+  State<SleepHomeScreen> createState() => _HomeScreenState();
 }
 
 /// State for the HomeScreenApplication.
 ///
 /// Needs the [OpenEarable]-Object to interact.
 class _HomeScreenState extends State<SleepHomeScreen> {
-  final OpenEarable _openEarable;
-
-  //Constructor
-  _HomeScreenState(this._openEarable);
-
   //Bottom-Navigation-Bar index.
   int _currentIndex = 0;
 
@@ -28,9 +25,9 @@ class _HomeScreenState extends State<SleepHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.background,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text('Powernapper Alarm Clock'),
       ),
 
@@ -39,7 +36,7 @@ class _HomeScreenState extends State<SleepHomeScreen> {
 
       //Bottom Navigation Bar
       bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Theme.of(context).colorScheme.background,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         currentIndex: _currentIndex,
         onTap: _onNavBarItemTapped,
         items: [
@@ -60,11 +57,9 @@ class _HomeScreenState extends State<SleepHomeScreen> {
   Widget _getBody() {
     switch (_currentIndex) {
       case 0:
-
         //Timer Tab
-        return TimerScreen(Interact(_openEarable));
+        return TimerScreen(Interact(widget.openEarable));
       case 1:
-
         //Information Tab
         return Column(
           children: [
@@ -92,7 +87,6 @@ class _HomeScreenState extends State<SleepHomeScreen> {
         );
 
       default:
-
         //Default
         return Center(
           child: Text('Ungültiger Index'),

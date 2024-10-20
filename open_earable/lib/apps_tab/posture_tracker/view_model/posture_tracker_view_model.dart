@@ -12,8 +12,8 @@ class PostureTrackerViewModel extends ChangeNotifier {
 
   BadPostureSettings get badPostureSettings => _badPostureReminder.settings;
 
-  AttitudeTracker _attitudeTracker;
-  BadPostureReminder _badPostureReminder;
+  final AttitudeTracker _attitudeTracker;
+  final BadPostureReminder _badPostureReminder;
   bool _isDisposed = false;
   PostureTrackerViewModel(this._attitudeTracker, this._badPostureReminder) {
     _attitudeTracker.didChangeAvailability = (_) {
@@ -24,7 +24,7 @@ class PostureTrackerViewModel extends ChangeNotifier {
 
     _attitudeTracker.listen((attitude) {
       _attitude = Attitude(
-          roll: attitude.roll, pitch: attitude.pitch, yaw: attitude.yaw);
+          roll: attitude.roll, pitch: attitude.pitch, yaw: attitude.yaw,);
       if (!_isDisposed) {
         notifyListeners();
       }

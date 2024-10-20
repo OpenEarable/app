@@ -16,7 +16,7 @@ class StretchArcPainter extends CustomPainter {
       {required this.angle,
       this.angleThreshold = 0,
       this.stretchState = NeckStretchState.noStretch,
-      required this.isFront});
+      required this.isFront,});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -28,7 +28,7 @@ class StretchArcPainter extends CustomPainter {
     Path circlePath = Path();
     circlePath.addOval(Rect.fromCircle(
         center: Offset(size.width / 2, size.height / 2),
-        radius: min(size.width, size.height) / 2));
+        radius: min(size.width, size.height) / 2,),);
     canvas.drawPath(circlePath, circlePaint);
 
     // Create a paint object with the right color for the stretch indicator
@@ -109,9 +109,9 @@ class StretchArcPainter extends CustomPainter {
 
   /// Gets the right start angle depending on stretch state
   double _getStartAngle(double startAngle, double threshold) {
-    if (!this.isFront) return startAngle - threshold;
+    if (!isFront) return startAngle - threshold;
 
-    switch (this.stretchState) {
+    switch (stretchState) {
       case NeckStretchState.rightNeckStretch:
         return startAngle - threshold;
       case NeckStretchState.leftNeckStretch:
@@ -123,8 +123,8 @@ class StretchArcPainter extends CustomPainter {
 
   /// Gets the right threshold depending on stretch state
   double _getThreshold(double threshold) {
-    if (this.isFront) {
-      switch (this.stretchState) {
+    if (isFront) {
+      switch (stretchState) {
         case NeckStretchState.rightNeckStretch:
         case NeckStretchState.leftNeckStretch:
           return threshold +
@@ -135,7 +135,7 @@ class StretchArcPainter extends CustomPainter {
       }
     }
 
-    switch (this.stretchState) {
+    switch (stretchState) {
       case NeckStretchState.mainNeckStretch:
         return threshold +
             (0.8 *
@@ -147,8 +147,8 @@ class StretchArcPainter extends CustomPainter {
 
   /// Determines whether the user is currently stretching in the right direction
   bool _isWrongStretchDirection() {
-    if (this.isFront) {
-      switch (this.stretchState) {
+    if (isFront) {
+      switch (stretchState) {
         case NeckStretchState.rightNeckStretch:
           return angle.sign >= 0;
         case NeckStretchState.leftNeckStretch:
@@ -158,7 +158,7 @@ class StretchArcPainter extends CustomPainter {
       }
     }
 
-    switch (this.stretchState) {
+    switch (stretchState) {
       case NeckStretchState.mainNeckStretch:
         return angle.sign >= 0;
       default:
@@ -169,11 +169,11 @@ class StretchArcPainter extends CustomPainter {
   /// Detgermines whether the overshoot is negative (shouldnt stretch that part)
   /// or is positive (should stretch that part)
   bool _isNegativeOvershoot() {
-    return (this.isFront &&
-            this.stretchState == NeckStretchState.mainNeckStretch) ||
-        (!this.isFront &&
-            (this.stretchState == NeckStretchState.leftNeckStretch ||
-                this.stretchState == NeckStretchState.rightNeckStretch));
+    return (isFront &&
+            stretchState == NeckStretchState.mainNeckStretch) ||
+        (!isFront &&
+            (stretchState == NeckStretchState.leftNeckStretch ||
+                stretchState == NeckStretchState.rightNeckStretch));
   }
 
   /// Returns the right color for the overshoot depending on stretch state and
@@ -209,6 +209,6 @@ class StretchArcPainter extends CustomPainter {
   @override
   bool shouldRepaint(CustomPainter oldDelegate) {
     // check if oldDelegate is an ArcPainter and if the angle is the same
-    return oldDelegate is ArcPainter && oldDelegate.angle != this.angle;
+    return oldDelegate is ArcPainter && oldDelegate.angle != angle;
   }
 }

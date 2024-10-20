@@ -21,14 +21,14 @@ class MenuItem {
       {required this.iconData,
       required this.title,
       required this.description,
-      required this.onTap});
+      required this.onTap,});
 }
 
 class StretchAppView extends StatefulWidget {
   final AttitudeTracker _tracker;
   final OpenEarable _openEarable;
 
-  StretchAppView(this._tracker, this._openEarable);
+  const StretchAppView(this._tracker, this._openEarable, {super.key});
 
   @override
   State<StretchAppView> createState() => _StretchAppViewState();
@@ -42,7 +42,7 @@ class _StretchAppViewState extends State<StretchAppView> {
   @override
   void initState() {
     super.initState();
-    this._viewModel = StretchViewModel(widget._tracker, widget._openEarable);
+    _viewModel = StretchViewModel(widget._tracker, widget._openEarable);
   }
 
   List<MenuItem> stretchApps(BuildContext context) {
@@ -58,8 +58,8 @@ class _StretchAppViewState extends State<StretchAppView> {
                     builder: (context) => Material(
                         child: Theme(
                             data: materialTheme,
-                            child: StretchTrackerView(this._viewModel)))));
-          }),
+                            child: StretchTrackerView(_viewModel),),),),);
+          },),
       MenuItem(
           iconData: Icons.info,
           title: "Stretch Stats",
@@ -71,8 +71,8 @@ class _StretchAppViewState extends State<StretchAppView> {
                     builder: (context) => Material(
                         child: Theme(
                             data: materialTheme,
-                            child: StretchStatsView(this._viewModel)))));
-          }),
+                            child: StretchStatsView(_viewModel),),),),);
+          },),
       MenuItem(
           iconData: Icons.help,
           title: "How to use this Tool",
@@ -84,8 +84,8 @@ class _StretchAppViewState extends State<StretchAppView> {
                     builder: (context) => Material(
                         child: Theme(
                             data: materialTheme,
-                            child: StretchTutorialView(this._viewModel)))));
-          }),
+                            child: StretchTutorialView(_viewModel),),),),);
+          },),
       // ... similarly for other apps
     ];
   }
@@ -95,23 +95,23 @@ class _StretchAppViewState extends State<StretchAppView> {
     List<MenuItem> apps = stretchApps(context);
 
     return Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.background,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         appBar: AppBar(
           title: const Text("Guided Neck Stretch"),
           actions: [
             /// Settings button, only active when not stretching
             IconButton(
-                onPressed: (this._viewModel.stretchState ==
+                onPressed: (_viewModel.stretchState ==
                             NeckStretchState.noStretch ||
-                        this._viewModel.stretchState ==
+                        _viewModel.stretchState ==
                             NeckStretchState.doneStretching)
                     ? () => Navigator.of(context).push(MaterialPageRoute(
                         builder: (context) => Material(
                             child: Theme(
                                 data: materialTheme,
-                                child: SettingsView(this._viewModel)))))
+                                child: SettingsView(_viewModel),),),),)
                     : null,
-                icon: Icon(Icons.settings)),
+                icon: Icon(Icons.settings),),
           ],
         ),
         body: Padding(
@@ -135,8 +135,8 @@ class _StretchAppViewState extends State<StretchAppView> {
                               // Arrow icon on the right
                               onTap: apps[index]
                                   .onTap, // Callback when the card is tapped
-                            )),
-                      ));
-                })));
+                            ),),
+                      ),);
+                },),),);
   }
 }

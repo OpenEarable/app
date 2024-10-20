@@ -1,5 +1,3 @@
-import 'dart:io';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:open_earable/ble/ble_controller.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
@@ -9,10 +7,10 @@ class BLEPage extends StatefulWidget {
   final OpenEarable openEarable;
   final int earableIndex;
 
-  BLEPage(this.openEarable, this.earableIndex);
+  const BLEPage(this.openEarable, this.earableIndex, {super.key});
 
   @override
-  _BLEPageState createState() => _BLEPageState();
+  State<BLEPage> createState() => _BLEPageState();
 }
 
 class _BLEPageState extends State<BLEPage> {
@@ -72,13 +70,13 @@ class _BLEPageState extends State<BLEPage> {
                               title: Text(device.name),
                               titleTextStyle: const TextStyle(fontSize: 16),
                               visualDensity: const VisualDensity(
-                                  horizontal: -4, vertical: -4),
+                                  horizontal: -4, vertical: -4,),
                               trailing: _buildTrailingWidget(device.id),
                               onTap: () {
                                 controller.connectToDevice(
-                                    device, _openEarable, widget.earableIndex);
+                                    device, _openEarable, widget.earableIndex,);
                               },
-                            )),
+                            ),),
                         if (index != controller.discoveredDevices.length - 1)
                           const Divider(
                             height: 1.0,
@@ -87,10 +85,10 @@ class _BLEPageState extends State<BLEPage> {
                             indent: 16.0,
                             endIndent: 0.0,
                           ),
-                      ]);
+                      ],);
                     },
-                  )));
-        }),
+                  ),),);
+        },),
         Center(
             child: Padding(
                 padding: EdgeInsets.all(16),
@@ -101,23 +99,23 @@ class _BLEPageState extends State<BLEPage> {
                       : "If your OpenEarable device is not shown here, try restarting it",
                   style: const TextStyle(fontSize: 16),
                   textAlign: TextAlign.center,
-                ))),
+                ),),),
         Center(
           child: ElevatedButton(
             onPressed: () =>
                 Provider.of<BluetoothController>(context, listen: false)
                     .startScanning(_openEarable),
             style: ButtonStyle(
-              foregroundColor: MaterialStateProperty.all(
-                  Theme.of(context).colorScheme.primary),
-              backgroundColor: MaterialStateProperty.all(
-                  Theme.of(context).colorScheme.secondary),
+              foregroundColor: WidgetStateProperty.all(
+                  Theme.of(context).colorScheme.primary,),
+              backgroundColor: WidgetStateProperty.all(
+                  Theme.of(context).colorScheme.secondary,),
             ),
             child: const Text('Restart Scan'),
           ),
-        )
+        ),
       ],
-    ));
+    ),);
   }
 
   Widget _buildTrailingWidget(String id) {
@@ -125,12 +123,12 @@ class _BLEPageState extends State<BLEPage> {
       return Icon(
           size: 24,
           Icons.check,
-          color: Theme.of(context).colorScheme.secondary);
+          color: Theme.of(context).colorScheme.secondary,);
     } else if (_openEarable.bleManager.connectingDevice?.id == id) {
       return SizedBox(
           height: 24,
           width: 24,
-          child: CircularProgressIndicator(strokeWidth: 2));
+          child: CircularProgressIndicator(strokeWidth: 2),);
     }
     return const SizedBox.shrink();
   }

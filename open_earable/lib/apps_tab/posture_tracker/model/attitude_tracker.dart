@@ -8,7 +8,7 @@ import 'attitude.dart';
 
 /// An abstract class for attitude trackers.
 abstract class AttitudeTracker {
-  StreamController<Attitude> _attitudeStreamController =
+  final StreamController<Attitude> _attitudeStreamController =
       StreamController<Attitude>.broadcast();
 
   Attitude _rawAttitude = Attitude();
@@ -49,7 +49,7 @@ abstract class AttitudeTracker {
   void calibrateToCurrentAttitude() async {
     _referenceAttitude = _rawAttitude;
     print(
-        "calibrated to {roll: ${_referenceAttitude.roll}, pitch: ${_referenceAttitude.pitch}, yaw: ${_referenceAttitude.yaw}}");
+        "calibrated to {roll: ${_referenceAttitude.roll}, pitch: ${_referenceAttitude.pitch}, yaw: ${_referenceAttitude.yaw}}",);
   }
 
   /// Cancle the stream and close the stream controller.
@@ -61,10 +61,10 @@ abstract class AttitudeTracker {
   }
 
   void updateAttitude(
-      {double? roll, double? pitch, double? yaw, Attitude? attitude}) {
+      {double? roll, double? pitch, double? yaw, Attitude? attitude,}) {
     if (roll == null && pitch == null && yaw == null && attitude == null) {
       throw ArgumentError(
-          "Either roll, pitch and yaw or attitude must be provided");
+          "Either roll, pitch and yaw or attitude must be provided",);
     }
     // Check if attitude is not null, otherwise use the angles
     attitude ??= Attitude(roll: roll ?? 0, pitch: pitch ?? 0, yaw: yaw ?? 0);

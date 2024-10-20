@@ -8,8 +8,10 @@ import 'package:open_earable/sensor_data_tab/sensor_chart.dart';
 import 'package:provider/provider.dart';
 
 class SensorDataTab extends StatefulWidget {
+  const SensorDataTab({super.key});
+
   @override
-  _SensorDataTabState createState() => _SensorDataTabState();
+  State<SensorDataTab> createState() => _SensorDataTabState();
 }
 
 class _SensorDataTabState extends State<SensorDataTab>
@@ -34,7 +36,7 @@ class _SensorDataTabState extends State<SensorDataTab>
 
   int lastTimestamp = 0;
   /*
-  _setupListeners() {
+  void _setupListeners() {
     _buttonStateSubscription =
         _currentOpenEarable.sensorManager.getButtonStateStream().listen((data) {
       print("Button State is ${data[0]}");
@@ -52,7 +54,7 @@ class _SensorDataTabState extends State<SensorDataTab>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.background,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         appBar: PreferredSize(
             preferredSize:
                 Size.fromHeight(kToolbarHeight), // Default AppBar height
@@ -60,12 +62,12 @@ class _SensorDataTabState extends State<SensorDataTab>
                 selector: (context, controller) => controller.isV2,
                 builder: (context, isV2, child) {
                   return isV2 ? v2TabBar() : v1TabBar();
-                })),
+                },),),
         body: Selector<BluetoothController, bool>(
             selector: (context, controller) => controller.isV2,
             builder: (context, isV2, child) {
               return isV2 ? v2TabBarView() : v1TabBarView();
-            }));
+            },),);
   }
 
   Widget v1TabBar() {
@@ -121,11 +123,11 @@ class _SensorDataTabState extends State<SensorDataTab>
               EarableDataChart(currentOpenEarable, 'MAG', 'Magnetometer'),
               EarableDataChart(currentOpenEarable, 'BARO', 'Pressure'),
               EarableDataChart(
-                  currentOpenEarable, 'TEMP', 'Temperature (Ambient)'),
+                  currentOpenEarable, 'TEMP', 'Temperature (Ambient)',),
               Earable3DModel(currentOpenEarable),
             ],
           );
-        });
+        },);
   }
 
   Widget v2TabBarView() {
@@ -141,15 +143,15 @@ class _SensorDataTabState extends State<SensorDataTab>
               EarableDataChart(currentOpenEarable, 'MAG', 'Magnetometer'),
               EarableDataChart(currentOpenEarable, 'BARO', 'Pressure'),
               EarableDataChart(
-                  currentOpenEarable, 'TEMP', 'Temperature (Ambient)'),
+                  currentOpenEarable, 'TEMP', 'Temperature (Ambient)',),
               EarableDataChart(
-                  currentOpenEarable, 'OPTTEMP', 'Temperature (Surface)'),
+                  currentOpenEarable, 'OPTTEMP', 'Temperature (Surface)',),
               EarableDataChart(currentOpenEarable, 'PULSOX', 'Heart Rate'),
               EarableDataChart(currentOpenEarable, 'PULSOX', 'SpO2'),
               EarableDataChart(currentOpenEarable, 'PPG', 'PPG'),
               Earable3DModel(currentOpenEarable),
             ],
           );
-        });
+        },);
   }
 }

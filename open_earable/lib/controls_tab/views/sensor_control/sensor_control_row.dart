@@ -1,25 +1,19 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:open_earable/shared/dynamic_value_picker.dart';
 import '../../models/open_earable_settings_v2.dart';
-import 'dart:io';
 import 'package:open_earable/ble/ble_controller.dart';
 
 class SensorControlRow extends StatefulWidget {
-  final String _sensorName;
+  final String sensorName;
 
-  SensorControlRow(this._sensorName);
+  const SensorControlRow(this.sensorName, {super.key});
 
   @override
-  _SensorControlRow createState() => _SensorControlRow(_sensorName);
+  State<SensorControlRow> createState() => _SensorControlRow();
 }
 
 class _SensorControlRow extends State<SensorControlRow> {
-  String _sensorName;
-
-  _SensorControlRow(this._sensorName);
-
   @override
   Widget build(BuildContext context) {
     SensorSettings sensorSettings =
@@ -28,7 +22,7 @@ class _SensorControlRow extends State<SensorControlRow> {
       children: [
         Checkbox(
           checkColor: Theme.of(context).colorScheme.primary,
-          fillColor: MaterialStateProperty.resolveWith(_getCheckboxColor),
+          fillColor: WidgetStateProperty.resolveWith(_getCheckboxColor),
           value: sensorSettings.sensorSelected,
           onChanged: Provider.of<BluetoothController>(context).connected
               ? (value) {
@@ -39,69 +33,75 @@ class _SensorControlRow extends State<SensorControlRow> {
               : null,
         ),
         Text(
-          _sensorName,
+          widget.sensorName,
           style: TextStyle(
             color: Color.fromRGBO(168, 168, 172, 1.0),
           ),
         ),
         Spacer(),
         Container(
-            decoration: BoxDecoration(
-              color: Provider.of<BluetoothController>(context).connected
-                  ? Colors.white
-                  : Colors.grey,
-              borderRadius: BorderRadius.circular(4.0),
+          decoration: BoxDecoration(
+            color: Provider.of<BluetoothController>(context).connected
+                ? Colors.white
+                : Colors.grey,
+            borderRadius: BorderRadius.circular(4.0),
+          ),
+          child: SizedBox(
+            width: 70,
+            height: 37,
+            child: Container(
+              alignment: Alignment.centerRight,
+              child: DynamicValuePicker(
+                context,
+                sensorSettings.frequencyOptionsBLE,
+                sensorSettings.selectedOptionBLE,
+                (newValue) {
+                  sensorSettings.updateSelectedBLEOption(newValue);
+                },
+                Provider.of<BluetoothController>(context).connected,
+                sensorSettings.isFakeDisabledBLE,
+              ),
             ),
-            child: SizedBox(
-                width: 70,
-                height: 37,
-                child: Container(
-                    alignment: Alignment.centerRight,
-                    child: DynamicValuePicker(
-                      context,
-                      sensorSettings.frequencyOptionsBLE,
-                      sensorSettings.selectedOptionBLE,
-                      (newValue) {
-                        sensorSettings.updateSelectedBLEOption(newValue);
-                      },
-                      Provider.of<BluetoothController>(context).connected,
-                      sensorSettings.isFakeDisabledBLE,
-                    )))),
+          ),
+        ),
         SizedBox(width: 8),
         Container(
-            decoration: BoxDecoration(
-              color: Provider.of<BluetoothController>(context).connected
-                  ? Colors.white
-                  : Colors.grey,
-              borderRadius: BorderRadius.circular(4.0),
+          decoration: BoxDecoration(
+            color: Provider.of<BluetoothController>(context).connected
+                ? Colors.white
+                : Colors.grey,
+            borderRadius: BorderRadius.circular(4.0),
+          ),
+          child: SizedBox(
+            width: 70,
+            height: 37,
+            child: Container(
+              alignment: Alignment.centerRight,
+              child: DynamicValuePicker(
+                context,
+                sensorSettings.frequencyOptionsSD,
+                sensorSettings.selectedOptionSD,
+                (newValue) {
+                  sensorSettings.updateSelectedSDOption(newValue);
+                },
+                Provider.of<BluetoothController>(context).connected,
+                sensorSettings.isFakeDisabledSD,
+              ),
             ),
-            child: SizedBox(
-                width: 70,
-                height: 37,
-                child: Container(
-                    alignment: Alignment.centerRight,
-                    child: DynamicValuePicker(
-                      context,
-                      sensorSettings.frequencyOptionsSD,
-                      sensorSettings.selectedOptionSD,
-                      (newValue) {
-                        sensorSettings.updateSelectedSDOption(newValue);
-                      },
-                      Provider.of<BluetoothController>(context).connected,
-                      sensorSettings.isFakeDisabledSD,
-                    )))),
+          ),
+        ),
         SizedBox(width: 8),
         Text("Hz", style: TextStyle(color: Color.fromRGBO(168, 168, 172, 1.0))),
       ],
     );
   }
 
-  Color _getCheckboxColor(Set<MaterialState> states) {
-    const Set<MaterialState> interactiveStates = <MaterialState>{
-      MaterialState.pressed,
-      MaterialState.hovered,
-      MaterialState.focused,
-      MaterialState.selected,
+  Color _getCheckboxColor(Set<WidgetState> states) {
+    const Set<WidgetState> interactiveStates = <WidgetState>{
+      WidgetState.pressed,
+      WidgetState.hovered,
+      WidgetState.focused,
+      WidgetState.selected,
     };
     if (states.any(interactiveStates.contains)) {
       return Theme.of(context).colorScheme.secondary;

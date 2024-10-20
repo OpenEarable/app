@@ -17,7 +17,7 @@ class MovementTracker {
 
   //Constructor
   MovementTracker(this._interact) {
-    this._openEarable = _interact.getEarable();
+    _openEarable = _interact.getEarable();
   }
 
   ///Start Subscription and reset timer.

@@ -9,11 +9,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 class BluetoothController extends ChangeNotifier {
   late SharedPreferences prefs;
 
-  String _openEarableName = "OpenEarable";
+  final String _openEarableName = "OpenEarable";
   OpenEarable get openEarableLeft => _openEarableLeft;
   OpenEarable get openEarableRight => _openEarableRight;
-  OpenEarable _openEarableLeft = OpenEarable();
-  OpenEarable _openEarableRight = OpenEarable();
+  final OpenEarable _openEarableLeft = OpenEarable();
+  final OpenEarable _openEarableRight = OpenEarable();
 
   bool _isV2 = false;
   bool get isV2 => _isV2;
@@ -53,10 +53,10 @@ class BluetoothController extends ChangeNotifier {
   bool _connectedRight = false;
   bool get connectedRight => _connectedRight;
 
-  int? _earableSOCLeft = null;
+  int? _earableSOCLeft;
   int? get earableSOCLeft => _earableSOCLeft;
 
-  int? _earableSOCRight = null;
+  int? _earableSOCRight;
   int? get earableSOCRight => _earableSOCRight;
 
   Future<void> _initializeSharedPreferences() async {
@@ -152,12 +152,10 @@ class BluetoothController extends ChangeNotifier {
     openEarable.bleManager.connectToDevice(device);
     String side = earableIndex == 0 ? "Left" : "Right";
     String otherSide = earableIndex != 0 ? "Left" : "Right";
-    if (prefs.getString("lastConnectedDeviceName" + otherSide) == device.name) {
-      prefs.setString("lastConnectedDeviceName" + otherSide, "");
+    if (prefs.getString("lastConnectedDeviceName$otherSide") == device.name) {
+      prefs.setString("lastConnectedDeviceName$otherSide", "");
     }
-    prefs.setString("lastConnectedDeviceName" + side, device.name);
-    Future.microtask(() {
-      notifyListeners();
-    });
+    prefs.setString("lastConnectedDeviceName$side", device.name);
+    Future.microtask(notifyListeners);
   }
 }
