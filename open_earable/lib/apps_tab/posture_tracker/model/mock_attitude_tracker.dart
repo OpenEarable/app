@@ -22,7 +22,7 @@ class MockAttitudeTracker extends AttitudeTracker {
       return Attitude(
           roll: sin(count / 10) * pi / 4,
           pitch: sin(count / 20) * pi / 4,
-          yaw: sin(count / 30) * pi / 4);
+          yaw: sin(count / 30) * pi / 4,);
     });
     didChangeAvailability = didChangeAvailability ?? (_) {};
 

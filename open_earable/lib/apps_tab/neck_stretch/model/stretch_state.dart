@@ -80,21 +80,22 @@ class StretchStats {
   double leftStretchDuration;
   double rightStretchDuration;
 
-  StretchStats(
-      {this.maxMainAngle = 0,
-      this.maxLeftAngle = 0,
-      this.maxRightAngle = 0,
-      this.mainStretchDuration = 0,
-      this.leftStretchDuration = 0,
-      this.rightStretchDuration = 0});
+  StretchStats({
+    this.maxMainAngle = 0,
+    this.maxLeftAngle = 0,
+    this.maxRightAngle = 0,
+    this.mainStretchDuration = 0,
+    this.leftStretchDuration = 0,
+    this.rightStretchDuration = 0,
+  });
 
   void clear() {
-    this.maxMainAngle = 0;
-    this.maxLeftAngle = 0;
-    this.maxRightAngle = 0;
-    this.mainStretchDuration = 0;
-    this.leftStretchDuration = 0;
-    this.rightStretchDuration = 0;
+    maxMainAngle = 0;
+    maxLeftAngle = 0;
+    maxRightAngle = 0;
+    mainStretchDuration = 0;
+    leftStretchDuration = 0;
+    rightStretchDuration = 0;
   }
 }
 
@@ -134,13 +135,14 @@ class StretchSettings {
 
 /// Stores all data and functions to manage the guided neck meditation
 class NeckStretch {
-  StretchSettings _settings = StretchSettings(
-      mainNeckRelaxation: Duration(seconds: 30),
-      leftNeckRelaxation: Duration(seconds: 30),
-      rightNeckRelaxation: Duration(seconds: 30),
-      restingTime: Duration(seconds: 5),
-      forwardStretchAngle: 45,
-      sideStretchAngle: 30);
+  StretchSettings settings = StretchSettings(
+    mainNeckRelaxation: Duration(seconds: 30),
+    leftNeckRelaxation: Duration(seconds: 30),
+    rightNeckRelaxation: Duration(seconds: 30),
+    restingTime: Duration(seconds: 5),
+    forwardStretchAngle: 45,
+    sideStretchAngle: 30,
+  );
 
   final OpenEarable _openEarable;
   final StretchViewModel _viewModel;
@@ -157,31 +159,27 @@ class NeckStretch {
   /// Stores the current active timer for state transition
   Timer? _currentTimer;
 
-  StretchSettings get settings => _settings;
-
   Duration get restDuration => _restDuration;
 
   bool get resting => _resting;
 
-  set settings(StretchSettings settings) => _settings = settings;
-
   NeckStretch(this._openEarable, this._viewModel) {
-    this._restDuration = Duration(seconds: 0);
-    this._resting = false;
+    _restDuration = Duration(seconds: 0);
+    _resting = false;
   }
 
   /// Starts the Meditation with the according timers
   void startStretching() {
     _resting = false;
     _viewModel.startTracking();
-    _settings.state = NeckStretchState.noStretch;
+    settings.state = NeckStretchState.noStretch;
     _setNextState();
   }
 
   /// Stops the current Meditation
   void stopStretching() {
     _resting = false;
-    _settings.state = NeckStretchState.noStretch;
+    settings.state = NeckStretchState.noStretch;
     _currentTimer?.cancel();
     _restDurationTimer?.cancel();
     _restDuration = Duration(seconds: 0);
@@ -197,7 +195,7 @@ class NeckStretch {
 
   /// Sets the state and timers for the state.
   void _setState(NeckStretchState state, Duration stateDuration) {
-    _settings.state = state;
+    settings.state = state;
     // If you just swapped to this state, first rest for restingTime, then set new state
     if (_resting) {
       /// If we don't restart the timer it results in a weird UI inconsistency
@@ -205,8 +203,8 @@ class NeckStretch {
       /// counted down when the next Timer hasn't started yet.
       _restDurationTimer?.cancel();
       _startCountdown();
-      _restDuration = _settings.restingTime;
-      _currentTimer = Timer(_settings.restingTime, () {
+      _restDuration = settings.restingTime;
+      _currentTimer = Timer(settings.restingTime, () {
         _resting = false;
         _setState(state, stateDuration);
         _openEarable.audioPlayer.jingle(8);
@@ -219,27 +217,33 @@ class NeckStretch {
 
   /// Used to set the next stretch state and set the correct Timers
   void _setNextState() {
-    switch (_settings.state) {
+    switch (settings.state) {
       case NeckStretchState.noStretch:
       case NeckStretchState.doneStretching:
         _startCountdown();
         _setState(
-            NeckStretchState.mainNeckStretch, _settings.mainNeckRelaxation);
+          NeckStretchState.mainNeckStretch,
+          settings.mainNeckRelaxation,
+        );
         return;
       case NeckStretchState.mainNeckStretch:
         _resting = true;
         _setState(
-            NeckStretchState.rightNeckStretch, _settings.rightNeckRelaxation);
+          NeckStretchState.rightNeckStretch,
+          settings.rightNeckRelaxation,
+        );
         _openEarable.audioPlayer.jingle(2);
         return;
       case NeckStretchState.rightNeckStretch:
         _resting = true;
         _setState(
-            NeckStretchState.leftNeckStretch, _settings.leftNeckRelaxation);
+          NeckStretchState.leftNeckStretch,
+          settings.leftNeckRelaxation,
+        );
         _openEarable.audioPlayer.jingle(2);
         return;
       case NeckStretchState.leftNeckStretch:
-        _settings.state = NeckStretchState.doneStretching;
+        settings.state = NeckStretchState.doneStretching;
         _currentTimer?.cancel();
         _restDurationTimer?.cancel();
         _restDuration = Duration(seconds: 0);

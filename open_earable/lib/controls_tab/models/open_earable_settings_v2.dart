@@ -4,24 +4,26 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 class OpenEarableSettingsV2 {
   static final OpenEarableSettingsV2 _instance =
       OpenEarableSettingsV2._internal();
+
   factory OpenEarableSettingsV2() {
     return _instance;
   }
+
   OpenEarableSettingsV2._internal() {
     resetState();
   }
 
-  List<List<String>> _imuOptions = [
+  final List<List<String>> _imuOptions = [
     ["0", "10", "20", "30", "40", "50", "60", "70", "80"],
-    ["90", "100", "200", "300", "400", "500", "600", "700", "800"]
+    ["90", "100", "200", "300", "400", "500", "600", "700", "800"],
   ];
 
-  List<List<String>> _barometerOptions = [
+  final List<List<String>> _barometerOptions = [
     ["0", "10", "20", "30", "40", "50", "60", "70", "80"],
-    ["90", "100", "200", "300"]
+    ["90", "100", "200", "300"],
   ];
 
-  List<List<String>> _microphoneOptions = [
+  final List<List<String>> _microphoneOptions = [
     // BLE Options
     [
       "0",
@@ -33,10 +35,10 @@ class OpenEarableSettingsV2 {
       "48000",
     ],
     // additional SD options
-    ["62500"]
+    ["62500"],
   ];
 
-  List<List<String>> _pulseOximeterOptions = [
+  final List<List<String>> _pulseOximeterOptions = [
     [
       "0",
       "30",
@@ -59,7 +61,7 @@ class OpenEarableSettingsV2 {
     ]
   ];
 
-  List<List<String>> _vitalsOptions = [
+  final List<List<String>> _vitalsOptions = [
     [
       "0",
       "1",
@@ -73,10 +75,10 @@ class OpenEarableSettingsV2 {
       "9",
       "10",
     ],
-    []
+    [],
   ];
 
-  List<List<String>> _opticalTemperatureOptions = [
+  final List<List<String>> _opticalTemperatureOptions = [
     [
       "0",
       "1",
@@ -90,7 +92,7 @@ class OpenEarableSettingsV2 {
       "9",
       "10",
     ],
-    ["20", "30", "40", "50", "60"]
+    ["20", "30", "40", "50", "60"],
   ];
 
   late SensorSettings microphone1Settings;
@@ -104,44 +106,52 @@ class OpenEarableSettingsV2 {
   late Color selectedColor;
   int selectedButtonIndex = 0;
   late bool rainbowModeActive;
+
   void resetState() {
     microphone1Settings = SensorSettings(
-        frequencyOptionsBLE: _microphoneOptions[0],
-        additionalOptionsSD: _microphoneOptions[1],
-        sensorID: 2);
+      frequencyOptionsBLE: _microphoneOptions[0],
+      additionalOptionsSD: _microphoneOptions[1],
+      sensorID: 2,
+    );
 
     microphone2Settings = SensorSettings(
-        frequencyOptionsBLE: _microphoneOptions[0],
-        additionalOptionsSD: _microphoneOptions[1],
-        sensorID: 3);
+      frequencyOptionsBLE: _microphoneOptions[0],
+      additionalOptionsSD: _microphoneOptions[1],
+      sensorID: 3,
+    );
 
     microphone1Settings.relatedSettings = microphone2Settings;
     microphone2Settings.relatedSettings = microphone1Settings;
 
     imuSettings = SensorSettings(
-        frequencyOptionsBLE: _imuOptions[0],
-        additionalOptionsSD: _imuOptions[1],
-        sensorID: 0);
+      frequencyOptionsBLE: _imuOptions[0],
+      additionalOptionsSD: _imuOptions[1],
+      sensorID: 0,
+    );
 
     pulseOximeterSettings = SensorSettings(
-        frequencyOptionsBLE: _pulseOximeterOptions[0],
-        additionalOptionsSD: _pulseOximeterOptions[1],
-        sensorID: 4);
+      frequencyOptionsBLE: _pulseOximeterOptions[0],
+      additionalOptionsSD: _pulseOximeterOptions[1],
+      sensorID: 4,
+    );
 
     vitalsSettings = SensorSettings(
-        frequencyOptionsBLE: _vitalsOptions[0],
-        additionalOptionsSD: _vitalsOptions[1],
-        sensorID: 5);
+      frequencyOptionsBLE: _vitalsOptions[0],
+      additionalOptionsSD: _vitalsOptions[1],
+      sensorID: 5,
+    );
 
     opticalTemperatureSettings = SensorSettings(
-        frequencyOptionsBLE: _opticalTemperatureOptions[0],
-        additionalOptionsSD: _opticalTemperatureOptions[1],
-        sensorID: 6);
+      frequencyOptionsBLE: _opticalTemperatureOptions[0],
+      additionalOptionsSD: _opticalTemperatureOptions[1],
+      sensorID: 6,
+    );
 
     barometerSettings = SensorSettings(
-        frequencyOptionsBLE: _barometerOptions[0],
-        additionalOptionsSD: _barometerOptions[1],
-        sensorID: 1);
+      frequencyOptionsBLE: _barometerOptions[0],
+      additionalOptionsSD: _barometerOptions[1],
+      sensorID: 1,
+    );
 
     selectedColor = Colors.deepPurple;
     rainbowModeActive = false;
@@ -159,45 +169,42 @@ class SensorSettings extends ChangeNotifier {
   late int sensorID;
   SensorSettings? relatedSettings;
 
-  SensorSettings(
-      {required frequencyOptionsBLE,
-      required additionalOptionsSD,
-      required sensorID,
-      sensorSelected = false,
-      selectedOptionBLE = "0",
-      selectedOptionSD = "0",
-      isFakeDisabledBLE = false,
-      isFakeDisabledSD = false,
-      this.relatedSettings}) {
-    this.frequencyOptionsBLE = frequencyOptionsBLE;
-    this.frequencyOptionsSD = frequencyOptionsBLE + additionalOptionsSD;
-    this.sensorSelected = sensorSelected;
-    this.selectedOptionBLE = selectedOptionBLE;
-    this.selectedOptionSD = selectedOptionSD;
-    this.isFakeDisabledBLE = isFakeDisabledBLE;
-    this.isFakeDisabledSD = isFakeDisabledSD;
-    this.sensorID = sensorID;
+  SensorSettings({
+    required this.frequencyOptionsBLE,
+    required additionalOptionsSD,
+    required this.sensorID,
+    this.sensorSelected = false,
+    this.selectedOptionBLE = "0",
+    this.selectedOptionSD = "0",
+    this.isFakeDisabledBLE = false,
+    this.isFakeDisabledSD = false,
+    this.relatedSettings,
+  }) {
+    frequencyOptionsSD = frequencyOptionsBLE + additionalOptionsSD;
   }
 
   OpenEarableSensorConfig getSensorConfigBLE() {
     double? samplingRate =
         sensorSelected ? double.tryParse(selectedOptionBLE) : 0;
     return OpenEarableSensorConfig(
-        sensorId: sensorID, samplingRate: samplingRate ?? 0, latency: 0);
+      sensorId: sensorID,
+      samplingRate: samplingRate ?? 0,
+      latency: 0,
+    );
   }
 
   void updateSelectedBLEOption(String option) {
-    this.selectedOptionBLE = option;
+    selectedOptionBLE = option;
     if (relatedSettings != null) {
       if (option != "0") {
-        this.isFakeDisabledBLE = false;
-        this.selectedOptionSD = "0";
-        this.isFakeDisabledSD = true;
+        isFakeDisabledBLE = false;
+        selectedOptionSD = "0";
+        isFakeDisabledSD = true;
         relatedSettings!.selectedOptionBLE = "0";
         relatedSettings!.isFakeDisabledBLE = true;
         relatedSettings!.isFakeDisabledSD = false;
       } else {
-        this.isFakeDisabledSD = false;
+        isFakeDisabledSD = false;
         if (relatedSettings!.selectedOptionSD == "0") {
           relatedSettings!.isFakeDisabledBLE = false;
         }
@@ -210,17 +217,17 @@ class SensorSettings extends ChangeNotifier {
   }
 
   void updateSelectedSDOption(String option) {
-    this.selectedOptionSD = option;
+    selectedOptionSD = option;
     if (relatedSettings != null) {
       if (option != "0") {
-        this.isFakeDisabledSD = false;
-        this.selectedOptionBLE = "0";
-        this.isFakeDisabledBLE = true;
+        isFakeDisabledSD = false;
+        selectedOptionBLE = "0";
+        isFakeDisabledBLE = true;
         if (relatedSettings!.selectedOptionSD == "0") {
           relatedSettings!.isFakeDisabledBLE = false;
         }
       } else if (relatedSettings!.selectedOptionBLE == "0") {
-        this.isFakeDisabledBLE = false;
+        isFakeDisabledBLE = false;
       }
       relatedSettings!.notifyListeners();
       relatedSettings!.onValuesChanged();
@@ -230,13 +237,13 @@ class SensorSettings extends ChangeNotifier {
   }
 
   void onValuesChanged() {
-    if (this.sensorSelected) {
-      if (this.selectedOptionBLE == "0" && this.selectedOptionSD == "0") {
-        this.sensorSelected = false;
+    if (sensorSelected) {
+      if (selectedOptionBLE == "0" && selectedOptionSD == "0") {
+        sensorSelected = false;
       }
     } else {
-      if (this.selectedOptionBLE != "0" || this.selectedOptionSD != "0") {
-        this.sensorSelected = true;
+      if (selectedOptionBLE != "0" || selectedOptionSD != "0") {
+        sensorSelected = true;
       }
     }
   }

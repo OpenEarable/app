@@ -1,6 +1,4 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'dart:io';
 import 'package:open_earable/ble/ble_controller.dart';
 import 'sensor_control_row.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
@@ -8,36 +6,16 @@ import 'package:provider/provider.dart';
 import '../../models/open_earable_settings_v2.dart';
 
 class SensorControlCard extends StatefulWidget {
-  SensorControlCard();
+  const SensorControlCard({super.key});
 
   @override
-  _SensorControlCardState createState() => _SensorControlCardState();
+  State<SensorControlCard> createState() => _SensorControlCardState();
 }
 
 class _SensorControlCardState extends State<SensorControlCard> {
+  @override
   void initState() {
     super.initState();
-  }
-
-  void _showErrorDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Invalid sampling rates'),
-          content: Text(
-              'Please ensure that sampling rates of IMU and Barometer are not greater than 30 Hz'),
-          actions: <Widget>[
-            TextButton(
-              child: Text('OK'),
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-              },
-            ),
-          ],
-        );
-      },
-    );
   }
 
   Future<void> _writeSensorConfigs() async {
@@ -118,10 +96,13 @@ class _SensorControlCardState extends State<SensorControlCard> {
                     height: 37,
                     child: Align(
                       alignment: Alignment.bottomCenter,
-                      child: Text("BLE",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                              color: Color.fromRGBO(168, 168, 172, 1.0))),
+                      child: Text(
+                        "BLE",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Color.fromRGBO(168, 168, 172, 1.0),
+                        ),
+                      ),
                     ),
                   ),
                   SizedBox(width: 8),
@@ -131,49 +112,60 @@ class _SensorControlCardState extends State<SensorControlCard> {
                     height: 37,
                     child: Align(
                       alignment: Alignment.bottomCenter,
-                      child: Text("SD",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                              color: Color.fromRGBO(168, 168, 172, 1.0))),
+                      child: Text(
+                        "SD",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Color.fromRGBO(168, 168, 172, 1.0),
+                        ),
+                      ),
                     ),
                   ),
                   SizedBox(width: 8),
                   // Space before the "Hz" label
-                  Text("Hz",
-                      textAlign: TextAlign.left,
-                      style:
-                          TextStyle(color: Color.fromRGBO(168, 168, 172, 0))),
+                  Text(
+                    "Hz",
+                    textAlign: TextAlign.left,
+                    style: TextStyle(color: Color.fromRGBO(168, 168, 172, 0)),
+                  ),
                 ],
               ),
               ChangeNotifierProvider<SensorSettings>.value(
-                  value: OpenEarableSettingsV2().microphone1Settings,
-                  child: SensorControlRow("Microphone 1")),
+                value: OpenEarableSettingsV2().microphone1Settings,
+                child: SensorControlRow("Microphone 1"),
+              ),
               SizedBox(height: 4),
               ChangeNotifierProvider<SensorSettings>.value(
-                  value: OpenEarableSettingsV2().microphone2Settings,
-                  child: SensorControlRow("Microphone 2")),
+                value: OpenEarableSettingsV2().microphone2Settings,
+                child: SensorControlRow("Microphone 2"),
+              ),
               Divider(
                 color: Color.fromRGBO(168, 168, 172, 1.0),
               ),
               ChangeNotifierProvider<SensorSettings>.value(
-                  value: OpenEarableSettingsV2().imuSettings,
-                  child: SensorControlRow("9-Axis IMU")),
+                value: OpenEarableSettingsV2().imuSettings,
+                child: SensorControlRow("9-Axis IMU"),
+              ),
               SizedBox(height: 4),
               ChangeNotifierProvider<SensorSettings>.value(
-                  value: OpenEarableSettingsV2().pulseOximeterSettings,
-                  child: SensorControlRow("Pulse Oximeter\n(Red/Infrared)")),
+                value: OpenEarableSettingsV2().pulseOximeterSettings,
+                child: SensorControlRow("Pulse Oximeter\n(Red/Infrared)"),
+              ),
               SizedBox(height: 4),
               ChangeNotifierProvider<SensorSettings>.value(
-                  value: OpenEarableSettingsV2().vitalsSettings,
-                  child: SensorControlRow("Heart Rate,\nSpO2")),
+                value: OpenEarableSettingsV2().vitalsSettings,
+                child: SensorControlRow("Heart Rate,\nSpO2"),
+              ),
               SizedBox(height: 4),
               ChangeNotifierProvider<SensorSettings>.value(
-                  value: OpenEarableSettingsV2().opticalTemperatureSettings,
-                  child: SensorControlRow("Optical Temp.\n(Surface)")),
+                value: OpenEarableSettingsV2().opticalTemperatureSettings,
+                child: SensorControlRow("Optical Temp.\n(Surface)"),
+              ),
               SizedBox(height: 4),
               ChangeNotifierProvider<SensorSettings>.value(
-                  value: OpenEarableSettingsV2().barometerSettings,
-                  child: SensorControlRow("Pressure,\nTemp. (Ambient)")),
+                value: OpenEarableSettingsV2().barometerSettings,
+                child: SensorControlRow("Pressure,\nTemp. (Ambient)"),
+              ),
               SizedBox(height: 8),
               Row(
                 children: [

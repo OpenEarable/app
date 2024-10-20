@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:open_earable/apps_tab/powernapper/movementTracker.dart';
+import 'package:open_earable/apps_tab/powernapper/movement_tracker.dart';
 import 'package:open_earable/apps_tab/powernapper/sensor_datatypes.dart';
 import 'package:open_earable/ble/ble_controller.dart';
 import 'package:open_earable/shared/earable_not_connected_warning.dart';
@@ -10,16 +10,15 @@ import 'interact.dart';
 /// TimerScreen - Main screen for the movment timer interaction.
 class TimerScreen extends StatefulWidget {
   final Interact interact;
-  TimerScreen(this.interact);
+
+  const TimerScreen(this.interact, {super.key});
+
   @override
-  State<StatefulWidget> createState() => TimerScreenState(interact);
+  State<StatefulWidget> createState() => TimerScreenState();
 }
 
 /// State for the movement Timer Interaction
 class TimerScreenState extends State<TimerScreen> {
-  //Interaction class
-  final Interact _interact;
-
   //Movement & timer logic
   late final MovementTracker _movementTracker;
 
@@ -29,9 +28,10 @@ class TimerScreenState extends State<TimerScreen> {
   //Display Data
   SensorDataType? _sensorData = NullData();
 
-  //Constructor
-  TimerScreenState(this._interact) {
-    this._movementTracker = MovementTracker(_interact);
+  @override
+  void initState() {
+    super.initState();
+    _movementTracker = MovementTracker(widget.interact);
   }
 
   @override
@@ -57,78 +57,82 @@ class TimerScreenState extends State<TimerScreen> {
             },
             child: Center(
               child: SingleChildScrollView(
-                  child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.asset(
-                    'lib/apps_tab/powernapper/assets/powernapping.png',
-                    width: 150,
-                    height: 150,
-                    color: Colors.grey,
-                  ),
-                  SizedBox(height: 20),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset(
+                      'lib/apps_tab/powernapper/assets/powernapping.png',
+                      width: 150,
+                      height: 150,
+                      color: Colors.grey,
+                    ),
+                    SizedBox(height: 20),
 
-                  // Input for Time length
-                  Padding(
-                    padding: EdgeInsets.all(20),
-                    child: TextField(
-                      controller: _controller,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
+                    // Input for Time length
+                    Padding(
+                      padding: EdgeInsets.all(20),
+                      child: TextField(
+                        controller: _controller,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
                           labelText: 'Zeitlänge eingeben (in Minuten)',
                           labelStyle: TextStyle(color: Colors.grey),
                           enabledBorder: UnderlineInputBorder(
                             borderSide: BorderSide(color: Colors.white),
                           ),
                           focusedBorder: UnderlineInputBorder(
-                              borderSide: BorderSide(color: Colors.grey))),
-                      style: TextStyle(color: Colors.white),
-                      cursorColor: Colors.white,
+                            borderSide: BorderSide(color: Colors.grey),
+                          ),
+                        ),
+                        style: TextStyle(color: Colors.white),
+                        cursorColor: Colors.white,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 20),
+                    SizedBox(height: 20),
 
-                  // Start timer button
-                  ElevatedButton(
-                    onPressed: () {
-                      String input = _controller.text;
-                      int minutes = int.tryParse(input) ?? 0;
+                    // Start timer button
+                    ElevatedButton(
+                      onPressed: () {
+                        String input = _controller.text;
+                        int minutes = int.tryParse(input) ?? 0;
 
-                      _movementTracker.start(minutes, updateText);
-                    },
-                    child: Text('Starten'),
-                  ),
+                        _movementTracker.start(minutes, updateText);
+                      },
+                      child: Text('Starten'),
+                    ),
 
-                  //Data table for the live display of the sensor data.
-                  DataTable(
-                    columns: [
-                      DataColumn(label: Text('Sensor')),
-                      DataColumn(label: Text('Wert')),
-                    ],
-                    rows: [
-                      DataRow(
-                        cells: [
-                          DataCell(Text('X')),
-                          DataCell(Text(_sensorData!.x.toStringAsFixed(14))),
-                        ],
-                      ),
-                      DataRow(
-                        cells: [
-                          DataCell(Text('Y')),
-                          DataCell(Text(_sensorData!.y.toStringAsFixed(14))),
-                        ],
-                      ),
-                      DataRow(
-                        cells: [
-                          DataCell(Text('Z')),
-                          DataCell(Text(_sensorData!.z.toStringAsFixed(14))),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
-              )),
-            ))
+                    //Data table for the live display of the sensor data.
+                    DataTable(
+                      columns: [
+                        DataColumn(label: Text('Sensor')),
+                        DataColumn(label: Text('Wert')),
+                      ],
+                      rows: [
+                        DataRow(
+                          cells: [
+                            DataCell(Text('X')),
+                            DataCell(Text(_sensorData!.x.toStringAsFixed(14))),
+                          ],
+                        ),
+                        DataRow(
+                          cells: [
+                            DataCell(Text('Y')),
+                            DataCell(Text(_sensorData!.y.toStringAsFixed(14))),
+                          ],
+                        ),
+                        DataRow(
+                          cells: [
+                            DataCell(Text('Z')),
+                            DataCell(Text(_sensorData!.z.toStringAsFixed(14))),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          )
         : EarableNotConnectedWarning();
   }
 }

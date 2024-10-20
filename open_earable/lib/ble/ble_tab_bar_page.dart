@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:open_earable/ble/ble_connect_view.dart';
@@ -8,10 +7,10 @@ import 'package:open_earable/ble/ble_controller.dart';
 class BLETabBarPage extends StatefulWidget {
   final int index;
 
-  BLETabBarPage({int this.index = 0});
+  const BLETabBarPage({super.key, this.index = 0});
 
   @override
-  _BLETabBarPageState createState() => _BLETabBarPageState();
+  State<BLETabBarPage> createState() => _BLETabBarPageState();
 }
 
 class _BLETabBarPageState extends State<BLETabBarPage>
@@ -34,12 +33,14 @@ class _BLETabBarPageState extends State<BLETabBarPage>
     if (_tabController.indexIsChanging) {
       if (_tabController.index == 0) {
         Provider.of<BluetoothController>(context, listen: false).startScanning(
-            Provider.of<BluetoothController>(context, listen: false)
-                .openEarableLeft);
+          Provider.of<BluetoothController>(context, listen: false)
+              .openEarableLeft,
+        );
       } else if (_tabController.index == 1) {
         Provider.of<BluetoothController>(context, listen: false).startScanning(
-            Provider.of<BluetoothController>(context, listen: false)
-                .openEarableRight);
+          Provider.of<BluetoothController>(context, listen: false)
+              .openEarableRight,
+        );
       }
     }
   }
@@ -47,12 +48,14 @@ class _BLETabBarPageState extends State<BLETabBarPage>
   void _handleTabChangeCupertino() {
     if (_cupertinoTabController.index == 0) {
       Provider.of<BluetoothController>(context, listen: false).startScanning(
-          Provider.of<BluetoothController>(context, listen: false)
-              .openEarableLeft);
+        Provider.of<BluetoothController>(context, listen: false)
+            .openEarableLeft,
+      );
     } else if (_cupertinoTabController.index == 1) {
       Provider.of<BluetoothController>(context, listen: false).startScanning(
-          Provider.of<BluetoothController>(context, listen: false)
-              .openEarableRight);
+        Provider.of<BluetoothController>(context, listen: false)
+            .openEarableRight,
+      );
     }
   }
 
@@ -68,54 +71,57 @@ class _BLETabBarPageState extends State<BLETabBarPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.background,
-        appBar: AppBar(
-          title: Text("Bluetooth Devices"),
-        ),
-        body: DefaultTabController(
-          length: 2,
-          child: Scaffold(
-            backgroundColor: Theme.of(context).colorScheme.background,
-            body: TabBarView(
-              controller: _tabController,
-              physics:
-                  NeverScrollableScrollPhysics(), // Disable swipe to change tabs
-              children: [
-                BLEPage(
-                    Provider.of<BluetoothController>(context).openEarableLeft,
-                    0),
-                BLEPage(
-                    Provider.of<BluetoothController>(context).openEarableRight,
-                    1),
-              ],
-            ),
-            bottomNavigationBar: BottomNavigationBar(
-              backgroundColor: Theme.of(context).colorScheme.background,
-              currentIndex: _tabController.index,
-              onTap: (index) {
-                setState(() {
-                  _tabController.index = index;
-                });
-              },
-              items: [
-                BottomNavigationBarItem(
-                  label: 'Left Earable',
-                  icon: ImageIcon(
-                    AssetImage('assets/OpenEarableIconLeft.png'),
-                    size: 40.0,
-                  ),
-                ),
-                BottomNavigationBarItem(
-                  label: 'Right Earable',
-                  icon: ImageIcon(
-                    AssetImage('assets/OpenEarableIconRight.png'),
-                    size: 40.0,
-                  ),
-                ),
-              ],
-            ),
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      appBar: AppBar(
+        title: Text("Bluetooth Devices"),
+      ),
+      body: DefaultTabController(
+        length: 2,
+        child: Scaffold(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          body: TabBarView(
+            controller: _tabController,
+            physics:
+                NeverScrollableScrollPhysics(), // Disable swipe to change tabs
+            children: [
+              BLEPage(
+                Provider.of<BluetoothController>(context).openEarableLeft,
+                0,
+              ),
+              BLEPage(
+                Provider.of<BluetoothController>(context).openEarableRight,
+                1,
+              ),
+            ],
           ),
-        ));
+          bottomNavigationBar: BottomNavigationBar(
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            currentIndex: _tabController.index,
+            onTap: (index) {
+              setState(() {
+                _tabController.index = index;
+              });
+            },
+            items: [
+              BottomNavigationBarItem(
+                label: 'Left Earable',
+                icon: ImageIcon(
+                  AssetImage('assets/OpenEarableIconLeft.png'),
+                  size: 40.0,
+                ),
+              ),
+              BottomNavigationBarItem(
+                label: 'Right Earable',
+                icon: ImageIcon(
+                  AssetImage('assets/OpenEarableIconRight.png'),
+                  size: 40.0,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

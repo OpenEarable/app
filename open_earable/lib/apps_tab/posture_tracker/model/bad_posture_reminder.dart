@@ -24,7 +24,7 @@ class BadPostureSettings {
       required this.rollAngleThreshold,
       required this.pitchAngleThreshold,
       required this.timeThreshold,
-      required this.resetTimeThreshold});
+      required this.resetTimeThreshold,});
 }
 
 class PostureTimestamps {
@@ -38,16 +38,16 @@ class BadPostureReminder {
       rollAngleThreshold: 20,
       pitchAngleThreshold: 20,
       timeThreshold: 10,
-      resetTimeThreshold: 1);
+      resetTimeThreshold: 1,);
   final OpenEarable _openEarable;
   final AttitudeTracker _attitudeTracker;
-  PostureTimestamps _timestamps = PostureTimestamps();
+  final PostureTimestamps _timestamps = PostureTimestamps();
 
   BadPostureSettings get settings => _settings;
 
   BadPostureReminder(this._openEarable, this._attitudeTracker);
 
-  bool? _lastPostureWasBad = null;
+  bool? _lastPostureWasBad;
 
   void start() {
     _timestamps.lastReset = DateTime.now();
@@ -102,7 +102,7 @@ class BadPostureReminder {
           // If the duration exceeds the minimum required, reset the last bad state time
           if (duration >= _settings.resetTimeThreshold) {
             print(
-                "duration: $duration, reset time threshold: ${_settings.resetTimeThreshold}");
+                "duration: $duration, reset time threshold: ${_settings.resetTimeThreshold}",);
             print("resetting last bad posture time");
             _timestamps.lastBadPosture = null;
           }

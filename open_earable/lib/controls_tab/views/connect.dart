@@ -4,15 +4,14 @@ import 'package:open_earable/ble/ble_controller.dart';
 import 'package:open_earable/ble/ble_tab_bar_page.dart';
 import 'package:open_earable/controls_tab/models/open_earable_settings_v2.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ConnectCard extends StatefulWidget {
-  ConnectCard();
+  const ConnectCard({super.key});
 
   @override
-  _ConnectCard createState() => _ConnectCard();
+  State<ConnectCard> createState() => _ConnectCard();
 }
 
 class _ConnectCard extends State<ConnectCard> {
@@ -54,7 +53,7 @@ class _ConnectCard extends State<ConnectCard> {
   void _startAutoConnectScan() async {
     if (_autoConnectEnabled) {
       Provider.of<BluetoothController>(context, listen: false).startScanning(
-          _openEarableLeft); // Scanning on one earable is sufficient to connect to both
+          _openEarableLeft,); // Scanning on one earable is sufficient to connect to both
     }
   }
 
@@ -86,7 +85,7 @@ class _ConnectCard extends State<ConnectCard> {
                               fontWeight: FontWeight.bold,
                             ),
                           );
-                        }),
+                        },),
                     Row(
                       children: [
                         Checkbox(
@@ -98,8 +97,9 @@ class _ConnectCard extends State<ConnectCard> {
                               _autoConnectEnabled = value ?? false;
                             });
                             _startAutoConnectScan();
-                            if (value != null)
+                            if (value != null) {
                               prefs.setBool("autoConnectEnabled", value);
+                            }
                           },
                         ),
                         Text(
@@ -107,7 +107,7 @@ class _ConnectCard extends State<ConnectCard> {
                           style: TextStyle(
                             color: Color.fromRGBO(168, 168, 172, 1.0),
                           ),
-                        )
+                        ),
                       ],
                     ),
                     Row(
@@ -127,11 +127,11 @@ class _ConnectCard extends State<ConnectCard> {
                                         0,
                                     onPressed: () => selectButton(0),
                                     openEarable: _openEarableLeft,
-                                    percentage: socLeft);
-                              }),
+                                    percentage: socLeft,);
+                              },),
                           SizedBox(height: 8),
                           _getConnectButton(context, "Left"),
-                        ])),
+                        ],),),
                         SizedBox(width: 8),
                         Expanded(
                             child: Column(children: [
@@ -148,14 +148,14 @@ class _ConnectCard extends State<ConnectCard> {
                                   openEarable: _openEarableRight,
                                   percentage: socRight,
                                 );
-                              }),
+                              },),
                           SizedBox(height: 8),
                           _getConnectButton(context, "Right"),
-                        ])),
+                        ],),),
                       ],
                     ),
                   ],
-                ))));
+                ),),),);
   }
 
   String _batteryPercentageString(int? percentage) {
@@ -167,7 +167,7 @@ class _ConnectCard extends State<ConnectCard> {
   }
 
   Widget _getConnectButton(BuildContext context, String side) {
-    return Container(
+    return SizedBox(
         height: 37,
         width: double.infinity,
         child: ElevatedButton(
@@ -177,12 +177,12 @@ class _ConnectCard extends State<ConnectCard> {
             foregroundColor: Colors.black,
           ),
           child: Text("Connect"),
-        ));
+        ),);
   }
 
-  _connectButtonAction(BuildContext context, String side) {
+  void _connectButtonAction(BuildContext context, String side) {
     Navigator.of(context).push(MaterialPageRoute(
-        builder: (context) => BLETabBarPage(index: side == "Left" ? 0 : 1)));
+        builder: (context) => BLETabBarPage(index: side == "Left" ? 0 : 1),),);
   }
 
   void _tryAutoconnect(List<DiscoveredDevice> devices) async {
@@ -215,7 +215,7 @@ class _ConnectCard extends State<ConnectCard> {
       if (_openEarableRight.bleManager.connectingDevice?.name !=
           deviceToConnectRight.name) {
         bleController.connectToDevice(
-            deviceToConnectRight, _openEarableRight, 1);
+            deviceToConnectRight, _openEarableRight, 1,);
       }
       devicesCopy.remove(deviceToConnectRight);
     } on StateError catch (_) {
@@ -247,9 +247,9 @@ class _ConnectCard extends State<ConnectCard> {
     return ElevatedButton(
       onPressed: onPressed,
       style: ButtonStyle(
-        backgroundColor: MaterialStateProperty.all(
-            Color.fromARGB(255, 83, 81, 91)), // Adjust the color as needed
-        shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+        backgroundColor: WidgetStateProperty.all(
+            Color.fromARGB(255, 83, 81, 91),), // Adjust the color as needed
+        shape: WidgetStateProperty.all<RoundedRectangleBorder>(
           RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10.0),
             side: BorderSide(
@@ -260,8 +260,8 @@ class _ConnectCard extends State<ConnectCard> {
             ),
           ),
         ),
-        padding: MaterialStateProperty.all(
-            EdgeInsets.zero), // Adjust padding if necessary
+        padding: WidgetStateProperty.all(
+            EdgeInsets.zero,), // Adjust padding if necessary
       ),
       child: Container(
         padding: EdgeInsets.all(8.0), // Padding inside the button for content

@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 class SettingsView extends StatefulWidget {
   final PostureTrackerViewModel _viewModel;
 
-  SettingsView(this._viewModel);
+  const SettingsView(this._viewModel, {super.key});
 
   @override
   State<SettingsView> createState() => _SettingsViewState();
@@ -25,13 +25,13 @@ class _SettingsViewState extends State<SettingsView> {
     super.initState();
     _viewModel = widget._viewModel;
     _rollAngleThresholdController = TextEditingController(
-        text: _viewModel.badPostureSettings.rollAngleThreshold.toString());
+        text: _viewModel.badPostureSettings.rollAngleThreshold.toString(),);
     _pitchAngleThresholdController = TextEditingController(
-        text: _viewModel.badPostureSettings.pitchAngleThreshold.toString());
+        text: _viewModel.badPostureSettings.pitchAngleThreshold.toString(),);
     _badPostureTimeThresholdController = TextEditingController(
-        text: _viewModel.badPostureSettings.timeThreshold.toString());
+        text: _viewModel.badPostureSettings.timeThreshold.toString(),);
     _goodPostureTimeThresholdController = TextEditingController(
-        text: _viewModel.badPostureSettings.resetTimeThreshold.toString());
+        text: _viewModel.badPostureSettings.resetTimeThreshold.toString(),);
   }
 
   @override
@@ -43,8 +43,8 @@ class _SettingsViewState extends State<SettingsView> {
           builder: (context, child) => Consumer<PostureTrackerViewModel>(
                 builder: (context, postureTrackerViewModel, child) =>
                     _buildSettingsView(),
-              )),
-      backgroundColor: Theme.of(context).colorScheme.background,
+              ),),
+      backgroundColor: Theme.of(context).colorScheme.surface,
     );
   }
 
@@ -59,7 +59,7 @@ class _SettingsViewState extends State<SettingsView> {
                 ? "Tracking"
                 : _viewModel.isAvailable
                     ? "Available"
-                    : "Unavailable"),
+                    : "Unavailable",),
           ),
         ),
         Card(
@@ -76,6 +76,7 @@ class _SettingsViewState extends State<SettingsView> {
                 },
               ),
               Visibility(
+                  visible: _viewModel.badPostureSettings.isActive,
                   child: Column(children: [
                     ListTile(
                       title: Text("Roll Angle Threshold (in degrees)"),
@@ -94,7 +95,7 @@ class _SettingsViewState extends State<SettingsView> {
                               labelText: 'Roll',
                               filled: true,
                               labelStyle: TextStyle(color: Colors.black),
-                              fillColor: Colors.white),
+                              fillColor: Colors.white,),
                           keyboardType: TextInputType.number,
                           onChanged: (_) {
                             _updatePostureSettings();
@@ -119,7 +120,7 @@ class _SettingsViewState extends State<SettingsView> {
                               labelText: 'Pitch',
                               filled: true,
                               labelStyle: TextStyle(color: Colors.black),
-                              fillColor: Colors.white),
+                              fillColor: Colors.white,),
                           keyboardType: TextInputType.number,
                           onChanged: (_) {
                             _updatePostureSettings();
@@ -144,7 +145,7 @@ class _SettingsViewState extends State<SettingsView> {
                               labelText: 'Seconds',
                               filled: true,
                               labelStyle: TextStyle(color: Colors.black),
-                              fillColor: Colors.white),
+                              fillColor: Colors.white,),
                           keyboardType: TextInputType.number,
                           onChanged: (_) {
                             _updatePostureSettings();
@@ -169,7 +170,7 @@ class _SettingsViewState extends State<SettingsView> {
                               labelText: 'Seconds',
                               filled: true,
                               labelStyle: TextStyle(color: Colors.black),
-                              fillColor: Colors.white),
+                              fillColor: Colors.white,),
                           keyboardType: TextInputType.number,
                           onChanged: (_) {
                             _updatePostureSettings();
@@ -177,9 +178,8 @@ class _SettingsViewState extends State<SettingsView> {
                         ),
                       ),
                     ),
-                  ]),
-                  visible: _viewModel.badPostureSettings.isActive),
-            ])),
+                  ],),),
+            ],),),
         Padding(
           padding: EdgeInsets.all(8.0),
           child: Row(children: [
@@ -199,10 +199,10 @@ class _SettingsViewState extends State<SettingsView> {
                     : () => _viewModel.startTracking(),
                 child: Text(_viewModel.isTracking
                     ? "Calibrate as Main Posture"
-                    : "Start Calibration"),
+                    : "Start Calibration",),
               ),
-            )
-          ]),
+            ),
+          ],),
         ),
       ],
     );

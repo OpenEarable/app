@@ -9,19 +9,20 @@ import 'package:open_earable/apps_tab/neck_stretch/model/stretch_colors.dart';
 class StretchTrackerView extends StatefulWidget {
   final StretchViewModel _viewModel;
 
-  StretchTrackerView(this._viewModel);
+  const StretchTrackerView(this._viewModel, {super.key});
 
   @override
   State<StretchTrackerView> createState() => _StretchTrackerViewState();
 
   /// Builds the actual head views using the StretchRollView
   static Widget buildHeadView(
-      String headAssetPath,
-      String neckAssetPath,
-      AlignmentGeometry headAlignment,
-      double roll,
-      double angleThreshold,
-      NeckStretchState state) {
+    String headAssetPath,
+    String neckAssetPath,
+    AlignmentGeometry headAlignment,
+    double roll,
+    double angleThreshold,
+    NeckStretchState state,
+  ) {
     return Padding(
       padding: const EdgeInsets.all(5),
       child: StretchRollView(
@@ -42,63 +43,67 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
   @override
   void initState() {
     super.initState();
-    this._viewModel = widget._viewModel;
+    _viewModel = widget._viewModel;
   }
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider<StretchViewModel>.value(
-        value: _viewModel,
-        builder: (context, child) => Consumer<StretchViewModel>(
-            builder: (context, neckStretchViewModel, child) => Scaffold(
-                  backgroundColor: Theme.of(context).colorScheme.background,
-                  appBar: AppBar(
-                    /// Override leading back arrow button to stop tracking if
-                    /// user stopped stretching
-                    leading: IconButton(
-                        icon: Icon(Icons.arrow_back),
-                        onPressed: () {
-                          neckStretchViewModel.isTracking
-                              ? _stopStretching()
-                              : () {};
-                          Navigator.of(context).pop();
-                        }),
-                    title: const Text("Guided Neck Stretch"),
-                    actions: [
-                      IconButton(
-
-                          /// Settings button, only active when not stretching
-                          onPressed: (this._viewModel.stretchState ==
-                                      NeckStretchState.noStretch ||
-                                  this._viewModel.stretchState ==
-                                      NeckStretchState.doneStretching)
-                              ? () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                      builder: (context) =>
-                                          SettingsView(this._viewModel)))
-                              : null,
-                          icon: Icon(Icons.settings)),
-                    ],
-                  ),
-                  body: Center(
-                    child: this._buildContentView(neckStretchViewModel),
-                  ),
-                )));
+      value: _viewModel,
+      builder: (context, child) => Consumer<StretchViewModel>(
+        builder: (context, neckStretchViewModel, child) => Scaffold(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          appBar: AppBar(
+            /// Override leading back arrow button to stop tracking if
+            /// user stopped stretching
+            leading: IconButton(
+              icon: Icon(Icons.arrow_back),
+              onPressed: () {
+                if (neckStretchViewModel.isTracking) {
+                  _stopStretching();
+                }
+                Navigator.of(context).pop();
+              },
+            ),
+            title: const Text("Guided Neck Stretch"),
+            actions: [
+              IconButton(
+                /// Settings button, only active when not stretching
+                onPressed: (_viewModel.stretchState ==
+                            NeckStretchState.noStretch ||
+                        _viewModel.stretchState ==
+                            NeckStretchState.doneStretching)
+                    ? () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => SettingsView(_viewModel),
+                          ),
+                        )
+                    : null,
+                icon: Icon(Icons.settings),
+              ),
+            ],
+          ),
+          body: Center(
+            child: _buildContentView(neckStretchViewModel),
+          ),
+        ),
+      ),
+    );
   }
 
   /// Used to start stretching via the button
   void _startStretching() {
-    this._viewModel.neckStretch.startStretching();
+    _viewModel.neckStretch.startStretching();
   }
 
   /// Used to stop stretching via the button
   void _stopStretching() {
-    this._viewModel.neckStretch.stopStretching();
+    _viewModel.neckStretch.stopStretching();
   }
 
   /// Returns the TextSpan representing the Status Text at the top of the app
   TextSpan _getStatusText() {
-    if (!_viewModel.isAvailable)
+    if (!_viewModel.isAvailable) {
       return TextSpan(
         text: "Connect an Earable to start Stretching!",
         style: TextStyle(
@@ -106,26 +111,31 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
           fontSize: 12,
         ),
       );
+    }
 
-    if (_viewModel.stretchState == NeckStretchState.noStretch)
+    if (_viewModel.stretchState == NeckStretchState.noStretch) {
       return TextSpan(text: "Click the Button below\n to start Stretching!");
+    }
 
-    if (_viewModel.stretchState == NeckStretchState.doneStretching)
+    if (_viewModel.stretchState == NeckStretchState.doneStretching) {
       return TextSpan(text: "You are done stretching,\n good job!");
+    }
 
-    return TextSpan(children: <TextSpan>[
-      TextSpan(
-        text: "Currently Stretching: \n",
-      ),
-      TextSpan(
-        text: this._viewModel.stretchState.display,
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 15,
-          color: stretchedAreaColor,
+    return TextSpan(
+      children: <TextSpan>[
+        TextSpan(
+          text: "Currently Stretching: \n",
         ),
-      )
-    ]);
+        TextSpan(
+          text: _viewModel.stretchState.display,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 15,
+            color: stretchedAreaColor,
+          ),
+        ),
+      ],
+    );
   }
 
   /// Returns the button text displayed within the button. Used to also display
@@ -134,20 +144,21 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
     if (!_viewModel.isTracking) return Text('Start Stretching');
 
     if (_viewModel.stretchState == NeckStretchState.doneStretching ||
-        _viewModel.stretchState == NeckStretchState.noStretch)
+        _viewModel.stretchState == NeckStretchState.noStretch) {
       return Text('Stop Stretching');
+    }
 
     return Text(_viewModel.restDuration.toString().substring(2, 7));
   }
 
   /// Build the actual content you can see in the app
   Widget _buildContentView(StretchViewModel neckStretchViewModel) {
-    var headViews = this._createHeadViews(neckStretchViewModel);
+    var headViews = _createHeadViews(neckStretchViewModel);
     return Column(
       children: [
         Padding(
           padding: EdgeInsets.all(5),
-          child: Container(
+          child: SizedBox(
             height: 40,
             child: Padding(
               padding: EdgeInsets.fromLTRB(0, 8, 0, 0),
@@ -164,7 +175,7 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
             child: e,
           ),
         ),
-        _buildStretchButton(neckStretchViewModel)
+        _buildStretchButton(neckStretchViewModel),
       ],
     );
   }
@@ -184,22 +195,24 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
   Widget _buildStretchButton(StretchViewModel neckStretchViewModel) {
     return Padding(
       padding: EdgeInsets.all(16),
-      child: Column(children: [
-        ElevatedButton(
-          onPressed: neckStretchViewModel.isAvailable
-              ? () {
-                  neckStretchViewModel.isTracking
-                      ? _stopStretching()
-                      : _startStretching();
-                }
-              : null,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: _getBackgroundColor(neckStretchViewModel),
-            foregroundColor: Colors.black,
+      child: Column(
+        children: [
+          ElevatedButton(
+            onPressed: neckStretchViewModel.isAvailable
+                ? () {
+                    neckStretchViewModel.isTracking
+                        ? _stopStretching()
+                        : _startStretching();
+                  }
+                : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _getBackgroundColor(neckStretchViewModel),
+              foregroundColor: Colors.black,
+            ),
+            child: _getButtonText(),
           ),
-          child: _getButtonText(),
-        ),
-      ]),
+        ],
+      ),
     );
   }
 
@@ -208,61 +221,75 @@ class _StretchTrackerViewState extends State<StretchTrackerView> {
     return [
       // Visible Head-Displays when not stretching
       _buildStretchViews(
-          NeckStretchState.noStretch, neckStretchViewModel, 0.0, 0.0),
+        NeckStretchState.noStretch,
+        neckStretchViewModel,
+        0.0,
+        0.0,
+      ),
 
       /// Visible Widgets for the main stretch
       _buildStretchViews(
-          NeckStretchState.mainNeckStretch,
-          neckStretchViewModel,
-          7.0,
-          (neckStretchViewModel.stretchSettings.forwardStretchAngle % 180)),
+        NeckStretchState.mainNeckStretch,
+        neckStretchViewModel,
+        7.0,
+        (neckStretchViewModel.stretchSettings.forwardStretchAngle % 180),
+      ),
 
       /// Visible Widgets for the right stretch
       _buildStretchViews(
-          NeckStretchState.rightNeckStretch,
-          neckStretchViewModel,
-          (neckStretchViewModel.stretchSettings.sideStretchAngle % 180),
-          15.0),
+        NeckStretchState.rightNeckStretch,
+        neckStretchViewModel,
+        (neckStretchViewModel.stretchSettings.sideStretchAngle % 180),
+        15.0,
+      ),
 
       /// Visible Widgets for the left stretch
-      _buildStretchViews(NeckStretchState.leftNeckStretch, neckStretchViewModel,
-          (neckStretchViewModel.stretchSettings.sideStretchAngle % 180), 15.0),
+      _buildStretchViews(
+        NeckStretchState.leftNeckStretch,
+        neckStretchViewModel,
+        (neckStretchViewModel.stretchSettings.sideStretchAngle % 180),
+        15.0,
+      ),
     ];
   }
 
   /// Builds the head tracking/stretch view parts for a certain state and thresholds
   Visibility _buildStretchViews(
-      NeckStretchState state,
-      StretchViewModel neckStretchViewModel,
-      double frontThreshold,
-      double sideThreshold) {
-    var visibility;
+    NeckStretchState state,
+    StretchViewModel neckStretchViewModel,
+    double frontThreshold,
+    double sideThreshold,
+  ) {
+    bool visibility;
     if (state == NeckStretchState.noStretch) {
-      visibility = this._viewModel.stretchState == NeckStretchState.noStretch ||
-          this._viewModel.stretchState == NeckStretchState.doneStretching;
+      visibility = _viewModel.stretchState == NeckStretchState.noStretch ||
+          _viewModel.stretchState == NeckStretchState.doneStretching;
     } else {
-      visibility = this._viewModel.stretchState == state;
+      visibility = _viewModel.stretchState == state;
     }
 
     return Visibility(
-        visible: visibility,
-        child: Column(
-          children: <Widget>[
-            StretchTrackerView.buildHeadView(
-                state.assetPathHeadFront,
-                state.assetPathNeckFront,
-                Alignment.center.add(Alignment(0, 0.3)),
-                neckStretchViewModel.attitude.roll,
-                frontThreshold,
-                state),
-            StretchTrackerView.buildHeadView(
-                state.assetPathHeadSide,
-                state.assetPathNeckSide,
-                Alignment.center.add(Alignment(0, 0.3)),
-                -neckStretchViewModel.attitude.pitch,
-                sideThreshold,
-                state),
-          ],
-        ));
+      visible: visibility,
+      child: Column(
+        children: <Widget>[
+          StretchTrackerView.buildHeadView(
+            state.assetPathHeadFront,
+            state.assetPathNeckFront,
+            Alignment.center.add(Alignment(0, 0.3)),
+            neckStretchViewModel.attitude.roll,
+            frontThreshold,
+            state,
+          ),
+          StretchTrackerView.buildHeadView(
+            state.assetPathHeadSide,
+            state.assetPathNeckSide,
+            Alignment.center.add(Alignment(0, 0.3)),
+            -neckStretchViewModel.attitude.pitch,
+            sideThreshold,
+            state,
+          ),
+        ],
+      ),
+    );
   }
 }

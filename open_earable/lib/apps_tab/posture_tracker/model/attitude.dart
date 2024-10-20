@@ -14,23 +14,23 @@ class Attitude {
     return Attitude(
         roll: roll + other.roll,
         pitch: pitch + other.pitch,
-        yaw: yaw + other.yaw);
+        yaw: yaw + other.yaw,);
   }
 
   Attitude operator -(Attitude other) {
     return Attitude(
         roll: roll - other.roll,
         pitch: pitch - other.pitch,
-        yaw: yaw - other.yaw);
+        yaw: yaw - other.yaw,);
   }
 
   Attitude operator *(double scalar) {
     return Attitude(
-        roll: roll * scalar, pitch: pitch * scalar, yaw: yaw * scalar);
+        roll: roll * scalar, pitch: pitch * scalar, yaw: yaw * scalar,);
   }
 
   Attitude operator /(double scalar) {
     return Attitude(
-        roll: roll / scalar, pitch: pitch / scalar, yaw: yaw / scalar);
+        roll: roll / scalar, pitch: pitch / scalar, yaw: yaw / scalar,);
   }
 }

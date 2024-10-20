@@ -1,5 +1,5 @@
 class EWMA {
-  double _alpha;
+  final double _alpha;
   double _oldValue = 0;
 
   EWMA(this._alpha);

@@ -3,29 +3,32 @@ import 'dart:async';
 import 'package:open_earable/shared/earable_not_connected_warning.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:flutter/material.dart';
-import 'package:community_charts_flutter/community_charts_flutter.dart' as charts;
+import 'package:community_charts_flutter/community_charts_flutter.dart'
+    as charts;
 import 'package:simple_kalman/simple_kalman.dart';
 import 'package:collection/collection.dart';
 import 'dart:math';
 import 'dart:core';
 
 class EarableDataChart extends StatefulWidget {
-  final OpenEarable _openEarable;
-  final String _groupName;
-  final String _chartTitle;
-  EarableDataChart(this._openEarable, this._groupName, this._chartTitle);
+  final OpenEarable openEarable;
+  final String sensorName;
+  final String chartTitle;
+
+  const EarableDataChart(
+    this.openEarable,
+    this.sensorName,
+    this.chartTitle, {
+    super.key,
+  });
+
   @override
-  _EarableDataChartState createState() =>
-      _EarableDataChartState(_openEarable, _groupName, _chartTitle);
+  State<EarableDataChart> createState() => _EarableDataChartState();
 }
 
 class _EarableDataChartState extends State<EarableDataChart> {
-  OpenEarable _openEarable;
-  final String _sensorName;
-  final String _chartTitle;
   late List<SensorData> _data;
   StreamSubscription? _dataSubscription;
-  _EarableDataChartState(this._openEarable, this._sensorName, this._chartTitle);
   late int _minX = 0;
   late int _maxX = 0;
   late List<String> colors;
@@ -34,8 +37,8 @@ class _EarableDataChartState extends State<EarableDataChart> {
   late double _maxY;
   final errorMeasure = {"ACC": 5.0, "GYRO": 10.0, "MAG": 25.0};
   late SimpleKalman kalmanX, kalmanY, kalmanZ;
-  int _numDatapoints = 200;
-  Map<String, String> _units = {
+  final int _numDatapoints = 200;
+  final Map<String, String> _units = {
     "ACC": "m/s\u00B2",
     "GYRO": "°/s",
     "MAG": "µT",
@@ -44,86 +47,99 @@ class _EarableDataChartState extends State<EarableDataChart> {
     "OPTTEMP": "°C",
     "PPG": "nm",
   };
-  _setupListeners() {
+
+  void _setupListeners() {
     _dataSubscription?.cancel();
-    if (!_openEarable.bleManager.connected) {
+    if (!widget.openEarable.bleManager.connected) {
       return;
     }
-    if (_sensorName == "BARO") {
+    if (widget.sensorName == "BARO") {
       _createSingleDataSubscription("Pressure");
-    } else if (_sensorName == "TEMP") {
+    } else if (widget.sensorName == "TEMP") {
       _createSingleDataSubscription("Temperature");
-    } else if (_sensorName == "PULSOX") {
-      if (_chartTitle == "SpO2") {
+    } else if (widget.sensorName == "PULSOX") {
+      if (widget.chartTitle == "SpO2") {
         _createSingleDataSubscription("SpO2");
       } else {
         _createSingleDataSubscription("HeartRate");
       }
-    } else if (_sensorName == "OPTTEMP") {
+    } else if (widget.sensorName == "OPTTEMP") {
       _createSingleDataSubscription("Temperature");
-    } else if (_sensorName == "PPG") {
+    } else if (widget.sensorName == "PPG") {
       _dataSubscription?.cancel();
-      _dataSubscription =
-          _openEarable.sensorManager.subscribeToSensorData(1).listen((data) {
+      _dataSubscription = widget.openEarable.sensorManager
+          .subscribeToSensorData(1)
+          .listen((data) {
         int timestamp = data["timestamp"];
         SensorData sensorData = SensorData(
-            name: _sensorName,
-            timestamp: timestamp,
-            values: [data[_sensorName]["Red"], data[_sensorName]["InfraRed"]],
-            units: data[_sensorName]["units"]);
+          name: widget.sensorName,
+          timestamp: timestamp,
+          values: [
+            data[widget.sensorName]["Red"],
+            data[widget.sensorName]["InfraRed"],
+          ],
+          units: data[widget.sensorName]["units"],
+        );
         _updateData(sensorData);
       });
-    } else if (_sensorName == "ACC" ||
-        _sensorName == "GYRO" ||
-        _sensorName == "MAG") {
+    } else if (widget.sensorName == "ACC" ||
+        widget.sensorName == "GYRO" ||
+        widget.sensorName == "MAG") {
       kalmanX = SimpleKalman(
-          errorMeasure: errorMeasure[_sensorName]!,
-          errorEstimate: errorMeasure[_sensorName]!,
-          q: 0.9);
+        errorMeasure: errorMeasure[widget.sensorName]!,
+        errorEstimate: errorMeasure[widget.sensorName]!,
+        q: 0.9,
+      );
       kalmanY = SimpleKalman(
-          errorMeasure: errorMeasure[_sensorName]!,
-          errorEstimate: errorMeasure[_sensorName]!,
-          q: 0.9);
+        errorMeasure: errorMeasure[widget.sensorName]!,
+        errorEstimate: errorMeasure[widget.sensorName]!,
+        q: 0.9,
+      );
       kalmanZ = SimpleKalman(
-          errorMeasure: errorMeasure[_sensorName]!,
-          errorEstimate: errorMeasure[_sensorName]!,
-          q: 0.9);
+        errorMeasure: errorMeasure[widget.sensorName]!,
+        errorEstimate: errorMeasure[widget.sensorName]!,
+        q: 0.9,
+      );
       _dataSubscription?.cancel();
-      _dataSubscription =
-          _openEarable.sensorManager.subscribeToSensorData(0).listen((data) {
+      _dataSubscription = widget.openEarable.sensorManager
+          .subscribeToSensorData(0)
+          .listen((data) {
         int timestamp = data["timestamp"];
         SensorData xyzValue = SensorData(
-            name: _sensorName,
-            timestamp: timestamp,
-            values: [
-              kalmanX.filtered(data[_sensorName]["X"]),
-              kalmanY.filtered(data[_sensorName]["Y"]),
-              kalmanZ.filtered(data[_sensorName]["Z"]),
-            ],
-            units: data[_sensorName]["units"]);
+          name: widget.sensorName,
+          timestamp: timestamp,
+          values: [
+            kalmanX.filtered(data[widget.sensorName]["X"]),
+            kalmanY.filtered(data[widget.sensorName]["Y"]),
+            kalmanZ.filtered(data[widget.sensorName]["Z"]),
+          ],
+          units: data[widget.sensorName]["units"],
+        );
 
         _updateData(xyzValue);
       });
     }
   }
 
-  _createSingleDataSubscription(String componentName) {
+  void _createSingleDataSubscription(String componentName) {
     _dataSubscription?.cancel();
-    _dataSubscription =
-        _openEarable.sensorManager.subscribeToSensorData(1).listen((data) {
+    _dataSubscription = widget.openEarable.sensorManager
+        .subscribeToSensorData(1)
+        .listen((data) {
       //units.addAll(data["TEMP"]["units"]);
       int timestamp = data["timestamp"];
       SensorData sensorData = SensorData(
-          name: _sensorName,
-          timestamp: timestamp,
-          values: [data[_sensorName][componentName]],
-          //temperature: data["TEMP"]["Temperature"],
-          units: data[_sensorName]["units"]);
+        name: widget.sensorName,
+        timestamp: timestamp,
+        values: [data[widget.sensorName][componentName]],
+        //temperature: data["TEMP"]["Temperature"],
+        units: data[widget.sensorName]["units"],
+      );
       _updateData(sensorData);
     });
   }
 
-  _updateData(SensorData value) {
+  void _updateData(SensorData value) {
     setState(() {
       _data.add(value);
       _checkLength(_data);
@@ -136,8 +152,9 @@ class _EarableDataChartState extends State<EarableDataChart> {
       double maxY = maxXYZValue.getMax();
       double minY = minXYZValue.getMin();
       double maxAbsValue = max(maxY.abs(), minY.abs());
-      bool isIMUChart =
-          _sensorName == "ACC" || _sensorName == "GYRO" || _sensorName == "MAG";
+      bool isIMUChart = widget.sensorName == "ACC" ||
+          widget.sensorName == "GYRO" ||
+          widget.sensorName == "MAG";
 
       _maxY = isIMUChart ? maxAbsValue : maxY;
       _minY = isIMUChart ? -maxAbsValue : minY;
@@ -146,7 +163,7 @@ class _EarableDataChartState extends State<EarableDataChart> {
     });
   }
 
-  _getColor(String title) {
+  List<String> _getColor(String title) {
     if (title == "Accelerometer") {
       return ['#FF6347', '#3CB371', '#1E90FF'];
     } else if (title == "Gyroscope") {
@@ -165,15 +182,17 @@ class _EarableDataChartState extends State<EarableDataChart> {
     } else if (title == "PPG") {
       return ['#32CD32', '#B22222'];
     }
+
+    // Default return value
+    return ['#FFFFFF', '#FFFFFF'];
   }
 
   @override
   void didUpdateWidget(covariant EarableDataChart oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget._openEarable != widget._openEarable) {
+    if (oldWidget.openEarable != widget.openEarable) {
       setState(() {
         _data.clear();
-        _openEarable = widget._openEarable;
       });
       _setupListeners();
     }
@@ -183,21 +202,21 @@ class _EarableDataChartState extends State<EarableDataChart> {
   void initState() {
     super.initState();
     _data = [];
-    colors = _getColor(_chartTitle);
-    if (_sensorName == 'TEMP' || _sensorName == 'OPTTEMP') {
+    colors = _getColor(widget.chartTitle);
+    if (widget.sensorName == 'TEMP' || widget.sensorName == 'OPTTEMP') {
       _minY = 0;
       _maxY = 30;
-    } else if (_sensorName == 'BARO') {
+    } else if (widget.sensorName == 'BARO') {
       _minY = 0;
       _maxY = 130000;
-    } else if (_sensorName == "MAG") {
+    } else if (widget.sensorName == "MAG") {
       _minY = -200;
       _maxY = 200;
     } else {
       _minY = -25;
       _maxY = 25;
     }
-    if (_openEarable.bleManager.connected) {
+    if (widget.openEarable.bleManager.connected) {
       _setupListeners();
     }
   }
@@ -208,7 +227,7 @@ class _EarableDataChartState extends State<EarableDataChart> {
     _dataSubscription?.cancel();
   }
 
-  _checkLength(data) {
+  void _checkLength(data) {
     if (data.length > _numDatapoints) {
       data.removeRange(0, data.length - _numDatapoints);
     }
@@ -216,44 +235,46 @@ class _EarableDataChartState extends State<EarableDataChart> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_openEarable.bleManager.connected) {
+    if (!widget.openEarable.bleManager.connected) {
       return EarableNotConnectedWarning();
     }
-    if (_sensorName == 'ACC' || _sensorName == 'GYRO' || _sensorName == 'MAG') {
+    if (widget.sensorName == 'ACC' ||
+        widget.sensorName == 'GYRO' ||
+        widget.sensorName == 'MAG') {
       seriesList = [
         charts.Series<SensorData, int>(
-          id: 'X${_data.isNotEmpty ? " (${_units[_sensorName]})" : ""}',
+          id: 'X${_data.isNotEmpty ? " (${_units[widget.sensorName]})" : ""}',
           colorFn: (_, __) => charts.Color.fromHex(code: colors[0]),
           domainFn: (SensorData data, _) => data.timestamp,
           measureFn: (SensorData data, _) => data.values[0],
           data: _data,
         ),
         charts.Series<SensorData, int>(
-          id: 'Y${_data.isNotEmpty ? " (${_units[_sensorName]})" : ""}',
+          id: 'Y${_data.isNotEmpty ? " (${_units[widget.sensorName]})" : ""}',
           colorFn: (_, __) => charts.Color.fromHex(code: colors[1]),
           domainFn: (SensorData data, _) => data.timestamp,
           measureFn: (SensorData data, _) => data.values[1],
           data: _data,
         ),
         charts.Series<SensorData, int>(
-          id: 'Z${_data.isNotEmpty ? " (${_units[_sensorName]})" : ""}',
+          id: 'Z${_data.isNotEmpty ? " (${_units[widget.sensorName]})" : ""}',
           colorFn: (_, __) => charts.Color.fromHex(code: colors[2]),
           domainFn: (SensorData data, _) => data.timestamp,
           measureFn: (SensorData data, _) => data.values[2],
           data: _data,
         ),
       ];
-    } else if (_sensorName == "PPG") {
+    } else if (widget.sensorName == "PPG") {
       seriesList = [
         charts.Series<SensorData, int>(
-          id: 'Red${_data.isNotEmpty ? " (${_units[_sensorName]})" : ""}',
+          id: 'Red${_data.isNotEmpty ? " (${_units[widget.sensorName]})" : ""}',
           colorFn: (_, __) => charts.Color.fromHex(code: colors[0]),
           domainFn: (SensorData data, _) => data.timestamp,
           measureFn: (SensorData data, _) => data.values[0],
           data: _data,
         ),
         charts.Series<SensorData, int>(
-          id: 'Infrared${_data.isNotEmpty ? " (${_units[_sensorName]})" : ""}',
+          id: 'Infrared${_data.isNotEmpty ? " (${_units[widget.sensorName]})" : ""}',
           colorFn: (_, __) => charts.Color.fromHex(code: colors[1]),
           domainFn: (SensorData data, _) => data.timestamp,
           measureFn: (SensorData data, _) => data.values[1],
@@ -263,7 +284,7 @@ class _EarableDataChartState extends State<EarableDataChart> {
     } else {
       seriesList = [
         charts.Series<SensorData, int>(
-          id: '$_chartTitle${_data.isNotEmpty ? " (${_units[_sensorName]})" : ""}',
+          id: '${widget.chartTitle}${_data.isNotEmpty ? " (${_units[widget.sensorName]})" : ""}',
           colorFn: (_, __) => charts.Color.fromHex(code: colors[0]),
           domainFn: (SensorData data, _) => data.timestamp,
           measureFn: (SensorData data, _) => data.values[0],
@@ -276,56 +297,61 @@ class _EarableDataChartState extends State<EarableDataChart> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-            padding: EdgeInsets.all(16),
-            child: Text(
-              _chartTitle,
-              style: TextStyle(fontSize: 30),
-            )),
+          padding: EdgeInsets.all(16),
+          child: Text(
+            widget.chartTitle,
+            style: TextStyle(fontSize: 30),
+          ),
+        ),
         Expanded(
           child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: charts.LineChart(
-                seriesList,
-                animate: false,
-                behaviors: [
-                  charts.SeriesLegend(
-                    position: charts.BehaviorPosition
-                        .bottom, // To position the legend at the end (bottom). You can change this as per requirement.
-                    outsideJustification: charts.OutsideJustification
-                        .middleDrawArea, // To justify the position.
-                    horizontalFirst: false, // To stack items horizontally.
-                    desiredMaxRows:
-                        1, // Optional if you want to define max rows for the legend.
-                    entryTextStyle: charts.TextStyleSpec(
-                      // Optional styling for the text.
-                      color: charts.Color(r: 255, g: 255, b: 255),
-                      fontSize: 12,
-                    ),
-                  )
-                ],
-                primaryMeasureAxis: charts.NumericAxisSpec(
-                  tickProviderSpec: charts.BasicNumericTickProviderSpec(
-                      desiredTickCount: 7,
-                      zeroBound: false,
-                      dataIsInWholeNumbers: false),
-                  renderSpec: charts.GridlineRendererSpec(
-                    labelStyle: charts.TextStyleSpec(
-                      fontSize: 14,
-                      color: charts.MaterialPalette.white, // Set the color here
-                    ),
+            padding: const EdgeInsets.all(16.0),
+            child: charts.LineChart(
+              seriesList,
+              animate: false,
+              behaviors: [
+                charts.SeriesLegend(
+                  position: charts.BehaviorPosition.bottom,
+                  // To position the legend at the end (bottom). You can change this as per requirement.
+                  outsideJustification:
+                      charts.OutsideJustification.middleDrawArea,
+                  // To justify the position.
+                  horizontalFirst: false,
+                  // To stack items horizontally.
+                  desiredMaxRows: 1,
+                  // Optional if you want to define max rows for the legend.
+                  entryTextStyle: charts.TextStyleSpec(
+                    // Optional styling for the text.
+                    color: charts.Color(r: 255, g: 255, b: 255),
+                    fontSize: 12,
                   ),
-                  viewport: charts.NumericExtents(_minY, _maxY),
                 ),
-                domainAxis: charts.NumericAxisSpec(
-                    renderSpec: charts.GridlineRendererSpec(
-                      labelStyle: charts.TextStyleSpec(
-                        fontSize: 14,
-                        color:
-                            charts.MaterialPalette.white, // Set the color here
-                      ),
-                    ),
-                    viewport: charts.NumericExtents(_minX, _maxX)),
-              )),
+              ],
+              primaryMeasureAxis: charts.NumericAxisSpec(
+                tickProviderSpec: charts.BasicNumericTickProviderSpec(
+                  desiredTickCount: 7,
+                  zeroBound: false,
+                  dataIsInWholeNumbers: false,
+                ),
+                renderSpec: charts.GridlineRendererSpec(
+                  labelStyle: charts.TextStyleSpec(
+                    fontSize: 14,
+                    color: charts.MaterialPalette.white, // Set the color here
+                  ),
+                ),
+                viewport: charts.NumericExtents(_minY, _maxY),
+              ),
+              domainAxis: charts.NumericAxisSpec(
+                renderSpec: charts.GridlineRendererSpec(
+                  labelStyle: charts.TextStyleSpec(
+                    fontSize: 14,
+                    color: charts.MaterialPalette.white, // Set the color here
+                  ),
+                ),
+                viewport: charts.NumericExtents(_minX, _maxX),
+              ),
+            ),
+          ),
         ),
       ],
     );
@@ -338,20 +364,23 @@ class SensorData {
   final List<double> values;
   final Map<dynamic, dynamic> units;
 
-  SensorData(
-      {required this.name,
-      required this.timestamp,
-      required this.values,
-      required this.units});
+  SensorData({
+    required this.name,
+    required this.timestamp,
+    required this.values,
+    required this.units,
+  });
 
   double getMax() {
     return values.reduce(
-        (currentMax, element) => element > currentMax ? element : currentMax);
+      (currentMax, element) => element > currentMax ? element : currentMax,
+    );
   }
 
   double getMin() {
     return values.reduce(
-        (currentMin, element) => element < currentMin ? element : currentMin);
+      (currentMin, element) => element < currentMin ? element : currentMin,
+    );
   }
 
   @override

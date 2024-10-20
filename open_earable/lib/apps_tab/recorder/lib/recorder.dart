@@ -7,20 +7,21 @@ import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 
 class Recorder extends StatefulWidget {
-  final OpenEarable _openEarable;
-  Recorder(this._openEarable);
+  final OpenEarable openEarable;
+
+  const Recorder(this.openEarable, {super.key});
+
   @override
-  _RecorderState createState() => _RecorderState(_openEarable);
+  State<Recorder> createState() => _RecorderState();
 }
 
 class _RecorderState extends State<Recorder> {
-  List<FileSystemEntity> _recordingFolders = [];
+  final List<FileSystemEntity> _recordingFolders = [];
   Directory? _selectedFolder;
-  final OpenEarable _openEarable;
   bool _recording = false;
   StreamSubscription? _imuSubscription;
   StreamSubscription? _barometerSubscription;
-  _RecorderState(this._openEarable);
+
   CsvWriter? _imuCsvWriter;
   CsvWriter? _barometerCsvWriter;
   late List<String> _imuHeader;
@@ -30,6 +31,7 @@ class _RecorderState extends State<Recorder> {
   Timer? _timer;
   Duration _duration = Duration();
   StreamSubscription? _connectionStateSubscription;
+
   @override
   void initState() {
     super.initState();
@@ -68,10 +70,12 @@ class _RecorderState extends State<Recorder> {
       "sensor_temp[°C]",
     ];
     _imuHeader.addAll(
-        _labels.sublist(1).map((label) => "label_OpenEarable_${label}"));
+      _labels.sublist(1).map((label) => "label_OpenEarable_$label"),
+    );
     _barometerHeader.addAll(
-        _labels.sublist(1).map((label) => "label_OpenEarable_${label}"));
-    if (_openEarable.bleManager.connected) {
+      _labels.sublist(1).map((label) => "label_OpenEarable_$label"),
+    );
+    if (widget.openEarable.bleManager.connected) {
       _setupListeners();
     }
     listSubfoldersInDocumentsDirectory();
@@ -133,9 +137,9 @@ class _RecorderState extends State<Recorder> {
     setState(() {});
   }
 
-  _setupListeners() {
+  void _setupListeners() {
     _connectionStateSubscription =
-        _openEarable.bleManager.connectionStateStream.listen((connected) {
+        widget.openEarable.bleManager.connectionStateStream.listen((connected) {
       setState(() {
         if (!connected) {
           _recording = false;
@@ -143,7 +147,7 @@ class _RecorderState extends State<Recorder> {
       });
     });
     _imuSubscription =
-        _openEarable.sensorManager.subscribeToSensorData(0).listen((data) {
+        widget.openEarable.sensorManager.subscribeToSensorData(0).listen((data) {
       if (!_recording) {
         return;
       }
@@ -185,7 +189,7 @@ class _RecorderState extends State<Recorder> {
     });
 
     _barometerSubscription =
-        _openEarable.sensorManager.subscribeToSensorData(1).listen((data) {
+        widget.openEarable.sensorManager.subscribeToSensorData(1).listen((data) {
       if (!_recording) {
         return;
       }
@@ -255,152 +259,158 @@ class _RecorderState extends State<Recorder> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.background,
-        appBar: AppBar(
-          title: Text('Recorder'),
-        ),
-        body: _recorderWidget());
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      appBar: AppBar(
+        title: Text('Recorder'),
+      ),
+      body: _recorderWidget(),
+    );
   }
 
   Widget _recorderWidget() {
     return Column(
       mainAxisAlignment: MainAxisAlignment.start,
       children: [
-        Container(
-            height: 200,
-            child: !_openEarable.bleManager.connected
-                ? EarableNotConnectedWarning()
-                : Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
+        SizedBox(
+          height: 200,
+          child: !widget.openEarable.bleManager.connected
+              ? EarableNotConnectedWarning()
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+                      child: Text(
+                        _formatDuration(_duration),
+                        style: TextStyle(
+                          fontFamily:
+                              'Digital', // This is a common monospaced font
+                          fontSize: 80,
+                          fontWeight: FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
                         Padding(
-                          padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
-                          child: Text(
-                            _formatDuration(_duration),
-                            style: TextStyle(
-                              fontFamily:
-                                  'Digital', // This is a common monospaced font
-                              fontSize: 80,
-                              fontWeight: FontWeight.normal,
+                          padding: EdgeInsets.all(16),
+                          child: ElevatedButton(
+                            onPressed: startStopRecording,
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: Size(200, 36),
+                              backgroundColor: _recording
+                                  ? Color(0xfff27777)
+                                  : Theme.of(context).colorScheme.secondary,
+                              foregroundColor: Colors.black,
+                            ),
+                            child: Text(
+                              _recording ? "Stop Recording" : "Start Recording",
+                              style: TextStyle(fontSize: 20),
                             ),
                           ),
                         ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Padding(
-                              padding: EdgeInsets.all(16),
-                              child: ElevatedButton(
-                                onPressed: startStopRecording,
-                                style: ElevatedButton.styleFrom(
-                                  minimumSize: Size(200, 36),
-                                  backgroundColor: _recording
-                                      ? Color(0xfff27777)
-                                      : Theme.of(context).colorScheme.secondary,
-                                  foregroundColor: Colors.black,
-                                ),
-                                child: Text(
-                                  _recording
-                                      ? "Stop Recording"
-                                      : "Start Recording",
-                                  style: TextStyle(fontSize: 20),
-                                ),
-                              ),
-                            ),
-                            DropdownButton<String>(
-                              value: _selectedLabel,
-                              icon: const Icon(Icons.arrow_drop_down),
-                              onChanged: (String? newValue) {
-                                setState(() {
-                                  _selectedLabel = newValue!;
-                                });
-                              },
-                              items: _labels.map<DropdownMenuItem<String>>(
-                                  (String value) {
-                                return DropdownMenuItem<String>(
-                                  value: value,
-                                  child: Text(value),
-                                );
-                              }).toList(),
-                            ),
-                          ],
+                        DropdownButton<String>(
+                          value: _selectedLabel,
+                          icon: const Icon(Icons.arrow_drop_down),
+                          onChanged: (String? newValue) {
+                            setState(() {
+                              _selectedLabel = newValue!;
+                            });
+                          },
+                          items: _labels
+                              .map<DropdownMenuItem<String>>((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(value),
+                            );
+                          }).toList(),
                         ),
-                      ])),
+                      ],
+                    ),
+                  ],
+                ),
+        ),
         Text("Recordings", style: TextStyle(fontSize: 20.0)),
         Divider(
           thickness: 2,
         ),
         _noRecordingsWidget(),
         Expanded(
-            child: ListView.builder(
-          itemCount: _recordingFolders.length,
-          itemBuilder: (context, index) {
-            return ListTile(
-              contentPadding: _recordingFolders[index] is File
-                  ? EdgeInsets.fromLTRB(40, 0, 16, 0)
-                  : null,
-              title: Row(
-                children: [
-                  Expanded(
+          child: ListView.builder(
+            itemCount: _recordingFolders.length,
+            itemBuilder: (context, index) {
+              return ListTile(
+                contentPadding: _recordingFolders[index] is File
+                    ? EdgeInsets.fromLTRB(40, 0, 16, 0)
+                    : null,
+                title: Row(
+                  children: [
+                    Expanded(
                       child: Text(
-                    _recordingFolders[index].path.split("/").last,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: _recordingFolders[index] is File ? 14 : null,
+                        _recordingFolders[index].path.split("/").last,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize:
+                              _recordingFolders[index] is File ? 14 : null,
+                        ),
+                      ),
                     ),
-                  )),
-                  Visibility(
-                    visible: _recordingFolders[index] is Directory,
-                    child: Transform.rotate(
-                      angle:
-                          _recordingFolders[index].path == _selectedFolder?.path
-                              ? 90 * 3.14 / 180
-                              : 0,
-                      child: Icon(Icons.arrow_right),
+                    Visibility(
+                      visible: _recordingFolders[index] is Directory,
+                      child: Transform.rotate(
+                        angle: _recordingFolders[index].path ==
+                                _selectedFolder?.path
+                            ? 90 * 3.14 / 180
+                            : 0,
+                        child: Icon(Icons.arrow_right),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              onTap: () {
-                if (_recordingFolders[index].path == _selectedFolder?.path) {
-                  _selectedFolder = null;
-                  listSubfoldersInDocumentsDirectory();
-                } else if (_recordingFolders[index] is Directory) {
-                  Directory d = _recordingFolders[index] as Directory;
-                  _selectedFolder = d;
-                  listSubfoldersInDocumentsDirectory();
-                } else if (_recordingFolders[index] is File) {
-                  OpenFile.open(_recordingFolders[index].path);
-                }
-              },
-              trailing: IconButton(
-                icon: Icon(Icons.delete,
+                  ],
+                ),
+                onTap: () {
+                  if (_recordingFolders[index].path == _selectedFolder?.path) {
+                    _selectedFolder = null;
+                    listSubfoldersInDocumentsDirectory();
+                  } else if (_recordingFolders[index] is Directory) {
+                    Directory d = _recordingFolders[index] as Directory;
+                    _selectedFolder = d;
+                    listSubfoldersInDocumentsDirectory();
+                  } else if (_recordingFolders[index] is File) {
+                    OpenFile.open(_recordingFolders[index].path);
+                  }
+                },
+                trailing: IconButton(
+                  icon: Icon(
+                    Icons.delete,
                     color: (_recording && index == 0)
                         ? Color.fromARGB(50, 255, 255, 255)
-                        : Colors.white),
-                onPressed: () {
-                  (_recording && index == 0)
-                      ? null
-                      : deleteFileSystemEntity(_recordingFolders[index]);
-                },
-                splashColor: (_recording && index == 0)
-                    ? Colors.transparent
-                    : Theme.of(context).splashColor,
-              ),
-              splashColor: Colors.transparent,
-            );
-          },
-        )),
+                        : Colors.white,
+                  ),
+                  onPressed: () {
+                    if (_recording && index == 0) {
+                      deleteFileSystemEntity(_recordingFolders[index]);
+                    }
+                  },
+                  splashColor: (_recording && index == 0)
+                      ? Colors.transparent
+                      : Theme.of(context).splashColor,
+                ),
+                splashColor: Colors.transparent,
+              );
+            },
+          ),
+        ),
       ],
     );
   }
 
   Widget _noRecordingsWidget() {
     return Visibility(
-        visible: _recordingFolders.isEmpty,
-        child: Expanded(
-            child: Stack(
+      visible: _recordingFolders.isEmpty,
+      child: Expanded(
+        child: Stack(
           fit: StackFit.expand,
           children: [
             Center(
@@ -427,7 +437,9 @@ class _RecorderState extends State<Recorder> {
               ),
             ),
           ],
-        )));
+        ),
+      ),
+    );
   }
 }
 
@@ -436,8 +448,11 @@ class CsvWriter {
   File? file;
   late Timer _timer;
 
-  CsvWriter(String prefix, DateTime startTime,
-      void Function() folderCreationClosure) {
+  CsvWriter(
+    String prefix,
+    DateTime startTime,
+    void Function() folderCreationClosure,
+  ) {
     if (file == null) {
       _openFile(prefix, startTime, folderCreationClosure);
     }
@@ -451,7 +466,7 @@ class CsvWriter {
     });
   }
 
-  cancelTimer() {
+  void cancelTimer() {
     _timer.cancel();
   }
 
@@ -459,8 +474,11 @@ class CsvWriter {
     buffer.add(data);
   }
 
-  Future<void> _openFile(String prefix, DateTime startTime,
-      void Function() folderCreationClosure) async {
+  Future<void> _openFile(
+    String prefix,
+    DateTime startTime,
+    void Function() folderCreationClosure,
+  ) async {
     String formattedDate =
         startTime.toUtc().toIso8601String().replaceAll(':', '_');
     formattedDate = "${formattedDate.substring(0, formattedDate.length - 4)}Z";

@@ -11,8 +11,10 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:open_earable/shared/global_theme.dart';
 
 class LEDColorCard extends StatefulWidget {
+  const LEDColorCard({super.key});
+
   @override
-  _LEDColorCardState createState() => _LEDColorCardState();
+  State<LEDColorCard> createState() => _LEDColorCardState();
 }
 
 class _LEDColorCardState extends State<LEDColorCard> {
@@ -37,13 +39,15 @@ class _LEDColorCardState extends State<LEDColorCard> {
   void _setLEDColor() {
     _stopRainbowMode();
     _openEarableLeft.rgbLed.writeLedColor(
-        r: OpenEarableSettings().selectedColor.red,
-        g: OpenEarableSettings().selectedColor.green,
-        b: OpenEarableSettings().selectedColor.blue);
+      r: OpenEarableSettings().selectedColor.red,
+      g: OpenEarableSettings().selectedColor.green,
+      b: OpenEarableSettings().selectedColor.blue,
+    );
     _openEarableRight.rgbLed.writeLedColor(
-        r: OpenEarableSettings().selectedColor.red,
-        g: OpenEarableSettings().selectedColor.green,
-        b: OpenEarableSettings().selectedColor.blue);
+      r: OpenEarableSettings().selectedColor.red,
+      g: OpenEarableSettings().selectedColor.green,
+      b: OpenEarableSettings().selectedColor.blue,
+    );
   }
 
   void _turnLEDoff() {
@@ -63,9 +67,15 @@ class _LEDColorCardState extends State<LEDColorCard> {
     rainbowTimer = Timer.periodic(Duration(milliseconds: 300), (Timer timer) {
       Map<String, int> rgbValue = _hslToRgb(h, 1, 0.5);
       _openEarableLeft.rgbLed.writeLedColor(
-          r: rgbValue['r']!, g: rgbValue['g']!, b: rgbValue['b']!);
+        r: rgbValue['r']!,
+        g: rgbValue['g']!,
+        b: rgbValue['b']!,
+      );
       _openEarableRight.rgbLed.writeLedColor(
-          r: rgbValue['r']!, g: rgbValue['g']!, b: rgbValue['b']!);
+        r: rgbValue['r']!,
+        g: rgbValue['g']!,
+        b: rgbValue['b']!,
+      );
 
       h += increment;
       if (h > 1) h = 0;
@@ -120,7 +130,7 @@ class _LEDColorCardState extends State<LEDColorCard> {
     return {
       'r': (r * 255).round(),
       'g': (g * 255).round(),
-      'b': (b * 255).round()
+      'b': (b * 255).round(),
     };
   }
 
@@ -136,30 +146,30 @@ class _LEDColorCardState extends State<LEDColorCard> {
         context: context,
         builder: (BuildContext context) {
           return Material(
-              child: AlertDialog(
-            title: const Text('Pick a color for the RGB LED'),
-            content: SingleChildScrollView(
-              child: ColorPicker(
-                pickerColor: OpenEarableSettings().selectedColor,
-                onColorChanged: (color) {
-                  setState(() {
-                    OpenEarableSettings().selectedColor = color;
-                  });
-                },
-                showLabel: true,
-                pickerAreaHeightPercent: 0.8,
-                enableAlpha: false,
+            child: AlertDialog(
+              title: const Text('Pick a color for the RGB LED'),
+              content: SingleChildScrollView(
+                child: ColorPicker(
+                  pickerColor: OpenEarableSettings().selectedColor,
+                  onColorChanged: (color) {
+                    setState(() {
+                      OpenEarableSettings().selectedColor = color;
+                    });
+                  },
+                  pickerAreaHeightPercent: 0.8,
+                  enableAlpha: false,
+                ),
               ),
+              actions: <Widget>[
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Done'),
+                ),
+              ],
             ),
-            actions: <Widget>[
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: const Text('Done'),
-              ),
-            ],
-          ));
+          );
         },
       );
     } else {
@@ -169,34 +179,34 @@ class _LEDColorCardState extends State<LEDColorCard> {
           return CupertinoAlertDialog(
             title: Text('Pick a color for the RGB LED'),
             content: SingleChildScrollView(
-                padding: EdgeInsets.zero,
-                child: Theme(
-                  data: materialTheme,
-                  child: Material(
-                    // Wrap with Material
-                    child: Localizations(
-                      locale:
-                          const Locale('en', 'US'), // Specify the app's locale
-                      delegates: [
-                        GlobalMaterialLocalizations.delegate,
-                        GlobalWidgetsLocalizations.delegate,
-                        GlobalCupertinoLocalizations.delegate,
-                      ],
-                      child: ColorPicker(
-                        pickerColor: OpenEarableSettings().selectedColor,
-                        onColorChanged: (color) {
-                          // Your color change logic
-                          setState(() {
-                            OpenEarableSettings().selectedColor = color;
-                          });
-                        },
-                        showLabel: true,
-                        pickerAreaHeightPercent: 0.8,
-                        enableAlpha: false,
-                      ), // Your widget that contains the DropdownButton
-                    ),
+              padding: EdgeInsets.zero,
+              child: Theme(
+                data: materialTheme,
+                child: Material(
+                  // Wrap with Material
+                  child: Localizations(
+                    locale:
+                        const Locale('en', 'US'), // Specify the app's locale
+                    delegates: [
+                      GlobalMaterialLocalizations.delegate,
+                      GlobalWidgetsLocalizations.delegate,
+                      GlobalCupertinoLocalizations.delegate,
+                    ],
+                    child: ColorPicker(
+                      pickerColor: OpenEarableSettings().selectedColor,
+                      onColorChanged: (color) {
+                        // Your color change logic
+                        setState(() {
+                          OpenEarableSettings().selectedColor = color;
+                        });
+                      },
+                      pickerAreaHeightPercent: 0.8,
+                      enableAlpha: false,
+                    ), // Your widget that contains the DropdownButton
                   ),
-                )),
+                ),
+              ),
+            ),
             actions: <Widget>[
               CupertinoDialogAction(
                 onPressed: () {
@@ -214,82 +224,88 @@ class _LEDColorCardState extends State<LEDColorCard> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 5.0),
-        child: Card(
-            //LED Color Picker Card
-            color: Theme.of(context).colorScheme.primary,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.symmetric(horizontal: 5.0),
+      child: Card(
+        //LED Color Picker Card
+        color: Theme.of(context).colorScheme.primary,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'LED Color',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18.0,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Selector<BluetoothController, bool>(
+                selector: (_, bleController) => bleController.connected,
+                builder: (context, connected, child) => Row(
                   children: [
-                    Text(
-                      'LED Color',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18.0,
-                        fontWeight: FontWeight.bold,
+                    GestureDetector(
+                      onTap: connected
+                          ? _openColorPicker
+                          : null, // Open color picker
+                      child: Container(
+                        width: 66,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: OpenEarableSettings().selectedColor,
+                          borderRadius: BorderRadius.circular(5),
+                        ),
                       ),
                     ),
-                    Selector<BluetoothController, bool>(
-                      selector: (_, bleController) => bleController.connected,
-                      builder: (context, connected, child) => Row(
-                        children: [
-                          GestureDetector(
-                            onTap: connected
-                                ? _openColorPicker
-                                : null, // Open color picker
-                            child: Container(
-                              width: 66,
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: OpenEarableSettings().selectedColor,
-                                borderRadius: BorderRadius.circular(5),
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: 5),
-                          SizedBox(
-                            width: 66,
-                            height: 36,
-                            child: ElevatedButton(
-                              onPressed: connected ? _setLEDColor : null,
-                              style: ElevatedButton.styleFrom(
-                                  backgroundColor: Color(0xff53515b),
-                                  // Set the background color to grey
-                                  foregroundColor: Colors.white),
-                              child: Text('Set'),
-                            ),
-                          ),
-                          SizedBox(width: 5),
-                          SizedBox(
-                              width: 66,
-                              height: 36,
-                              child: ElevatedButton(
-                                onPressed: connected ? _startRainbowMode : null,
-                                style: ElevatedButton.styleFrom(
-                                    backgroundColor: Color(0xff53515b),
-                                    // Set the background color to grey
-                                    foregroundColor: Colors.white),
-                                child: Text("🦄"),
-                              )),
-                          Spacer(),
-                          SizedBox(
-                            width: 66,
-                            height: 36,
-                            child: ElevatedButton(
-                              onPressed: connected ? _turnLEDoff : null,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Color(0xfff27777),
-                                foregroundColor: Colors.black,
-                              ),
-                              child: Text('Off'),
-                            ),
-                          )
-                        ],
+                    SizedBox(width: 5),
+                    SizedBox(
+                      width: 66,
+                      height: 36,
+                      child: ElevatedButton(
+                        onPressed: connected ? _setLEDColor : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xff53515b),
+                          // Set the background color to grey
+                          foregroundColor: Colors.white,
+                        ),
+                        child: Text('Set'),
                       ),
                     ),
-                  ]),
-            )));
+                    SizedBox(width: 5),
+                    SizedBox(
+                      width: 66,
+                      height: 36,
+                      child: ElevatedButton(
+                        onPressed: connected ? _startRainbowMode : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xff53515b),
+                          // Set the background color to grey
+                          foregroundColor: Colors.white,
+                        ),
+                        child: Text("🦄"),
+                      ),
+                    ),
+                    Spacer(),
+                    SizedBox(
+                      width: 66,
+                      height: 36,
+                      child: ElevatedButton(
+                        onPressed: connected ? _turnLEDoff : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xfff27777),
+                          foregroundColor: Colors.black,
+                        ),
+                        child: Text('Off'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

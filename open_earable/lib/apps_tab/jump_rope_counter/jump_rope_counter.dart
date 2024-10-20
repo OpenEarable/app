@@ -22,21 +22,19 @@ class JumpRecordResult {
 /// JumpRopeCounter widget.
 class JumpRopeCounter extends StatefulWidget {
   /// Instance of OpenEarable device.
-  final OpenEarable _openEarable;
+  final OpenEarable openEarable;
 
   /// Constructor for JumpRopeCounter widget.
-  JumpRopeCounter(this._openEarable);
+  const JumpRopeCounter(this.openEarable, {super.key});
 
-  _JumpRopeCounterState createState() => _JumpRopeCounterState(_openEarable);
+  @override
+  State<JumpRopeCounter> createState() => _JumpRopeCounterState();
 }
 
 /// The state of the JumpRopeCounter widget.
 /// Contains the UI and logic for the JumpRopeCounter widget.
 class _JumpRopeCounterState extends State<JumpRopeCounter>
     with SingleTickerProviderStateMixin {
-  /// Instance of OpenEarable device.
-  final OpenEarable _openEarable;
-
   /// Subscription to the IMU sensor.
   StreamSubscription? _imuSubscription;
 
@@ -46,7 +44,7 @@ class _JumpRopeCounterState extends State<JumpRopeCounter>
   bool _firstJump = true;
 
   /// Sampling rate for the accelerometer.
-  double _samplingRate = 10.0;
+  final double _samplingRate = 10.0;
 
   /// Number of jumps.
   int _jumps = 0;
@@ -64,7 +62,7 @@ class _JumpRopeCounterState extends State<JumpRopeCounter>
   Duration _duration = Duration();
 
   /// Maximum number of saved recordings.
-  int _maxSavedItems = 50;
+  final int _maxSavedItems = 50;
 
   /// List of past recordings.
   late List<JumpRecordResult> _recordings = [];
@@ -73,10 +71,7 @@ class _JumpRopeCounterState extends State<JumpRopeCounter>
   late TabController _tabController;
 
   /// Amount of tabs.
-  late int _tabAmount = 2;
-
-  /// Constructor for _JumpRopeCounterState.
-  _JumpRopeCounterState(this._openEarable);
+  late final int _tabAmount = 2;
 
   /// Initializes state and sets up listeners for sensor data.
   @override
@@ -85,9 +80,9 @@ class _JumpRopeCounterState extends State<JumpRopeCounter>
     loadJumpRecordings();
     _tabController =
         TabController(length: _tabAmount, vsync: this, initialIndex: 0);
-    if (_openEarable.bleManager.connected) {
+    if (widget.openEarable.bleManager.connected) {
       /// Set sampling rate to maximum.
-      _openEarable.sensorManager.writeSensorConfig(_buildSensorConfig());
+      widget.openEarable.sensorManager.writeSensorConfig(_buildSensorConfig());
 
       /// Setup listeners for sensor data.
       _setupListeners();
@@ -109,7 +104,7 @@ class _JumpRopeCounterState extends State<JumpRopeCounter>
       _recordings = recordings
               ?.map((e) => JumpRecordResult(
                   jumps: int.parse(e.split(',')[0]),
-                  duration: Duration(seconds: int.parse(e.split(',')[1]))))
+                  duration: Duration(seconds: int.parse(e.split(',')[1])),),)
               .toList() ??
           [];
     });
@@ -171,7 +166,7 @@ class _JumpRopeCounterState extends State<JumpRopeCounter>
   void saveJumpRecordings() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setStringList('jumpRecordings',
-        _recordings.map((e) => '${e.jumps},${e.duration.inSeconds}').toList());
+        _recordings.map((e) => '${e.jumps},${e.duration.inSeconds}').toList(),);
   }
 
   /// Formats the duration to a string.
@@ -192,9 +187,9 @@ class _JumpRopeCounterState extends State<JumpRopeCounter>
   }
 
   /// Sets up listeners for sensor data.
-  _setupListeners() {
+  void _setupListeners() {
     _imuSubscription =
-        _openEarable.sensorManager.subscribeToSensorData(0).listen((data) {
+        widget.openEarable.sensorManager.subscribeToSensorData(0).listen((data) {
       /// If the recording is stopped, stop processing sensor data.
       if (!_recording) {
         return;
@@ -205,11 +200,11 @@ class _JumpRopeCounterState extends State<JumpRopeCounter>
 
   /// Processes the sensor data.
   void _processSensorData(Map<String, dynamic> data) {
-    double _accX = data["ACC"]["X"];
-    double _accY = data["ACC"]["Y"];
-    double _accZ = data["ACC"]["Z"];
+    double accX = data["ACC"]["X"];
+    double accY = data["ACC"]["Y"];
+    double accZ = data["ACC"]["Z"];
     double accMagnitude =
-        _accZ.sign * sqrt(_accX * _accX + _accY * _accY + _accZ * _accZ);
+        accZ.sign * sqrt(accX * accX + accY * accY + accZ * accZ);
     double currentAcc = accMagnitude - _gravity;
 
     _updateJumps(currentAcc);
@@ -239,14 +234,14 @@ class _JumpRopeCounterState extends State<JumpRopeCounter>
     return DefaultTabController(
       length: _tabAmount,
       child: Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.background,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         appBar: AppBar(
           title: Text('Jump Rope Counter'),
           bottom: TabBar(
             controller: _tabController,
             indicator: BoxDecoration(
                 borderRadius: BorderRadius.circular(8), // Creates border
-                color: Colors.greenAccent),
+                color: Colors.greenAccent,),
             tabs: [
               Tab(text: "Record"),
               Tab(text: "Jump Activity"),
@@ -257,7 +252,7 @@ class _JumpRopeCounterState extends State<JumpRopeCounter>
           controller: _tabController,
           children: [
             /// If the earable is not connected, show a warning. Otherwise show the jump counter.
-            _openEarable.bleManager.connected
+            widget.openEarable.bleManager.connected
                 ? _ropeCounterWidget()
                 : EarableNotConnectedWarning(),
             _ropeSkipHistoryWidget(),
@@ -292,14 +287,14 @@ class _JumpRopeCounterState extends State<JumpRopeCounter>
             ),
           ),
         ),
-      ]),
+      ],),
       Padding(
         padding: EdgeInsets.fromLTRB(8, 0, 8, 0),
         child: Column(
           children: [
             Padding(
                 padding: EdgeInsets.fromLTRB(16, 0, 32, 0),
-                child: Text("Time")),
+                child: Text("Time"),),
             Padding(
               padding: EdgeInsets.fromLTRB(16, 0, 32, 0),
               child: Text(
@@ -335,8 +330,8 @@ class _JumpRopeCounterState extends State<JumpRopeCounter>
             ),
           ),
         ),
-      ))
-    ]));
+      ),),
+    ],),);
   }
 
   /// Builds the UI for the jump rope history.
@@ -392,8 +387,8 @@ class _JumpRopeCounterState extends State<JumpRopeCounter>
                     itemCount: _recordings.length,
                     physics: BouncingScrollPhysics(),
                     itemBuilder: (context, index) {
-                      int _reverseIndex = _recordings.length - index - 1;
-                      return _listItem(_reverseIndex);
+                      int reverseIndex = _recordings.length - index - 1;
+                      return _listItem(reverseIndex);
                     },
                     separatorBuilder: (context, index) {
                       return Divider(
@@ -416,11 +411,11 @@ class _JumpRopeCounterState extends State<JumpRopeCounter>
       background: Container(
         color: Colors.red,
         child: Align(
+          alignment: Alignment.centerRight,
           child: Padding(
             padding: const EdgeInsets.only(right: 16),
             child: Icon(Icons.delete),
           ),
-          alignment: Alignment.centerRight,
         ),
       ),
       confirmDismiss: (direction) async {
@@ -431,7 +426,7 @@ class _JumpRopeCounterState extends State<JumpRopeCounter>
               content: Text('Deleted Entry'),
               duration: Duration(milliseconds: 2000),
               action: SnackBarAction(
-                  label: 'Undo', onPressed: () => delete = false),
+                  label: 'Undo', onPressed: () => delete = false,),
             ),
           );
           await snackbarController.closed;
@@ -499,7 +494,7 @@ class _JumpRopeCounterState extends State<JumpRopeCounter>
                   ],
                 ),
               ],
-            )
+            ),
           ],
         ),
       ),

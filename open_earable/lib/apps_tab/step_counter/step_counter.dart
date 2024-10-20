@@ -5,39 +5,29 @@ import 'dart:async';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:provider/provider.dart';
 
-/**
- * Erstellt einen naiven Schrittzähler, dieser basiert auf dem erreichen eines Schwellenwerts in der Summe der Beschleunigungswerte (x,y,z).
- * Es wird auch die Durchschnittliche Geschwindigkeit in Schritte pro Sekunde berechnet.
- */
+/// Erstellt einen naiven Schrittzähler, dieser basiert auf dem erreichen eines Schwellenwerts in der Summe der Beschleunigungswerte (x,y,z).
+/// Es wird auch die Durchschnittliche Geschwindigkeit in Schritte pro Sekunde berechnet.
 class StepCounter extends StatefulWidget {
-  final OpenEarable _openEarable;
+  final OpenEarable openEarable;
 
-  StepCounter(this._openEarable);
+  const StepCounter(this.openEarable, {super.key});
 
   @override
-  _StepCounterState createState() => _StepCounterState(_openEarable);
+  State<StepCounter> createState() => _StepCounterState();
 }
 
-/**
- * Definiert den den Schrittzähler und den Timer
- */
+/// Definiert den den Schrittzähler und den Timer
 class _StepCounterState extends State<StepCounter> {
-  final OpenEarable _openEarable;
-
-  _StepCounterState(this._openEarable);
-
   Duration _duration = Duration();
   bool _startStepCount = false;
   StreamSubscription? _imuSubscription;
   Timer? _timer;
   int _countedSteps = 0;
 
-  /**
-   * Aktualisiert die aus der Einstellungsseite erhaltenen Werte
-   */
+  /// Aktualisiert die aus der Einstellungsseite erhaltenen Werte
   void updateValues(String stoppedTime, String countedSteps) {
     print(
-        'Received values: stoppedTime=$stoppedTime, countedSteps=$countedSteps');
+        'Received values: stoppedTime=$stoppedTime, countedSteps=$countedSteps',);
     setState(() {
       _duration = stringToDuration(stoppedTime);
       _countedSteps = int.parse(countedSteps);
@@ -45,14 +35,12 @@ class _StepCounterState extends State<StepCounter> {
     print('Updated values: _duration=$_duration, _countedSteps=$_countedSteps');
   }
 
-  /**
-   * Wandelt den eingegebenen String in eine Uhrzeit um.
-   * Es werden Folgende Formate unterstützt:
-   * HH:MM:SS
-   * MM:SS
-   * SS (wird in Duration der Form HH:MM:SS umgewandelt)
-   *
-   */
+  /// Wandelt den eingegebenen String in eine Uhrzeit um.
+  /// Es werden Folgende Formate unterstützt:
+  /// HH:MM:SS
+  /// MM:SS
+  /// SS (wird in Duration der Form HH:MM:SS umgewandelt)
+  ///
   Duration stringToDuration(String stoppedTime) {
     List<String> timeComponents = stoppedTime.split(':');
     if (timeComponents.length == 3) {
@@ -72,9 +60,7 @@ class _StepCounterState extends State<StepCounter> {
     }
   }
 
-  /**
-   * Bei Aufruf wird das Schrittzählen gestartet, falls dieses bereits läuft wird es gestoppt
-   */
+  /// Bei Aufruf wird das Schrittzählen gestartet, falls dieses bereits läuft wird es gestoppt
   void startStopStepCount() async {
     if (_startStepCount) {
       setState(() {
@@ -90,9 +76,7 @@ class _StepCounterState extends State<StepCounter> {
     }
   }
 
-  /**
-   * Formatiert eine Zeitangabe in einen klassischen Uhrzeitstring HH:MM:SS
-   */
+  /// Formatiert eine Zeitangabe in einen klassischen Uhrzeitstring HH:MM:SS
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
     String twoDigitHours = twoDigits(duration.inHours);
@@ -102,9 +86,7 @@ class _StepCounterState extends State<StepCounter> {
     return "$twoDigitHours:$twoDigitMinutes:$twoDigitSeconds";
   }
 
-  /**
-   * Berechnet die durchschnittlichen Schritte pro Minute
-   */
+  /// Berechnet die durchschnittlichen Schritte pro Minute
   String _formatAvgCadence(int steps, Duration duration) {
     if (duration.inSeconds != 0) {
       return (60.0 * steps / duration.inSeconds.toDouble()).toStringAsFixed(2);
@@ -112,9 +94,7 @@ class _StepCounterState extends State<StepCounter> {
     return "0"; // Wenn durch 0 geteilt wird
   }
 
-  /**
-   * Setzt den Timer auf 00:00:00 zurück und erstellt einen fotlaufenden Timer
-   */
+  /// Setzt den Timer auf 00:00:00 zurück und erstellt einen fotlaufenden Timer
   void _startTimer() {
     _duration = Duration();
     _timer = Timer.periodic(Duration(seconds: 1), (timer) {
@@ -124,24 +104,20 @@ class _StepCounterState extends State<StepCounter> {
     });
   }
 
-  /**
-   * Hält den Timer an
-   */
+  /// Hält den Timer an
   void _stopTimer() {
     if (_timer != null) {
       _timer!.cancel();
     }
   }
 
-  /**
-   * Ruft die Sensordaten vom Earable ab und verarbeitet dies.
-   */
-  _setupListeners() {
+  /// Ruft die Sensordaten vom Earable ab und verarbeitet dies.
+  void _setupListeners() {
     OpenEarableSensorConfig config =
         OpenEarableSensorConfig(sensorId: 0, samplingRate: 30, latency: 0);
-    _openEarable.sensorManager.writeSensorConfig(config);
+    widget.openEarable.sensorManager.writeSensorConfig(config);
     _imuSubscription =
-        _openEarable.sensorManager.subscribeToSensorData(0).listen((data) {
+        widget.openEarable.sensorManager.subscribeToSensorData(0).listen((data) {
       if (!_startStepCount) {
         return;
       }
@@ -181,20 +157,16 @@ class _StepCounterState extends State<StepCounter> {
     return numSteps;
   }
 
-  /**
-   * Inizialisiert den Schrittzähler bzw. fügt ihn dem Baum hinzu.
-   */
+  /// Inizialisiert den Schrittzähler bzw. fügt ihn dem Baum hinzu.
   @override
   void initState() {
     super.initState();
-    if (_openEarable.bleManager.connected) {
+    if (widget.openEarable.bleManager.connected) {
       _setupListeners();
     }
   }
 
-  /**
-   * Entfernt den Schrittzähler vom Baum.
-   */
+  /// Entfernt den Schrittzähler vom Baum.
   @override
   void dispose() {
     super.dispose();
@@ -202,18 +174,16 @@ class _StepCounterState extends State<StepCounter> {
     _imuSubscription?.cancel();
   }
 
-  /**
-   * Stellt die GUI zur Verfügung, Hier werden auch die Informationen von der Einstellungsseite abgerufen.
-   */
+  /// Stellt die GUI zur Verfügung, Hier werden auch die Informationen von der Einstellungsseite abgerufen.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: Text('StepCounter'),
       ),
       // Beschränkt die GUI auf nicht von Betriebssystem verwendeten Bereich. Funktioniert nicht auf jedem Gerät.
-      body: SafeArea(child: _StepCounterWidget()
+      body: SafeArea(child: _stepCounterWidget(),
           // Hier Könnte eine Fehlermeldung eingefügt werden, weil das Earable nicht verbunden ist.
           // Die App ist aber auch teilweise zur Berchnung der Pro Sekunde zurückgelegten Schritte verwendbar.
           // Deshalb wird keine Fehlermeldung auf dem ganzen Bildschrirm ausgegeben.
@@ -221,10 +191,8 @@ class _StepCounterState extends State<StepCounter> {
     );
   }
 
-  /**
-   * Dieses Widget stellt sicher das das Gerät bei verwendung der App gedreht werden kann.
-   */
-  Widget _StepCounterWidget() {
+  /// Dieses Widget stellt sicher das das Gerät bei verwendung der App gedreht werden kann.
+  Widget _stepCounterWidget() {
     return Center(
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -236,9 +204,7 @@ class _StepCounterState extends State<StepCounter> {
     );
   }
 
-  /**
-   * Erstellt die GUI im Landscape Modus
-   */
+  /// Erstellt die GUI im Landscape Modus
   Widget _buildRow() {
     return !Provider.of<BluetoothController>(context).connected
         ? EarableNotConnectedWarning()
@@ -250,11 +216,11 @@ class _StepCounterState extends State<StepCounter> {
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     _buildListTile(
-                        _formatDuration(_duration), "Stopped Time", 40),
+                        _formatDuration(_duration), "Stopped Time", 40,),
                     _buildListTile(
-                        _countedSteps.toString(), "Counted Steps", 40),
+                        _countedSteps.toString(), "Counted Steps", 40,),
                     _buildListTile(_formatAvgCadence(_countedSteps, _duration),
-                        "Avg. Cadence\n(Steps per Minute)", 40),
+                        "Avg. Cadence\n(Steps per Minute)", 40,),
                   ],
                 ),
               ),
@@ -270,9 +236,7 @@ class _StepCounterState extends State<StepCounter> {
           );
   }
 
-  /**
-   * Erstellt die GUI im Portait Modus
-   */
+  /// Erstellt die GUI im Portait Modus
   Widget _buildColumn() {
     return !Provider.of<BluetoothController>(context).connected
         ? EarableNotConnectedWarning()
@@ -283,7 +247,7 @@ class _StepCounterState extends State<StepCounter> {
               _buildListTile(_formatDuration(_duration), "Stopped Time", 60),
               _buildListTile(_countedSteps.toString(), "Counted Steps", 60),
               _buildListTile(_formatAvgCadence(_countedSteps, _duration),
-                  "Avg. Cadence\n(Steps per Minute)", 60),
+                  "Avg. Cadence\n(Steps per Minute)", 60,),
               Spacer(),
               _buildControlButtons(),
               Spacer(),
@@ -291,9 +255,7 @@ class _StepCounterState extends State<StepCounter> {
           );
   }
 
-  /**
-   * Erstellt die Buttons
-   */
+  /// Erstellt die Buttons
   Widget _buildControlButtons() {
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -306,11 +268,9 @@ class _StepCounterState extends State<StepCounter> {
     );
   }
 
-  /**
-   * Abstrahiert die Textausgabe um Codeduplikate zu vermeiden
-   */
+  /// Abstrahiert die Textausgabe um Codeduplikate zu vermeiden
   Widget _buildListTile(
-      String leadingText, String trailingText, double fontSize) {
+      String leadingText, String trailingText, double fontSize,) {
     return ListTile(
       contentPadding: EdgeInsets.all(8),
       title: Center(child: _buildText(leadingText, fontSize)),
@@ -319,13 +279,11 @@ class _StepCounterState extends State<StepCounter> {
         trailingText,
         style: TextStyle(fontSize: fontSize * 0.5),
         textAlign: TextAlign.center,
-      )),
+      ),),
     );
   }
 
-  /**
-   * Erstellt ein Text Widget in der gegebenen Textgröße
-   */
+  /// Erstellt ein Text Widget in der gegebenen Textgröße
   Widget _buildText(String text, double fontSize) {
     return Text(
       text,
@@ -337,9 +295,7 @@ class _StepCounterState extends State<StepCounter> {
     );
   }
 
-  /**
-   * Erstellt ein Widget das einen Button verwaltet und bei Bestätigen des Button eine Funktion ausführt.
-   */
+  /// Erstellt ein Widget das einen Button verwaltet und bei Bestätigen des Button eine Funktion ausführt.
   Widget _buildButton({VoidCallback? onPressed, required String label}) {
     return Padding(
       padding: EdgeInsets.all(8),

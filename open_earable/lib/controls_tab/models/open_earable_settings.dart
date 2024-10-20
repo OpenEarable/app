@@ -20,7 +20,7 @@ class OpenEarableSettings {
     "40000",
     "41667",
     "50000",
-    "62500"
+    "62500",
   ];
   final Map<String, int> jingleMap = {
     'IDLE': 0,

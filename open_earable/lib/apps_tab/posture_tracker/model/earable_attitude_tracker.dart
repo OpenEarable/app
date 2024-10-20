@@ -13,9 +13,9 @@ class EarableAttitudeTracker extends AttitudeTracker {
   @override
   bool get isAvailable => _openEarable.bleManager.connected;
 
-  EWMA _rollEWMA = EWMA(0.5);
-  EWMA _pitchEWMA = EWMA(0.5);
-  EWMA _yawEWMA = EWMA(0.5);
+  final EWMA _rollEWMA = EWMA(0.5);
+  final EWMA _pitchEWMA = EWMA(0.5);
+  final EWMA _yawEWMA = EWMA(0.5);
 
   EarableAttitudeTracker(this._openEarable) {
     _openEarable.bleManager.connectionStateStream.listen((connected) {
@@ -39,7 +39,7 @@ class EarableAttitudeTracker extends AttitudeTracker {
       updateAttitude(
           roll: _rollEWMA.update(event["EULER"]["ROLL"]),
           pitch: _pitchEWMA.update(event["EULER"]["PITCH"]),
-          yaw: _yawEWMA.update(event["EULER"]["YAW"]));
+          yaw: _yawEWMA.update(event["EULER"]["YAW"]),);
     });
   }
 

@@ -9,13 +9,14 @@ import 'package:open_earable/shared/earable_not_connected_warning.dart';
 /// An app that lets you test your jump height using an OpenEarable device.
 class JumpHeightTest extends StatefulWidget {
   /// Instance of OpenEarable device.
-  final OpenEarable _openEarable;
+  final OpenEarable openEarable;
 
   /// Constructs a JumpHeightTest widget with a given OpenEarable device.
-  JumpHeightTest(this._openEarable);
+  const JumpHeightTest(this.openEarable, {super.key});
 
   /// Creates a state for JumpHeightTest widget.
-  _JumpHeightTestState createState() => _JumpHeightTestState(_openEarable);
+  @override
+  State<JumpHeightTest> createState() => _JumpHeightTestState();
 }
 
 /// State class for JumpHeightTest widget.
@@ -29,13 +30,12 @@ class _JumpHeightTestState extends State<JumpHeightTest>
 
   /// Current height calculated from sensor data.
   double _height = 0.0;
+
   // List to store each jump's data.
-  List<Jump> _jumpData = [];
+  final List<Jump> _jumpData = [];
+
   // Flag to indicate if jump measurement is ongoing.
   bool _isJumping = false;
-
-  /// Instance of OpenEarable device.
-  final OpenEarable _openEarable;
 
   /// Flag to indicate if an OpenEarable device is connected.
   bool _earableConnected = false;
@@ -55,10 +55,10 @@ class _JumpHeightTestState extends State<JumpHeightTest>
   double _velocity = 0.0;
 
   /// Sampling rate time slice (inverse of frequency).
-  double _timeSlice = 1 / 30.0;
+  final double _timeSlice = 1 / 30.0;
 
   /// Standard gravity in m/s^2.
-  double _gravity = 9.81;
+  final double _gravity = 9.81;
 
   /// X-axis acceleration.
   double _accX = 0.0;
@@ -75,18 +75,15 @@ class _JumpHeightTestState extends State<JumpHeightTest>
   /// Manages the [TabBar].
   late TabController _tabController;
 
-  /// Constructs a _JumpHeightTestState object with a given OpenEarable device.
-  _JumpHeightTestState(this._openEarable);
-
   /// Initializes state and sets up listeners for sensor data.
   @override
   void initState() {
     super.initState();
     _tabController = TabController(vsync: this, length: 3);
     // Set up listeners for sensor data.
-    if (_openEarable.bleManager.connected) {
+    if (widget.openEarable.bleManager.connected) {
       // Set sampling rate to maximum.
-      _openEarable.sensorManager.writeSensorConfig(_buildSensorConfig());
+      widget.openEarable.sensorManager.writeSensorConfig(_buildSensorConfig());
       // Initialize Kalman filters.
       _initializeKalmanFilters();
       _setupListeners();
@@ -102,9 +99,10 @@ class _JumpHeightTestState extends State<JumpHeightTest>
   }
 
   /// Sets up listeners to receive sensor data from the OpenEarable device.
-  _setupListeners() {
-    _imuSubscription =
-        _openEarable.sensorManager.subscribeToSensorData(0).listen((data) {
+  void _setupListeners() {
+    _imuSubscription = widget.openEarable.sensorManager
+        .subscribeToSensorData(0)
+        .listen((data) {
       // Only process sensor data if jump measurement is ongoing.
       if (!_isJumping) {
         return;
@@ -144,17 +142,20 @@ class _JumpHeightTestState extends State<JumpHeightTest>
   /// Initializes Kalman filters for accelerometer data.
   void _initializeKalmanFilters() {
     _kalmanX = SimpleKalman(
-        errorMeasure: _errorMeasureAcc,
-        errorEstimate: _errorMeasureAcc,
-        q: 0.9);
+      errorMeasure: _errorMeasureAcc,
+      errorEstimate: _errorMeasureAcc,
+      q: 0.9,
+    );
     _kalmanY = SimpleKalman(
-        errorMeasure: _errorMeasureAcc,
-        errorEstimate: _errorMeasureAcc,
-        q: 0.9);
+      errorMeasure: _errorMeasureAcc,
+      errorEstimate: _errorMeasureAcc,
+      q: 0.9,
+    );
     _kalmanZ = SimpleKalman(
-        errorMeasure: _errorMeasureAcc,
-        errorEstimate: _errorMeasureAcc,
-        q: 0.9);
+      errorMeasure: _errorMeasureAcc,
+      errorEstimate: _errorMeasureAcc,
+      q: 0.9,
+    );
   }
 
   /// Processes incoming sensor data and updates jump height.
@@ -190,7 +191,7 @@ class _JumpHeightTestState extends State<JumpHeightTest>
   /// Updates the current height based on the current acceleration.
   /// If the device is stationary, the velocity is reset to 0.
   /// Otherwise, it integrates the current acceleration to update velocity and height.
-  _updateHeight(double currentAcc) {
+  void _updateHeight(double currentAcc) {
     setState(() {
       if (_deviceIsStationary(0.3)) {
         _velocity = 0.0;
@@ -228,7 +229,7 @@ class _JumpHeightTestState extends State<JumpHeightTest>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: Text('Jump Height Test'),
       ),
@@ -236,10 +237,12 @@ class _JumpHeightTestState extends State<JumpHeightTest>
         children: [
           TabBar(
             controller: _tabController,
-            indicatorColor: Colors.white, // Color of the underline indicator
-            labelColor: Colors.white, // Color of the active tab label
-            unselectedLabelColor:
-                Colors.grey, // Color of the inactive tab labels
+            // Color of the underline indicator
+            indicatorColor: Colors.white,
+            // Color of the active tab label
+            labelColor: Colors.white,
+            // Color of the inactive tab labels
+            unselectedLabelColor: Colors.grey,
             tabs: [
               Tab(text: 'Height'),
               Tab(text: 'Raw Acc.'),
@@ -247,7 +250,7 @@ class _JumpHeightTestState extends State<JumpHeightTest>
             ],
           ),
           Expanded(
-            child: (!_openEarable.bleManager.connected)
+            child: (!widget.openEarable.bleManager.connected)
                 ? EarableNotConnectedWarning()
                 : _buildJumpHeightDataTabs(),
           ),
@@ -267,7 +270,7 @@ class _JumpHeightTestState extends State<JumpHeightTest>
             ),
           ),
           SizedBox(height: 20), // Margin between button and text
-          _buildText()
+          _buildText(),
         ],
       ),
     );
@@ -277,27 +280,25 @@ class _JumpHeightTestState extends State<JumpHeightTest>
     return TabBarView(
       controller: _tabController,
       children: [
-        JumpHeightChart(_openEarable, "Height Data"),
-        JumpHeightChart(_openEarable, "Raw Acceleration Data"),
-        JumpHeightChart(_openEarable, "Filtered Acceleration Data")
+        JumpHeightChart(widget.openEarable, "Height Data"),
+        JumpHeightChart(widget.openEarable, "Raw Acceleration Data"),
+        JumpHeightChart(widget.openEarable, "Filtered Acceleration Data"),
       ],
     );
   }
 
   Widget _buildText() {
-    return Container(
-      child: Column(
-        children: [
-          Text(
-            'Max height: ${_maxHeight.toStringAsFixed(2)} m',
-            style: Theme.of(context).textTheme.headlineMedium,
-          ),
-          Text(
-            'Jump time: ${_prettyDuration(_jumpDuration)}',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-        ],
-      ),
+    return Column(
+      children: [
+        Text(
+          'Max height: ${_maxHeight.toStringAsFixed(2)} m',
+          style: Theme.of(context).textTheme.headlineMedium,
+        ),
+        Text(
+          'Jump time: ${_prettyDuration(_jumpDuration)}',
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+      ],
     );
   }
 
