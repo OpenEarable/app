@@ -33,6 +33,8 @@ jobs:
       - working-directory: ./open_earable
         run: flutter pub get
       - working-directory: ./open_earable
+        run: flutter analyze
+      - working-directory: ./open_earable
         run: flutter build apk
       - uses: actions/upload-artifact@v3
         with:
