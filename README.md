@@ -15,7 +15,7 @@
 </p>
   
 <p>
-  <a href="https://open-earable-web.web.app">
+  <a href="https://dashboard.open-earable.teco.edu/">
     ↗️ Open Web app
   </a> (Needs Web Bluetooth support)
 </p>
