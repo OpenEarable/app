@@ -15,10 +15,10 @@ class EarableDataChart extends StatefulWidget {
   final String sensorName;
   final String chartTitle;
 
-  const EarableDataChart(
-    this.openEarable,
-    this.sensorName,
-    this.chartTitle, {
+  const EarableDataChart({
+    required this.openEarable,
+    required this.sensorName,
+    required this.chartTitle,
     super.key,
   });
 

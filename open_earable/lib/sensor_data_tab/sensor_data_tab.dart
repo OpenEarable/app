@@ -100,14 +100,30 @@ class _SensorDataTabState extends State<SensorDataTab>
         return TabBarView(
           controller: _v1TabController,
           children: [
-            EarableDataChart(currentOpenEarable, 'ACC', 'Accelerometer'),
-            EarableDataChart(currentOpenEarable, 'GYRO', 'Gyroscope'),
-            EarableDataChart(currentOpenEarable, 'MAG', 'Magnetometer'),
-            EarableDataChart(currentOpenEarable, 'BARO', 'Pressure'),
             EarableDataChart(
-              currentOpenEarable,
-              'TEMP',
-              'Temperature (Ambient)',
+              openEarable: currentOpenEarable,
+              sensorName: 'ACC',
+              chartTitle: 'Accelerometer',
+            ),
+            EarableDataChart(
+              openEarable: currentOpenEarable,
+              sensorName: 'GYRO',
+              chartTitle: 'Gyroscope',
+            ),
+            EarableDataChart(
+              openEarable: currentOpenEarable,
+              sensorName: 'MAG',
+              chartTitle: 'Magnetometer',
+            ),
+            EarableDataChart(
+              openEarable: currentOpenEarable,
+              sensorName: 'BARO',
+              chartTitle: 'Pressure',
+            ),
+            EarableDataChart(
+              openEarable: currentOpenEarable,
+              sensorName: 'TEMP',
+              chartTitle: 'Temperature (Ambient)',
             ),
             Earable3DModel(currentOpenEarable),
           ],
@@ -124,23 +140,51 @@ class _SensorDataTabState extends State<SensorDataTab>
         return TabBarView(
           controller: _tabController,
           children: [
-            EarableDataChart(currentOpenEarable, 'ACC', 'Accelerometer'),
-            EarableDataChart(currentOpenEarable, 'GYRO', 'Gyroscope'),
-            EarableDataChart(currentOpenEarable, 'MAG', 'Magnetometer'),
-            EarableDataChart(currentOpenEarable, 'BARO', 'Pressure'),
             EarableDataChart(
-              currentOpenEarable,
-              'TEMP',
-              'Temperature (Ambient)',
+              openEarable: currentOpenEarable,
+              sensorName: 'ACC',
+              chartTitle: 'Accelerometer',
             ),
             EarableDataChart(
-              currentOpenEarable,
-              'OPTTEMP',
-              'Temperature (Surface)',
+              openEarable: currentOpenEarable,
+              sensorName: 'GYRO',
+              chartTitle: 'Gyroscope',
             ),
-            EarableDataChart(currentOpenEarable, 'PULSOX', 'Heart Rate'),
-            EarableDataChart(currentOpenEarable, 'PULSOX', 'SpO2'),
-            EarableDataChart(currentOpenEarable, 'PPG', 'PPG'),
+            EarableDataChart(
+              openEarable: currentOpenEarable,
+              sensorName: 'MAG',
+              chartTitle: 'Magnetometer',
+            ),
+            EarableDataChart(
+              openEarable: currentOpenEarable,
+              sensorName: 'BARO',
+              chartTitle: 'Pressure',
+            ),
+            EarableDataChart(
+              openEarable: currentOpenEarable,
+              sensorName: 'TEMP',
+              chartTitle: 'Temperature (Ambient)',
+            ),
+            EarableDataChart(
+              openEarable: currentOpenEarable,
+              sensorName: 'OPTTEMP',
+              chartTitle: 'Temperature (Surface)',
+            ),
+            EarableDataChart(
+              openEarable: currentOpenEarable,
+              sensorName: 'PULSOX',
+              chartTitle: 'Heart Rate',
+            ),
+            EarableDataChart(
+              openEarable: currentOpenEarable,
+              sensorName: 'PULSOX',
+              chartTitle: 'SpO2',
+            ),
+            EarableDataChart(
+              openEarable: currentOpenEarable,
+              sensorName: 'PPG',
+              chartTitle: 'PPG',
+            ),
             Earable3DModel(currentOpenEarable),
           ],
         );
