@@ -26,6 +26,111 @@ class EarableDataChart extends StatefulWidget {
 
   @override
   State<EarableDataChart> createState() => _EarableDataChartState();
+
+  static List<EarableDataChart> _getV1DataCharts(OpenEarable openEarable) {
+    return [
+      EarableDataChart(
+        openEarable: openEarable,
+        sensorName: 'ACC',
+        chartTitle: 'Accelerometer',
+        shortTitle: 'Acc.',
+      ),
+      EarableDataChart(
+        openEarable: openEarable,
+        sensorName: 'GYRO',
+        chartTitle: 'Gyroscope',
+        shortTitle: 'Gyro.',
+      ),
+      EarableDataChart(
+        openEarable: openEarable,
+        sensorName: 'MAG',
+        chartTitle: 'Magnetometer',
+        shortTitle: 'Magn.',
+      ),
+      EarableDataChart(
+        openEarable: openEarable,
+        sensorName: 'BARO',
+        chartTitle: 'Pressure',
+        shortTitle: 'Press.',
+      ),
+      EarableDataChart(
+        openEarable: openEarable,
+        sensorName: 'TEMP',
+        chartTitle: 'Temperature (Ambient)',
+        shortTitle: 'Temp. (A.)',
+      ),
+    ];
+  }
+
+  static List<EarableDataChart> _getV2DataCharts(OpenEarable openEarable) {
+    return [
+      EarableDataChart(
+        openEarable: openEarable,
+        sensorName: 'ACC',
+        chartTitle: 'Accelerometer',
+        shortTitle: 'Acc.',
+      ),
+      EarableDataChart(
+        openEarable: openEarable,
+        sensorName: 'GYRO',
+        chartTitle: 'Gyroscope',
+        shortTitle: 'Gyro.',
+      ),
+      EarableDataChart(
+        openEarable: openEarable,
+        sensorName: 'MAG',
+        chartTitle: 'Magnetometer',
+        shortTitle: 'Magn.',
+      ),
+      EarableDataChart(
+        openEarable: openEarable,
+        sensorName: 'BARO',
+        chartTitle: 'Pressure',
+        shortTitle: 'Press.',
+      ),
+      EarableDataChart(
+        openEarable: openEarable,
+        sensorName: 'TEMP',
+        chartTitle: 'Temperature (Ambient)',
+        shortTitle: 'Temp. (A.)',
+      ),
+      EarableDataChart(
+        openEarable: openEarable,
+        sensorName: 'OPTTEMP',
+        chartTitle: 'Temperature (Surface)',
+        shortTitle: 'Temp. (S.)',
+      ),
+      EarableDataChart(
+        openEarable: openEarable,
+        sensorName: 'PULSOX',
+        chartTitle: 'Heart Rate',
+        shortTitle: 'HR',
+      ),
+      EarableDataChart(
+        openEarable: openEarable,
+        sensorName: 'PULSOX',
+        chartTitle: 'SpO2',
+        shortTitle: 'SpO2',
+      ),
+      EarableDataChart(
+        openEarable: openEarable,
+        sensorName: 'PPG',
+        chartTitle: 'PPG',
+        shortTitle: 'PPG',
+      ),
+    ];
+  }
+
+  static List<EarableDataChart> getAvailableDataCharts(
+    OpenEarable openEarable,
+    bool isV2,
+  ) {
+    if (isV2) {
+      return _getV2DataCharts(openEarable);
+    }
+
+    return _getV1DataCharts(openEarable);
+  }
 }
 
 class _EarableDataChartState extends State<EarableDataChart> {
