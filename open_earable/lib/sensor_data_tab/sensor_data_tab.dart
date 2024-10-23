@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:open_earable/ble/ble_controller.dart';
 import 'package:open_earable/sensor_data_tab/earable_3d_model.dart';
+import 'package:open_earable/shared/square_children_grid.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_earable/sensor_data_tab/sensor_chart.dart';
 import 'package:provider/provider.dart';
@@ -43,6 +44,9 @@ class _InternalSensorDataTab extends StatefulWidget {
 
 class _InternalSensorDataTabState extends State<_InternalSensorDataTab>
     with TickerProviderStateMixin {
+  final double minWidgetHeight = 320;
+  final double minWidgetWidth = 370;
+
   late TabController _tabController;
 
   late List<Widget> dataChartWidgets;
@@ -88,26 +92,53 @@ class _InternalSensorDataTabState extends State<_InternalSensorDataTab>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(kToolbarHeight), // Default AppBar height
-        child: TabBar(
-          isScrollable: true,
-          controller: _tabController,
-          // Color of the underline indicator
-          indicatorColor: Colors.white,
-          // Color of the active tab label
-          labelColor: Colors.white,
-          // Color of the inactive tab labels
-          unselectedLabelColor: Colors.grey,
-          tabs: dataChartTabs,
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: dataChartWidgets,
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        double width = constraints.maxWidth;
+        double height = constraints.maxHeight;
+        (int, int) rowColumnDimension =
+            SquareChildrenGrid.calculateColumnsAndRows(
+          width,
+          height,
+          dataChartWidgets.length,
+        );
+        int cols = rowColumnDimension.$1;
+        int rows = rowColumnDimension.$2;
+
+        double chartWidth = width / cols;
+        double chartHeight = width / rows;
+
+        if (chartHeight >= minWidgetHeight && chartWidth >= minWidgetWidth) {
+          return SquareChildrenGrid(
+            precalculatedColumns: cols,
+            precalculatedRows: rows,
+            children: dataChartWidgets,
+          );
+        }
+
+        return Scaffold(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          appBar: PreferredSize(
+            // Default AppBar height
+            preferredSize: Size.fromHeight(kToolbarHeight),
+            child: TabBar(
+              isScrollable: true,
+              controller: _tabController,
+              // Color of the underline indicator
+              indicatorColor: Colors.white,
+              // Color of the active tab label
+              labelColor: Colors.white,
+              // Color of the inactive tab labels
+              unselectedLabelColor: Colors.grey,
+              tabs: dataChartTabs,
+            ),
+          ),
+          body: TabBarView(
+            controller: _tabController,
+            children: dataChartWidgets,
+          ),
+        );
+      },
     );
   }
 }
