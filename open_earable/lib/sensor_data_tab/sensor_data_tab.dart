@@ -5,14 +5,43 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_earable/sensor_data_tab/sensor_chart.dart';
 import 'package:provider/provider.dart';
 
-class SensorDataTab extends StatefulWidget {
+class SensorDataTab extends StatelessWidget {
   const SensorDataTab({super.key});
 
   @override
-  State<SensorDataTab> createState() => _SensorDataTabState();
+  Widget build(BuildContext context) {
+    return Selector<BluetoothController, bool>(
+      selector: (context, controller) => controller.isV2,
+      builder: (context, isV2, child) {
+        return Selector<BluetoothController, OpenEarable>(
+          selector: (_, controller) => controller.currentOpenEarable,
+          shouldRebuild: (previous, current) => previous != current,
+          builder: (_, currentOpenEarable, __) {
+            return _InternalSensorDataTab(
+              openEarable: currentOpenEarable,
+              isV2: isV2,
+            );
+          },
+        );
+      },
+    );
+  }
 }
 
-class _SensorDataTabState extends State<SensorDataTab>
+class _InternalSensorDataTab extends StatefulWidget {
+  final OpenEarable openEarable;
+  final bool isV2;
+
+  const _InternalSensorDataTab({
+    required this.openEarable,
+    required this.isV2,
+  });
+
+  @override
+  State<_InternalSensorDataTab> createState() => _InternalSensorDataTabState();
+}
+
+class _InternalSensorDataTabState extends State<_InternalSensorDataTab>
     with TickerProviderStateMixin {
   late TabController _tabController;
   late TabController _v1TabController;
@@ -30,19 +59,9 @@ class _SensorDataTabState extends State<SensorDataTab>
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(kToolbarHeight), // Default AppBar height
-        child: Selector<BluetoothController, bool>(
-          selector: (context, controller) => controller.isV2,
-          builder: (context, isV2, child) {
-            return isV2 ? v2TabBar() : v1TabBar();
-          },
-        ),
+        child: widget.isV2 ? v2TabBar() : v1TabBar(),
       ),
-      body: Selector<BluetoothController, bool>(
-        selector: (context, controller) => controller.isV2,
-        builder: (context, isV2, child) {
-          return isV2 ? v2TabBarView() : v1TabBarView();
-        },
-      ),
+      body: widget.isV2 ? v2TabBarView() : v1TabBarView(),
     );
   }
 
@@ -93,102 +112,90 @@ class _SensorDataTabState extends State<SensorDataTab>
   }
 
   Widget v1TabBarView() {
-    return Selector<BluetoothController, OpenEarable>(
-      selector: (_, controller) => controller.currentOpenEarable,
-      shouldRebuild: (previous, current) => previous != current,
-      builder: (_, currentOpenEarable, __) {
-        return TabBarView(
-          controller: _v1TabController,
-          children: [
-            EarableDataChart(
-              openEarable: currentOpenEarable,
-              sensorName: 'ACC',
-              chartTitle: 'Accelerometer',
-            ),
-            EarableDataChart(
-              openEarable: currentOpenEarable,
-              sensorName: 'GYRO',
-              chartTitle: 'Gyroscope',
-            ),
-            EarableDataChart(
-              openEarable: currentOpenEarable,
-              sensorName: 'MAG',
-              chartTitle: 'Magnetometer',
-            ),
-            EarableDataChart(
-              openEarable: currentOpenEarable,
-              sensorName: 'BARO',
-              chartTitle: 'Pressure',
-            ),
-            EarableDataChart(
-              openEarable: currentOpenEarable,
-              sensorName: 'TEMP',
-              chartTitle: 'Temperature (Ambient)',
-            ),
-            Earable3DModel(currentOpenEarable),
-          ],
-        );
-      },
+    return TabBarView(
+      controller: _v1TabController,
+      children: [
+        EarableDataChart(
+          openEarable: widget.openEarable,
+          sensorName: 'ACC',
+          chartTitle: 'Accelerometer',
+        ),
+        EarableDataChart(
+          openEarable: widget.openEarable,
+          sensorName: 'GYRO',
+          chartTitle: 'Gyroscope',
+        ),
+        EarableDataChart(
+          openEarable: widget.openEarable,
+          sensorName: 'MAG',
+          chartTitle: 'Magnetometer',
+        ),
+        EarableDataChart(
+          openEarable: widget.openEarable,
+          sensorName: 'BARO',
+          chartTitle: 'Pressure',
+        ),
+        EarableDataChart(
+          openEarable: widget.openEarable,
+          sensorName: 'TEMP',
+          chartTitle: 'Temperature (Ambient)',
+        ),
+        Earable3DModel(widget.openEarable),
+      ],
     );
   }
 
   Widget v2TabBarView() {
-    return Selector<BluetoothController, OpenEarable>(
-      selector: (_, controller) => controller.currentOpenEarable,
-      shouldRebuild: (previous, current) => previous != current,
-      builder: (_, currentOpenEarable, __) {
-        return TabBarView(
-          controller: _tabController,
-          children: [
-            EarableDataChart(
-              openEarable: currentOpenEarable,
-              sensorName: 'ACC',
-              chartTitle: 'Accelerometer',
-            ),
-            EarableDataChart(
-              openEarable: currentOpenEarable,
-              sensorName: 'GYRO',
-              chartTitle: 'Gyroscope',
-            ),
-            EarableDataChart(
-              openEarable: currentOpenEarable,
-              sensorName: 'MAG',
-              chartTitle: 'Magnetometer',
-            ),
-            EarableDataChart(
-              openEarable: currentOpenEarable,
-              sensorName: 'BARO',
-              chartTitle: 'Pressure',
-            ),
-            EarableDataChart(
-              openEarable: currentOpenEarable,
-              sensorName: 'TEMP',
-              chartTitle: 'Temperature (Ambient)',
-            ),
-            EarableDataChart(
-              openEarable: currentOpenEarable,
-              sensorName: 'OPTTEMP',
-              chartTitle: 'Temperature (Surface)',
-            ),
-            EarableDataChart(
-              openEarable: currentOpenEarable,
-              sensorName: 'PULSOX',
-              chartTitle: 'Heart Rate',
-            ),
-            EarableDataChart(
-              openEarable: currentOpenEarable,
-              sensorName: 'PULSOX',
-              chartTitle: 'SpO2',
-            ),
-            EarableDataChart(
-              openEarable: currentOpenEarable,
-              sensorName: 'PPG',
-              chartTitle: 'PPG',
-            ),
-            Earable3DModel(currentOpenEarable),
-          ],
-        );
-      },
+    return TabBarView(
+      controller: _tabController,
+      children: [
+        EarableDataChart(
+          openEarable: widget.openEarable,
+          sensorName: 'ACC',
+          chartTitle: 'Accelerometer',
+        ),
+        EarableDataChart(
+          openEarable: widget.openEarable,
+          sensorName: 'GYRO',
+          chartTitle: 'Gyroscope',
+        ),
+        EarableDataChart(
+          openEarable: widget.openEarable,
+          sensorName: 'MAG',
+          chartTitle: 'Magnetometer',
+        ),
+        EarableDataChart(
+          openEarable: widget.openEarable,
+          sensorName: 'BARO',
+          chartTitle: 'Pressure',
+        ),
+        EarableDataChart(
+          openEarable: widget.openEarable,
+          sensorName: 'TEMP',
+          chartTitle: 'Temperature (Ambient)',
+        ),
+        EarableDataChart(
+          openEarable: widget.openEarable,
+          sensorName: 'OPTTEMP',
+          chartTitle: 'Temperature (Surface)',
+        ),
+        EarableDataChart(
+          openEarable: widget.openEarable,
+          sensorName: 'PULSOX',
+          chartTitle: 'Heart Rate',
+        ),
+        EarableDataChart(
+          openEarable: widget.openEarable,
+          sensorName: 'PULSOX',
+          chartTitle: 'SpO2',
+        ),
+        EarableDataChart(
+          openEarable: widget.openEarable,
+          sensorName: 'PPG',
+          chartTitle: 'PPG',
+        ),
+        Earable3DModel(widget.openEarable),
+      ],
     );
   }
 }
