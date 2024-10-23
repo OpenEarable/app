@@ -14,13 +14,15 @@ class EarableDataChart extends StatefulWidget {
   final OpenEarable openEarable;
   final String sensorName;
   final String chartTitle;
+  final String shortTitle;
 
   const EarableDataChart({
     required this.openEarable,
     required this.sensorName,
     required this.chartTitle,
+    String? shortTitle,
     super.key,
-  });
+  }) : shortTitle = shortTitle ?? chartTitle;
 
   @override
   State<EarableDataChart> createState() => _EarableDataChartState();
