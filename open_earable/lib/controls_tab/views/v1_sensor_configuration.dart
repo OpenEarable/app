@@ -125,7 +125,9 @@ class _V1SensorConfigurationCardState extends State<V1SensorConfigurationCard> {
                   });
                 }
               }, (String newValue) {
-                OpenEarableSettings().selectedImuOption = newValue;
+                setState(() {
+                  OpenEarableSettings().selectedImuOption = newValue;
+                });
               }),
               _sensorConfigurationRow(
                   "Barometer",
@@ -139,7 +141,9 @@ class _V1SensorConfigurationCardState extends State<V1SensorConfigurationCard> {
                   });
                 }
               }, (String newValue) {
-                OpenEarableSettings().selectedBarometerOption = newValue;
+                setState(() {
+                  OpenEarableSettings().selectedBarometerOption = newValue;
+                });
               }),
               _sensorConfigurationRow(
                   "Microphone",
@@ -151,7 +155,9 @@ class _V1SensorConfigurationCardState extends State<V1SensorConfigurationCard> {
                   OpenEarableSettings().microphoneSettingSelected = newValue!;
                 });
               }, (String newValue) {
-                OpenEarableSettings().selectedMicrophoneOption = newValue;
+                setState(() {
+                  OpenEarableSettings().selectedMicrophoneOption = newValue;
+                });
               }),
               SizedBox(height: 8),
               Row(
