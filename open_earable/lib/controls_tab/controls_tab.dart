@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:open_earable/ble/ble_controller.dart';
-import 'package:open_earable/controls_tab/views/audio_player.dart';
-import 'package:open_earable/controls_tab/views/v1_connect.dart';
-import 'package:open_earable/controls_tab/views/v1_sensor_configuration.dart';
+import 'package:open_earable/controls_tab/views/audio_and_led.dart';
+import 'package:open_earable/controls_tab/views/connect_and_configure.dart';
 import 'package:provider/provider.dart';
-import 'views/sensor_control/sensor_control.dart';
-import 'views/connect.dart';
-import 'views/led_color.dart';
 import 'dart:async';
 
 class ControlTab extends StatefulWidget {
@@ -42,16 +38,8 @@ class _ControlTabState extends State<ControlTab> {
                 SizedBox(
                   height: 5,
                 ),
-                isV2 ? ConnectCard() : V1ConnectCard(),
-                isV2 ? SensorControlCard() : V1SensorConfigurationCard(),
-                if (!isV2)
-                  AudioPlayerCard(
-                    Provider.of<BluetoothController>(
-                      context,
-                      listen: false,
-                    ).openEarableLeft,
-                  ),
-                LEDColorCard(),
+                ConnectAndConfigure(),
+                AudioAndLed(),
               ],
             );
           },
