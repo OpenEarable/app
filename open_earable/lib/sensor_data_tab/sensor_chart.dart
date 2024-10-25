@@ -131,6 +131,17 @@ class EarableDataChart extends StatefulWidget {
 
     return _getV1DataCharts(openEarable);
   }
+
+  static int getAvailableDataChartsCount(
+      OpenEarable openEarable,
+      bool isV2,
+      ) {
+    if (isV2) {
+      return 9;
+    }
+
+    return 5;
+  }
 }
 
 class _EarableDataChartState extends State<EarableDataChart> {
