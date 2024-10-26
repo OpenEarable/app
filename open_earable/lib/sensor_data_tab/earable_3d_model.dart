@@ -35,6 +35,10 @@ class _Earable3DModelState extends State<Earable3DModel> {
   void didUpdateWidget(covariant Earable3DModel oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.openEarable != widget.openEarable) {
+      // TODO: Fix this, both widgets hold the same mutable object, so this comparison is pointless
+      _setupListeners();
+    } else if (_imuSubscription == null) {
+      // Workaround for now
       _setupListeners();
     }
   }
