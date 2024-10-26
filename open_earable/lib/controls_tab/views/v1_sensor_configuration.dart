@@ -5,17 +5,38 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:provider/provider.dart';
 import '../models/open_earable_settings.dart';
 
-class V1SensorConfigurationCard extends StatefulWidget {
+class V1SensorConfigurationCard extends StatelessWidget {
   const V1SensorConfigurationCard({super.key});
 
   @override
-  State<V1SensorConfigurationCard> createState() =>
-      _V1SensorConfigurationCardState();
+  Widget build(BuildContext context) {
+    return Consumer<BluetoothController>(
+      builder: (context, bleController, child) {
+        return _InternalV1SensorConfigurationCard(
+          openEarable: bleController.currentOpenEarable,
+          connected: bleController.currentOpenEarable.bleManager.connected,
+        );
+      },
+    );
+  }
 }
 
-class _V1SensorConfigurationCardState extends State<V1SensorConfigurationCard> {
-  late OpenEarable _openEarable;
+class _InternalV1SensorConfigurationCard extends StatefulWidget {
+  final OpenEarable openEarable;
+  final bool connected;
 
+  const _InternalV1SensorConfigurationCard({
+    required this.openEarable,
+    required this.connected,
+  });
+
+  @override
+  State<_InternalV1SensorConfigurationCard> createState() =>
+      _InternalV1SensorConfigurationCardState();
+}
+
+class _InternalV1SensorConfigurationCardState
+    extends State<_InternalV1SensorConfigurationCard> {
   Color _getCheckboxColor(Set<WidgetState> states) {
     const Set<WidgetState> interactiveStates = <WidgetState>{
       WidgetState.pressed,
@@ -87,15 +108,13 @@ class _V1SensorConfigurationCardState extends State<V1SensorConfigurationCard> {
           : 0,
       latency: 0,
     );
-    await _openEarable.sensorManager.writeSensorConfig(imuConfig);
-    await _openEarable.sensorManager.writeSensorConfig(barometerConfig);
-    await _openEarable.sensorManager.writeSensorConfig(microphoneConfig);
+    await widget.openEarable.sensorManager.writeSensorConfig(imuConfig);
+    await widget.openEarable.sensorManager.writeSensorConfig(barometerConfig);
+    await widget.openEarable.sensorManager.writeSensorConfig(microphoneConfig);
   }
 
   @override
   Widget build(BuildContext context) {
-    _openEarable = Provider.of<BluetoothController>(context, listen: false)
-        .openEarableLeft;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 5.0),
       child: Card(
@@ -167,19 +186,17 @@ class _V1SensorConfigurationCardState extends State<V1SensorConfigurationCard> {
                       height: 37,
                       child: ElevatedButton(
                         onPressed:
-                            Provider.of<BluetoothController>(context).connected
+                            widget.connected
                                 ? _writeSensorConfigs
                                 : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor:
-                              Provider.of<BluetoothController>(context)
-                                      .connected
+                              widget.connected
                                   ? Theme.of(context).colorScheme.secondary
                                   : Colors.grey,
                           foregroundColor: Colors.black,
                           enableFeedback:
-                              Provider.of<BluetoothController>(context)
-                                  .connected,
+                              widget.connected,
                         ),
                         child: Text("Set Configuration"),
                       ),
@@ -208,7 +225,7 @@ class _V1SensorConfigurationCardState extends State<V1SensorConfigurationCard> {
           checkColor: Theme.of(context).colorScheme.primary,
           fillColor: WidgetStateProperty.resolveWith(_getCheckboxColor),
           value: settingSelected,
-          onChanged: Provider.of<BluetoothController>(context).connected
+          onChanged: widget.connected
               ? changeBool
               : null,
         ),
@@ -221,7 +238,7 @@ class _V1SensorConfigurationCardState extends State<V1SensorConfigurationCard> {
         Spacer(),
         Container(
           decoration: BoxDecoration(
-            color: Provider.of<BluetoothController>(context).connected
+            color: widget.connected
                 ? Colors.white
                 : Colors.grey,
             borderRadius: BorderRadius.circular(4.0),
@@ -236,7 +253,7 @@ class _V1SensorConfigurationCardState extends State<V1SensorConfigurationCard> {
                 options,
                 currentValue,
                 changeSelection,
-                Provider.of<BluetoothController>(context).connected,
+                widget.connected,
                 false,
               ),
             ),

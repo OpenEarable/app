@@ -309,9 +309,11 @@ class _EarableDataChartState extends State<EarableDataChart> {
   void didUpdateWidget(covariant EarableDataChart oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.openEarable != widget.openEarable) {
-      setState(() {
-        _data.clear();
-      });
+      // TODO: Fix this, both widgets hold the same mutable object, so this comparison is pointless
+      _data.clear();
+      _setupListeners();
+    } else if (_dataSubscription == null) {
+      // Workaround for now
       _setupListeners();
     }
   }
