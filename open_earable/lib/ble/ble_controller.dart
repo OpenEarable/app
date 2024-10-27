@@ -10,15 +10,19 @@ class BluetoothController extends ChangeNotifier {
   late SharedPreferences prefs;
 
   final String _openEarableName = "OpenEarable";
+
   OpenEarable get openEarableLeft => _openEarableLeft;
+
   OpenEarable get openEarableRight => _openEarableRight;
   final OpenEarable _openEarableLeft = OpenEarable();
   final OpenEarable _openEarableRight = OpenEarable();
 
   bool _isV2 = false;
+
   bool get isV2 => _isV2;
 
   late OpenEarable _currentOpenEarable;
+
   OpenEarable get currentOpenEarable => _currentOpenEarable;
 
   StreamSubscription? _scanSubscription;
@@ -29,6 +33,7 @@ class BluetoothController extends ChangeNotifier {
   StreamSubscription? _batteryLevelSubscriptionRight;
 
   List<DiscoveredDevice> _discoveredDevices = [];
+
   List<DiscoveredDevice> get discoveredDevices => _discoveredDevices;
 
   BluetoothController() {
@@ -48,15 +53,19 @@ class BluetoothController extends ChangeNotifier {
   bool get connected => _connectedLeft || _connectedRight;
 
   bool _connectedLeft = false;
+
   bool get connectedLeft => _connectedLeft;
 
   bool _connectedRight = false;
+
   bool get connectedRight => _connectedRight;
 
   int? _earableSOCLeft;
+
   int? get earableSOCLeft => _earableSOCLeft;
 
   int? _earableSOCRight;
+
   int? get earableSOCRight => _earableSOCRight;
 
   Future<void> _initializeSharedPreferences() async {
@@ -143,13 +152,17 @@ class BluetoothController extends ChangeNotifier {
     });
   }
 
-  void connectToDevice(device, OpenEarable openEarable, int earableIndex) {
+  Future<void> connectToDevice(
+    device,
+    OpenEarable openEarable,
+    int earableIndex,
+  ) async {
     if (device.name == openEarable.bleManager.connectedDevice?.name ||
         device.name == openEarable.bleManager.connectingDevice?.name) {
       return;
     }
     _scanSubscription?.cancel();
-    openEarable.bleManager.connectToDevice(device);
+    await openEarable.bleManager.connectToDevice(device);
     String side = earableIndex == 0 ? "Left" : "Right";
     String otherSide = earableIndex != 0 ? "Left" : "Right";
     if (prefs.getString("lastConnectedDeviceName$otherSide") == device.name) {
