@@ -30,7 +30,7 @@ class AppsTab extends StatelessWidget {
 
   const AppsTab(this._openEarable, {super.key});
 
-  List<AppInfo> sampleApps(BuildContext context) {
+  static List<AppInfo> sampleApps(BuildContext context, OpenEarable openEarable) {
     return [
       AppInfo(
         logoPath: "lib/apps_tab/recorder/assets/logo.png",
@@ -43,7 +43,7 @@ class AppsTab extends StatelessWidget {
               builder: (context) => Material(
                 child: Theme(
                   data: materialTheme,
-                  child: Recorder(_openEarable),
+                  child: Recorder(openEarable),
                 ),
               ),
             ),
@@ -63,8 +63,8 @@ class AppsTab extends StatelessWidget {
                 child: Theme(
                   data: materialTheme,
                   child: PostureTrackerView(
-                    EarableAttitudeTracker(_openEarable),
-                    _openEarable,
+                    EarableAttitudeTracker(openEarable),
+                    openEarable,
                   ),
                 ),
               ),
@@ -85,7 +85,7 @@ class AppsTab extends StatelessWidget {
                 child: Theme(
                   data: materialTheme,
                   child: Material(
-                    child: JumpHeightTest(_openEarable),
+                    child: JumpHeightTest(openEarable),
                   ),
                 ),
               ),
@@ -105,7 +105,7 @@ class AppsTab extends StatelessWidget {
               builder: (context) => Material(
                 child: Theme(
                   data: materialTheme,
-                  child: JumpRopeCounter(_openEarable),
+                  child: JumpRopeCounter(openEarable),
                 ),
               ),
             ),
@@ -123,7 +123,7 @@ class AppsTab extends StatelessWidget {
               builder: (context) => Material(
                 child: Theme(
                   data: materialTheme,
-                  child: StepCounter(_openEarable),
+                  child: StepCounter(openEarable),
                 ),
               ),
             ),
@@ -142,7 +142,7 @@ class AppsTab extends StatelessWidget {
               builder: (context) => Material(
                 child: Theme(
                   data: materialTheme,
-                  child: SleepHomeScreen(_openEarable),
+                  child: SleepHomeScreen(openEarable),
                 ),
               ),
             ),
@@ -161,7 +161,7 @@ class AppsTab extends StatelessWidget {
               builder: (context) => Material(
                 child: Theme(
                   data: materialTheme,
-                  child: TightnessMeter(_openEarable),
+                  child: TightnessMeter(openEarable),
                 ),
               ),
             ),
@@ -180,8 +180,8 @@ class AppsTab extends StatelessWidget {
                 child: Theme(
                   data: materialTheme,
                   child: StretchAppView(
-                    EarableAttitudeTracker(_openEarable),
-                    _openEarable,
+                    EarableAttitudeTracker(openEarable),
+                    openEarable,
                   ),
                 ),
               ),
@@ -195,7 +195,7 @@ class AppsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    List<AppInfo> apps = sampleApps(context);
+    List<AppInfo> apps = sampleApps(context, _openEarable);
 
     return Padding(
       padding: const EdgeInsets.only(top: 5),

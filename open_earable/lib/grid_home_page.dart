@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:open_earable/apps_tab/apps_tab.dart';
 import 'package:open_earable/ble/ble_controller.dart';
 import 'package:open_earable/ble/ble_tab_bar_page.dart';
 import 'package:open_earable/controls_tab/models/open_earable_settings_v2.dart';
@@ -53,9 +54,21 @@ class _InternalGridHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    List<AppInfo> sampleApps = AppsTab.sampleApps(context, openEarable);
+
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
+        leading: Builder(
+          builder: (context) {
+            return IconButton(
+              icon: const Icon(Icons.menu),
+              onPressed: () {
+                Scaffold.of(context).openDrawer();
+              },
+            );
+          },
+        ),
         title: Center(
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -88,6 +101,33 @@ class _InternalGridHomePage extends StatelessWidget {
             },
           ),
         ],
+      ),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: sampleApps.map((appInfo) {
+            return ListTile(
+              leading: SizedBox(
+                height: 30.0,
+                width: 30.0,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8.0),
+                  child: Image.asset(
+                    appInfo.logoPath,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              title: Text(appInfo.title),
+              subtitle: Text(appInfo.description),
+              onTap: () {
+                // Close the drawer before launching the app
+                Navigator.of(context).pop();
+                appInfo.onTap();
+              },
+            );
+          }).toList(),
+        ),
       ),
       body: SquareChildrenGrid(
         precalculatedRows: precalculatedRows,
