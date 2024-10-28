@@ -133,8 +133,8 @@ class _InternalGridHomePage extends StatelessWidget {
         precalculatedRows: precalculatedRows,
         precalculatedColumns: precalculatedColumns,
         children: [
-          Expanded(child: ConnectAndConfigure()),
-          Expanded(child: AudioAndLed()),
+          ConnectAndConfigure(),
+          AudioAndLed(),
           ...EarableDataChart.getAvailableDataCharts(
             openEarable,
             isV2,
