@@ -16,7 +16,6 @@ class AudioPlayerCard extends StatefulWidget {
 
 class _AudioPlayerCardState extends State<AudioPlayerCard> {
   late TextEditingController _filenameTextController;
-  late TextEditingController _jingleTextController;
 
   late TextEditingController _frequencyTextController;
   late TextEditingController _frequencyVolumeTextController;
@@ -27,9 +26,6 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     super.initState();
     _filenameTextController = TextEditingController(
       text: OpenEarableSettings().selectedFilename,
-    );
-    _jingleTextController = TextEditingController(
-      text: OpenEarableSettings().selectedJingle,
     );
     _frequencyTextController = TextEditingController(
       text: OpenEarableSettings().selectedFrequency,
@@ -81,11 +77,9 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
   }
 
   void _setJingle() {
-    int jingleIndex =
-        OpenEarableSettings().getJingleIndex(_jingleTextController.text);
-    print(
-      "Setting source to jingle '${_jingleTextController.text}' with index $jingleIndex",
-    );
+    String jingleName = OpenEarableSettings().selectedJingle;
+    int jingleIndex = OpenEarableSettings().jingleMap[jingleName]!;
+    print("Setting source to jingle '$jingleName' with index $jingleIndex");
     widget.openEarable.audioPlayer.jingle(jingleIndex);
   }
 
