@@ -4,7 +4,6 @@ import 'package:open_earable/controls_tab/models/open_earable_settings.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'dart:async';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
-import 'dart:io';
 import 'package:provider/provider.dart';
 import 'package:open_earable/ble/ble_controller.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -155,84 +154,54 @@ class _InternalLedColorCardState extends State<_InternalLedColorCard> {
   */
 
   void _openColorPicker() {
-    if (Platform.isAndroid) {
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return Material(
-            child: AlertDialog(
-              title: const Text('Pick a color for the RGB LED'),
-              content: SingleChildScrollView(
-                child: ColorPicker(
-                  pickerColor: OpenEarableSettings().selectedColor,
-                  onColorChanged: (color) {
-                    setState(() {
-                      OpenEarableSettings().selectedColor = color;
-                    });
-                  },
-                  pickerAreaHeightPercent: 0.8,
-                  enableAlpha: false,
-                ),
-              ),
-              actions: <Widget>[
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('Done'),
-                ),
-              ],
-            ),
-          );
-        },
-      );
-    } else {
-      showCupertinoDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return CupertinoAlertDialog(
-            title: Text('Pick a color for the RGB LED'),
-            content: SingleChildScrollView(
-              padding: EdgeInsets.zero,
-              child: Theme(
-                data: materialTheme,
-                child: Material(
-                  // Wrap with Material
-                  child: Localizations(
-                    locale:
-                        const Locale('en', 'US'), // Specify the app's locale
-                    delegates: [
-                      GlobalMaterialLocalizations.delegate,
-                      GlobalWidgetsLocalizations.delegate,
-                      GlobalCupertinoLocalizations.delegate,
-                    ],
-                    child: ColorPicker(
-                      pickerColor: OpenEarableSettings().selectedColor,
-                      onColorChanged: (color) {
-                        // Your color change logic
-                        setState(() {
-                          OpenEarableSettings().selectedColor = color;
-                        });
-                      },
-                      pickerAreaHeightPercent: 0.8,
-                      enableAlpha: false,
-                    ), // Your widget that contains the DropdownButton
-                  ),
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Pick a color for the RGB LED'),
+          content: SingleChildScrollView(
+            padding: EdgeInsets.zero,
+            child: Theme(
+              data: materialTheme,
+              child: Material(
+                // Wrap with Material
+                child: Localizations(
+                  locale: const Locale('en', 'US'), // Specify the app's locale
+                  delegates: [
+                    GlobalMaterialLocalizations.delegate,
+                    GlobalWidgetsLocalizations.delegate,
+                    GlobalCupertinoLocalizations.delegate,
+                  ],
+                  child: ColorPicker(
+                    pickerColor: OpenEarableSettings().selectedColor,
+                    onColorChanged: (color) {
+                      // Your color change logic
+                      setState(() {
+                        OpenEarableSettings().selectedColor = color;
+                      });
+                    },
+                    pickerAreaHeightPercent: 0.8,
+                    enableAlpha: false,
+                  ), // Your widget that contains the DropdownButton
                 ),
               ),
             ),
-            actions: <Widget>[
-              CupertinoDialogAction(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
+          ),
+          actions: <Widget>[
+            CupertinoDialogAction(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              textStyle: TextStyle(color: Colors.white),
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
                 child: Text('Done'),
               ),
-            ],
-          );
-        },
-      );
-    }
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -257,16 +226,21 @@ class _InternalLedColorCardState extends State<_InternalLedColorCard> {
               ),
               Row(
                 children: [
-                  GestureDetector(
-                    onTap: widget.connected
-                        ? _openColorPicker
-                        : null, // Open color picker
-                    child: Container(
-                      width: 66,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: OpenEarableSettings().selectedColor,
-                        borderRadius: BorderRadius.circular(5),
+                  MouseRegion(
+                    cursor: widget.connected
+                        ? SystemMouseCursors.click
+                        : MouseCursor.defer,
+                    child: GestureDetector(
+                      onTap: widget.connected
+                          ? _openColorPicker
+                          : null, // Open color picker
+                      child: Container(
+                        width: 66,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: OpenEarableSettings().selectedColor,
+                          borderRadius: BorderRadius.circular(5),
+                        ),
                       ),
                     ),
                   ),
