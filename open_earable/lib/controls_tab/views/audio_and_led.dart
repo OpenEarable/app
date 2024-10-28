@@ -15,14 +15,8 @@ class AudioAndLed extends StatelessWidget {
         return Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (!isV2)
-              AudioPlayerCard(
-                Provider.of<BluetoothController>(
-                  context,
-                  listen: false,
-                ).openEarableLeft,
-              ),
-            LEDColorCard(),
+            if (!isV2) AudioPlayerCard(),
+            LedColorCard(),
           ],
         );
       },
