@@ -5,16 +5,39 @@ import 'package:provider/provider.dart';
 import '../models/open_earable_settings.dart';
 import '../../shared/dynamic_value_picker.dart';
 
-class AudioPlayerCard extends StatefulWidget {
-  final OpenEarable openEarable;
-
-  const AudioPlayerCard(this.openEarable, {super.key});
+class AudioPlayerCard extends StatelessWidget {
+  const AudioPlayerCard({
+    super.key,
+  });
 
   @override
-  State<AudioPlayerCard> createState() => _AudioPlayerCardState();
+  Widget build(BuildContext context) {
+    return Consumer<BluetoothController>(
+      builder: (context, bleController, child) {
+        return _InternalAudioPlayerCard(
+          openEarable: bleController.currentOpenEarable,
+          connected: bleController.currentOpenEarable.bleManager.connected,
+        );
+      },
+    );
+  }
 }
 
-class _AudioPlayerCardState extends State<AudioPlayerCard> {
+class _InternalAudioPlayerCard extends StatefulWidget {
+  final OpenEarable openEarable;
+  final bool connected;
+
+  const _InternalAudioPlayerCard({
+    required this.openEarable,
+    required this.connected,
+  });
+
+  @override
+  State<_InternalAudioPlayerCard> createState() =>
+      _InternalAudioPlayerCardState();
+}
+
+class _InternalAudioPlayerCardState extends State<_InternalAudioPlayerCard> {
   late TextEditingController _filenameTextController;
 
   late TextEditingController _frequencyTextController;
@@ -146,69 +169,59 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
 
   @override
   Widget build(BuildContext context) {
+    updateText(widget.connected);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 5.0),
-      child: Selector<BluetoothController, bool>(
-        selector: (_, bleController) => bleController.connected,
-        builder: (context, connected, child) {
-          updateText(connected);
-          return Card(
-            //Audio Player Card
-            color: Theme.of(context).colorScheme.primary,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Audio Player',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18.0,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  _getFileNameRow(),
-                  _getJingleRow(),
-                  _getFrequencyRow(),
-                  SizedBox(height: 12),
-                  _getMaterialButtonRow(connected),
-                ],
+      child: Card(
+        //Audio Player Card
+        color: Theme.of(context).colorScheme.primary,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Audio Player',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18.0,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-          );
-        },
+              _getFileNameRow(),
+              _getJingleRow(),
+              _getFrequencyRow(),
+              SizedBox(height: 12),
+              _getMaterialButtonRow(widget.connected),
+            ],
+          ),
+        ),
       ),
     );
   }
 
   Widget _getAudioPlayerRadio(int index) {
-    return Selector<BluetoothController, bool>(
-      selector: (_, bleController) => bleController.connected,
-      builder: (context, connected, child) {
-        return SizedBox(
-          height: 38,
-          width: 44,
-          child: Radio(
-            value: index,
-            groupValue: OpenEarableSettings().selectedAudioPlayerRadio,
-            onChanged: !connected
-                ? null
-                : (int? value) {
-                    setState(() {
-                      OpenEarableSettings().selectedAudioPlayerRadio =
-                          value ?? 0;
-                    });
-                  },
-            fillColor: WidgetStateProperty.resolveWith((states) {
-              if (states.contains(WidgetState.selected)) {
-                return Theme.of(context).colorScheme.secondary;
-              }
-              return Colors.grey;
-            }),
-          ),
-        );
-      },
+    return SizedBox(
+      height: 38,
+      width: 44,
+      child: Radio(
+        value: index,
+        groupValue: OpenEarableSettings().selectedAudioPlayerRadio,
+        onChanged: !widget.connected
+            ? null
+            : (int? value) {
+                setState(() {
+                  OpenEarableSettings().selectedAudioPlayerRadio = value ?? 0;
+                });
+              },
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Theme.of(context).colorScheme.secondary;
+          }
+          return Colors.grey;
+        }),
+      ),
     );
   }
 
@@ -251,29 +264,26 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
     String? placeholder,
     int? maxLength,
   ) {
-    return Selector<BluetoothController, bool>(
-      selector: (_, controller) => controller.connected,
-      builder: (context, connected, child) {
-        return TextField(
-          controller: textController,
-          obscureText: false,
-          enabled: connected,
-          style: TextStyle(color: connected ? Colors.black : Colors.grey[700]),
-          decoration: InputDecoration(
-            labelText: placeholder,
-            contentPadding: EdgeInsets.fromLTRB(8, 0, 0, 0),
-            border: OutlineInputBorder(),
-            floatingLabelBehavior: FloatingLabelBehavior.never,
-            labelStyle:
-                TextStyle(color: connected ? Colors.black : Colors.grey[700]),
-            filled: true,
-            fillColor: connected ? Colors.white : Colors.grey,
-          ),
-          keyboardType: keyboardType,
-          maxLength: maxLength,
-          maxLines: 1,
-        );
-      },
+    return TextField(
+      controller: textController,
+      obscureText: false,
+      enabled: widget.connected,
+      style:
+          TextStyle(color: widget.connected ? Colors.black : Colors.grey[700]),
+      decoration: InputDecoration(
+        labelText: placeholder,
+        contentPadding: EdgeInsets.fromLTRB(8, 0, 0, 0),
+        border: OutlineInputBorder(),
+        floatingLabelBehavior: FloatingLabelBehavior.never,
+        labelStyle: TextStyle(
+          color: widget.connected ? Colors.black : Colors.grey[700],
+        ),
+        filled: true,
+        fillColor: widget.connected ? Colors.white : Colors.grey,
+      ),
+      keyboardType: keyboardType,
+      maxLength: maxLength,
+      maxLines: 1,
     );
   }
 
@@ -296,9 +306,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: Provider.of<BluetoothController>(context).connected
-                      ? Colors.white
-                      : Colors.grey,
+                  color: widget.connected ? Colors.white : Colors.grey,
                   borderRadius: BorderRadius.circular(4.0),
                 ),
                 child: SizedBox(
@@ -312,7 +320,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
                         OpenEarableSettings().selectedJingle = newValue;
                       });
                     },
-                    Provider.of<BluetoothController>(context).connected,
+                    widget.connected,
                     false,
                   ),
                 ),
@@ -358,9 +366,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
               child: Text(
                 'Hz',
                 style: TextStyle(
-                  color: Provider.of<BluetoothController>(context).connected
-                      ? Colors.white
-                      : Colors.grey,
+                  color: widget.connected ? Colors.white : Colors.grey,
                 ), // Set text color to white
               ),
             ),
@@ -383,18 +389,14 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
               child: Text(
                 '%',
                 style: TextStyle(
-                  color: Provider.of<BluetoothController>(context).connected
-                      ? Colors.white
-                      : Colors.grey,
+                  color: widget.connected ? Colors.white : Colors.grey,
                 ), // Set text color to white
               ),
             ),
             Spacer(),
             Container(
               decoration: BoxDecoration(
-                color: Provider.of<BluetoothController>(context).connected
-                    ? Colors.white
-                    : Colors.grey,
+                color: widget.connected ? Colors.white : Colors.grey,
                 borderRadius: BorderRadius.circular(4.0),
               ),
               child: SizedBox(
@@ -411,7 +413,7 @@ class _AudioPlayerCardState extends State<AudioPlayerCard> {
                       },
                     );
                   },
-                  Provider.of<BluetoothController>(context).connected,
+                  widget.connected,
                   false,
                 ),
               ),

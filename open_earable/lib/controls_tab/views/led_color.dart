@@ -10,40 +10,54 @@ import 'package:open_earable/ble/ble_controller.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:open_earable/shared/global_theme.dart';
 
-class LEDColorCard extends StatefulWidget {
-  const LEDColorCard({super.key});
+class LedColorCard extends StatelessWidget {
+  const LedColorCard({super.key});
 
   @override
-  State<LEDColorCard> createState() => _LEDColorCardState();
+  Widget build(BuildContext context) {
+    return Consumer<BluetoothController>(
+      builder: (context, bleController, child) {
+        return _InternalLedColorCard(
+          openEarableLeft: bleController.openEarableLeft,
+          openEarableRight: bleController.openEarableRight,
+          connected: bleController.currentOpenEarable.bleManager.connected,
+        );
+      },
+    );
+  }
 }
 
-class _LEDColorCardState extends State<LEDColorCard> {
+class _InternalLedColorCard extends StatefulWidget {
+  final OpenEarable openEarableLeft;
+  final OpenEarable openEarableRight;
+  final bool connected;
+
+  const _InternalLedColorCard({
+    required this.openEarableLeft,
+    required this.openEarableRight,
+    required this.connected,
+  });
+
+  @override
+  State<_InternalLedColorCard> createState() => _InternalLedColorCardState();
+}
+
+class _InternalLedColorCardState extends State<_InternalLedColorCard> {
   Timer? rainbowTimer;
-  late OpenEarable _openEarableLeft;
-  late OpenEarable _openEarableRight;
 
   @override
   void initState() {
     super.initState();
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _openEarableLeft =
-        Provider.of<BluetoothController>(context).openEarableLeft;
-    _openEarableRight =
-        Provider.of<BluetoothController>(context).openEarableRight;
-  }
-
   void _setLEDColor() {
     _stopRainbowMode();
-    _openEarableLeft.rgbLed.writeLedColor(
+    widget.openEarableLeft.rgbLed.writeLedColor(
       r: OpenEarableSettings().selectedColor.red,
       g: OpenEarableSettings().selectedColor.green,
       b: OpenEarableSettings().selectedColor.blue,
     );
-    _openEarableRight.rgbLed.writeLedColor(
+    widget.openEarableRight.rgbLed.writeLedColor(
       r: OpenEarableSettings().selectedColor.red,
       g: OpenEarableSettings().selectedColor.green,
       b: OpenEarableSettings().selectedColor.blue,
@@ -52,8 +66,8 @@ class _LEDColorCardState extends State<LEDColorCard> {
 
   void _turnLEDoff() {
     _stopRainbowMode();
-    _openEarableLeft.rgbLed.writeLedColor(r: 0, g: 0, b: 0);
-    _openEarableRight.rgbLed.writeLedColor(r: 0, g: 0, b: 0);
+    widget.openEarableLeft.rgbLed.writeLedColor(r: 0, g: 0, b: 0);
+    widget.openEarableRight.rgbLed.writeLedColor(r: 0, g: 0, b: 0);
   }
 
   void _startRainbowMode() {
@@ -66,12 +80,12 @@ class _LEDColorCardState extends State<LEDColorCard> {
 
     rainbowTimer = Timer.periodic(Duration(milliseconds: 300), (Timer timer) {
       Map<String, int> rgbValue = _hslToRgb(h, 1, 0.5);
-      _openEarableLeft.rgbLed.writeLedColor(
+      widget.openEarableLeft.rgbLed.writeLedColor(
         r: rgbValue['r']!,
         g: rgbValue['g']!,
         b: rgbValue['b']!,
       );
-      _openEarableRight.rgbLed.writeLedColor(
+      widget.openEarableRight.rgbLed.writeLedColor(
         r: rgbValue['r']!,
         g: rgbValue['g']!,
         b: rgbValue['b']!,
@@ -241,66 +255,63 @@ class _LEDColorCardState extends State<LEDColorCard> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              Selector<BluetoothController, bool>(
-                selector: (_, bleController) => bleController.connected,
-                builder: (context, connected, child) => Row(
-                  children: [
-                    GestureDetector(
-                      onTap: connected
-                          ? _openColorPicker
-                          : null, // Open color picker
-                      child: Container(
-                        width: 66,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: OpenEarableSettings().selectedColor,
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 5),
-                    SizedBox(
+              Row(
+                children: [
+                  GestureDetector(
+                    onTap: widget.connected
+                        ? _openColorPicker
+                        : null, // Open color picker
+                    child: Container(
                       width: 66,
                       height: 36,
-                      child: ElevatedButton(
-                        onPressed: connected ? _setLEDColor : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Color(0xff53515b),
-                          // Set the background color to grey
-                          foregroundColor: Colors.white,
-                        ),
-                        child: Text('Set'),
+                      decoration: BoxDecoration(
+                        color: OpenEarableSettings().selectedColor,
+                        borderRadius: BorderRadius.circular(5),
                       ),
                     ),
-                    SizedBox(width: 5),
-                    SizedBox(
-                      width: 66,
-                      height: 36,
-                      child: ElevatedButton(
-                        onPressed: connected ? _startRainbowMode : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Color(0xff53515b),
-                          // Set the background color to grey
-                          foregroundColor: Colors.white,
-                        ),
-                        child: Text("🦄"),
+                  ),
+                  SizedBox(width: 5),
+                  SizedBox(
+                    width: 66,
+                    height: 36,
+                    child: ElevatedButton(
+                      onPressed: widget.connected ? _setLEDColor : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xff53515b),
+                        // Set the background color to grey
+                        foregroundColor: Colors.white,
                       ),
+                      child: Text('Set'),
                     ),
-                    Spacer(),
-                    SizedBox(
-                      width: 66,
-                      height: 36,
-                      child: ElevatedButton(
-                        onPressed: connected ? _turnLEDoff : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Color(0xfff27777),
-                          foregroundColor: Colors.black,
-                        ),
-                        child: Text('Off'),
+                  ),
+                  SizedBox(width: 5),
+                  SizedBox(
+                    width: 66,
+                    height: 36,
+                    child: ElevatedButton(
+                      onPressed: widget.connected ? _startRainbowMode : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xff53515b),
+                        // Set the background color to grey
+                        foregroundColor: Colors.white,
                       ),
+                      child: Text("🦄"),
                     ),
-                  ],
-                ),
+                  ),
+                  Spacer(),
+                  SizedBox(
+                    width: 66,
+                    height: 36,
+                    child: ElevatedButton(
+                      onPressed: widget.connected ? _turnLEDoff : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xfff27777),
+                        foregroundColor: Colors.black,
+                      ),
+                      child: Text('Off'),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
