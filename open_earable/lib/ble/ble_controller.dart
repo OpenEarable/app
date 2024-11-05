@@ -5,6 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:open_earable/controls_tab/models/open_earable_settings_v2.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:permission_handler/permission_handler.dart';
+
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+
+import 'package:universal_ble/universal_ble.dart';
+
+import 'package:flutter_reactive_ble/flutter_reactive_ble.dart' as reactive;
 
 class BluetoothController extends ChangeNotifier {
   late SharedPreferences prefs;
@@ -122,7 +129,8 @@ class BluetoothController extends ChangeNotifier {
     });
   }
 
-  Future<void> startScanning(OpenEarable openEarable) async {
+  
+  /*Future<void> startScanning(OpenEarable openEarable) async {
     _scanSubscription?.cancel();
     //_scanning = true;
     _discoveredDevices = [];
@@ -141,7 +149,118 @@ class BluetoothController extends ChangeNotifier {
         notifyListeners();
       }
     });
+  }*/
+
+Future<void> requestPermissions() async {
+  if (await Permission.bluetooth.isDenied) {
+    print("Bluetooth permission denied -- requesting");
+    await Permission.bluetooth.request();
   }
+
+  if (await Permission.bluetoothScan.isDenied) {
+    print("Bluetooth scan permission denied -- requesting");
+    await Permission.bluetoothScan.request();
+  }
+
+  if (await Permission.bluetoothConnect.isDenied) {
+    print("Bluetooth connect permission denied -- requesting");
+    await Permission.bluetoothConnect.request();
+  }
+
+  if (await Permission.location.isDenied) {
+    print("Location permission denied -- requesting");
+    await Permission.location.request();
+  }
+}
+
+/*
+Future<void> _checkConnectionStatus(DiscoveredDevice device) async {
+    final connection = _ble.connectToDevice(id: device.id, servicesWithCharacteristicsToDiscover: {}).listen(null);
+    connection.onDone(() async {
+      // Check the connection status after attempting to connect
+      final connectedDevices = await _ble.connectedDevices;
+      if (connectedDevices.any((d) => d.id == device.id)) {
+        setState(() {
+          _connectedDevices.add(device);
+        });
+      }
+      // Cancel the connection attempt
+      connection.cancel();
+    });
+  }*/
+
+  Future<void> startScanning(OpenEarable openEarable) async {
+    await requestPermissions();
+    _scanSubscription?.cancel();
+    //_scanning = true;
+    _discoveredDevices = [];
+
+    /*FlutterReactiveBle _reactiveBle = FlutterReactiveBle();
+    Stream<ConnectionStateUpdate> conn = _reactiveBle.connectedDeviceStream;*/
+
+    //conn.listen(onData)
+
+    List<BluetoothDevice> pairedDevices = await FlutterBluePlus.bondedDevices;
+    print("Paired devices: ${pairedDevices}");
+
+    reactive.FlutterReactiveBle _ble = reactive.FlutterReactiveBle();
+
+    List<BleDevice> connectedDevices = await UniversalBle.getSystemDevices(withServices: []);
+    for (final device in connectedDevices) {
+      if (openEarable.bleManager.connectedDevice != null && openEarable.bleManager.connectedDevice!.id == device.deviceId) continue;
+      if (device.isPaired!) {
+        int rssi = await _ble.readRssi(device.deviceId);
+        DiscoveredDevice d = DiscoveredDevice(id: device.deviceId, name: device.name!, //serviceData: {}, // Populate with actual service data if available
+        manufacturerData: device.manufacturerData!, // Populate with actual manufacturer data if available
+        rssi: rssi, // Assuming BleDevice has an rssi field
+        serviceUuids: []); //, connectable: reactive.Connectable.available);
+        print("device: ${device.name}");
+        discoveredDevices.add(d);
+        notifyListeners();
+      }
+    }
+
+    if (openEarable.bleManager.connectedDevice != null) {
+        print("Already connected device found: ${openEarable.bleManager.connectedDevice}");
+        discoveredDevices.add(openEarable.bleManager.connectedDevice!);
+        notifyListeners();
+    }
+
+    try {
+        await openEarable.bleManager.startScan();
+    } catch (error) {
+        print("Error starting scan: $error");
+        return;
+    }
+
+    _scanSubscription = openEarable.bleManager.scanStream.listen((incomingDevice) async {
+        //List<BluetoothDevice> connectedDevices = await FlutterBluePlus.connectedDevices;
+        //print("Connected devices: ${connectedDevices}");
+
+        /*List<BleDevice> connectedDevices = await UniversalBle.getSystemDevices(withServices: []);
+        for (final device in connectedDevices) {
+          if (device.isPaired!) {
+            int rssi = await _ble.readRssi(device.deviceId);
+            //print("Connected devices: ${device.name}");
+            DiscoveredDevice d = DiscoveredDevice(id: device.deviceId, name: device.name!, serviceData: {}, // Populate with actual service data if available
+            manufacturerData: device.manufacturerData!, // Populate with actual manufacturer data if available
+            rssi: rssi, // Assuming BleDevice has an rssi field
+            serviceUuids: [], connectable: Connectable.available);
+            print("Connected device: ${d}");
+          }
+        }*/
+
+        //print("Discovered device: ${incomingDevice}");
+
+        if (incomingDevice.name.isNotEmpty &&
+            incomingDevice.name.contains(_openEarableName) &&
+            !discoveredDevices.any((device) => device.id == incomingDevice.id)) {
+              print("Discovered device: ${incomingDevice.name}, ${incomingDevice.id}");
+            discoveredDevices.add(incomingDevice);
+            notifyListeners();
+        }
+    });
+}
 
   void connectToDevice(device, OpenEarable openEarable, int earableIndex) {
     if (device.name == openEarable.bleManager.connectedDevice?.name ||
@@ -150,6 +269,7 @@ class BluetoothController extends ChangeNotifier {
     }
     _scanSubscription?.cancel();
     openEarable.bleManager.connectToDevice(device);
+    print("connect to device .................. ${device.name}");
     String side = earableIndex == 0 ? "Left" : "Right";
     String otherSide = earableIndex != 0 ? "Left" : "Right";
     if (prefs.getString("lastConnectedDeviceName" + otherSide) == device.name) {
