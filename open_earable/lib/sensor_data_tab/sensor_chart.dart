@@ -440,6 +440,16 @@ class _EarableDataChartState extends State<EarableDataChart> {
           data: _data,
         ),
       ];
+      webSeriesList = [
+        ChartSeries(
+          id: '${widget.chartTitle}${_data.isNotEmpty ? " (${_units[widget.sensorName]})" : ""}',
+          label: '${widget.chartTitle}${_data.isNotEmpty ? " (${_units[widget.sensorName]})" : ""}',
+          getDomainFn: (SensorData data, _) => data.timestamp,
+          getMeasureFn: (SensorData data, _) => data.values[0],
+          getColorFn: (_, __) => colors[0],
+          data: _data,
+        ),
+      ];
     }
 
     print("Created series list for ${widget.sensorName}: $webSeriesList");

@@ -58,25 +58,28 @@
       }
 
       if (canvas.chartInitialized === true) {
+        console.log('Updating existing chart');
         // Update the existing chart
-        canvas.chart.destroy();
-      }
-
-      canvas.chart = new Chart(ctx, {
-        type: chartType,
-        data: {
-          labels: labels,
-          datasets: datasets,
-        },
-        options: {
-          responsive: true,
-          animation: {
-            duration: 0,
+        canvas.chart.data.labels = labels;
+        canvas.chart.data.datasets = datasets;
+        canvas.chart.update();
+      } else {
+        console.log('Creating new chart');
+        canvas.chart = new Chart(ctx, {
+          type: chartType,
+          data: {
+            labels: labels,
+            datasets: datasets,
           },
-        },
-      });
-
-      canvas.chartInitialized = true;
+          options: {
+            responsive: true,
+            animation: {
+              duration: 0,
+            },
+          },
+        });
+        canvas.chartInitialized = true;
+      }
     }
   </script>
 </head>
