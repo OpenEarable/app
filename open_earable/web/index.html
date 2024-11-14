@@ -40,6 +40,44 @@
   <link rel="stylesheet" type="text/css" href="splash/style.css">
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
   <script src="splash/splash.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    function renderChartJS(chartId, chartType, labelsString, datasetsString) {
+      const ctx = document.getElementById(chartId).getContext('2d');
+
+      console.log('Rendering chart ' + chartId + ' with type: ' + chartType);
+
+      var labels = JSON.parse(labelsString);
+      var datasets = JSON.parse(datasetsString);
+      
+      if (!datasets || !labels) {
+        console.error('Datasets or labels are null');
+        return;
+      }
+
+      // Destroy previous chart instance if it exists
+      if (window.currentChart) {
+        window.currentChart.destroy();
+      }
+
+      // Create a new Chart instance and store it globally
+      window.currentChart = new Chart(ctx, {
+        type: chartType,
+        data: {
+          labels: labels,
+          datasets: datasets,
+        },
+        options: {
+          responsive: true,
+          animation: {
+            duration: 0,
+          },
+        },
+      });
+
+    }
+  </script>
 </head>
 <body>
   <script>
