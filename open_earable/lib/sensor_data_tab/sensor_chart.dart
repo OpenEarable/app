@@ -458,7 +458,7 @@ class _EarableDataChartState extends State<EarableDataChart> {
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: kIsWeb
-                ? ChartJsWidget(chartType: 'line', seriesList: webSeriesList)
+                ? ChartJsWidget(chartType: 'line', seriesList: webSeriesList, title: widget.sensorName)
                 : charts.LineChart(
               seriesList,
               animate: false,

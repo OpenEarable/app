@@ -30,9 +30,12 @@ class ChartJsWidget extends StatelessWidget {
   final String chartType;
   final List<ChartSeries> seriesList;
 
+  final String title;
+
   const ChartJsWidget({super.key, 
     required this.chartType,
     required this.seriesList,
+    required this.title,
   });
 
   @override
@@ -44,7 +47,7 @@ class ChartJsWidget extends StatelessWidget {
     }
 
     // Generate a unique chart ID
-    final String chartId = 'chart-${DateTime.now().millisecondsSinceEpoch}';
+    final String chartId = 'chart-$title';
 
     // Register a view for the HTML element (CanvasElement)
     platformViewRegistry.registerViewFactory(

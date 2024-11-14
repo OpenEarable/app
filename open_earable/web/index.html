@@ -44,7 +44,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     function renderChartJS(chartId, chartType, labelsString, datasetsString) {
-      const ctx = document.getElementById(chartId).getContext('2d');
+      const canvas = document.getElementById(chartId);
+      const ctx = canvas.getContext('2d');
 
       console.log('Rendering chart ' + chartId + ' with type: ' + chartType);
 
@@ -56,13 +57,12 @@
         return;
       }
 
-      // Destroy previous chart instance if it exists
-      if (window.currentChart) {
-        window.currentChart.destroy();
+      if (canvas.chartInitialized === true) {
+        // Update the existing chart
+        canvas.chart.destroy();
       }
 
-      // Create a new Chart instance and store it globally
-      window.currentChart = new Chart(ctx, {
+      canvas.chart = new Chart(ctx, {
         type: chartType,
         data: {
           labels: labels,
@@ -76,6 +76,7 @@
         },
       });
 
+      canvas.chartInitialized = true;
     }
   </script>
 </head>
