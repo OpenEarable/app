@@ -51,11 +51,15 @@
 
       var labels = JSON.parse(labelsString);
       var datasets = JSON.parse(datasetsString);
-      
+
       if (!datasets || !labels) {
         console.error('Datasets or labels are null');
         return;
       }
+
+      datasets.forEach(dataset => {
+        dataset.pointStyle =false;
+      });
 
       if (canvas.chartInitialized === true) {
         console.log('Updating existing chart');
