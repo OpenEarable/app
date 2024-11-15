@@ -47,7 +47,7 @@ class _SensorControlRow extends State<SensorControlRow> {
             borderRadius: BorderRadius.circular(4.0),
           ),
           child: SizedBox(
-            width: 70,
+            width: 75,
             height: 37,
             child: Container(
               alignment: Alignment.centerRight,
@@ -64,7 +64,7 @@ class _SensorControlRow extends State<SensorControlRow> {
             ),
           ),
         ),
-        SizedBox(width: 8),
+        SizedBox(width: 4),
         Container(
           decoration: BoxDecoration(
             color: Provider.of<BluetoothController>(context).connected
@@ -73,7 +73,7 @@ class _SensorControlRow extends State<SensorControlRow> {
             borderRadius: BorderRadius.circular(4.0),
           ),
           child: SizedBox(
-            width: 70,
+            width: 75,
             height: 37,
             child: Container(
               alignment: Alignment.centerRight,
@@ -90,7 +90,7 @@ class _SensorControlRow extends State<SensorControlRow> {
             ),
           ),
         ),
-        SizedBox(width: 8),
+        SizedBox(width: 4),
         Text("Hz", style: TextStyle(color: Color.fromRGBO(168, 168, 172, 1.0))),
       ],
     );
