@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:open_earable/sensor_data_tab/sensor_html_chart.dart';
+import 'package:open_earable/sensor_data_tab/sensor_html_chart_stub.dart' if (dart.library.html) 'package:open_earable/sensor_data_tab/sensor_html_chart.dart';
 import 'package:open_earable/shared/earable_not_connected_warning.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:flutter/material.dart';
