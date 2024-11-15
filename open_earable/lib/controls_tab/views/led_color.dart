@@ -224,6 +224,7 @@ class _InternalLedColorCardState extends State<_InternalLedColorCard> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+              SizedBox(height: 8),
               Row(
                 children: [
                   MouseRegion(
@@ -244,7 +245,7 @@ class _InternalLedColorCardState extends State<_InternalLedColorCard> {
                       ),
                     ),
                   ),
-                  SizedBox(width: 5),
+                  SizedBox(width: 4),
                   SizedBox(
                     width: 66,
                     height: 36,
@@ -258,7 +259,7 @@ class _InternalLedColorCardState extends State<_InternalLedColorCard> {
                       child: Text('Set'),
                     ),
                   ),
-                  SizedBox(width: 5),
+                  SizedBox(width: 4),
                   SizedBox(
                     width: 66,
                     height: 36,
