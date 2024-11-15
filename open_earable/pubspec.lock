@@ -86,8 +86,10 @@ packages:
     description:
       name: cli_util
       sha256: ff6785f7e9e3c38ac98b2fb035701789de90154024a75b6cb926445e83197d1c
+      sha256: ff6785f7e9e3c38ac98b2fb035701789de90154024a75b6cb926445e83197d1c
       url: "https://pub.dev"
     source: hosted
+    version: "0.4.2"
     version: "0.4.2"
   clock:
     dependency: transitive
@@ -330,8 +332,10 @@ packages:
     description:
       name: html
       sha256: "1fc58edeaec4307368c60d59b7e15b9d658b57d7f3125098b6294153c75337ec"
+      sha256: "1fc58edeaec4307368c60d59b7e15b9d658b57d7f3125098b6294153c75337ec"
       url: "https://pub.dev"
     source: hosted
+    version: "0.15.5"
     version: "0.15.5"
   image:
     dependency: transitive
@@ -453,7 +457,7 @@ packages:
       resolved-ref: "9c21f1bb268260f6150435f7757bc8578dd64e26"
       url: "https://github.com/OpenEarable/open_earable_flutter.git"
     source: git
-    version: "0.0.4"
+    version: "0.0.5"
   open_file:
     dependency: "direct main"
     description:
@@ -531,8 +535,10 @@ packages:
     description:
       name: path_provider
       sha256: "50c5dd5b6e1aaf6fb3a78b33f6aa3afca52bf903a8a5298f53101fdaee55bbcd"
+      sha256: "50c5dd5b6e1aaf6fb3a78b33f6aa3afca52bf903a8a5298f53101fdaee55bbcd"
       url: "https://pub.dev"
     source: hosted
+    version: "2.1.5"
     version: "2.1.5"
   path_provider_android:
     dependency: transitive
@@ -659,8 +665,10 @@ packages:
     description:
       name: shared_preferences
       sha256: "95f9997ca1fb9799d494d0cb2a780fd7be075818d59f00c43832ed112b158a82"
+      sha256: "95f9997ca1fb9799d494d0cb2a780fd7be075818d59f00c43832ed112b158a82"
       url: "https://pub.dev"
     source: hosted
+    version: "2.3.3"
     version: "2.3.3"
   shared_preferences_android:
     dependency: transitive
@@ -808,8 +816,10 @@ packages:
     description:
       name: url_launcher_android
       sha256: "6fc2f56536ee873eeb867ad176ae15f304ccccc357848b351f6f0d8d4a40d193"
+      sha256: "6fc2f56536ee873eeb867ad176ae15f304ccccc357848b351f6f0d8d4a40d193"
       url: "https://pub.dev"
     source: hosted
+    version: "6.3.14"
     version: "6.3.14"
   url_launcher_ios:
     dependency: transitive
@@ -823,10 +833,10 @@ packages:
     dependency: transitive
     description:
       name: url_launcher_linux
-      sha256: e2b9622b4007f97f504cd64c0128309dfb978ae66adbe944125ed9e1750f06af
+      sha256: "4e9ba368772369e3e08f231d2301b4ef72b9ff87c31192ef471b380ef29a4935"
       url: "https://pub.dev"
     source: hosted
-    version: "3.2.0"
+    version: "3.2.1"
   url_launcher_macos:
     dependency: transitive
     description:

@@ -40,6 +40,52 @@
   <link rel="stylesheet" type="text/css" href="splash/style.css">
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
   <script src="splash/splash.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    function renderChartJS(chartId, chartType, labelsString, datasetsString) {
+      const canvas = document.getElementById(chartId);
+      const ctx = canvas.getContext('2d');
+
+      console.log('Rendering chart ' + chartId + ' with type: ' + chartType);
+
+      var labels = JSON.parse(labelsString);
+      var datasets = JSON.parse(datasetsString);
+
+      if (!datasets || !labels) {
+        console.error('Datasets or labels are null');
+        return;
+      }
+
+      datasets.forEach(dataset => {
+        dataset.pointStyle =false;
+      });
+
+      if (canvas.chartInitialized === true) {
+        console.log('Updating existing chart');
+        // Update the existing chart
+        canvas.chart.data.labels = labels;
+        canvas.chart.data.datasets = datasets;
+        canvas.chart.update();
+      } else {
+        console.log('Creating new chart');
+        canvas.chart = new Chart(ctx, {
+          type: chartType,
+          data: {
+            labels: labels,
+            datasets: datasets,
+          },
+          options: {
+            responsive: true,
+            animation: {
+              duration: 0,
+            },
+          },
+        });
+        canvas.chartInitialized = true;
+      }
+    }
+  </script>
 </head>
 <body>
   <script>

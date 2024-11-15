@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:open_earable/sensor_data_tab/sensor_html_chart.dart';
 import 'package:open_earable/shared/earable_not_connected_warning.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +10,7 @@ import 'package:simple_kalman/simple_kalman.dart';
 import 'package:collection/collection.dart';
 import 'dart:math';
 import 'dart:core';
+import 'package:flutter/foundation.dart';
 
 class EarableDataChart extends StatefulWidget {
   final OpenEarable openEarable;
@@ -151,6 +153,7 @@ class _EarableDataChartState extends State<EarableDataChart> {
   late int _maxX = 0;
   late List<String> colors;
   List<charts.Series<dynamic, num>> seriesList = [];
+  List<ChartSeries> webSeriesList = [];
   late double _minY;
   late double _maxY;
   final errorMeasure = {"ACC": 5.0, "GYRO": 10.0, "MAG": 25.0};
@@ -384,6 +387,32 @@ class _EarableDataChartState extends State<EarableDataChart> {
           data: _data,
         ),
       ];
+      webSeriesList = [
+        ChartSeries(
+          id: 'X${_data.isNotEmpty ? " (${_units[widget.sensorName]})" : ""}',
+          label: 'X${_data.isNotEmpty ? " (${_units[widget.sensorName]})" : ""}',
+          getDomainFn: (SensorData data, _) => data.timestamp,
+          getMeasureFn: (SensorData data, _) => data.values[0],
+          getColorFn: (_, __) => colors[0],
+          data: _data,
+        ),
+        ChartSeries(
+          id: 'Y${_data.isNotEmpty ? " (${_units[widget.sensorName]})" : ""}',
+          label: 'Y${_data.isNotEmpty ? " (${_units[widget.sensorName]})" : ""}',
+          getDomainFn: (SensorData data, _) => data.timestamp,
+          getMeasureFn: (SensorData data, _) => data.values[1],
+          getColorFn: (_, __) => colors[1],
+          data: _data,
+        ),
+        ChartSeries(
+          id: 'Z${_data.isNotEmpty ? " (${_units[widget.sensorName]})" : ""}',
+          label: 'Z${_data.isNotEmpty ? " (${_units[widget.sensorName]})" : ""}',
+          getDomainFn: (SensorData data, _) => data.timestamp,
+          getMeasureFn: (SensorData data, _) => data.values[2],
+          getColorFn: (_, __) => colors[2],
+          data: _data,
+        ),
+      ];
     } else if (widget.sensorName == "PPG") {
       seriesList = [
         charts.Series<SensorData, int>(
@@ -411,7 +440,19 @@ class _EarableDataChartState extends State<EarableDataChart> {
           data: _data,
         ),
       ];
+      webSeriesList = [
+        ChartSeries(
+          id: '${widget.chartTitle}${_data.isNotEmpty ? " (${_units[widget.sensorName]})" : ""}',
+          label: '${widget.chartTitle}${_data.isNotEmpty ? " (${_units[widget.sensorName]})" : ""}',
+          getDomainFn: (SensorData data, _) => data.timestamp,
+          getMeasureFn: (SensorData data, _) => data.values[0],
+          getColorFn: (_, __) => colors[0],
+          data: _data,
+        ),
+      ];
     }
+
+    print("Created series list for ${widget.sensorName}: $webSeriesList");
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -426,7 +467,9 @@ class _EarableDataChartState extends State<EarableDataChart> {
         Expanded(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
-            child: charts.LineChart(
+            child: kIsWeb
+                ? ChartJsWidget(chartType: 'line', seriesList: webSeriesList, title: widget.sensorName)
+                : charts.LineChart(
               seriesList,
               animate: false,
               behaviors: [
