@@ -5,6 +5,8 @@ import 'dart:ui_web';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:open_earable/sensor_data_tab/sensor_chart.dart';
+// Conditional imports
+// For web-specific code
 
 class ChartSeries {
   final String id;
@@ -25,14 +27,14 @@ class ChartSeries {
   });
 }
 
-
 class ChartJsWidget extends StatelessWidget {
   final String chartType;
   final List<ChartSeries> seriesList;
 
   final String title;
 
-  const ChartJsWidget({super.key, 
+  const ChartJsWidget({
+    super.key,
     required this.chartType,
     required this.seriesList,
     required this.title,
@@ -57,13 +59,20 @@ class ChartJsWidget extends StatelessWidget {
 
     // Extract labels and datasets after the widget has been built
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final labels = seriesList[0].data.map((data) => seriesList[0].getDomainFn(data, null).toString()).toList();
+      final labels = seriesList[0]
+          .data
+          .map((data) => seriesList[0].getDomainFn(data, null).toString())
+          .toList();
       final datasets = seriesList.map((series) {
         return {
           'label': series.label,
-          'data': series.data.map((data) => series.getMeasureFn(data, null)).toList(),
-          'borderColor': series.getColorFn(series.data[0], null), // Use colorFn for color
-          'backgroundColor': series.getColorFn(series.data[0], null) + '33', // With transparency
+          'data': series.data
+              .map((data) => series.getMeasureFn(data, null))
+              .toList(),
+          'borderColor':
+              series.getColorFn(series.data[0], null), // Use colorFn for color
+          'backgroundColor': series.getColorFn(series.data[0], null) +
+              '33', // With transparency
         };
       }).toList();
 

@@ -1,6 +1,7 @@
 import 'dart:async';
 
-import 'package:open_earable/sensor_data_tab/sensor_html_chart.dart';
+import 'sensor_html_chart_stub.dart'
+    if (dart.library.html) 'sensor_html_chart.dart';
 import 'package:open_earable/shared/earable_not_connected_warning.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:flutter/material.dart';
@@ -135,9 +136,9 @@ class EarableDataChart extends StatefulWidget {
   }
 
   static int getAvailableDataChartsCount(
-      OpenEarable openEarable,
-      bool isV2,
-      ) {
+    OpenEarable openEarable,
+    bool isV2,
+  ) {
     if (isV2) {
       return 9;
     }
@@ -390,7 +391,8 @@ class _EarableDataChartState extends State<EarableDataChart> {
       webSeriesList = [
         ChartSeries(
           id: 'X${_data.isNotEmpty ? " (${_units[widget.sensorName]})" : ""}',
-          label: 'X${_data.isNotEmpty ? " (${_units[widget.sensorName]})" : ""}',
+          label:
+              'X${_data.isNotEmpty ? " (${_units[widget.sensorName]})" : ""}',
           getDomainFn: (SensorData data, _) => data.timestamp,
           getMeasureFn: (SensorData data, _) => data.values[0],
           getColorFn: (_, __) => colors[0],
@@ -398,7 +400,8 @@ class _EarableDataChartState extends State<EarableDataChart> {
         ),
         ChartSeries(
           id: 'Y${_data.isNotEmpty ? " (${_units[widget.sensorName]})" : ""}',
-          label: 'Y${_data.isNotEmpty ? " (${_units[widget.sensorName]})" : ""}',
+          label:
+              'Y${_data.isNotEmpty ? " (${_units[widget.sensorName]})" : ""}',
           getDomainFn: (SensorData data, _) => data.timestamp,
           getMeasureFn: (SensorData data, _) => data.values[1],
           getColorFn: (_, __) => colors[1],
@@ -406,7 +409,8 @@ class _EarableDataChartState extends State<EarableDataChart> {
         ),
         ChartSeries(
           id: 'Z${_data.isNotEmpty ? " (${_units[widget.sensorName]})" : ""}',
-          label: 'Z${_data.isNotEmpty ? " (${_units[widget.sensorName]})" : ""}',
+          label:
+              'Z${_data.isNotEmpty ? " (${_units[widget.sensorName]})" : ""}',
           getDomainFn: (SensorData data, _) => data.timestamp,
           getMeasureFn: (SensorData data, _) => data.values[2],
           getColorFn: (_, __) => colors[2],
@@ -443,7 +447,8 @@ class _EarableDataChartState extends State<EarableDataChart> {
       webSeriesList = [
         ChartSeries(
           id: '${widget.chartTitle}${_data.isNotEmpty ? " (${_units[widget.sensorName]})" : ""}',
-          label: '${widget.chartTitle}${_data.isNotEmpty ? " (${_units[widget.sensorName]})" : ""}',
+          label:
+              '${widget.chartTitle}${_data.isNotEmpty ? " (${_units[widget.sensorName]})" : ""}',
           getDomainFn: (SensorData data, _) => data.timestamp,
           getMeasureFn: (SensorData data, _) => data.values[0],
           getColorFn: (_, __) => colors[0],
@@ -468,52 +473,57 @@ class _EarableDataChartState extends State<EarableDataChart> {
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: kIsWeb
-                ? ChartJsWidget(chartType: 'line', seriesList: webSeriesList, title: widget.sensorName)
+                ? ChartJsWidget(
+                    chartType: 'line',
+                    seriesList: webSeriesList,
+                    title: widget.sensorName)
                 : charts.LineChart(
-              seriesList,
-              animate: false,
-              behaviors: [
-                charts.SeriesLegend(
-                  position: charts.BehaviorPosition.bottom,
-                  // To position the legend at the end (bottom). You can change this as per requirement.
-                  outsideJustification:
-                      charts.OutsideJustification.middleDrawArea,
-                  // To justify the position.
-                  horizontalFirst: false,
-                  // To stack items horizontally.
-                  desiredMaxRows: 1,
-                  // Optional if you want to define max rows for the legend.
-                  entryTextStyle: charts.TextStyleSpec(
-                    // Optional styling for the text.
-                    color: charts.Color(r: 255, g: 255, b: 255),
-                    fontSize: 12,
+                    seriesList,
+                    animate: false,
+                    behaviors: [
+                      charts.SeriesLegend(
+                        position: charts.BehaviorPosition.bottom,
+                        // To position the legend at the end (bottom). You can change this as per requirement.
+                        outsideJustification:
+                            charts.OutsideJustification.middleDrawArea,
+                        // To justify the position.
+                        horizontalFirst: false,
+                        // To stack items horizontally.
+                        desiredMaxRows: 1,
+                        // Optional if you want to define max rows for the legend.
+                        entryTextStyle: charts.TextStyleSpec(
+                          // Optional styling for the text.
+                          color: charts.Color(r: 255, g: 255, b: 255),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                    primaryMeasureAxis: charts.NumericAxisSpec(
+                      tickProviderSpec: charts.BasicNumericTickProviderSpec(
+                        desiredTickCount: 7,
+                        zeroBound: false,
+                        dataIsInWholeNumbers: false,
+                      ),
+                      renderSpec: charts.GridlineRendererSpec(
+                        labelStyle: charts.TextStyleSpec(
+                          fontSize: 14,
+                          color: charts
+                              .MaterialPalette.white, // Set the color here
+                        ),
+                      ),
+                      viewport: charts.NumericExtents(_minY, _maxY),
+                    ),
+                    domainAxis: charts.NumericAxisSpec(
+                      renderSpec: charts.GridlineRendererSpec(
+                        labelStyle: charts.TextStyleSpec(
+                          fontSize: 14,
+                          color: charts
+                              .MaterialPalette.white, // Set the color here
+                        ),
+                      ),
+                      viewport: charts.NumericExtents(_minX, _maxX),
+                    ),
                   ),
-                ),
-              ],
-              primaryMeasureAxis: charts.NumericAxisSpec(
-                tickProviderSpec: charts.BasicNumericTickProviderSpec(
-                  desiredTickCount: 7,
-                  zeroBound: false,
-                  dataIsInWholeNumbers: false,
-                ),
-                renderSpec: charts.GridlineRendererSpec(
-                  labelStyle: charts.TextStyleSpec(
-                    fontSize: 14,
-                    color: charts.MaterialPalette.white, // Set the color here
-                  ),
-                ),
-                viewport: charts.NumericExtents(_minY, _maxY),
-              ),
-              domainAxis: charts.NumericAxisSpec(
-                renderSpec: charts.GridlineRendererSpec(
-                  labelStyle: charts.TextStyleSpec(
-                    fontSize: 14,
-                    color: charts.MaterialPalette.white, // Set the color here
-                  ),
-                ),
-                viewport: charts.NumericExtents(_minX, _maxX),
-              ),
-            ),
           ),
         ),
       ],
