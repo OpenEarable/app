@@ -476,7 +476,8 @@ class _EarableDataChartState extends State<EarableDataChart> {
                 ? ChartJsWidget(
                     chartType: 'line',
                     seriesList: webSeriesList,
-                    title: widget.sensorName)
+                    title: widget.sensorName,
+                  )
                 : charts.LineChart(
                     seriesList,
                     animate: false,

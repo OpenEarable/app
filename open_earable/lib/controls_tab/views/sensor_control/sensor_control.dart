@@ -142,10 +142,11 @@ class _SensorControlCardState extends State<SensorControlCard> {
               child: SensorControlRow("Microphone 2"),
             ),
             Padding(
-                padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
-                child: Divider(
-                  color: Color.fromRGBO(168, 168, 172, 1.0),
-                )),
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
+              child: Divider(
+                color: Color.fromRGBO(168, 168, 172, 1.0),
+              ),
+            ),
             ChangeNotifierProvider<SensorSettings>.value(
               value: OpenEarableSettingsV2().imuSettings,
               child: SensorControlRow("9-Axis IMU"),
@@ -171,34 +172,35 @@ class _SensorControlCardState extends State<SensorControlCard> {
               child: SensorControlRow("Pressure,\nTemp. (Ambient)"),
             ),
             Padding(
-                padding: EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: SizedBox(
-                        height: 37,
-                        child: ElevatedButton(
-                          onPressed: Provider.of<BluetoothController>(context)
-                                  .connected
-                              ? _writeSensorConfigs
-                              : null,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                Provider.of<BluetoothController>(context)
-                                        .connected
-                                    ? Theme.of(context).colorScheme.secondary
-                                    : Colors.grey,
-                            foregroundColor: Colors.black,
-                            enableFeedback:
-                                Provider.of<BluetoothController>(context)
-                                    .connected,
-                          ),
-                          child: Text("Set Configuration"),
+              padding: EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 37,
+                      child: ElevatedButton(
+                        onPressed:
+                            Provider.of<BluetoothController>(context).connected
+                                ? _writeSensorConfigs
+                                : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              Provider.of<BluetoothController>(context)
+                                      .connected
+                                  ? Theme.of(context).colorScheme.secondary
+                                  : Colors.grey,
+                          foregroundColor: Colors.black,
+                          enableFeedback:
+                              Provider.of<BluetoothController>(context)
+                                  .connected,
                         ),
+                        child: Text("Set Configuration"),
                       ),
                     ),
-                  ],
-                )),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
