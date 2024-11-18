@@ -74,14 +74,14 @@ class _SensorControlCardState extends State<SensorControlCard> {
       child: Card(
         //Audio Player Card
         color: Theme.of(context).colorScheme.primary,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Padding(
+                  padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
+                  child: Text(
                     'Sensor Control',
                     style: TextStyle(
                       color: Colors.white,
@@ -89,85 +89,91 @@ class _SensorControlCardState extends State<SensorControlCard> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  Spacer(),
-                  // This matches the Spacer in your DynamicValuePicker row
-                  SizedBox(
-                    width: 70,
-                    height: 37,
-                    child: Align(
-                      alignment: Alignment.bottomCenter,
-                      child: Text(
-                        "BLE",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Color.fromRGBO(168, 168, 172, 1.0),
-                        ),
+                ),
+                Spacer(),
+                // This matches the Spacer in your DynamicValuePicker row
+                SizedBox(
+                  width: 80,
+                  height: 37,
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Text(
+                      "BLE",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Color.fromRGBO(168, 168, 172, 1.0),
                       ),
                     ),
                   ),
-                  SizedBox(width: 8),
-                  // Space between the first title and the second title
-                  SizedBox(
-                    width: 70,
-                    height: 37,
-                    child: Align(
-                      alignment: Alignment.bottomCenter,
-                      child: Text(
-                        "SD",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Color.fromRGBO(168, 168, 172, 1.0),
-                        ),
+                ),
+                SizedBox(width: 4),
+                // Space between the first title and the second title
+                SizedBox(
+                  width: 80,
+                  height: 37,
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Text(
+                      "SD",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Color.fromRGBO(168, 168, 172, 1.0),
                       ),
                     ),
                   ),
-                  SizedBox(width: 8),
-                  // Space before the "Hz" label
-                  Text(
-                    "Hz",
-                    textAlign: TextAlign.left,
-                    style: TextStyle(color: Color.fromRGBO(168, 168, 172, 0)),
-                  ),
-                ],
-              ),
-              ChangeNotifierProvider<SensorSettings>.value(
-                value: OpenEarableSettingsV2().microphone1Settings,
-                child: SensorControlRow("Microphone 1"),
-              ),
-              SizedBox(height: 4),
-              ChangeNotifierProvider<SensorSettings>.value(
-                value: OpenEarableSettingsV2().microphone2Settings,
-                child: SensorControlRow("Microphone 2"),
-              ),
-              Divider(
+                ),
+                SizedBox(width: 4),
+                // Space before the "Hz" label
+                Text(
+                  "Hz",
+                  textAlign: TextAlign.left,
+                  style: TextStyle(color: Color.fromRGBO(168, 168, 172, 255)),
+                ),
+                SizedBox(width: 16),
+              ],
+            ),
+            ChangeNotifierProvider<SensorSettings>.value(
+              value: OpenEarableSettingsV2().microphone1Settings,
+              child: SensorControlRow("Microphone 1"),
+            ),
+            SizedBox(height: 4),
+            ChangeNotifierProvider<SensorSettings>.value(
+              value: OpenEarableSettingsV2().microphone2Settings,
+              child: SensorControlRow("Microphone 2"),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
+              child: Divider(
                 color: Color.fromRGBO(168, 168, 172, 1.0),
               ),
-              ChangeNotifierProvider<SensorSettings>.value(
-                value: OpenEarableSettingsV2().imuSettings,
-                child: SensorControlRow("9-Axis IMU"),
-              ),
-              SizedBox(height: 4),
-              ChangeNotifierProvider<SensorSettings>.value(
-                value: OpenEarableSettingsV2().pulseOximeterSettings,
-                child: SensorControlRow("Pulse Oximeter\n(Red/Infrared)"),
-              ),
-              SizedBox(height: 4),
-              ChangeNotifierProvider<SensorSettings>.value(
-                value: OpenEarableSettingsV2().vitalsSettings,
-                child: SensorControlRow("Heart Rate,\nSpO2"),
-              ),
-              SizedBox(height: 4),
-              ChangeNotifierProvider<SensorSettings>.value(
-                value: OpenEarableSettingsV2().opticalTemperatureSettings,
-                child: SensorControlRow("Optical Temp.\n(Surface)"),
-              ),
-              SizedBox(height: 4),
-              ChangeNotifierProvider<SensorSettings>.value(
-                value: OpenEarableSettingsV2().barometerSettings,
-                child: SensorControlRow("Pressure,\nTemp. (Ambient)"),
-              ),
-              SizedBox(height: 8),
-              Row(
+            ),
+            ChangeNotifierProvider<SensorSettings>.value(
+              value: OpenEarableSettingsV2().imuSettings,
+              child: SensorControlRow("9-Axis IMU"),
+            ),
+            SizedBox(height: 4),
+            ChangeNotifierProvider<SensorSettings>.value(
+              value: OpenEarableSettingsV2().pulseOximeterSettings,
+              child: SensorControlRow("Pulse Oximeter\n(Red/Infrared)"),
+            ),
+            SizedBox(height: 4),
+            ChangeNotifierProvider<SensorSettings>.value(
+              value: OpenEarableSettingsV2().vitalsSettings,
+              child: SensorControlRow("Heart Rate,\nSpO2"),
+            ),
+            SizedBox(height: 4),
+            ChangeNotifierProvider<SensorSettings>.value(
+              value: OpenEarableSettingsV2().opticalTemperatureSettings,
+              child: SensorControlRow("Optical Temp.\n(Surface)"),
+            ),
+            SizedBox(height: 4),
+            ChangeNotifierProvider<SensorSettings>.value(
+              value: OpenEarableSettingsV2().barometerSettings,
+              child: SensorControlRow("Pressure,\nTemp. (Ambient)"),
+            ),
+            Padding(
+              padding: EdgeInsets.all(16),
+              child: Row(
                 children: [
                   Expanded(
                     child: SizedBox(
@@ -194,8 +200,8 @@ class _SensorControlCardState extends State<SensorControlCard> {
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

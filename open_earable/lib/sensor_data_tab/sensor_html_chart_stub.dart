@@ -36,7 +36,7 @@ class ChartJsWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Text("Chart.js is only supported on Flutter Web."),
+      child: Text("Chart.js is not supported on this platform."),
     );
   }
 }
