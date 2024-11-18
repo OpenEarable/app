@@ -20,13 +20,14 @@ class ChartSeries {
   });
 }
 
+
 class ChartJsWidget extends StatelessWidget {
   final String chartType;
   final List<ChartSeries> seriesList;
+
   final String title;
 
-  const ChartJsWidget({
-    super.key,
+  const ChartJsWidget({super.key, 
     required this.chartType,
     required this.seriesList,
     required this.title,

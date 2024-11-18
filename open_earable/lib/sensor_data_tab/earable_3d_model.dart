@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:open_earable/sensor_data_tab/earable_3d_view.dart' if (dart.library.html) 'package:open_earable/sensor_data_tab/earable_3d_view_web.dart';
 import 'dart:async';
 import 'dart:math';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
-import 'package:model_viewer_plus/model_viewer_plus.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 
 class Earable3DModel extends StatefulWidget {
   final OpenEarable openEarable;
@@ -14,15 +13,17 @@ class Earable3DModel extends StatefulWidget {
 }
 
 class _Earable3DModelState extends State<Earable3DModel> {
-  WebViewController? _controller;
   StreamSubscription? _imuSubscription;
   double _pitch = 0;
   double _yaw = 0;
   double _roll = 0;
 
-  final String fileName = "assets/OpenEarable.obj";
+  final GlobalKey<ModelViewerWidgetState> _modelViewerKey = GlobalKey();
+
+  final String fileName = 'assets/OpenEarableV1.glb';
 
   dynamic sourceTexture;
+
   @override
   void initState() {
     super.initState();
@@ -62,8 +63,11 @@ class _Earable3DModelState extends State<Earable3DModel> {
         _pitch = data["EULER"]["PITCH"];
         _roll = data["EULER"]["ROLL"];
       });
-      _controller?.runJavaScript(
-          "document.querySelector('model-viewer').setAttribute('orientation', '${-_pitch} $_roll ${-_yaw}');",);
+      if (_modelViewerKey.currentState == null) {
+        print("ModelViewerKey.currentState is null");
+        return;
+      }
+      _modelViewerKey.currentState?.updateOrientation(_pitch, _yaw, _roll);
     });
   }
 
@@ -71,20 +75,12 @@ class _Earable3DModelState extends State<Earable3DModel> {
   Widget build(BuildContext context) {
     return Column(mainAxisAlignment: MainAxisAlignment.center, children: [
       Expanded(
-          child: ModelViewer(
-              cameraControls: false,
-              backgroundColor: Theme.of(context).colorScheme.surface,
-              src: 'assets/OpenEarableV1.glb',
-              alt: 'A 3D model of an astronaut',
-              interactionPrompt: InteractionPrompt.none,
-              autoRotate: false,
-              disableZoom: true,
-              disablePan: true,
-              onWebViewCreated: (controller) {
-                _controller = controller;
-                controller.runJavaScript(
-                    "document.body.style.overflow = 'hidden';document.documentElement.style.overflow = 'hidden';document.addEventListener('touchmove', function(e) { e.preventDefault(); }, { passive: false });",);
-              },),),
+        child: ModelViewerWidget(
+          key: _modelViewerKey,
+          modelSrc: fileName,
+          backgroundColor: Theme.of(context).colorScheme.surface,
+        ),
+      ),
       Padding(
           padding: EdgeInsets.only(bottom: 16),
           child: Text(

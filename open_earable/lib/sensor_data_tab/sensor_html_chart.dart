@@ -1,14 +1,10 @@
 import 'dart:convert';
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:js' as js;
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
+import 'package:universal_html/html.dart' as html;
+import 'package:universal_html/js.dart' as js;
 import 'dart:ui_web';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:open_earable/sensor_data_tab/sensor_chart.dart';
-// Conditional imports
-// For web-specific code
 
 class ChartSeries {
   final String id;
