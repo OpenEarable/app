@@ -152,24 +152,30 @@ class BluetoothController extends ChangeNotifier {
   }*/
 
 Future<void> requestPermissions() async {
+  if (kIsWeb) {
+    return;
+  }
+
   if (await Permission.bluetooth.isDenied) {
     print("Bluetooth permission denied -- requesting");
     await Permission.bluetooth.request();
   }
 
-  if (await Permission.bluetoothScan.isDenied) {
-    print("Bluetooth scan permission denied -- requesting");
-    await Permission.bluetoothScan.request();
-  }
+  if (defaultTargetPlatform == TargetPlatform.android) {
+    if (await Permission.bluetoothScan.isDenied) {
+      print("Bluetooth scan permission denied -- requesting");
+      await Permission.bluetoothScan.request();
+    }
 
-  if (await Permission.bluetoothConnect.isDenied) {
-    print("Bluetooth connect permission denied -- requesting");
-    await Permission.bluetoothConnect.request();
-  }
+    if (await Permission.bluetoothConnect.isDenied) {
+      print("Bluetooth connect permission denied -- requesting");
+      await Permission.bluetoothConnect.request();
+    }
 
-  if (await Permission.location.isDenied) {
-    print("Location permission denied -- requesting");
-    await Permission.location.request();
+    if (await Permission.location.isDenied) {
+      print("Location permission denied -- requesting");
+      await Permission.location.request();
+    }
   }
 }
 
@@ -190,77 +196,68 @@ Future<void> _checkConnectionStatus(DiscoveredDevice device) async {
   }*/
 
   Future<void> startScanning(OpenEarable openEarable) async {
+    print("Starting scan");
     await requestPermissions();
+    print("Permissions requested");
     _scanSubscription?.cancel();
-    //_scanning = true;
     _discoveredDevices = [];
 
-    /*FlutterReactiveBle _reactiveBle = FlutterReactiveBle();
-    Stream<ConnectionStateUpdate> conn = _reactiveBle.connectedDeviceStream;*/
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      print("running on android -- searching for bonded devices");
+      // For Android: Search within already connected devices
+      List<BluetoothDevice> pairedDevices = await FlutterBluePlus.bondedDevices;
+      print("Paired devices: ${pairedDevices}");
 
-    //conn.listen(onData)
+      reactive.FlutterReactiveBle _ble = reactive.FlutterReactiveBle();
 
-    List<BluetoothDevice> pairedDevices = await FlutterBluePlus.bondedDevices;
-    print("Paired devices: ${pairedDevices}");
-
-    reactive.FlutterReactiveBle _ble = reactive.FlutterReactiveBle();
-
-    List<BleDevice> connectedDevices = await UniversalBle.getSystemDevices(withServices: []);
-    for (final device in connectedDevices) {
-      if (openEarable.bleManager.connectedDevice != null && openEarable.bleManager.connectedDevice!.id == device.deviceId) continue;
-      if (device.isPaired!) {
-        int rssi = await _ble.readRssi(device.deviceId);
-        DiscoveredDevice d = DiscoveredDevice(id: device.deviceId, name: device.name!, //serviceData: {}, // Populate with actual service data if available
-        manufacturerData: device.manufacturerData!, // Populate with actual manufacturer data if available
-        rssi: rssi, // Assuming BleDevice has an rssi field
-        serviceUuids: []); //, connectable: reactive.Connectable.available);
-        print("device: ${device.name}");
-        discoveredDevices.add(d);
-        notifyListeners();
+      List<BleDevice> connectedDevices = await UniversalBle.getSystemDevices(withServices: []);
+      for (final device in connectedDevices) {
+        if (openEarable.bleManager.connectedDevice != null && openEarable.bleManager.connectedDevice!.id == device.deviceId) continue;
+        if (device.isPaired!) {
+          int rssi = await _ble.readRssi(device.deviceId);
+          DiscoveredDevice d = DiscoveredDevice(
+            id: device.deviceId,
+            name: device.name!,
+            manufacturerData: device.manufacturerData!,
+            rssi: rssi,
+            serviceUuids: [],
+          );
+          print("Device: ${device.name}");
+          _discoveredDevices.add(d);
+          notifyListeners();
+        }
       }
-    }
-
-    if (openEarable.bleManager.connectedDevice != null) {
-        print("Already connected device found: ${openEarable.bleManager.connectedDevice}");
-        discoveredDevices.add(openEarable.bleManager.connectedDevice!);
-        notifyListeners();
-    }
-
-    try {
+    } else if (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS) {
+      print("running on iOS/macOS -- searching for advertised devices");
+      
+      // For iOS and macOS: Search within advertised devices
+      try {
         await openEarable.bleManager.startScan();
-    } catch (error) {
+      } catch (error) {
         print("Error starting scan: $error");
         return;
-    }
+      }
 
-    _scanSubscription = openEarable.bleManager.scanStream.listen((incomingDevice) async {
-        //List<BluetoothDevice> connectedDevices = await FlutterBluePlus.connectedDevices;
-        //print("Connected devices: ${connectedDevices}");
-
-        /*List<BleDevice> connectedDevices = await UniversalBle.getSystemDevices(withServices: []);
-        for (final device in connectedDevices) {
-          if (device.isPaired!) {
-            int rssi = await _ble.readRssi(device.deviceId);
-            //print("Connected devices: ${device.name}");
-            DiscoveredDevice d = DiscoveredDevice(id: device.deviceId, name: device.name!, serviceData: {}, // Populate with actual service data if available
-            manufacturerData: device.manufacturerData!, // Populate with actual manufacturer data if available
-            rssi: rssi, // Assuming BleDevice has an rssi field
-            serviceUuids: [], connectable: Connectable.available);
-            print("Connected device: ${d}");
-          }
-        }*/
-
-        //print("Discovered device: ${incomingDevice}");
-
+      _scanSubscription = openEarable.bleManager.scanStream.listen((incomingDevice) {
         if (incomingDevice.name.isNotEmpty &&
             incomingDevice.name.contains(_openEarableName) &&
-            !discoveredDevices.any((device) => device.id == incomingDevice.id)) {
-              print("Discovered device: ${incomingDevice.name}, ${incomingDevice.id}");
-            discoveredDevices.add(incomingDevice);
-            notifyListeners();
+            !_discoveredDevices.any((device) => device.id == incomingDevice.id)) {
+          print("Discovered device: ${incomingDevice.name}, ${incomingDevice.id}");
+          _discoveredDevices.add(incomingDevice);
+          notifyListeners();
         }
-    });
-}
+      });
+    } else {
+      print("Unsupported platform");
+    }
+
+    // If there's already a connected device, add it to the discovered devices list
+    if (openEarable.bleManager.connectedDevice != null) {
+      print("Already connected device found: ${openEarable.bleManager.connectedDevice}");
+      _discoveredDevices.add(openEarable.bleManager.connectedDevice!);
+      notifyListeners();
+    }
+  }
 
   void connectToDevice(device, OpenEarable openEarable, int earableIndex) {
     if (device.name == openEarable.bleManager.connectedDevice?.name ||

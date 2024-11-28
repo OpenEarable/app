@@ -49,11 +49,12 @@ class _EarableDataChartState extends State<EarableDataChart> {
     if (!_openEarable.bleManager.connected) {
       return;
     }
+    logger.t("setting up listeners for $_sensorName");
     if (_sensorName == "BARO") {
       _createSingleDataSubscription("Pressure");
     } else if (_sensorName == "TEMP") {
       _createSingleDataSubscription("Temperature");
-    } else if (_sensorName == "PULSOX") {
+    } else if (_sensorName == "PPG") {
       if (_chartTitle == "SpO2") {
         _createSingleDataSubscription("SpO2");
       } else {
