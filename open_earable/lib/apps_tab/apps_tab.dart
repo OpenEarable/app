@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:open_earable/apps_tab/cpready/cpready.dart';
 import 'package:open_earable/apps_tab/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_earable/apps_tab/posture_tracker/view/posture_tracker_view.dart';
 import 'package:open_earable/apps_tab/neck_stretch/view/stretch_app_view.dart';
@@ -181,6 +182,26 @@ class AppsTab extends StatelessWidget {
                   data: materialTheme,
                   child: StretchAppView(
                     EarableAttitudeTracker(openEarable),
+                    openEarable,
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+      AppInfo(
+        logoPath: "lib/apps_tab/cpready/assets/logo.png",
+        title: "CPReady",
+        description: "Guided CPR procedure.",
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => Material(
+                child: Theme(
+                  data: materialTheme,
+                  child: CPReady(
                     openEarable,
                   ),
                 ),
