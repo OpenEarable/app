@@ -4,7 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_timer_countdown/flutter_timer_countdown.dart';
 import 'package:open_earable/apps_tab/cpready/model/data.dart';
-import 'package:open_earable/apps_tab/cpready/widgets/CPRInstructionView.dart';
+import 'package:open_earable/apps_tab/cpready/widgets/cpr_instruction_view.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:simple_kalman/simple_kalman.dart';
 
@@ -41,31 +41,22 @@ class _CPReadyState extends State<CPReady> {
   double _accY = 0.0;
   double _accZ = 0.0;
 
-  /// Current velocity calculated from acceleration.
-  double _currentVelocity = 0.0;
-
   /// The current vertical acceleration
-  double _currentVerticalAcc = 0.0;
-
-  /// Last measured velocity
-  double _lastVelocity = 0.0;
-
-  /// Pitch angle in radians.
-  double _pitch = 0.0;
-
-  double _roll = 0.0;
+  double _currentAcc = 0.0;
 
   /// The alpha parameter for the exponential smoothing
   final double _exponentialSmoothingAlpha = 0.7;
 
   /// The threshold after which the device should be considered stationary
-  final double _accelerationThreshold = 0.2;
+  final double _accelerationThreshold = 2;
 
   /// Last change in the direction of vertical movement that was recorded
   DateTime? _lastChange;
 
   /// Bool storing if a cpr is currently executed.
   bool _doingCPR = false;
+
+  bool _detectedPush = false;
 
   /// Instruction currently given to the user
   CPRInstruction _currentInstruction = CPRInstruction.fine;
@@ -108,64 +99,63 @@ class _CPReadyState extends State<CPReady> {
 
   /// Processes incoming sensor [data] and updates jump height.
   void _processSensorData(Map<String, dynamic> data) {
-    /// Kalman filtered accelerometer data for X.
-    _accX = _kalmanX.filtered(data["ACC"]["X"]);
-
-    /// Kalman filtered accelerometer data for Y.
-    _accY = _kalmanY.filtered(data["ACC"]["Y"]);
-
-    /// Kalman filtered accelerometer data for Z.
-    _accZ = _kalmanZ.filtered(data["ACC"]["Z"]);
-
-    _roll = data["EULER"]["ROLL"];
-
-    /// Pitch angle in radians.
-    _pitch = data["EULER"]["PITCH"];
-    // Calculates the current vertical acceleration.
-    // It adjusts the Z-axis acceleration with the pitch angle to account for the device's orientation.
-    _currentVerticalAcc = _accZ * cos(_pitch) + _accX * sin(_pitch);
-
-    // Subtract gravity to get acceleration due to movement.
-    _currentVerticalAcc -= _gravity;
-
-    _updateVelocity();
-  }
-
-  /// Updates the current velocity based on the [currentVerticalAcc].
-  void _updateVelocity() {
     setState(() {
-      if (_deviceIsStationary(_accelerationThreshold)) {
-        //If the device is not accelerating, we can assume in our use case that the user is not moving vertically.
-        _currentVerticalAcc = 0;
-        _currentVelocity = 0;
-      } else {
-        // Integrate acceleration to get velocity.
-        _currentVelocity += _currentVerticalAcc * (1 / _samplingRate);
-      }
+      /// Kalman filtered accelerometer data for X.
+      _accX = _kalmanX.filtered(data["ACC"]["X"]);
 
-      if (_currentVelocity.sign != _lastVelocity.sign) {
-        // The user has changed its vertical direction of movement, indicating
-        // a change between an up and a down movement.
-        // We can therefore now measure the frequency with which they are performing CPR.
-        _updateFrequency();
-      }
-      _lastVelocity = _currentVelocity;
+      /// Kalman filtered accelerometer data for Y.
+      _accY = _kalmanY.filtered(data["ACC"]["Y"]);
+
+      /// Kalman filtered accelerometer data for Z.
+      _accZ = _kalmanZ.filtered(data["ACC"]["Z"]);
+
+      // Calculates the current vertical acceleration.
+      // It adjusts the Z-axis acceleration with the pitch angle to account for the device's orientation.
+      _currentAcc =
+          _accZ.sign * sqrt(_accX * _accX + _accY * _accY + _accZ * _accZ);
+
+      // Subtract gravity to get acceleration due to movement.
+      _currentAcc -= _gravity;
     });
+
+    if (_currentAcc > _accelerationThreshold && !_detectedPush) {
+      //If there is enough magnitude assume there is currently a push
+      _updateFrequency();
+      setState(() {
+        _detectedPush = true;
+      });
+    } else if (_currentAcc < 0) {
+      setState(() {
+        _detectedPush = false;
+      });
+    }
+
   }
 
-  /// Checks if the device is stationary based on acceleration magnitude.
-  bool _deviceIsStationary(double threshold) {
-    double accMagnitude = sqrt(_accX * _accX + _accY * _accY + _accZ * _accZ);
-    bool isStationary = (accMagnitude > _gravity - threshold) &&
-        (accMagnitude < _gravity + threshold);
-    return isStationary;
+  /// Updates the instruction given to the user based on the frequency measured
+  /// by the earable, with which they are currently giving CPR.
+  ///
+  /// The recommend CPR frequency is between 100 and 120 bpm
+  /// (Source: [NHS](https://www.nhs.uk/conditions/first-aid/cpr/#:~:text=Keeping%20your%20hands%20on%20their,as%20long%20as%20you%20can.))
+  void _updateInstruction() {
+    setState(() {
+      if (_currentFrequency < (90 / 60)) {
+        _currentInstruction = CPRInstruction.faster;
+      } else if (_currentFrequency > (130 / 60)) {
+        _currentInstruction = CPRInstruction.slower;
+      } else {
+        _currentInstruction = CPRInstruction.fine;
+      }
+    });
   }
 
   /// Updates the frequency of the CPR
   void _updateFrequency() {
     var currentTime = DateTime.now();
     if (_lastChange == null) {
-      _lastChange = currentTime;
+      setState(() {
+        _lastChange = currentTime;
+      });
       return;
     }
     //difference is the duration for one up or down movement
@@ -175,26 +165,13 @@ class _CPReadyState extends State<CPReady> {
     //The calculated frequency is also exponentially smoothened with the previous values.
     //Source exponential smoothing: https://en.wikipedia.org/wiki/Exponential_smoothing
     //Should only be calculated if the difference was big enough so that false positives are ignored.
-    if (difference > 20
-    ) {
-      _currentFrequency = _exponentialSmoothingAlpha * (1000 / difference) / 2 + (1 - _exponentialSmoothingAlpha) * _currentFrequency;
-      _lastChange = currentTime;
+    if (difference > 20) {
+      setState(() {
+        _currentFrequency = _exponentialSmoothingAlpha * (1000 / difference) +
+            (1 - _exponentialSmoothingAlpha) * _currentFrequency;
+        _lastChange = currentTime;
+      });
       _updateInstruction();
-    }
-  }
-
-  /// Updates the instruction given to the user based on the frequency measured
-  /// by the earable, with which they are currently giving CPR.
-  ///
-  /// The recommend CPR frequency is between 100 and 120 bpm
-  /// (Source: [NHS](https://www.nhs.uk/conditions/first-aid/cpr/#:~:text=Keeping%20your%20hands%20on%20their,as%20long%20as%20you%20can.))
-  void _updateInstruction() {
-    if (_currentFrequency < (90 / 60)) {
-      _currentInstruction = CPRInstruction.faster;
-    } else if (_currentFrequency > (130 / 60)) {
-      _currentInstruction = CPRInstruction.slower;
-    } else {
-      _currentInstruction = CPRInstruction.fine;
     }
   }
 
@@ -232,15 +209,11 @@ class _CPReadyState extends State<CPReady> {
     if (_doingCPR) {
       setState(() {
         _doingCPR = false;
-        _lastVelocity = 0;
         _lastChange = null;
       });
       return;
     }
 
-    setState(() {
-      _doingCPR = true;
-    });
     showDialog(
       barrierDismissible: false,
       context: context,
@@ -257,7 +230,12 @@ class _CPReadyState extends State<CPReady> {
                   seconds: 03,
                 ),
               ),
-              onEnd: () => Navigator.pop(context),
+              onEnd: () {
+                Navigator.pop(context);
+                setState(() {
+                _doingCPR = true;
+                });
+              },
             ),
           ],
         ),
@@ -267,7 +245,7 @@ class _CPReadyState extends State<CPReady> {
 
   @override
   Widget build(BuildContext context) {
-    double mainButtonSize = min(MediaQuery.sizeOf(context).width / 2, 300);
+    double mainButtonSize = min(max(MediaQuery.sizeOf(context).width / 2, 300), 500);
     TextStyle mediumTextStyle = Theme.of(context).textTheme.displaySmall!;
 
     return Scaffold(
@@ -292,7 +270,9 @@ class _CPReadyState extends State<CPReady> {
                       fontSize: 30,
                     ),
                   ),
-                  SizedBox(height: 20,)
+                  SizedBox(
+                    height: 20,
+                  ),
                 ],
               ),
             ),
@@ -301,9 +281,9 @@ class _CPReadyState extends State<CPReady> {
               child: ElevatedButton(
                 style: ButtonStyle(
                     fixedSize: WidgetStateProperty.all(
-                        Size(mainButtonSize, mainButtonSize)),
+                        Size(mainButtonSize, mainButtonSize),),
                     backgroundColor: WidgetStateProperty.all(Colors.red),
-                    shape: WidgetStateProperty.all(CircleBorder())),
+                    shape: WidgetStateProperty.all(CircleBorder()),),
                 onPressed: _startStopCPR,
                 child: Text(
                   _doingCPR ? "Stop CPR" : "Start CPR",
@@ -323,16 +303,9 @@ class _CPReadyState extends State<CPReady> {
                     "Current frequency: ${_toBPM(_currentFrequency).round()} bpm",
                     style: mediumTextStyle,
                   ),
-                  //Text("The recommend frequency is between 100 and 120 bpm", style: mediumTextStyle,),
+                  Text("The recommend frequency is between 100 and 120 bpm", style: mediumTextStyle,),
                   Text(
-                      "Current velocity: ${_currentVelocity.toStringAsFixed(4)}"),
-                  Text(
-                      "Current vertical accelaration: ${_currentVerticalAcc.toStringAsFixed(4)}"),
-                  Text("Current x acc: ${_accX.toStringAsFixed(4)}"),
-                  Text("Current y acc: ${_accY.toStringAsFixed(4)}"),
-                  Text("Current z acc: ${_accZ.toStringAsFixed(4)}"),
-                  Text("pitch: $_pitch"),
-                  Text("roll: $_roll"),
+                      "Current vertical acceleration: ${_currentAcc.toStringAsFixed(4)}",),
                 ],
               ),
             ),
