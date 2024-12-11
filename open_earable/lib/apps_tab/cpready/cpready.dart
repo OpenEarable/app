@@ -33,7 +33,7 @@ class _CPReadyState extends State<CPReady> {
   /// Sampling rate time.
   final double _samplingRate = 30;
 
-  /// Standard gravity in m/s^2.
+  /// Gravity constant [m / (s^2)].
   final double _gravity = 9.81;
 
   /// Accelerations.
@@ -41,44 +41,49 @@ class _CPReadyState extends State<CPReady> {
   double _accY = 0.0;
   double _accZ = 0.0;
 
-  /// The current vertical acceleration
+  /// The current acceleration magnitude
   double _currentAcc = 0.0;
-
-  /// The alpha parameter for the exponential smoothing
-  final double _exponentialSmoothingAlpha = 0.7;
-
-  /// The threshold after which the device should be considered stationary
-  final double _accelerationThreshold = 2;
-
-  /// Last change in the direction of vertical movement that was recorded
-  DateTime? _lastChange;
-
-  /// Bool storing if a cpr is currently executed.
-  bool _doingCPR = false;
-
-  bool _detectedPush = false;
-
-  /// Instruction currently given to the user
-  CPRInstruction _currentInstruction = CPRInstruction.fine;
 
   /// Current frequency of up and down movements in Hz
   double _currentFrequency = 100 / 60;
 
-  /// Initializes state and sets up listeners for sensor data.
+  /// The alpha parameter for the exponential smoothing
+  final double _exponentialSmoothingAlpha = 0.7;
+
+  /// The threshold for the acceleration after which a movement should be considered a push
+  final double _accelerationThreshold = 2;
+
+  /// [DateTime] of the last push that was recorded
+  DateTime? _lastPush;
+
+  /// Bool storing if there was a currently a push detected
+  bool _detectedPush = false;
+
+  /// Bool storing if a cpr is currently executed.
+  bool _doingCPR = false;
+
+  /// Instruction currently given to the user
+  CPRInstruction _currentInstruction = CPRInstruction.fine;
+
   @override
   void initState() {
     super.initState();
     // Set up listeners for sensor data.
     if (widget._openEarable.bleManager.connected) {
       // Set the configuration for the OpenEarable device
-      widget._openEarable.sensorManager.writeSensorConfig(_buildSensorConfig());
+      widget._openEarable.sensorManager.writeSensorConfig(
+        OpenEarableSensorConfig(
+          sensorId: 0,
+          samplingRate: _samplingRate,
+          latency: 0,
+        ),
+      );
       _initializeKalmanFilters();
-      _setupListeners();
+      _setupSensorListeners();
       _earableConnected = true;
     }
   }
 
-  ///Disposes the widget
   @override
   void dispose() {
     super.dispose();
@@ -86,7 +91,7 @@ class _CPReadyState extends State<CPReady> {
   }
 
   /// Sets up listeners to receive sensor data from the OpenEarable device.
-  void _setupListeners() {
+  void _setupSensorListeners() {
     _imuSubscription = widget._openEarable.sensorManager
         .subscribeToSensorData(0)
         .listen((data) {
@@ -97,24 +102,20 @@ class _CPReadyState extends State<CPReady> {
     });
   }
 
-  /// Processes incoming sensor [data] and updates jump height.
+  /// Processes the received sensor [data] and updates the frequency.
+  /// The frequency is only updated if a new push is detected.
   void _processSensorData(Map<String, dynamic> data) {
     setState(() {
-      /// Kalman filtered accelerometer data for X.
+      /// Kalman filtered acceleration data
       _accX = _kalmanX.filtered(data["ACC"]["X"]);
-
-      /// Kalman filtered accelerometer data for Y.
       _accY = _kalmanY.filtered(data["ACC"]["Y"]);
-
-      /// Kalman filtered accelerometer data for Z.
       _accZ = _kalmanZ.filtered(data["ACC"]["Z"]);
 
-      // Calculates the current vertical acceleration.
-      // It adjusts the Z-axis acceleration with the pitch angle to account for the device's orientation.
+      // Calculates the current magnitude of acceleration.
       _currentAcc =
           _accZ.sign * sqrt(_accX * _accX + _accY * _accY + _accZ * _accZ);
 
-      // Subtract gravity to get acceleration due to movement.
+      // Need to subtract gravity to get real movement and not background force.
       _currentAcc -= _gravity;
     });
 
@@ -125,41 +126,25 @@ class _CPReadyState extends State<CPReady> {
         _detectedPush = true;
       });
     } else if (_currentAcc < 0) {
+      //Upward movement
       setState(() {
         _detectedPush = false;
       });
     }
-
-  }
-
-  /// Updates the instruction given to the user based on the frequency measured
-  /// by the earable, with which they are currently giving CPR.
-  ///
-  /// The recommend CPR frequency is between 100 and 120 bpm
-  /// (Source: [NHS](https://www.nhs.uk/conditions/first-aid/cpr/#:~:text=Keeping%20your%20hands%20on%20their,as%20long%20as%20you%20can.))
-  void _updateInstruction() {
-    setState(() {
-      if (_currentFrequency < (90 / 60)) {
-        _currentInstruction = CPRInstruction.faster;
-      } else if (_currentFrequency > (130 / 60)) {
-        _currentInstruction = CPRInstruction.slower;
-      } else {
-        _currentInstruction = CPRInstruction.fine;
-      }
-    });
   }
 
   /// Updates the frequency of the CPR
   void _updateFrequency() {
     var currentTime = DateTime.now();
-    if (_lastChange == null) {
+    if (_lastPush == null) {
+      //If this is the first recorded push.
       setState(() {
-        _lastChange = currentTime;
+        _lastPush = currentTime;
       });
       return;
     }
-    //difference is the duration for one up or down movement
-    int difference = currentTime.difference(_lastChange!).inMilliseconds;
+    //difference is the duration for the last up and down movement
+    int difference = currentTime.difference(_lastPush!).inMilliseconds;
 
     //Converting the time needed for one up and down movement to a frequency [Hz].
     //The calculated frequency is also exponentially smoothened with the previous values.
@@ -169,13 +154,34 @@ class _CPReadyState extends State<CPReady> {
       setState(() {
         _currentFrequency = _exponentialSmoothingAlpha * (1000 / difference) +
             (1 - _exponentialSmoothingAlpha) * _currentFrequency;
-        _lastChange = currentTime;
+        _lastPush = currentTime;
       });
       _updateInstruction();
     }
   }
 
-  /// Initializes Kalman filters for accelerometer data.
+  /// Updates the instruction given to the user based on the frequency measured
+  /// by the earable, with which they are currently giving CPR.
+  ///
+  /// The recommend CPR frequency is between 100 and 120 bpm
+  /// (Source: [NHS](https://www.nhs.uk/conditions/first-aid/cpr/#:~:text=Keeping%20your%20hands%20on%20their,as%20long%20as%20you%20can.))
+  void _updateInstruction() {
+    setState(() {
+      if (_currentFrequency < (70 / 60)) {
+        _currentInstruction = CPRInstruction.muchFaster;
+      } else if (_currentFrequency < (100 / 60)) {
+        _currentInstruction = CPRInstruction.faster;
+      } else if (_currentFrequency > (150 / 60)) {
+        _currentInstruction = CPRInstruction.muchSlower;
+      } else if (_currentFrequency > (120 / 60)) {
+        _currentInstruction = CPRInstruction.slower;
+      } else {
+        _currentInstruction = CPRInstruction.fine;
+      }
+    });
+  }
+
+  /// Initializes Kalman filters for acceleration data.
   void _initializeKalmanFilters() {
     _kalmanX = SimpleKalman(
       errorMeasure: _errorMeasureAcc,
@@ -194,48 +200,49 @@ class _CPReadyState extends State<CPReady> {
     );
   }
 
-  /// Builds a sensor configuration for the OpenEarable device.
-  /// Sets the sensor ID, sampling rate, and latency.
-  OpenEarableSensorConfig _buildSensorConfig() {
-    return OpenEarableSensorConfig(
-      sensorId: 0,
-      samplingRate: _samplingRate,
-      latency: 0,
-    );
-  }
-
   ///Starts or stops a CPR procedure.
   void _startStopCPR() {
     if (_doingCPR) {
+      //Stop CPR
       setState(() {
         _doingCPR = false;
-        _lastChange = null;
+        _lastPush = null;
       });
       return;
     }
 
+    var theme = Theme.of(context);
+
+    //Start CPR with a countdown
     showDialog(
       barrierDismissible: false,
       context: context,
       builder: (BuildContext context) => AlertDialog(
-        title: Text("Get in position"),
+        title: Text(
+          "Get in position!",
+          style: theme.textTheme.displaySmall,
+        ),
         content: Column(
           children: [
-            const Text("First call emergency agencies before performing CPR"),
             TimerCountdown(
               format: CountDownTimerFormat.secondsOnly,
+              timeTextStyle: theme.textTheme.displayLarge,
+              secondsDescription: "",
               endTime: DateTime.now().add(
                 const Duration(
-                  minutes: 00,
                   seconds: 03,
                 ),
               ),
               onEnd: () {
                 Navigator.pop(context);
                 setState(() {
-                _doingCPR = true;
+                  _doingCPR = true;
                 });
               },
+            ),
+            Text(
+              "First call emergency agencies before performing CPR",
+              style: theme.textTheme.displaySmall,
             ),
           ],
         ),
@@ -245,7 +252,8 @@ class _CPReadyState extends State<CPReady> {
 
   @override
   Widget build(BuildContext context) {
-    double mainButtonSize = min(max(MediaQuery.sizeOf(context).width / 2, 300), 500);
+    double mainButtonSize =
+        min(max(MediaQuery.sizeOf(context).width / 2, 300), 500);
     TextStyle mediumTextStyle = Theme.of(context).textTheme.displaySmall!;
 
     return Scaffold(
@@ -267,7 +275,7 @@ class _CPReadyState extends State<CPReady> {
                     "No Earable Connected",
                     style: TextStyle(
                       color: Colors.red,
-                      fontSize: 30,
+                      fontSize: 50,
                     ),
                   ),
                   SizedBox(
@@ -280,14 +288,29 @@ class _CPReadyState extends State<CPReady> {
               //Button for starting the CPR
               child: ElevatedButton(
                 style: ButtonStyle(
-                    fixedSize: WidgetStateProperty.all(
-                        Size(mainButtonSize, mainButtonSize),),
-                    backgroundColor: WidgetStateProperty.all(Colors.red),
-                    shape: WidgetStateProperty.all(CircleBorder()),),
+                  elevation: WidgetStateProperty.all(20),
+                  fixedSize: WidgetStateProperty.all(
+                    _doingCPR
+                        ? Size(mainButtonSize / 4, mainButtonSize / 4)
+                        : Size(mainButtonSize, mainButtonSize),
+                  ),
+                  backgroundColor: WidgetStateProperty.all(Colors.redAccent),
+                  shape: WidgetStateProperty.all(
+                    RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(_doingCPR ? 10 : 100),
+                    ),
+                  ),
+                ),
                 onPressed: _startStopCPR,
                 child: Text(
                   _doingCPR ? "Stop CPR" : "Start CPR",
-                  style: Theme.of(context).textTheme.displayMedium,
+                  style: _doingCPR ? Theme.of(context)
+                      .textTheme
+                      .bodyMedium!
+                      .copyWith(fontWeight: FontWeight.bold) : Theme.of(context)
+                      .textTheme
+                      .displayMedium!
+                      .copyWith(fontWeight: FontWeight.bold) ,
                 ),
               ),
             ),
@@ -303,9 +326,16 @@ class _CPReadyState extends State<CPReady> {
                     "Current frequency: ${_toBPM(_currentFrequency).round()} bpm",
                     style: mediumTextStyle,
                   ),
-                  Text("The recommend frequency is between 100 and 120 bpm", style: mediumTextStyle,),
+                  SizedBox(
+                    height: 20,
+                  ),
                   Text(
-                      "Current vertical acceleration: ${_currentAcc.toStringAsFixed(4)}",),
+                    "The recommend frequency is between 100 and 120 bpm",
+                    style: mediumTextStyle,
+                  ),
+                  Text(
+                    "Current vertical acceleration: ${_currentAcc.toStringAsFixed(4)}",
+                  ),
                 ],
               ),
             ),
@@ -319,4 +349,12 @@ class _CPReadyState extends State<CPReady> {
 /// Function that converts frequencies from Hz to bpm
 double _toBPM(double currentFrequency) {
   return currentFrequency * 60;
+}
+
+/// Function for retrieving a text scale factor.
+/// It uses the [context] for a responsive text size.
+double textScaleFactor(BuildContext context, {double maxTextScaleFactor = 2}) {
+  final width = MediaQuery.of(context).size.width;
+  double val = (width / 1400) * maxTextScaleFactor;
+  return max(1, min(val, maxTextScaleFactor));
 }
