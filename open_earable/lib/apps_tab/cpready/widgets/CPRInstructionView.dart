@@ -10,7 +10,7 @@ class CPRInstructionView extends StatelessWidget {
   Widget build(BuildContext context) {
     var style = Theme.of(context)
         .textTheme
-        .bodyLarge!
+        .displayMedium!
         .copyWith(color: instruction.color);
     return Text(
       instruction.messageString,
