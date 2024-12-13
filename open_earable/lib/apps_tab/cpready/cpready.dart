@@ -4,7 +4,9 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_timer_countdown/flutter_timer_countdown.dart';
 import 'package:open_earable/apps_tab/cpready/model/data.dart';
+import 'package:open_earable/apps_tab/cpready/utils.dart';
 import 'package:open_earable/apps_tab/cpready/widgets/cpr_instruction_view.dart';
+import 'package:open_earable/apps_tab/cpready/widgets/cpr_start_button.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:simple_kalman/simple_kalman.dart';
 
@@ -65,6 +67,12 @@ class _CPReadyState extends State<CPReady> {
   /// Instruction currently given to the user
   CPRInstruction _currentInstruction = CPRInstruction.fine;
 
+  /// Timer for the guided CPR
+  Timer? _timer;
+
+  /// Bool storing if a playback should be played
+  bool _playingTone = false;
+
   @override
   void initState() {
     super.initState();
@@ -82,12 +90,21 @@ class _CPReadyState extends State<CPReady> {
       _setupSensorListeners();
       _earableConnected = true;
     }
+
+    _timer = Timer.periodic(
+      Duration(milliseconds: 500),
+          (Timer t) {_playTone();},
+    );
   }
 
   @override
   void dispose() {
     super.dispose();
     _imuSubscription?.cancel();
+    _timer!.cancel();
+    if (_earableConnected) {
+      widget._openEarable.audioPlayer.setState(AudioPlayerState.stop);
+    }
   }
 
   /// Sets up listeners to receive sensor data from the OpenEarable device.
@@ -200,6 +217,24 @@ class _CPReadyState extends State<CPReady> {
     );
   }
 
+  void _playTone() {
+    if (_earableConnected && _playingTone) {
+      widget._openEarable.audioPlayer.setState(AudioPlayerState.start);
+      widget._openEarable.audioPlayer.setState(AudioPlayerState.pause);
+    }
+  }
+
+  void _startStopTimer() {
+    //Sets up a timer that will play a tone with a frequency of 120 bpm
+    if (_playingTone) {
+      _playingTone = false;
+      widget._openEarable.audioPlayer.setState(AudioPlayerState.pause);
+    } else {
+      _playingTone = true;
+      widget._openEarable.audioPlayer.frequency(1, 440, 0.2);
+    }
+  }
+
   ///Starts or stops a CPR procedure.
   void _startStopCPR() {
     if (_doingCPR) {
@@ -254,9 +289,19 @@ class _CPReadyState extends State<CPReady> {
   Widget build(BuildContext context) {
     double mainButtonSize =
         min(max(MediaQuery.sizeOf(context).width / 2, 300), 500);
-    TextStyle mediumTextStyle = Theme.of(context).textTheme.displaySmall!;
 
     return Scaffold(
+      appBar: AppBar(
+        leading: Padding(
+          padding: const EdgeInsets.all(3.0),
+          child: ImageIcon(
+            AssetImage("lib/apps_tab/cpready/assets/logo_outlined.png"),
+            color: Colors.black,
+          ),
+        ),
+        title: const Text("CPReady"),
+        backgroundColor: Colors.redAccent,
+      ),
       body: SingleChildScrollView(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -264,6 +309,7 @@ class _CPReadyState extends State<CPReady> {
             SizedBox(
               height: 10,
             ),
+            ElevatedButton(onPressed: _startStopTimer, child: Text("Frequency")),
             Visibility(
               // Show error message if no OpenEarable device is connected.
               visible: !_earableConnected,
@@ -284,35 +330,10 @@ class _CPReadyState extends State<CPReady> {
                 ],
               ),
             ),
-            Center(
-              //Button for starting the CPR
-              child: ElevatedButton(
-                style: ButtonStyle(
-                  elevation: WidgetStateProperty.all(20),
-                  fixedSize: WidgetStateProperty.all(
-                    _doingCPR
-                        ? Size(mainButtonSize / 4, mainButtonSize / 4)
-                        : Size(mainButtonSize, mainButtonSize),
-                  ),
-                  backgroundColor: WidgetStateProperty.all(Colors.redAccent),
-                  shape: WidgetStateProperty.all(
-                    RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(_doingCPR ? 10 : 100),
-                    ),
-                  ),
-                ),
-                onPressed: _startStopCPR,
-                child: Text(
-                  _doingCPR ? "Stop CPR" : "Start CPR",
-                  style: _doingCPR ? Theme.of(context)
-                      .textTheme
-                      .bodyMedium!
-                      .copyWith(fontWeight: FontWeight.bold) : Theme.of(context)
-                      .textTheme
-                      .displayMedium!
-                      .copyWith(fontWeight: FontWeight.bold) ,
-                ),
-              ),
+            CprStartButton(
+              doingCPR: _doingCPR,
+              onPressed: _startStopCPR,
+              size: mainButtonSize,
             ),
             Visibility(
               // The values measured while doing CPR
@@ -322,16 +343,16 @@ class _CPReadyState extends State<CPReady> {
               child: Column(
                 children: [
                   CPRInstructionView(instruction: _currentInstruction),
-                  Text(
-                    "Current frequency: ${_toBPM(_currentFrequency).round()} bpm",
-                    style: mediumTextStyle,
-                  ),
+                  Text("Current frequency: ${toBPM(_currentFrequency).round()}",
+                      style: TextStyle(fontSize: 40),
+                      textScaler: TextScaler.linear(textScaleFactor(context))),
                   SizedBox(
                     height: 20,
                   ),
                   Text(
                     "The recommend frequency is between 100 and 120 bpm",
-                    style: mediumTextStyle,
+                    style: TextStyle(fontSize: 30),
+                    textScaler: TextScaler.linear(textScaleFactor(context)),
                   ),
                   Text(
                     "Current vertical acceleration: ${_currentAcc.toStringAsFixed(4)}",
@@ -344,17 +365,4 @@ class _CPReadyState extends State<CPReady> {
       ),
     );
   }
-}
-
-/// Function that converts frequencies from Hz to bpm
-double _toBPM(double currentFrequency) {
-  return currentFrequency * 60;
-}
-
-/// Function for retrieving a text scale factor.
-/// It uses the [context] for a responsive text size.
-double textScaleFactor(BuildContext context, {double maxTextScaleFactor = 2}) {
-  final width = MediaQuery.of(context).size.width;
-  double val = (width / 1400) * maxTextScaleFactor;
-  return max(1, min(val, maxTextScaleFactor));
 }
