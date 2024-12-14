@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:open_earable/apps_tab/hamster_hurdle/hamster_hurdle_app.dart';
 import 'package:open_earable/apps_tab/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_earable/apps_tab/posture_tracker/view/posture_tracker_view.dart';
 import 'package:open_earable/apps_tab/neck_stretch/view/stretch_app_view.dart';
@@ -183,6 +184,25 @@ class AppsTab extends StatelessWidget {
                     EarableAttitudeTracker(openEarable),
                     openEarable,
                   ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+      AppInfo(
+        logoPath: "lib/apps_tab/hamster_hurdle/assets/logo.png",
+        //iconData: Icons.music_note,
+        title: "Hamster Hurdle",
+        description: "Exercise in a fun way",
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => Material(
+                child: Theme(
+                  data: materialTheme,
+                  child: HamsterHurdleApp(openEarable),
                 ),
               ),
             ),

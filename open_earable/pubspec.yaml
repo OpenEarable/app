@@ -132,6 +132,7 @@ flutter:
     - lib/apps_tab/tightness/assets/
     - lib/apps_tab/jump_rope_counter/assets/
     - lib/apps_tab/step_counter/assets/
+    - lib/apps_tab/hamster_hurdle/assets/
 
   fonts:
     - family:  OpenEarableIcon
