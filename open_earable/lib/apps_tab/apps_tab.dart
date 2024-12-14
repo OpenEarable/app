@@ -194,7 +194,7 @@ class AppsTab extends StatelessWidget {
         logoPath: "lib/apps_tab/hamster_hurdle/assets/logo.png",
         //iconData: Icons.music_note,
         title: "Hamster Hurdle",
-        description: "Exercise in a fun way",
+        description: "Your fun warmup",
         onTap: () {
           Navigator.push(
             context,

@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:flutter/cupertino.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:simple_kalman/simple_kalman.dart';
 
 class HamsterHurdleApp extends StatefulWidget {
   /// Instance of OpenEarable device.
@@ -18,12 +19,35 @@ class _HamsterHurdleState extends State<HamsterHurdleApp> {
   /// Subscription to the IMU sensor.
   StreamSubscription? _imuSubscription;
 
+  /// X-axis acceleration.
+  double _accX = 0.0;
+
+  /// Y-axis acceleration.
+  double _accY = 0.0;
+
+  /// Z-axis acceleration.
+  double _accZ = 0.0;
+
+  /// Y-axis from gyroscope.
+  double _gyroY = 0.0;
+
+  ///The error measurement used in the Kalman-Filter for acceleration
+  final double errorMeasureAcc = 5.0;
+
+  ///The error measurement used in the Kalman-Filter for the gyroscope
+  final double errorMeasureGyro = 10.0;
+
+  /// Kalman filters for accelerometer and gyroscope data.
+  late SimpleKalman _kalmanAccX, _kalmanAccY, _kalmanAccZ, _kalmanGyroY;
+
+  /// Standard gravity in m/s^2.
   final double _gravity = 9.81;
-  double currentAcc = 0;
+
+  GameAction currentAction = GameAction.running;
 
   @override
   Widget build(BuildContext context) {
-    return Text("CurrentAcc: $currentAcc");
+    return Text(currentAction.name);
   }
 
   /// Builds the sensor config.
@@ -33,12 +57,16 @@ class _HamsterHurdleState extends State<HamsterHurdleApp> {
 
   /// Processes the sensor data.
   void _processSensorData(Map<String, dynamic> data) {
-    double accX = data["ACC"]["X"];
-    double accY = data["ACC"]["Y"];
-    double accZ = data["ACC"]["Z"];
+    _accZ = data["ACC"]["Z"];
+    _accY = data["ACC"]["Y"];
+    _accX = data["ACC"]["Z"];
+    _gyroY = data["GYRO"]["Y"];
+
     double accMagnitude =
-        accZ.sign * sqrt(accX * accX + accY * accY + accZ * accZ);
-    currentAcc = accMagnitude - _gravity;
+        _accZ.sign * sqrt(_accX * _accX + _accY * _accY + _accZ * _accZ);
+    double currentAcc = accMagnitude - _gravity;
+    _determineAction(currentAcc, _gyroY);
+
   }
 
   /// Sets up listeners for sensor data.
@@ -46,6 +74,19 @@ class _HamsterHurdleState extends State<HamsterHurdleApp> {
     _imuSubscription = widget.openEarable.sensorManager
         .subscribeToSensorData(0)
         .listen(_processSensorData);
+  }
+
+  void _determineAction(double acceleration, double gyroForward) {
+    if(gyroForward > 10  && currentAction == GameAction.running) {
+      setState(() {
+        currentAction = GameAction.ducking;
+      });
+    }
+    if(gyroForward < -10 && currentAction == GameAction.ducking) {
+      setState(() {
+        currentAction = GameAction.running;
+      });
+    }
   }
 
   @override
@@ -57,4 +98,11 @@ class _HamsterHurdleState extends State<HamsterHurdleApp> {
       _setupListeners();
     }
   }
+}
+
+enum GameAction {
+  ducking,
+  jumping,
+  gettingUp,
+  running,
 }
