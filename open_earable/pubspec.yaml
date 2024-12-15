@@ -69,6 +69,7 @@ dev_dependencies:
     sdk: flutter
   flutter_launcher_icons: ^0.13.1
   flutter_lints: ^5.0.0
+  flame: ^1.21.0
 
 flutter_icons:
   android: true
@@ -124,6 +125,7 @@ flutter:
   #   - images/a_dot_ham.jpeg
   assets:
     - assets/
+    - assets/images/
     - lib/apps_tab/powernapper/assets/
     - lib/apps_tab/recorder/assets/
     - lib/apps_tab/posture_tracker/assets/
