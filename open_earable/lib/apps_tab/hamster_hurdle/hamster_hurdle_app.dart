@@ -109,8 +109,12 @@ class _HamsterHurdleState extends State<HamsterHurdleApp> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-
-    )
+      body: Container(
+        decoration: BoxDecoration(image: DecorationImage(image: AssetImage(
+          "lib/apps_tab/hamster_hurdle/assets/start_background.png",),
+            fit: BoxFit.cover,),),
+      ),
+    );
   }
 
 
