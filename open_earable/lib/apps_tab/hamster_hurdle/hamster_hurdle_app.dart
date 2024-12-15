@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:simple_kalman/simple_kalman.dart';
 
@@ -18,6 +19,8 @@ class HamsterHurdleApp extends StatefulWidget {
 class _HamsterHurdleState extends State<HamsterHurdleApp> {
   /// Subscription to the IMU sensor.
   StreamSubscription? _imuSubscription;
+
+  DateTime? _timeOfJumpDetection;
 
   /// X-axis acceleration.
   double _accX = 0.0;
@@ -45,11 +48,6 @@ class _HamsterHurdleState extends State<HamsterHurdleApp> {
 
   GameAction currentAction = GameAction.running;
 
-  @override
-  Widget build(BuildContext context) {
-    return Text(currentAction.name);
-  }
-
   /// Builds the sensor config.
   OpenEarableSensorConfig _buildOpenEarableConfig() {
     return OpenEarableSensorConfig(sensorId: 0, samplingRate: 30, latency: 0);
@@ -59,14 +57,13 @@ class _HamsterHurdleState extends State<HamsterHurdleApp> {
   void _processSensorData(Map<String, dynamic> data) {
     _accZ = data["ACC"]["Z"];
     _accY = data["ACC"]["Y"];
-    _accX = data["ACC"]["Z"];
+    _accX = data["ACC"]["X"];
     _gyroY = data["GYRO"]["Y"];
 
     double accMagnitude =
         _accZ.sign * sqrt(_accX * _accX + _accY * _accY + _accZ * _accZ);
     double currentAcc = accMagnitude - _gravity;
-    _determineAction(currentAcc, _gyroY);
-
+    _determineAction();
   }
 
   /// Sets up listeners for sensor data.
@@ -76,16 +73,26 @@ class _HamsterHurdleState extends State<HamsterHurdleApp> {
         .listen(_processSensorData);
   }
 
-  void _determineAction(double acceleration, double gyroForward) {
-    if(gyroForward > 10  && currentAction == GameAction.running) {
+  void _determineAction() {
+    double threshold = 0.5;
+    if (_accZ < 0 + threshold) {
+      setState(() {
+        _timeOfJumpDetection = DateTime.now();
+        currentAction = GameAction.jumping;
+      });
+    } else if (_accZ > _gravity + 2 && !_currentlyJumping()) {
       setState(() {
         currentAction = GameAction.ducking;
       });
     }
-    if(gyroForward < -10 && currentAction == GameAction.ducking) {
-      setState(() {
-        currentAction = GameAction.running;
-      });
+  }
+
+  bool _currentlyJumping() {
+    if (_timeOfJumpDetection == null) {
+      return false;
+    } else {
+      return DateTime.now().difference(_timeOfJumpDetection!) <
+          Duration(milliseconds: 900);
     }
   }
 
@@ -98,6 +105,15 @@ class _HamsterHurdleState extends State<HamsterHurdleApp> {
       _setupListeners();
     }
   }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+
+    )
+  }
+
+
 }
 
 enum GameAction {
