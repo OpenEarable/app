@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
+import 'package:open_earable/apps_tab/hamster_hurdle/components/obstacle.dart';
 
 import '../hamster_hurdles_game.dart';
 import '../hamster_hurdles_world.dart';
@@ -19,8 +20,8 @@ class Hamster extends PositionComponent
 
   late Sprite _hamsterSprite;
   double _velocity = 0;
-  final xPosition;
-  final double _gravity = 30;
+  final double xPosition;
+  final double _gravity = 15;
   final double _jumpForce = -11;
   late double _maxJumpHeight;
   late double ground;
@@ -29,10 +30,14 @@ class Hamster extends PositionComponent
   Future<void> onLoad() async {
     await super.onLoad();
     _hamsterSprite = await Sprite.load("hamster.png");
-    add(RectangleHitbox()..collisionType = CollisionType.active);
+    add(CircleHitbox(
+        radius: size.y * 0.35,
+        anchor: Anchor.center,
+        position: Vector2(position.x + size.x / 2, position.y + size.y / 2))
+      ..collisionType = CollisionType.active);
     position.y = world.groundLevel;
     position.x = xPosition;
-    _maxJumpHeight = world.size.y /4 - size.y;
+    _maxJumpHeight = world.size.y / 4 - size.y;
   }
 
   void jump(GameAction lastAction) {
@@ -52,17 +57,21 @@ class Hamster extends PositionComponent
   }
 
   void duck() {
-    size = Vector2(size.x, game.size.y/16);
+    size = Vector2(size.x, game.size.y / 16);
   }
 
   void getUp() {
-    size = Vector2(size.x, game.size.y/8);
+    size = Vector2(size.x, game.size.y / 8);
   }
 
   @override
   void onCollision(Set<Vector2> intersectionPoints, PositionComponent other) {
-    if (other is ScreenHitbox) {}
     super.onCollision(intersectionPoints, other);
+    if (other is Obstacle) {
+      game.playState = PlayState.gameOver;
+      world.stopGame();
+      print("Game Over!!!");
+    }
   }
 
   @override

@@ -159,16 +159,15 @@ class GamePageState extends State<GamePage> {
   }
 
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         body: GameWidget(
       game: game,
       overlayBuilderMap: {
-        'StopButton': (context, game) => StopButton(),
+        PlayState.playing.name: (context, game) => StopButton(),
+        PlayState.gameOver.name: (context, game) => GameOverOverlay(),
       },
-      initialActiveOverlays: const ['StopButton'],
     ));
   }
 }
@@ -198,6 +197,18 @@ class HamsterHurdle extends FlameGame<HamsterHurdleWorld>
   late Vector2 currentViewPortSize;
 
   DateTime? duckingStartTime;
+
+  PlayState _playState = PlayState.playing;
+
+  PlayState get playState => _playState;
+  set playState(PlayState playState) {
+    _playState = playState;
+    switch (playState) {
+      case PlayState.gameOver:
+      case PlayState.playing:
+        overlays.add(playState.name);
+    }
+  }
 
   @override
   Future<void> onLoad() async {
@@ -245,4 +256,35 @@ enum GameAction {
   running,
 }
 
+enum PlayState { playing, gameOver }
 
+class GameOverOverlay extends StatelessWidget {
+  const GameOverOverlay({
+    super.key,
+  });
+
+
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      alignment: const Alignment(0, -0.15),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            "Game Over",
+            style: Theme
+                .of(context)
+                .textTheme
+                .headlineLarge,
+          ),
+          const SizedBox(height: 16),
+          TextButton(onPressed: () {Navigator.pop(context);}, child: Text("Return"))
+        ],
+      ),
+    );
+  }
+
+
+}

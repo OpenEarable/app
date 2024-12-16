@@ -39,7 +39,7 @@ class Obstacle extends PositionComponent
     _obstacleSprite = await Sprite.load(imageSource);
     final ratio = _obstacleSprite.srcSize.x / _obstacleSprite.srcSize.y;
     size = Vector2(height * ratio, height);
-    add(RectangleHitbox());
+    add(RectangleHitbox()..collisionType = CollisionType.passive);
   }
 
   @override

@@ -17,11 +17,16 @@ class HamsterHurdleWorld extends World
 
   Vector2 get size => game.size;
   late final double groundLevel = 3 * size.y / 15;
-  final double gameSpeed = 250;
+  double _gameSpeed = 250;
+  double get gameSpeed => _gameSpeed;
+  void stopGame() {
+    _gameSpeed = 0;
+  }
   final double hamsterPosition = 0;
   late double tunnelHeight;
   late Obstacle _lastObstacle;
   late double screenWidth;
+  late HurdleBackground _background;
 
   @override
   Future<void> onLoad() async {
@@ -31,22 +36,22 @@ class HamsterHurdleWorld extends World
     add(hamster = Hamster(
         size: Vector2(size.y / 8, size.y / 8), xPosition: hamsterPosition));
     add(HamsterTunnel(tunnelHeight: size.y / 4));
-    add(HurdleBackground(speed: gameSpeed));
+    add(_background = HurdleBackground(speed: _gameSpeed));
     add(_lastObstacle = Obstacle(
-        gameSpeed: gameSpeed,
+        gameSpeed: _gameSpeed,
         initialXPosition: screenWidth,
         obstacleType: _randomizeObstacleType()));
     debugMode = true;
   }
 
   void _generateObstacle() {
-    double maximumDistanceBetweenObstacles = hamster.size.x * 3;
+    double maximumDistanceBetweenObstacles = hamster.size.x * 6;
     double randomizedXPosition =
         (Random().nextDouble() * maximumDistanceBetweenObstacles) + screenWidth;
     add(_lastObstacle = Obstacle(
         obstacleType: _randomizeObstacleType(),
         initialXPosition: randomizedXPosition,
-        gameSpeed: gameSpeed));
+        gameSpeed: _gameSpeed));
   }
 
   ObstacleType _randomizeObstacleType() {
@@ -70,20 +75,23 @@ class HamsterHurdleWorld extends World
 
   @override
   void update(double dt) {
-    double minDistanceBetweenObstacles =
-        _lastObstacle.size.x + hamster.size.x * 1.5;
     super.update(dt);
+    double minDistanceBetweenObstacles =
+        _lastObstacle.size.x + hamster.size.x * 3;
     if (_lastObstacle.x <= screenWidth - minDistanceBetweenObstacles) {
       _generateObstacle();
-      print(children.whereType<Obstacle>().length);
     }
     _removeObstacles();
+    _background.parallax?.baseVelocity = Vector2(gameSpeed, 0);
     game.camera.viewfinder.zoom = 1.0;
+
   }
 
   @override
-  void onGameResize(Vector2 canvasSize) {
-    super.onGameResize(canvasSize);
-    screenWidth = canvasSize.x;
+  void onGameResize(Vector2 size) {
+    super.onGameResize(size);
+    screenWidth = size.x;
   }
 }
+
+
