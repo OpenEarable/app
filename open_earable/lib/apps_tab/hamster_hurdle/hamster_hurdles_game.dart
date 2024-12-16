@@ -8,6 +8,7 @@ import 'package:flame/components.dart';
 
 import 'package:flutter/material.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:simple_kalman/simple_kalman.dart';
 
 import 'hamster_hurdles_world.dart';
 
@@ -35,32 +36,24 @@ class GamePageState extends State<GamePage> {
   DateTime? _timeOfLanding;
   DateTime? _timeOfGettingUp;
 
-  /// X-axis acceleration.
-  double _accX = 0.0;
-
-  /// Y-axis acceleration.
-  double _accY = 0.0;
-
   /// Z-axis acceleration.
   double _accZ = 0.0;
 
-  double _lastAccZ = 0.0;
+  /// Kalman-Filter for acceleration Z-axis;
+  late SimpleKalman _kalmanZ;
+
 
   Queue<double> latestAccZValues = Queue<double>.from(List.filled(5, 0));
 
-  /// Y-axis from gyroscope.
-  double _gyroY = 0.0;
 
   ///The error measurement used in the Kalman-Filter for acceleration
-  final double errorMeasureAcc = 5.0;
-
-  ///The error measurement used in the Kalman-Filter for the gyroscope
-  final double errorMeasureGyro = 10.0;
+  final double _errorMeasureAcc = 5.0;
 
   /// Standard gravity in m/s^2.
   final double _gravity = 9.81;
 
   GameAction currentAction = GameAction.running;
+
 
   /// Builds the sensor config.
   OpenEarableSensorConfig _buildOpenEarableConfig() {
@@ -69,12 +62,8 @@ class GamePageState extends State<GamePage> {
 
   /// Processes the sensor data.
   void _processSensorData(Map<String, dynamic> data) {
-    _accZ = data["ACC"]["Z"];
+    _accZ = _kalmanZ.filtered(data["ACC"]["Z"]);
     addData(_accZ);
-    _accY = data["ACC"]["Y"];
-    _accX = data["ACC"]["X"];
-    _gyroY = data["GYRO"]["Y"];
-
     _determineAction();
   }
 
@@ -96,13 +85,13 @@ class GamePageState extends State<GamePage> {
   }
 
   void _determineAction() {
-    double jumpThreshold = 0.4;
+    double jumpThreshold = 0.5;
     if (_accZ < 0 + jumpThreshold && currentAction != GameAction.jumping) {
       game.onJump(currentAction);
       setState(() {
         currentAction = GameAction.jumping;
       });
-    } else if (_accZ > _gravity + 2 &&
+    } else if (_accZ > _gravity + 1.5 &&
         currentAction != GameAction.jumping &&
         !_recentlyLanded() &&
         !_recentlyGotUp()) {
@@ -122,7 +111,7 @@ class GamePageState extends State<GamePage> {
 
   bool _isUpwardsMotion() {
     int counter = 0;
-    double threshold = 0.8;
+    double threshold = 0.6;
     for (double data in latestAccZValues) {
       if (data + threshold < _accZ) {
         counter++;
@@ -145,13 +134,22 @@ class GamePageState extends State<GamePage> {
       return false;
     } else {
       return DateTime.now().difference(_timeOfGettingUp!) <
-          Duration(milliseconds: 300);
+          Duration(milliseconds: 200);
     }
+  }
+
+  void _initKalman() {
+    _kalmanZ = SimpleKalman(
+      errorMeasure: _errorMeasureAcc,
+      errorEstimate: _errorMeasureAcc,
+      q: 0.9,
+    );
   }
 
   @override
   void initState() {
     super.initState();
+    _initKalman();
     game = HamsterHurdle();
     if (widget.openEarable.bleManager.connected) {
       widget.openEarable.sensorManager
@@ -159,6 +157,8 @@ class GamePageState extends State<GamePage> {
       _setupListeners();
     }
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -174,6 +174,8 @@ class GamePageState extends State<GamePage> {
 }
 
 class StopButton extends StatelessWidget {
+  const StopButton({super.key});
+
   @override
   Widget build(BuildContext context) {
     return ElevatedButton.icon(
@@ -190,8 +192,8 @@ class HamsterHurdle extends FlameGame<HamsterHurdleWorld>
     with HasCollisionDetection, TapDetector, KeyboardEvents {
   HamsterHurdle()
       : super(
-          world: HamsterHurdleWorld(),
-        );
+    world: HamsterHurdleWorld(),
+  );
 
   late Vector2 currentViewPortSize;
 
@@ -207,8 +209,6 @@ class HamsterHurdle extends FlameGame<HamsterHurdleWorld>
     currentViewPortSize = camera.viewport.size;
     super.update(dt);
   }
-
-
 
 
   void onJump(GameAction lastAction) {
@@ -230,6 +230,12 @@ class HamsterHurdle extends FlameGame<HamsterHurdleWorld>
 
   Duration calculateDuckingTime() {
     return DateTime.now().difference(duckingStartTime!);
+  }
+
+  @override
+  void onGameResize(Vector2 canvasSize) {
+    super.onGameResize(canvasSize);
+
   }
 }
 

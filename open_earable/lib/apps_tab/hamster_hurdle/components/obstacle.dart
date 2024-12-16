@@ -7,8 +7,13 @@ class Obstacle extends PositionComponent
     with HasWorldReference<HamsterHurdleWorld> {
   late Sprite _obstacleSprite;
   final ObstacleType obstacleType;
+  final double initialXPosition;
+  final double gameSpeed;
 
-  Obstacle({required this.obstacleType, required super.position})
+  Obstacle(
+      {required this.gameSpeed,
+      required this.initialXPosition,
+      required this.obstacleType})
       : super(priority: 2);
 
   @override
@@ -19,15 +24,18 @@ class Obstacle extends PositionComponent
     switch (obstacleType) {
       case ObstacleType.root:
         imageSource = "root_obstacle.png";
-        anchor = Anchor.topCenter;
-        height = world.tunnelHeight*0.7;
+        anchor = Anchor.topLeft;
+        height = world.tunnelHeight * 0.7;
+        position.y = world.groundLevel - world.tunnelHeight;
         break;
       case ObstacleType.nuts:
         imageSource = "nut_obstacle.png";
-        anchor = Anchor.bottomCenter;
-        height = world.tunnelHeight*0.3;
+        anchor = Anchor.bottomLeft;
+        height = world.tunnelHeight * 0.3;
+        position.y = world.groundLevel;
         break;
     }
+    position.x = initialXPosition;
     _obstacleSprite = await Sprite.load(imageSource);
     final ratio = _obstacleSprite.srcSize.x / _obstacleSprite.srcSize.y;
     size = Vector2(height * ratio, height);
@@ -46,9 +54,8 @@ class Obstacle extends PositionComponent
   @override
   void update(double dt) {
     super.update(dt);
-    position.x -= dt* 100;
+    position.x -= dt * gameSpeed;
   }
-
 }
 
 enum ObstacleType {

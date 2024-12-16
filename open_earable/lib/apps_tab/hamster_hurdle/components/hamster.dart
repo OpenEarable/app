@@ -11,7 +11,7 @@ class Hamster extends PositionComponent
         HasGameRef<HamsterHurdle>,
         HasWorldReference<HamsterHurdleWorld>,
         CollisionCallbacks {
-  Hamster({required super.size})
+  Hamster({required this.xPosition, required super.size})
       : super(
           anchor: Anchor.bottomCenter,
           priority: 3,
@@ -19,6 +19,7 @@ class Hamster extends PositionComponent
 
   late Sprite _hamsterSprite;
   double _velocity = 0;
+  final xPosition;
   final double _gravity = 30;
   final double _jumpForce = -11;
   late double _maxJumpHeight;
@@ -30,6 +31,7 @@ class Hamster extends PositionComponent
     _hamsterSprite = await Sprite.load("hamster.png");
     add(RectangleHitbox()..collisionType = CollisionType.active);
     position.y = world.groundLevel;
+    position.x = xPosition;
     _maxJumpHeight = world.size.y /4 - size.y;
   }
 
