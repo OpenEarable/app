@@ -11,6 +11,13 @@ import 'package:open_earable/apps_tab/cpready/widgets/cpr_start_button.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:simple_kalman/simple_kalman.dart';
 
+/// App that helps the user when performing CPR
+///
+/// It provides functionality for measuring the frequency of the CPR procedure.
+/// Also it supports mouth-to-mouth procedure and actively prompts the user to do
+/// so if the feature is activated.
+/// Additionally a metronome is implemented which can give the user an
+/// audible support for performing CPR with a frequency of 110 bpm.
 class CPReady extends StatefulWidget {
   const CPReady(this._openEarable, {super.key});
 
@@ -35,6 +42,9 @@ class _CPReadyState extends State<CPReady> {
 
   /// Gravity constant [m / (s^2)].
   final double _gravity = 9.81;
+
+  ///Constant for the amounts of pushes between mouth-to-mouth sequences
+  final int _mouthToMouthInterval = 30;
 
   /// The subscription to the imu data.
   StreamSubscription? _imuSubscription;
@@ -174,8 +184,11 @@ class _CPReadyState extends State<CPReady> {
         _lastPush = currentTime;
         _pushCounter++;
 
-        if (_mouthToMouth && _pushCounter == 30) {
-          _mouthToMouthSequence();
+        if (_pushCounter == _mouthToMouthInterval) {
+          _pushCounter = 0;
+          if (_mouthToMouth) {
+            _mouthToMouthSequence();
+          }
         }
       });
       _updateInstruction();
@@ -230,49 +243,57 @@ class _CPReadyState extends State<CPReady> {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext builderContext) {
+        //Future for closing the dialog
+        Future.delayed(Duration(seconds: 4), () {
+          if (builderContext.mounted) {
+            Navigator.of(builderContext).pop();
+          }
+          setState(() {
+            _lastPush = null;
+            _pushCounter = 0;
+          });
+        });
+
         return AlertDialog(
           title: Text(
-            "Time for mouth to mouth!",
+            'Time for mouth-to-mouth!',
             style: Theme.of(context).textTheme.displaySmall,
           ),
-          content: TimerCountdown(
-            format: CountDownTimerFormat.secondsOnly,
-            timeTextStyle: Theme.of(context).textTheme.displayLarge,
-            secondsDescription: "",
-            endTime: DateTime.now().add(
-              const Duration(
-                seconds: 03,
-              ),
+          content: SingleChildScrollView(
+            child: Column(
+              children: [
+                Image(
+                  image: AssetImage(
+                    "lib/apps_tab/cpready/assets/mouthtomouth.png",
+                  ),
+                ),
+                SizedBox(
+                  height: 5,
+                ),
+                Text(
+                  "If you want to deactivate this feature, do so with the slider",
+                ),
+              ],
             ),
-            onEnd: () {
-              Navigator.pop(builderContext);
-              setState(() {
-                _lastPush = null;
-                _pushCounter = 0;
-              });
-            },
           ),
         );
       },
     );
   }
 
-  /// Plays a metronome timer
-  void _playTone() {
-    if (_earableConnected) {
-      widget._openEarable.audioPlayer.setState(AudioPlayerState.start);
-      widget._openEarable.audioPlayer.setState(AudioPlayerState.pause);
-    }
-  }
-
-  /// Starts or stops a timer for the metronome
-  void _startStopTimer() {
+  /// Starts or stops a timer for the metronome.
+  /// Due to the asynchronous communication and jitter, the metronome does not
+  /// play a perfect frequency but can still help.
+  void _startStopMetronomeTimer() {
     if (_timer == null) {
       //Sets up a timer that will play a tone with a frequency of approx 110 bpm
       _timer = Timer.periodic(
         Duration(milliseconds: 545),
         (Timer t) {
-          _playTone();
+          if (_earableConnected) {
+            widget._openEarable.audioPlayer.setState(AudioPlayerState.start);
+            widget._openEarable.audioPlayer.setState(AudioPlayerState.pause);
+          }
         },
       );
 
@@ -432,6 +453,7 @@ class _CPReadyState extends State<CPReady> {
               ),
             ),
             child: Row(
+              mainAxisSize: MainAxisSize.max,
               children: [
                 Switch(
                   value: _mouthToMouth,
@@ -447,6 +469,18 @@ class _CPReadyState extends State<CPReady> {
                 Text(
                   "Mouth-to-mouth",
                   style: Theme.of(context).textTheme.bodyLarge,
+                ),
+                Visibility(
+                  visible: _mouthToMouth,
+                  child: Expanded(
+                    child: Text(
+                      "In ${max(0, _mouthToMouthInterval - _pushCounter)}",
+                      textAlign: TextAlign.right,
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 5,
                 ),
               ],
             ),
@@ -470,7 +504,7 @@ class _CPReadyState extends State<CPReady> {
             Expanded(
               flex: 1,
               child: CprStandardButton(
-                onPressed: _startStopTimer,
+                onPressed: _startStopMetronomeTimer,
                 label: _timer == null ? "Start Metronome" : "Stop Metronome",
               ),
             ),
@@ -488,7 +522,6 @@ class _CPReadyState extends State<CPReady> {
         SizedBox(
           height: 20,
         ),
-        Text("$_pushCounter"),
         Text(
           "The recommend frequency is between 100 and 120 bpm",
           style: TextStyle(fontSize: 30),
