@@ -27,19 +27,20 @@ class Obstacle extends PositionComponent
         anchor = Anchor.topLeft;
         height = world.tunnelHeight * 0.7;
         position.y = world.groundLevel - world.tunnelHeight;
+        add(RectangleHitbox()..collisionType = CollisionType.passive);
         break;
       case ObstacleType.nuts:
         imageSource = "nut_obstacle.png";
         anchor = Anchor.bottomLeft;
         height = world.tunnelHeight * 0.3;
         position.y = world.groundLevel;
+        add(CircleHitbox()..collisionType = CollisionType.passive);
         break;
     }
     position.x = initialXPosition;
     _obstacleSprite = await Sprite.load(imageSource);
     final ratio = _obstacleSprite.srcSize.x / _obstacleSprite.srcSize.y;
     size = Vector2(height * ratio, height);
-    add(RectangleHitbox()..collisionType = CollisionType.passive);
   }
 
   @override

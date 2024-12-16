@@ -21,8 +21,8 @@ class Hamster extends PositionComponent
   late Sprite _hamsterSprite;
   double _velocity = 0;
   final double xPosition;
-  final double _gravity = 15;
-  final double _jumpForce = -11;
+  final double _gravity = 5;
+  final double _jumpForce = -15;
   late double _maxJumpHeight;
   late double ground;
 
@@ -61,7 +61,7 @@ class Hamster extends PositionComponent
   }
 
   void getUp() {
-    size = Vector2(size.x, game.size.y / 8);
+    size = Vector2(size.x, game.size.y / 9);
   }
 
   @override
@@ -77,7 +77,11 @@ class Hamster extends PositionComponent
   @override
   void update(double dt) {
     super.update(dt);
-    _velocity += _gravity * dt;
+    if (_velocity < 0) {
+      _velocity += (_gravity * 0.8) * dt; // Reduced gravity when rising
+    } else {
+      _velocity += _gravity * dt; // Normal gravity when falling
+    }
     position.y += _velocity;
     bool belowGround = position.y > world.groundLevel;
     if (belowGround) {

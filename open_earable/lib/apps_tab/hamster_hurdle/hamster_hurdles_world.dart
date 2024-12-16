@@ -17,7 +17,7 @@ class HamsterHurdleWorld extends World
 
   Vector2 get size => game.size;
   late final double groundLevel = 3 * size.y / 15;
-  double _gameSpeed = 250;
+  double _gameSpeed = 270;
   double get gameSpeed => _gameSpeed;
   void stopGame() {
     _gameSpeed = 0;
@@ -34,7 +34,7 @@ class HamsterHurdleWorld extends World
     tunnelHeight = size.y / 4;
     screenWidth = size.x;
     add(hamster = Hamster(
-        size: Vector2(size.y / 8, size.y / 8), xPosition: hamsterPosition));
+        size: Vector2(size.y / 9, size.y / 9), xPosition: hamsterPosition));
     add(HamsterTunnel(tunnelHeight: size.y / 4));
     add(_background = HurdleBackground(speed: _gameSpeed));
     add(_lastObstacle = Obstacle(
@@ -45,7 +45,7 @@ class HamsterHurdleWorld extends World
   }
 
   void _generateObstacle() {
-    double maximumDistanceBetweenObstacles = hamster.size.x * 6;
+    double maximumDistanceBetweenObstacles = hamster.size.x * 9;
     double randomizedXPosition =
         (Random().nextDouble() * maximumDistanceBetweenObstacles) + screenWidth;
     add(_lastObstacle = Obstacle(
@@ -77,7 +77,7 @@ class HamsterHurdleWorld extends World
   void update(double dt) {
     super.update(dt);
     double minDistanceBetweenObstacles =
-        _lastObstacle.size.x + hamster.size.x * 3;
+        _lastObstacle.size.x + hamster.size.x * 5;
     if (_lastObstacle.x <= screenWidth - minDistanceBetweenObstacles) {
       _generateObstacle();
     }
