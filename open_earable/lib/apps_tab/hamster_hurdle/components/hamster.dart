@@ -20,7 +20,7 @@ class Hamster extends PositionComponent
   late Sprite _hamsterSprite;
   double _velocity = 0;
   final double _gravity = 30;
-  final double _jumpForce = -14;
+  final double _jumpForce = -11;
   late double _maxJumpHeight;
   late double ground;
 
@@ -30,7 +30,7 @@ class Hamster extends PositionComponent
     _hamsterSprite = await Sprite.load("hamster.png");
     add(RectangleHitbox()..collisionType = CollisionType.active);
     position.y = world.groundLevel;
-    _maxJumpHeight = world.size.y / 2.5 - size.y;
+    _maxJumpHeight = world.size.y /4 - size.y;
   }
 
   void jump(GameAction lastAction) {
@@ -50,11 +50,11 @@ class Hamster extends PositionComponent
   }
 
   void duck() {
-    size = Vector2(size.x, 80.0);
+    size = Vector2(size.x, game.size.y/16);
   }
 
   void getUp() {
-    size = Vector2(size.x, 160.0);
+    size = Vector2(size.x, game.size.y/8);
   }
 
   @override

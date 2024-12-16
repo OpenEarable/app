@@ -102,7 +102,7 @@ class GamePageState extends State<GamePage> {
       setState(() {
         currentAction = GameAction.jumping;
       });
-    } else if (_accZ > _gravity + 2.2 &&
+    } else if (_accZ > _gravity + 2 &&
         currentAction != GameAction.jumping &&
         !_recentlyLanded() &&
         !_recentlyGotUp()) {
@@ -190,7 +190,6 @@ class HamsterHurdle extends FlameGame<HamsterHurdleWorld>
     with HasCollisionDetection, TapDetector, KeyboardEvents {
   HamsterHurdle()
       : super(
-          //camera: CameraComponent.withFixedResolution(width: 1200, height: 1800),
           world: HamsterHurdleWorld(),
         );
 
@@ -239,3 +238,5 @@ enum GameAction {
   jumping,
   running,
 }
+
+

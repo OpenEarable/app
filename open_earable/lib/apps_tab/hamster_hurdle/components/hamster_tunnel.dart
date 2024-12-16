@@ -1,6 +1,5 @@
 
 import 'dart:ui';
-import 'dart:math';
 import 'package:flame/components.dart';
 import 'package:flutter/cupertino.dart';
 
@@ -16,7 +15,7 @@ class HamsterTunnel extends RectangleComponent
             paint: Paint()
               ..color = const Color(0xffad784c)
               ..style = PaintingStyle.fill,
-            priority: 2,
+            priority: 1,
             anchor: Anchor.bottomCenter);
 
 
@@ -26,7 +25,7 @@ class HamsterTunnel extends RectangleComponent
   Future<void> onLoad() async {
     super.onLoad();
     position.y = world.groundLevel;
-    size = Vector2(gameRef.size.x, tunnelHeight);
+    size = Vector2(game.size.x, tunnelHeight);
   }
   @override
   void render(Canvas canvas) {
@@ -34,6 +33,7 @@ class HamsterTunnel extends RectangleComponent
   }
     @override
   void update(double dt) {
+    size = Vector2(game.size.x, tunnelHeight);
     super.update(dt);
   }
 }
