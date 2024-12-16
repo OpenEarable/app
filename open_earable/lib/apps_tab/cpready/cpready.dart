@@ -6,6 +6,7 @@ import 'package:flutter_timer_countdown/flutter_timer_countdown.dart';
 import 'package:open_earable/apps_tab/cpready/model/data.dart';
 import 'package:open_earable/apps_tab/cpready/utils.dart';
 import 'package:open_earable/apps_tab/cpready/widgets/cpr_instruction_view.dart';
+import 'package:open_earable/apps_tab/cpready/widgets/cpr_standard_button.dart';
 import 'package:open_earable/apps_tab/cpready/widgets/cpr_start_button.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:simple_kalman/simple_kalman.dart';
@@ -20,23 +21,29 @@ class CPReady extends StatefulWidget {
 }
 
 class _CPReadyState extends State<CPReady> {
-  /// The subscription to the imu data.
-  StreamSubscription? _imuSubscription;
+  /// The alpha parameter for the exponential smoothing
+  final double _exponentialSmoothingAlpha = 0.5;
 
-  /// Flag to indicate if an OpenEarable device is connected.
-  bool _earableConnected = false;
+  /// The threshold for the acceleration after which a movement should be considered a push
+  final double _accelerationThreshold = 2;
 
   /// Error measure for the Kalman filter.
   final _errorMeasureAcc = 5.0;
-
-  /// Kalman filters for accelerometer data.
-  late SimpleKalman _kalmanX, _kalmanY, _kalmanZ;
 
   /// Sampling rate time.
   final double _samplingRate = 30;
 
   /// Gravity constant [m / (s^2)].
   final double _gravity = 9.81;
+
+  /// The subscription to the imu data.
+  StreamSubscription? _imuSubscription;
+
+  /// Flag to indicate if an OpenEarable device is connected.
+  bool _earableConnected = false;
+
+  /// Kalman filters for accelerometer data.
+  late SimpleKalman _kalmanX, _kalmanY, _kalmanZ;
 
   /// Accelerations.
   double _accX = 0.0;
@@ -47,13 +54,7 @@ class _CPReadyState extends State<CPReady> {
   double _currentAcc = 0.0;
 
   /// Current frequency of up and down movements in Hz
-  double _currentFrequency = 100 / 60;
-
-  /// The alpha parameter for the exponential smoothing
-  final double _exponentialSmoothingAlpha = 0.7;
-
-  /// The threshold for the acceleration after which a movement should be considered a push
-  final double _accelerationThreshold = 2;
+  double _currentFrequency = 0;
 
   /// [DateTime] of the last push that was recorded
   DateTime? _lastPush;
@@ -70,8 +71,11 @@ class _CPReadyState extends State<CPReady> {
   /// Timer for the guided CPR
   Timer? _timer;
 
-  /// Bool storing if a playback should be played
-  bool _playingTone = false;
+  /// Bool for storing if mouth-to-mouth is activated
+  bool _mouthToMouth = true;
+
+  /// Counter for counting how many pushes were made
+  int _pushCounter = 0;
 
   @override
   void initState() {
@@ -90,18 +94,13 @@ class _CPReadyState extends State<CPReady> {
       _setupSensorListeners();
       _earableConnected = true;
     }
-
-    _timer = Timer.periodic(
-      Duration(milliseconds: 500),
-          (Timer t) {_playTone();},
-    );
   }
 
   @override
   void dispose() {
     super.dispose();
     _imuSubscription?.cancel();
-    _timer!.cancel();
+    _timer?.cancel();
     if (_earableConnected) {
       widget._openEarable.audioPlayer.setState(AudioPlayerState.stop);
     }
@@ -157,6 +156,7 @@ class _CPReadyState extends State<CPReady> {
       //If this is the first recorded push.
       setState(() {
         _lastPush = currentTime;
+        _pushCounter++;
       });
       return;
     }
@@ -172,6 +172,11 @@ class _CPReadyState extends State<CPReady> {
         _currentFrequency = _exponentialSmoothingAlpha * (1000 / difference) +
             (1 - _exponentialSmoothingAlpha) * _currentFrequency;
         _lastPush = currentTime;
+        _pushCounter++;
+
+        if (_mouthToMouth && _pushCounter == 30) {
+          _mouthToMouthSequence();
+        }
       });
       _updateInstruction();
     }
@@ -217,21 +222,69 @@ class _CPReadyState extends State<CPReady> {
     );
   }
 
+  /// Initializes a mouth to mouth sequence.
+  ///
+  /// Shows a dialog that requests the user to do a mouth-to-mouth procedure.
+  void _mouthToMouthSequence() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext builderContext) {
+        return AlertDialog(
+          title: Text(
+            "Time for mouth to mouth!",
+            style: Theme.of(context).textTheme.displaySmall,
+          ),
+          content: TimerCountdown(
+            format: CountDownTimerFormat.secondsOnly,
+            timeTextStyle: Theme.of(context).textTheme.displayLarge,
+            secondsDescription: "",
+            endTime: DateTime.now().add(
+              const Duration(
+                seconds: 03,
+              ),
+            ),
+            onEnd: () {
+              Navigator.pop(builderContext);
+              setState(() {
+                _lastPush = null;
+                _pushCounter = 0;
+              });
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  /// Plays a metronome timer
   void _playTone() {
-    if (_earableConnected && _playingTone) {
+    if (_earableConnected) {
       widget._openEarable.audioPlayer.setState(AudioPlayerState.start);
       widget._openEarable.audioPlayer.setState(AudioPlayerState.pause);
     }
   }
 
+  /// Starts or stops a timer for the metronome
   void _startStopTimer() {
-    //Sets up a timer that will play a tone with a frequency of 120 bpm
-    if (_playingTone) {
-      _playingTone = false;
-      widget._openEarable.audioPlayer.setState(AudioPlayerState.pause);
+    if (_timer == null) {
+      //Sets up a timer that will play a tone with a frequency of approx 110 bpm
+      _timer = Timer.periodic(
+        Duration(milliseconds: 545),
+        (Timer t) {
+          _playTone();
+        },
+      );
+
+      if (_earableConnected) {
+        widget._openEarable.audioPlayer.frequency(1, 440, 0.2);
+      }
     } else {
-      _playingTone = true;
-      widget._openEarable.audioPlayer.frequency(1, 440, 0.2);
+      if (_earableConnected) {
+        widget._openEarable.audioPlayer.setState(AudioPlayerState.pause);
+      }
+      _timer!.cancel();
+      _timer = null;
     }
   }
 
@@ -255,9 +308,11 @@ class _CPReadyState extends State<CPReady> {
       builder: (BuildContext context) => AlertDialog(
         title: Text(
           "Get in position!",
-          style: theme.textTheme.displaySmall,
+          style: TextStyle(color: Colors.white, fontSize: 30),
+          textScaler: TextScaler.linear(textScaleFactor(context)),
         ),
         content: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             TimerCountdown(
               format: CountDownTimerFormat.secondsOnly,
@@ -275,10 +330,6 @@ class _CPReadyState extends State<CPReady> {
                 });
               },
             ),
-            Text(
-              "First call emergency agencies before performing CPR",
-              style: theme.textTheme.displaySmall,
-            ),
           ],
         ),
       ),
@@ -287,9 +338,6 @@ class _CPReadyState extends State<CPReady> {
 
   @override
   Widget build(BuildContext context) {
-    double mainButtonSize =
-        min(max(MediaQuery.sizeOf(context).width / 2, 300), 500);
-
     return Scaffold(
       appBar: AppBar(
         leading: Padding(
@@ -309,7 +357,6 @@ class _CPReadyState extends State<CPReady> {
             SizedBox(
               height: 10,
             ),
-            ElevatedButton(onPressed: _startStopTimer, child: Text("Frequency")),
             Visibility(
               // Show error message if no OpenEarable device is connected.
               visible: !_earableConnected,
@@ -317,52 +364,137 @@ class _CPReadyState extends State<CPReady> {
               maintainAnimation: true,
               child: Column(
                 children: [
+                  Icon(
+                    Icons.warning,
+                    color: Colors.red,
+                    size: 40,
+                  ),
                   Text(
                     "No Earable Connected",
                     style: TextStyle(
                       color: Colors.red,
-                      fontSize: 50,
+                      fontSize: 30,
                     ),
-                  ),
-                  SizedBox(
-                    height: 20,
-                  ),
-                ],
-              ),
-            ),
-            CprStartButton(
-              doingCPR: _doingCPR,
-              onPressed: _startStopCPR,
-              size: mainButtonSize,
-            ),
-            Visibility(
-              // The values measured while doing CPR
-              visible: _doingCPR,
-              maintainState: true,
-              maintainAnimation: true,
-              child: Column(
-                children: [
-                  CPRInstructionView(instruction: _currentInstruction),
-                  Text("Current frequency: ${toBPM(_currentFrequency).round()}",
-                      style: TextStyle(fontSize: 40),
-                      textScaler: TextScaler.linear(textScaleFactor(context))),
-                  SizedBox(
-                    height: 20,
-                  ),
-                  Text(
-                    "The recommend frequency is between 100 and 120 bpm",
-                    style: TextStyle(fontSize: 30),
                     textScaler: TextScaler.linear(textScaleFactor(context)),
                   ),
-                  Text(
-                    "Current vertical acceleration: ${_currentAcc.toStringAsFixed(4)}",
+                  SizedBox(
+                    height: 20,
                   ),
                 ],
               ),
             ),
+            _doingCPR ? _buildCprScreen() : _buildStartScreen(),
           ],
         ),
       ),
+    );
+  }
+
+  /// Method that returns the widget that is shown when the user is not doing CPR
+  Widget _buildStartScreen() {
+    double mainButtonSize =
+        min(max(MediaQuery.sizeOf(context).width / 2, 300), 500);
+
+    return Column(
+      children: [
+        CprStartButton(
+          onPressed: _startStopCPR,
+          size: mainButtonSize,
+        ),
+        SizedBox(
+          height: 20,
+        ),
+        Text(
+          "First call emergency agencies before performing CPR",
+          style: TextStyle(color: Colors.white, fontSize: 30),
+          textScaler: TextScaler.linear(textScaleFactor(context)),
+        ),
+      ],
+    );
+  }
+
+  /// Method that returns the widget that is shown when the user is performing CPR
+  Widget _buildCprScreen() {
+    return Column(
+      children: [
+        Center(
+          child: Container(
+            margin: const EdgeInsets.all(5.0),
+            padding: const EdgeInsets.all(2.0),
+            decoration: BoxDecoration(
+              border: Border.all(
+                width: 1.0,
+                color: Colors.redAccent,
+              ),
+              borderRadius: const BorderRadius.all(
+                Radius.circular(10.0) //
+                ,
+              ),
+            ),
+            child: Row(
+              children: [
+                Switch(
+                  value: _mouthToMouth,
+                  onChanged: (value) {
+                    setState(() {
+                      _mouthToMouth = value;
+                    });
+                  },
+                ),
+                SizedBox(
+                  width: 5,
+                ),
+                Text(
+                  "Mouth-to-mouth",
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ],
+            ),
+          ),
+        ),
+        Row(
+          children: [
+            SizedBox(
+              width: 5,
+            ),
+            Expanded(
+              flex: 1,
+              child: CprStandardButton(
+                onPressed: _startStopCPR,
+                label: "Stop CPR",
+              ),
+            ),
+            SizedBox(
+              width: 10,
+            ),
+            Expanded(
+              flex: 1,
+              child: CprStandardButton(
+                onPressed: _startStopTimer,
+                label: _timer == null ? "Start Metronome" : "Stop Metronome",
+              ),
+            ),
+            SizedBox(
+              width: 5,
+            ),
+          ],
+        ),
+        CprInstructionView(instruction: _currentInstruction),
+        Text(
+          "Current frequency: ${toBPM(_currentFrequency).round()}",
+          style: TextStyle(fontSize: 40),
+          textScaler: TextScaler.linear(textScaleFactor(context)),
+        ),
+        SizedBox(
+          height: 20,
+        ),
+        Text("$_pushCounter"),
+        Text(
+          "The recommend frequency is between 100 and 120 bpm",
+          style: TextStyle(fontSize: 30),
+          textScaler: TextScaler.linear(textScaleFactor(context)),
+        ),
+      ],
     );
   }
 }

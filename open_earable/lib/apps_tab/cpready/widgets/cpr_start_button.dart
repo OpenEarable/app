@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:open_earable/apps_tab/cpready/utils.dart';
 
 class CprStartButton extends StatelessWidget {
-  const CprStartButton(
-      {super.key, required bool doingCPR, required VoidCallback onPressed, required double size})
-      : _doingCPR = doingCPR,
-        _onPressed = onPressed,
+  const CprStartButton({
+    super.key,
+    required VoidCallback onPressed,
+    required double size,
+  })  : _onPressed = onPressed,
         _size = size;
 
-  final bool _doingCPR;
   final VoidCallback _onPressed;
   final double _size;
 
@@ -19,32 +20,24 @@ class CprStartButton extends StatelessWidget {
         style: ButtonStyle(
           elevation: WidgetStateProperty.all(20),
           fixedSize: WidgetStateProperty.all(
-            _doingCPR
-                ? Size(_size / 4, _size / 4)
-                : Size(_size, _size),
+            Size(_size, _size),
           ),
           backgroundColor: WidgetStateProperty.all(Colors.redAccent),
           shape: WidgetStateProperty.all(
             RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(_doingCPR ? 10 : 100),
+              borderRadius: BorderRadius.circular(100),
             ),
           ),
         ),
         onPressed: _onPressed,
         child: Text(
-          _doingCPR ? "Stop CPR" : "Start CPR",
+          "Start CPR",
           textAlign: TextAlign.center,
-          style: _doingCPR
-              ? Theme
-              .of(context)
-              .textTheme
-              .bodyMedium!
-              .copyWith(fontWeight: FontWeight.bold)
-              : Theme
-              .of(context)
-              .textTheme
-              .displayMedium!
-              .copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(context)
+                  .textTheme
+                  .displaySmall!
+                  .copyWith(fontWeight: FontWeight.bold),
+          textScaler: TextScaler.linear(textScaleFactor(context)),
         ),
       ),
     );
