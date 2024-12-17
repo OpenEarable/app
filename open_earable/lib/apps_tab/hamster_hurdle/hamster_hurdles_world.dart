@@ -17,11 +17,8 @@ class HamsterHurdleWorld extends World
 
   Vector2 get size => game.size;
   late final double groundLevel = 3 * size.y / 15;
-  double _gameSpeed = 270;
+  late double _gameSpeed;
   double get gameSpeed => _gameSpeed;
-  void stopGame() {
-    _gameSpeed = 0;
-  }
   final double hamsterPosition = 0;
   late double tunnelHeight;
   late Obstacle _lastObstacle;
@@ -31,6 +28,19 @@ class HamsterHurdleWorld extends World
   @override
   Future<void> onLoad() async {
     super.onLoad();
+    startGame();
+  }
+
+  void stopGame() {
+    _gameSpeed = 0;
+    _removeAllObstacles();
+  }
+
+  void startGame() {
+    removeAll(children.whereType<Obstacle>());
+    removeAll(children.whereType<Hamster>());
+    removeAll(children.whereType<HurdleBackground>());
+    _gameSpeed = 270;
     tunnelHeight = size.y / 4;
     screenWidth = size.x;
     add(hamster = Hamster(
@@ -41,8 +51,9 @@ class HamsterHurdleWorld extends World
         gameSpeed: _gameSpeed,
         initialXPosition: screenWidth,
         obstacleType: _randomizeObstacleType()));
-    debugMode = true;
   }
+
+
 
   void _generateObstacle() {
     double maximumDistanceBetweenObstacles = hamster.size.x * 9;
@@ -73,18 +84,23 @@ class HamsterHurdleWorld extends World
     }
   }
 
+  void _removeAllObstacles() {
+    removeAll(children.whereType<Obstacle>());
+  }
+
   @override
   void update(double dt) {
     super.update(dt);
-    double minDistanceBetweenObstacles =
-        _lastObstacle.size.x + hamster.size.x * 5;
-    if (_lastObstacle.x <= screenWidth - minDistanceBetweenObstacles) {
-      _generateObstacle();
+    if(game.playState == PlayState.playing) {
+      double minDistanceBetweenObstacles =
+          _lastObstacle.size.x + hamster.size.x * 5;
+      if (_lastObstacle.x <= screenWidth - minDistanceBetweenObstacles) {
+        _generateObstacle();
+      }
+      _removeObstacles();
+      game.camera.viewfinder.zoom = 1.0;
     }
-    _removeObstacles();
     _background.parallax?.baseVelocity = Vector2(gameSpeed, 0);
-    game.camera.viewfinder.zoom = 1.0;
-
   }
 
   @override

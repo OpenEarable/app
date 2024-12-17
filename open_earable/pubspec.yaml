@@ -33,7 +33,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   open_earable_flutter:
-    git: 
+    git:
       url: https://github.com/OpenEarable/open_earable_flutter.git
   youtube_player_flutter: ^9.1.1
   permission_handler: ^11.3.1
@@ -63,7 +63,7 @@ dependencies:
 dependency_overrides:
   intl: ^0.18.1
   web: 0.5.1
-  
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -137,12 +137,15 @@ flutter:
     - lib/apps_tab/hamster_hurdle/assets/
 
   fonts:
-    - family:  OpenEarableIcon
+    - family: OpenEarableIcon
       fonts:
-       - asset: assets/OpenEarableIcon.ttf
+        - asset: assets/OpenEarableIcon.ttf
     - family: Digital
       fonts:
         - asset: assets/digital-7-mono.ttf
+    - family: HamsterHurdleFont
+      fonts:
+        - asset: lib/apps_tab/hamster_hurdle/fonts/JungleAdventurer.ttf
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
 

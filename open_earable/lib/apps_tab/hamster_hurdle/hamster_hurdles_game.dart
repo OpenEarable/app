@@ -8,6 +8,8 @@ import 'package:flame/game.dart';
 import 'package:flame/components.dart';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:open_earable/apps_tab/hamster_hurdle/playing_time.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:simple_kalman/simple_kalman.dart';
 
@@ -59,6 +61,8 @@ class GamePageState extends State<GamePage> {
 
   GameAction currentAction = GameAction.running;
 
+  final ValueNotifier<String> _timeNotifier = ValueNotifier("0:00");
+
   /// Builds the sensor config.
   OpenEarableSensorConfig _buildOpenEarableConfig() {
     return OpenEarableSensorConfig(sensorId: 0, samplingRate: 30, latency: 0);
@@ -66,18 +70,15 @@ class GamePageState extends State<GamePage> {
 
   /// Processes the sensor data.
   void _processSensorData(Map<String, dynamic> data) {
-    _accX = _kalmanY.filtered(data["ACC"]["X"]);
+    _accX = _kalmanX.filtered(data["ACC"]["X"]);
     _accY = _kalmanY.filtered(data["ACC"]["Y"]);
     _accZ = _kalmanZ.filtered(data["ACC"]["Z"]);
-    addData(_accZ);
+    addSensorData(_accZ);
     _determineAction();
   }
 
-  void addData(double newData) {
-    // Add new data to the queue
+  void addSensorData(double newData) {
     latestAccZValues.addLast(newData);
-
-    // Remove the oldest element if the queue exceeds size 5
     if (latestAccZValues.length > 5) {
       latestAccZValues.removeFirst();
     }
@@ -93,20 +94,17 @@ class GamePageState extends State<GamePage> {
   void _determineAction() {
     double jumpThreshold = 0.8;
     double duckThreshold = 1.5;
-    if (_accZ < 0 + jumpThreshold && primaryUpwardsMovement() &&
+    if (_accZ < 0 + jumpThreshold &&
+        primaryUpwardsMovement() &&
         currentAction != GameAction.jumping) {
       game.onJump(currentAction);
-      setState(() {
-        currentAction = GameAction.jumping;
-      });
+      currentAction = GameAction.jumping;
     } else if (_accZ > _gravity + duckThreshold &&
         currentAction != GameAction.jumping &&
         !_recentlyLanded() &&
         !_recentlyGotUp()) {
-      setState(() {
-        currentAction = GameAction.ducking;
-        game.onDuck();
-      });
+      game.onDuck();
+      currentAction = GameAction.ducking;
     } else if (currentAction == GameAction.jumping && game.hamsterOnGround()) {
       _timeOfLanding = DateTime.now();
       currentAction = GameAction.running;
@@ -118,7 +116,7 @@ class GamePageState extends State<GamePage> {
   }
 
   bool primaryUpwardsMovement() {
-    double maximumMovementInYXPlane = 10;
+    double maximumMovementInYXPlane = 8;
     return sqrt(_accX * _accX + _accY * _accY) < maximumMovementInYXPlane;
   }
 
@@ -184,28 +182,59 @@ class GamePageState extends State<GamePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        body: GameWidget(
-      game: game,
-      overlayBuilderMap: {
-        PlayState.playing.name: (context, game) => StopButton(),
-        PlayState.gameOver.name: (context, game) => GameOverOverlay(),
-      },
-    ));
+      body: Stack(
+        children: [
+          GameWidget(
+            game: game,
+            overlayBuilderMap: {
+              PlayState.playing.name: (context, game) => ActiveGameOverlay(
+                    gameTimer: GameTimer(
+                      timeNotifier: _timeNotifier,
+                    ),
+                  ),
+              PlayState.gameOver.name: (context, game) => GameOverOverlay(
+                    finalTime:_timeNotifier.value,
+                  ),
+            },
+            initialActiveOverlays: [PlayState.playing.name],
+          ),
+          Align(
+            alignment: Alignment.topLeft,
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                icon: const Icon(Icons.arrow_back_rounded),
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xff8d4223)),
+                label: buildOverlayText("End Game", 18),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
-class StopButton extends StatelessWidget {
-  const StopButton({super.key});
+class ActiveGameOverlay extends StatelessWidget {
+  const ActiveGameOverlay({super.key, required this.gameTimer});
+
+  final Widget gameTimer;
 
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton.icon(
-        onPressed: () {
-          Navigator.pop(context);
-        },
-        icon: const Icon(Icons.arrow_back_rounded),
-        style: ElevatedButton.styleFrom(backgroundColor: Color(0xff8d4223)),
-        label: Text("End Game"));
+    double screenWidth = MediaQuery.of(context).size.width;
+    double screenHeight = MediaQuery.of(context).size.height;
+
+    return Column(
+      children: [
+        SizedBox(height: screenHeight / 9),
+        Center(child: gameTimer),
+      ],
+    );
   }
 }
 
@@ -225,17 +254,20 @@ class HamsterHurdle extends FlameGame<HamsterHurdleWorld>
   PlayState get playState => _playState;
 
   set playState(PlayState playState) {
-    _playState = playState;
     switch (playState) {
       case PlayState.gameOver:
+        overlays.add(playState.name);
+        overlays.remove(PlayState.playing.name);
       case PlayState.playing:
         overlays.add(playState.name);
+        overlays.remove(PlayState.gameOver.name);
     }
+    _playState = playState;
   }
 
   @override
   Future<void> onLoad() async {
-    return super.onLoad();
+    super.onLoad();
   }
 
   @override
@@ -266,6 +298,31 @@ class HamsterHurdle extends FlameGame<HamsterHurdleWorld>
   }
 
   @override
+  void onTap() {
+    super.onTap();
+    _restartGame();
+  }
+
+  @override
+  KeyEventResult onKeyEvent(
+      KeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
+    super.onKeyEvent(event, keysPressed);
+    switch (event.logicalKey) {
+      case LogicalKeyboardKey.space:
+      case LogicalKeyboardKey.enter:
+        _restartGame();
+    }
+    return KeyEventResult.handled;
+  }
+
+  void _restartGame() {
+    if (_playState == PlayState.gameOver) {
+      world.startGame();
+      playState = PlayState.playing;
+    }
+  }
+
+  @override
   void onGameResize(Vector2 canvasSize) {
     super.onGameResize(canvasSize);
   }
@@ -280,29 +337,36 @@ enum GameAction {
 enum PlayState { playing, gameOver }
 
 class GameOverOverlay extends StatelessWidget {
+  final String finalTime;
+
   const GameOverOverlay({
+    required this.finalTime,
     super.key,
   });
 
   @override
   Widget build(BuildContext context) {
+    double screenHeight = MediaQuery.of(context).size.height;
     return Container(
-      alignment: const Alignment(0, -0.15),
+      alignment: const Alignment(0, -0.5),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            "Game Over",
-            style: Theme.of(context).textTheme.headlineLarge,
-          ),
+          buildOverlayText("Game Over", 48),
           const SizedBox(height: 16),
-          TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: Text("Return"))
+          buildOverlayText("Tab to play again", 24),
+          SizedBox(height: 20),
+          buildOverlayText("Time played: $finalTime", 48)
         ],
       ),
     );
   }
+}
+
+///Selects custom font for Text in game.
+Widget buildOverlayText(String message, double fontSize) {
+  return Text(
+    message,
+    style: TextStyle(fontFamily: 'HamsterHurdleFont', fontSize: fontSize),
+  );
 }

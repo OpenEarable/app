@@ -70,7 +70,6 @@ class Hamster extends PositionComponent
     if (other is Obstacle) {
       game.playState = PlayState.gameOver;
       world.stopGame();
-      print("Game Over!!!");
     }
   }
 
