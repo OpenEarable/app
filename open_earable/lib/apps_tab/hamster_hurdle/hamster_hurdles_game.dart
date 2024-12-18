@@ -193,7 +193,7 @@ class GamePageState extends State<GamePage> {
                     ),
                   ),
               PlayState.gameOver.name: (context, game) => GameOverOverlay(
-                    finalTime:_timeNotifier.value,
+                    finalTime: _timeNotifier.value,
                   ),
             },
             initialActiveOverlays: [PlayState.playing.name],
@@ -209,7 +209,7 @@ class GamePageState extends State<GamePage> {
                 icon: const Icon(Icons.arrow_back_rounded),
                 style: ElevatedButton.styleFrom(
                     backgroundColor: Color(0xff8d4223)),
-                label: buildOverlayText("End Game", 18),
+                label: gameText("End Game", 18),
               ),
             ),
           ),
@@ -347,24 +347,30 @@ class GameOverOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     double screenHeight = MediaQuery.of(context).size.height;
-    return Container(
-      alignment: const Alignment(0, -0.5),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          buildOverlayText("Game Over", 48),
-          const SizedBox(height: 16),
-          buildOverlayText("Tab to play again", 24),
-          SizedBox(height: 20),
-          buildOverlayText("Time played: $finalTime", 48)
-        ],
+    return Column(children: [
+      Container(
+        height: screenHeight / 2,
+        alignment: const Alignment(0, -0.5),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            gameText("Game Over", 48),
+            const SizedBox(height: 16),
+            gameText("Tab to play again", 24),
+          ],
+        ),
       ),
-    );
+      Container(
+        alignment: const Alignment(0, 0.5),
+        height: screenHeight / 2,
+        child: gameText("Time played: $finalTime", 36),
+      )
+    ]);
   }
 }
 
 ///Selects custom font for Text in game.
-Widget buildOverlayText(String message, double fontSize) {
+Widget gameText(String message, double fontSize) {
   return Text(
     message,
     style: TextStyle(fontFamily: 'HamsterHurdleFont', fontSize: fontSize),
