@@ -9,16 +9,13 @@ import 'package:flame/components.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:open_earable/apps_tab/hamster_hurdle/playing_time.dart';
+import 'package:open_earable/apps_tab/hamster_hurdle/game_score.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:simple_kalman/simple_kalman.dart';
 
+import '../../shared/earable_not_connected_warning.dart';
+import 'gameOverlays.dart';
 import 'hamster_hurdles_world.dart';
-
-enum HamsterPosture {
-  normal,
-  ducking,
-}
 
 class GamePage extends StatefulWidget {
   const GamePage({super.key, required this.openEarable});
@@ -61,7 +58,7 @@ class GamePageState extends State<GamePage> {
 
   GameAction currentAction = GameAction.running;
 
-  final ValueNotifier<String> _timeNotifier = ValueNotifier("0:00");
+  final ValueNotifier<int> _scoreNotifier = ValueNotifier(0);
 
   /// Builds the sensor config.
   OpenEarableSensorConfig _buildOpenEarableConfig() {
@@ -92,10 +89,10 @@ class GamePageState extends State<GamePage> {
   }
 
   void _determineAction() {
-    double jumpThreshold = 0.8;
+    double jumpThreshold = 0.5;
     double duckThreshold = 1.5;
     if (_accZ < 0 + jumpThreshold &&
-        primaryUpwardsMovement() &&
+        primaryVerticalMovement() &&
         currentAction != GameAction.jumping) {
       game.onJump(currentAction);
       currentAction = GameAction.jumping;
@@ -105,7 +102,8 @@ class GamePageState extends State<GamePage> {
         !_recentlyGotUp()) {
       game.onDuck();
       currentAction = GameAction.ducking;
-    } else if (currentAction == GameAction.jumping && game.hamsterOnGround()) {
+    } else if (currentAction == GameAction.jumping &&
+        game.hamsterTouchesGround()) {
       _timeOfLanding = DateTime.now();
       currentAction = GameAction.running;
     } else if (currentAction == GameAction.ducking && _isUpwardsMotion()) {
@@ -115,20 +113,21 @@ class GamePageState extends State<GamePage> {
     }
   }
 
-  bool primaryUpwardsMovement() {
+  bool primaryVerticalMovement() {
     double maximumMovementInYXPlane = 8;
     return sqrt(_accX * _accX + _accY * _accY) < maximumMovementInYXPlane;
   }
 
   bool _isUpwardsMotion() {
     int counter = 0;
+    int thresholdCount = 3;
     double threshold = 0.3;
     for (double data in latestAccZValues) {
       if (data + threshold < _accZ) {
         counter++;
       }
     }
-    return counter > 3;
+    return counter > thresholdCount;
   }
 
   bool _recentlyLanded() {
@@ -179,25 +178,35 @@ class GamePageState extends State<GamePage> {
     }
   }
 
+  /// Cancels the subscription to the IMU sensor when the widget is disposed.
+  @override
+  void dispose() {
+    super.dispose();
+    _imuSubscription?.cancel();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
-          GameWidget(
-            game: game,
-            overlayBuilderMap: {
-              PlayState.playing.name: (context, game) => ActiveGameOverlay(
-                    gameTimer: GameTimer(
-                      timeNotifier: _timeNotifier,
-                    ),
-                  ),
-              PlayState.gameOver.name: (context, game) => GameOverOverlay(
-                    finalTime: _timeNotifier.value,
-                  ),
-            },
-            initialActiveOverlays: [PlayState.playing.name],
-          ),
+          widget.openEarable.bleManager.connected
+              ? GameWidget(
+                  game: game,
+                  overlayBuilderMap: {
+                    PlayState.playing.name: (context, game) =>
+                        ActiveGameOverlay(
+                          gameScore: GameScore(
+                            scoreNotifier: _scoreNotifier,
+                          ),
+                        ),
+                    PlayState.gameOver.name: (context, game) => GameOverOverlay(
+                          finalScore: _scoreNotifier.value,
+                        ),
+                  },
+                  initialActiveOverlays: [PlayState.playing.name],
+                )
+              : EarableNotConnectedWarning(),
           Align(
             alignment: Alignment.topLeft,
             child: Padding(
@@ -209,31 +218,15 @@ class GamePageState extends State<GamePage> {
                 icon: const Icon(Icons.arrow_back_rounded),
                 style: ElevatedButton.styleFrom(
                     backgroundColor: Color(0xff8d4223)),
-                label: gameText("End Game", 18),
+                label: GameText(
+                  text: "End Game",
+                  fontSize: 18,
+                ),
               ),
             ),
-          ),
+          )
         ],
       ),
-    );
-  }
-}
-
-class ActiveGameOverlay extends StatelessWidget {
-  const ActiveGameOverlay({super.key, required this.gameTimer});
-
-  final Widget gameTimer;
-
-  @override
-  Widget build(BuildContext context) {
-    double screenWidth = MediaQuery.of(context).size.width;
-    double screenHeight = MediaQuery.of(context).size.height;
-
-    return Column(
-      children: [
-        SizedBox(height: screenHeight / 9),
-        Center(child: gameTimer),
-      ],
     );
   }
 }
@@ -245,8 +238,6 @@ class HamsterHurdle extends FlameGame<HamsterHurdleWorld>
           world: HamsterHurdleWorld(),
         );
 
-  late Vector2 currentViewPortSize;
-
   DateTime? duckingStartTime;
 
   PlayState _playState = PlayState.playing;
@@ -256,6 +247,7 @@ class HamsterHurdle extends FlameGame<HamsterHurdleWorld>
   set playState(PlayState playState) {
     switch (playState) {
       case PlayState.gameOver:
+        world.stopGame();
         overlays.add(playState.name);
         overlays.remove(PlayState.playing.name);
       case PlayState.playing:
@@ -263,17 +255,6 @@ class HamsterHurdle extends FlameGame<HamsterHurdleWorld>
         overlays.remove(PlayState.gameOver.name);
     }
     _playState = playState;
-  }
-
-  @override
-  Future<void> onLoad() async {
-    super.onLoad();
-  }
-
-  @override
-  void update(double dt) {
-    currentViewPortSize = camera.viewport.size;
-    super.update(dt);
   }
 
   void onJump(GameAction lastAction) {
@@ -289,7 +270,7 @@ class HamsterHurdle extends FlameGame<HamsterHurdleWorld>
     world.hamster.getUp();
   }
 
-  bool hamsterOnGround() {
+  bool hamsterTouchesGround() {
     return world.hamster.isTouchingGround();
   }
 
@@ -321,11 +302,6 @@ class HamsterHurdle extends FlameGame<HamsterHurdleWorld>
       playState = PlayState.playing;
     }
   }
-
-  @override
-  void onGameResize(Vector2 canvasSize) {
-    super.onGameResize(canvasSize);
-  }
 }
 
 enum GameAction {
@@ -336,43 +312,22 @@ enum GameAction {
 
 enum PlayState { playing, gameOver }
 
-class GameOverOverlay extends StatelessWidget {
-  final String finalTime;
+///Selects custom font for Text in game.
+class GameText extends StatelessWidget {
+  final String text;
+  final double fontSize;
 
-  const GameOverOverlay({
-    required this.finalTime,
+  const GameText({
+    required this.text,
+    this.fontSize = 24,
     super.key,
   });
 
   @override
   Widget build(BuildContext context) {
-    double screenHeight = MediaQuery.of(context).size.height;
-    return Column(children: [
-      Container(
-        height: screenHeight / 2,
-        alignment: const Alignment(0, -0.5),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            gameText("Game Over", 48),
-            const SizedBox(height: 16),
-            gameText("Tab to play again", 24),
-          ],
-        ),
-      ),
-      Container(
-        alignment: const Alignment(0, 0.5),
-        height: screenHeight / 2,
-        child: gameText("Time played: $finalTime", 36),
-      )
-    ]);
+    return Text(
+      text,
+      style: TextStyle(fontFamily: 'HamsterHurdleFont', fontSize: fontSize),
+    );
   }
-}
-
-///Selects custom font for Text in game.
-Widget gameText(String message, double fontSize) {
-  return Text(
-    message,
-    style: TextStyle(fontFamily: 'HamsterHurdleFont', fontSize: fontSize),
-  );
 }

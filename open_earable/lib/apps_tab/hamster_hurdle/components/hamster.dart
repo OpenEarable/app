@@ -21,10 +21,11 @@ class Hamster extends PositionComponent
   late Sprite _hamsterSprite;
   double _velocity = 0;
   final double xPosition;
-  final double _gravity = 5;
+  final double _gravity = 2.3;
   final double _jumpForce = -15;
   late double _maxJumpHeight;
   late double ground;
+  late double initialSize;
 
   @override
   Future<void> onLoad() async {
@@ -37,7 +38,8 @@ class Hamster extends PositionComponent
       ..collisionType = CollisionType.active);
     position.y = world.groundLevel;
     position.x = xPosition;
-    _maxJumpHeight = world.size.y / 4 - size.y;
+    _maxJumpHeight = world.tunnelHeight - size.y;
+    initialSize = size.y;
   }
 
   void jump(GameAction lastAction) {
@@ -57,11 +59,11 @@ class Hamster extends PositionComponent
   }
 
   void duck() {
-    size = Vector2(size.x, game.size.y / 16);
+    size = Vector2(size.x, initialSize/2);
   }
 
   void getUp() {
-    size = Vector2(size.x, game.size.y / 9);
+    size = Vector2(size.x, initialSize);
   }
 
   @override
@@ -76,10 +78,14 @@ class Hamster extends PositionComponent
   @override
   void update(double dt) {
     super.update(dt);
-    if (_velocity < 0) {
-      _velocity += (_gravity * 0.8) * dt; // Reduced gravity when rising
+    if (_velocity < 0 && position.y > world.groundLevel - world.tunnelHeight*0.3) {
+      _velocity += (_gravity * 0.7) * dt; // Reduced gravity when rising and
+      // hamster position in y direction is lower than height of ground obstacles.
+      // This is for a good playing experience, the player rises relatively
+      // quickly over the obstacle but then stays in the air long enough to get
+      // over the obstacle
     } else {
-      _velocity += _gravity * dt; // Normal gravity when falling
+      _velocity += _gravity * dt;
     }
     position.y += _velocity;
     bool belowGround = position.y > world.groundLevel;
@@ -87,6 +93,7 @@ class Hamster extends PositionComponent
       position.y = world.groundLevel;
       _velocity = 0;
     }
+    //Prevents hamster from jumping outside the tunnel
     if (position.y < world.groundLevel - _maxJumpHeight) {
       position.y = world.groundLevel - _maxJumpHeight;
       _velocity = 0; // Stop upward velocity when max height is reached

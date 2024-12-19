@@ -25,14 +25,14 @@ class Obstacle extends PositionComponent
       case ObstacleType.root:
         imageSource = "root_obstacle.png";
         anchor = Anchor.topLeft;
-        height = world.tunnelHeight * 0.7;
+        height = world.rootHeight;
         position.y = world.groundLevel - world.tunnelHeight;
         add(RectangleHitbox()..collisionType = CollisionType.passive);
         break;
       case ObstacleType.nuts:
         imageSource = "nut_obstacle.png";
         anchor = Anchor.bottomLeft;
-        height = world.tunnelHeight * 0.3;
+        height = world.nutHeight;
         position.y = world.groundLevel;
         add(CircleHitbox()..collisionType = CollisionType.passive);
         break;

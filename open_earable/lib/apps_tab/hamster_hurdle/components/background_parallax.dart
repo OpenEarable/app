@@ -6,10 +6,6 @@ import 'package:open_earable/apps_tab/hamster_hurdle/hamster_hurdles_world.dart'
 
 class HurdleBackground extends ParallaxComponent<HamsterHurdle>
     with HasWorldReference<HamsterHurdleWorld> {
-  double speed;
-
-  HurdleBackground({required this.speed});
-
   @override
   Future<void> onLoad() async {
     anchor = Anchor.center;
@@ -22,4 +18,3 @@ class HurdleBackground extends ParallaxComponent<HamsterHurdle>
     );
   }
 }
-

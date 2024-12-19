@@ -46,7 +46,8 @@ class _HamsterHurdleState extends State<HamsterHurdleApp> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => GamePage(
+                        builder: (context) =>
+                            GamePage(
                           openEarable: widget.openEarable,
                         ),
                       ),
@@ -54,7 +55,7 @@ class _HamsterHurdleState extends State<HamsterHurdleApp> {
                   },
                   style: ElevatedButton.styleFrom(
                       backgroundColor: Color(0xff8d4223)),
-                  child: gameText('START', 15),
+                  child: GameText(text: 'START', fontSize: 18,),
                 ),
               ),
               const SizedBox(height: 15,),
@@ -71,7 +72,7 @@ class _HamsterHurdleState extends State<HamsterHurdleApp> {
                     },
                     style: ElevatedButton.styleFrom(
                         backgroundColor: Color(0xff8d4223)),
-                    child: gameText('INFO', 15),
+                    child: GameText(text: 'INFO', fontSize: 18,),
                   ))
             ],
           ),

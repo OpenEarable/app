@@ -38,6 +38,7 @@ dependencies:
   youtube_player_flutter: ^9.1.1
   permission_handler: ^11.3.1
   app_settings: ^5.1.1
+  flame: ^1.21.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

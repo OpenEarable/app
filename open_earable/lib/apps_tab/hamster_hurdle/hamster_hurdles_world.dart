@@ -21,8 +21,9 @@ class HamsterHurdleWorld extends World
   double get gameSpeed => _gameSpeed;
   final double hamsterPosition = 0;
   late double tunnelHeight;
+  late double rootHeight;
+  late double nutHeight;
   late Obstacle _lastObstacle;
-  late double screenWidth;
   late HurdleBackground _background;
 
   @override
@@ -37,19 +38,23 @@ class HamsterHurdleWorld extends World
   }
 
   void startGame() {
+    //removes all instances from previous game.
     removeAll(children.whereType<Obstacle>());
     removeAll(children.whereType<Hamster>());
     removeAll(children.whereType<HurdleBackground>());
+
     _gameSpeed = 270;
     tunnelHeight = size.y / 4;
-    screenWidth = size.x;
+    rootHeight = tunnelHeight*0.7;
+    nutHeight = tunnelHeight*0.3;
     add(hamster = Hamster(
         size: Vector2(size.y / 9, size.y / 9), xPosition: hamsterPosition));
-    add(HamsterTunnel(tunnelHeight: size.y / 4));
-    add(_background = HurdleBackground(speed: _gameSpeed));
+    add(HamsterTunnel(tunnelHeight: tunnelHeight));
+    add(_background = HurdleBackground());
+    //generate the first random obstacle
     add(_lastObstacle = Obstacle(
         gameSpeed: _gameSpeed,
-        initialXPosition: screenWidth,
+        initialXPosition: size.x,
         obstacleType: _randomizeObstacleType()));
   }
 
@@ -58,7 +63,7 @@ class HamsterHurdleWorld extends World
   void _generateObstacle() {
     double maximumDistanceBetweenObstacles = hamster.size.x * 9;
     double randomizedXPosition =
-        (Random().nextDouble() * maximumDistanceBetweenObstacles) + screenWidth;
+        (Random().nextDouble() * maximumDistanceBetweenObstacles) + size.x;
     add(_lastObstacle = Obstacle(
         obstacleType: _randomizeObstacleType(),
         initialXPosition: randomizedXPosition,
@@ -91,10 +96,11 @@ class HamsterHurdleWorld extends World
   @override
   void update(double dt) {
     super.update(dt);
+    //only generate new obstacles when game is being played.
     if(game.playState == PlayState.playing) {
       double minDistanceBetweenObstacles =
           _lastObstacle.size.x + hamster.size.x * 5;
-      if (_lastObstacle.x <= screenWidth - minDistanceBetweenObstacles) {
+      if (_lastObstacle.x <= game.size.x - minDistanceBetweenObstacles) {
         _generateObstacle();
       }
       _removeObstacles();
@@ -103,11 +109,8 @@ class HamsterHurdleWorld extends World
     _background.parallax?.baseVelocity = Vector2(gameSpeed, 0);
   }
 
-  @override
-  void onGameResize(Vector2 size) {
-    super.onGameResize(size);
-    screenWidth = size.x;
-  }
+
+
 }
 
 

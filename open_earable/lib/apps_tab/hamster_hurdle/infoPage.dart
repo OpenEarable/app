@@ -15,6 +15,8 @@ class InfoPage extends StatelessWidget {
   final String jumpImagePath =
       'lib/apps_tab/hamster_hurdle/assets/explanatory_image_jump.png';
 
+  const InfoPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -28,13 +30,12 @@ class InfoPage extends StatelessWidget {
               Color(0xffaf7a4d),
             ],
           ),),
-        height: MediaQuery.of(context).size.height,
         child: SingleChildScrollView(
           child: Column(
             children: [
               Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: gameText("HOW TO PLAY", 64),
+                child: GameText(text: "HOW TO PLAY", fontSize: 48,),
               ),
               const SizedBox(height: 25),
               FeatureDescriptionRow(
@@ -76,7 +77,7 @@ class FeatureDescriptionRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                gameText(headline, 24),
+                GameText(text: headline, fontSize: 36,),
                 const SizedBox(
                   height: 10,
                 ),
