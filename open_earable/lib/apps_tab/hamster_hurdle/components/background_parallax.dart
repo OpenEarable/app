@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:open_earable/apps_tab/hamster_hurdle/hamster_hurdles_game.dart';
 import 'package:open_earable/apps_tab/hamster_hurdle/hamster_hurdles_world.dart';
 
+///Class responsible for generating the moving background in the game.
 class HurdleBackground extends ParallaxComponent<HamsterHurdle>
     with HasWorldReference<HamsterHurdleWorld> {
   @override

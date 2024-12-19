@@ -2,25 +2,10 @@ import 'package:flutter/cupertino.dart';
 
 import 'hamster_hurdles_game.dart';
 
-class ActiveGameOverlay extends StatelessWidget {
-  const ActiveGameOverlay({super.key, required this.gameScore});
-
-  final Widget gameScore;
-
-  @override
-  Widget build(BuildContext context) {
-    double screenHeight = MediaQuery.of(context).size.height;
-    return Column(
-      children: [
-        SizedBox(height: screenHeight / 9),
-        Center(child: gameScore),
-      ],
-    );
-  }
-}
-
-
+///A Widget representing what is being shown when the player loses.
 class GameOverOverlay extends StatelessWidget {
+
+  ///The final score achieved by the player during the game.
   final int finalScore;
 
   const GameOverOverlay({
@@ -28,6 +13,9 @@ class GameOverOverlay extends StatelessWidget {
     super.key,
   });
 
+
+  /// A widget that displays a "Game Over" screen with the final score
+  /// and a prompt to play again.
   @override
   Widget build(BuildContext context) {
     double screenHeight = MediaQuery.of(context).size.height;

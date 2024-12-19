@@ -3,17 +3,27 @@ import 'package:flame/components.dart';
 import 'package:flame/extensions.dart';
 import 'package:open_earable/apps_tab/hamster_hurdle/hamster_hurdles_world.dart';
 
+
+///Class representing an obstacle in the game.
 class Obstacle extends PositionComponent
     with HasWorldReference<HamsterHurdleWorld> {
+
+  ///The image rendered to visually represent the obstacle.
   late Sprite _obstacleSprite;
+
+  ///The type of the obstacle.
   final ObstacleType obstacleType;
+
+  ///The initial x position that the obstacle is placed on on the screen.
   final double initialXPosition;
+
+  ///The speed at which the obstacles move along the x-axis.
   final double gameSpeed;
 
   Obstacle(
       {required this.gameSpeed,
       required this.initialXPosition,
-      required this.obstacleType})
+      required this.obstacleType,})
       : super(priority: 2);
 
   @override
@@ -52,6 +62,7 @@ class Obstacle extends PositionComponent
     );
   }
 
+  ///Moves the obstacles along the x-axis according to gameSpeed.
   @override
   void update(double dt) {
     super.update(dt);
@@ -59,6 +70,7 @@ class Obstacle extends PositionComponent
   }
 }
 
+///Encapsulates the types an obstacle can be.
 enum ObstacleType {
   root,
   nuts,

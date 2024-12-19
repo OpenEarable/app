@@ -17,11 +17,13 @@ class InfoPage extends StatelessWidget {
 
   const InfoPage({super.key});
 
+  ///A widget that displays an instructional on how to play Hamster Hurdles.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(),
-      body: Container(decoration: const BoxDecoration(
+      body: Container(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -29,13 +31,17 @@ class InfoPage extends StatelessWidget {
               Color(0xff5b3417),
               Color(0xffaf7a4d),
             ],
-          ),),
+          ),
+        ),
         child: SingleChildScrollView(
           child: Column(
             children: [
               Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: GameText(text: "HOW TO PLAY", fontSize: 48,),
+                child: GameText(
+                  text: "HOW TO PLAY",
+                  fontSize: 48,
+                ),
               ),
               const SizedBox(height: 25),
               FeatureDescriptionRow(
@@ -63,10 +69,17 @@ class FeatureDescriptionRow extends StatelessWidget {
     required this.pathToImage,
   });
 
+  ///The headline of the explanatory text.
   final String headline;
+
+  ///The explanatory text.
   final String explanatoryText;
+
+  ///The path to the explanatory image.
   final String pathToImage;
 
+  ///A widget that displays a row with an explanatory text and an
+  ///explanatory image.
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -77,7 +90,10 @@ class FeatureDescriptionRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                GameText(text: headline, fontSize: 36,),
+                GameText(
+                  text: headline,
+                  fontSize: 36,
+                ),
                 const SizedBox(
                   height: 10,
                 ),
@@ -99,7 +115,6 @@ class FeatureDescriptionRow extends StatelessWidget {
                     pathToImage,
                   ),
                   fit: BoxFit.scaleDown,
-
                 ),
               ),
               width: 200,

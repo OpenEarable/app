@@ -7,25 +7,38 @@ import 'package:open_earable/apps_tab/hamster_hurdle/components/obstacle.dart';
 import '../hamster_hurdles_game.dart';
 import '../hamster_hurdles_world.dart';
 
+///The player in the game.
 class Hamster extends PositionComponent
     with
         HasGameRef<HamsterHurdle>,
         HasWorldReference<HamsterHurdleWorld>,
         CollisionCallbacks {
-  Hamster({required this.xPosition, required super.size})
+  Hamster({required this.initialXPosition, required super.size})
       : super(
           anchor: Anchor.bottomCenter,
           priority: 3,
         );
 
-  late Sprite _hamsterSprite;
-  double _velocity = 0;
-  final double xPosition;
+  ///The x-coordinate the hamster appears on on the screen after loading the game.
+  final double initialXPosition;
+
+  ///gravity used to calculate falling movement for jump.
   final double _gravity = 2.3;
+
+  ///the upwards movement used to calculate velocity during jump.
   final double _jumpForce = -15;
+
+  ///The maximum height the hamster can jump.
   late double _maxJumpHeight;
-  late double ground;
+
+  ///the size the hamster has at loading the game.
   late double initialSize;
+
+  ///The Sprite of the hamster used to render the character.
+  late Sprite _hamsterSprite;
+
+  ///Used for calculating the jump movement.
+  double _velocity = 0;
 
   @override
   Future<void> onLoad() async {
@@ -34,14 +47,16 @@ class Hamster extends PositionComponent
     add(CircleHitbox(
         radius: size.y * 0.35,
         anchor: Anchor.center,
-        position: Vector2(position.x + size.x / 2, position.y + size.y / 2))
-      ..collisionType = CollisionType.active);
+        position: Vector2(position.x + size.x / 2, position.y + size.y / 2),)
+      ..collisionType = CollisionType.active,);
     position.y = world.groundLevel;
-    position.x = xPosition;
+    position.x = initialXPosition;
     _maxJumpHeight = world.tunnelHeight - size.y;
     initialSize = size.y;
   }
 
+  ///Updates velocity to match a jump movement and updates the posture of
+  ///the hamster, if hamster was previously ducking.
   void jump(GameAction lastAction) {
     if (lastAction == GameAction.ducking) {
       getUp();
@@ -58,12 +73,19 @@ class Hamster extends PositionComponent
     );
   }
 
+  ///Updates the vertical size of the hamster to show a ducking motion.
   void duck() {
-    size = Vector2(size.x, initialSize/2);
+    size = Vector2(size.x, initialSize / 2);
   }
 
+  ///Sets the vertical size of the hamster back to the initial size.
   void getUp() {
     size = Vector2(size.x, initialSize);
+  }
+
+  ///checks if the hamster is currently touching the ground.
+  bool isTouchingGround() {
+    return position.y >= world.groundLevel;
   }
 
   @override
@@ -78,7 +100,8 @@ class Hamster extends PositionComponent
   @override
   void update(double dt) {
     super.update(dt);
-    if (_velocity < 0 && position.y > world.groundLevel - world.tunnelHeight*0.3) {
+    if (_velocity < 0 &&
+        position.y > world.groundLevel - world.tunnelHeight * 0.3) {
       _velocity += (_gravity * 0.7) * dt; // Reduced gravity when rising and
       // hamster position in y direction is lower than height of ground obstacles.
       // This is for a good playing experience, the player rises relatively
@@ -98,9 +121,5 @@ class Hamster extends PositionComponent
       position.y = world.groundLevel - _maxJumpHeight;
       _velocity = 0; // Stop upward velocity when max height is reached
     }
-  }
-
-  bool isTouchingGround() {
-    return position.y >= world.groundLevel;
   }
 }

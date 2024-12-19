@@ -5,6 +5,8 @@ import 'package:flutter/cupertino.dart';
 import '../hamster_hurdles_game.dart';
 import '../hamster_hurdles_world.dart';
 
+
+///Class representing the Tunnel the hamster runs through.
 class HamsterTunnel extends RectangleComponent
     with HasWorldReference<HamsterHurdleWorld>, HasGameRef<HamsterHurdle> {
   HamsterTunnel({
@@ -14,7 +16,7 @@ class HamsterTunnel extends RectangleComponent
               ..color = const Color(0xffad784c)
               ..style = PaintingStyle.fill,
             priority: 1,
-            anchor: Anchor.bottomCenter);
+            anchor: Anchor.bottomCenter,);
 
   final double tunnelHeight;
 

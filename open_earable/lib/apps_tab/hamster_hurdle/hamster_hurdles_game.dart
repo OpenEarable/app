@@ -14,7 +14,7 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:simple_kalman/simple_kalman.dart';
 
 import '../../shared/earable_not_connected_warning.dart';
-import 'gameOverlays.dart';
+import 'gameOverOverlay.dart';
 import 'hamster_hurdles_world.dart';
 
 class GamePage extends StatefulWidget {
@@ -28,12 +28,16 @@ class GamePage extends StatefulWidget {
 }
 
 class GamePageState extends State<GamePage> {
+  ///the instance of the game.
   late final HamsterHurdle game;
 
   /// Subscription to the IMU sensor.
   StreamSubscription? _imuSubscription;
 
+  ///last time of hamster landing after jump.
   DateTime? _timeOfLanding;
+
+  ///last time hamster got up from ducking position.
   DateTime? _timeOfGettingUp;
 
   /// Z-axis acceleration.
@@ -48,6 +52,7 @@ class GamePageState extends State<GamePage> {
   /// Kalman-Filter for acceleration Z-axis;
   late SimpleKalman _kalmanX, _kalmanY, _kalmanZ;
 
+  ///The last five measured z-axis acceleration values.
   Queue<double> latestAccZValues = Queue<double>.from(List.filled(5, 0));
 
   ///The error measurement used in the Kalman-Filter for acceleration
@@ -56,8 +61,10 @@ class GamePageState extends State<GamePage> {
   /// Standard gravity in m/s^2.
   final double _gravity = 9.81;
 
+  ///the current action of the player during the game.
   GameAction currentAction = GameAction.running;
 
+  ///the current score of the game.
   final ValueNotifier<int> _scoreNotifier = ValueNotifier(0);
 
   /// Builds the sensor config.
@@ -74,6 +81,7 @@ class GamePageState extends State<GamePage> {
     _determineAction();
   }
 
+  ///adds the newData to the latest measured z-axis acceleration values.
   void addSensorData(double newData) {
     latestAccZValues.addLast(newData);
     if (latestAccZValues.length > 5) {
@@ -88,6 +96,8 @@ class GamePageState extends State<GamePage> {
         .listen(_processSensorData);
   }
 
+  ///determines which player action should be shown on screen based on
+  /// current sensory data.
   void _determineAction() {
     double jumpThreshold = 0.5;
     double duckThreshold = 1.5;
@@ -113,11 +123,15 @@ class GamePageState extends State<GamePage> {
     }
   }
 
+  ///checks if current measured  acceleration is primary along the z-axis.
   bool primaryVerticalMovement() {
-    double maximumMovementInYXPlane = 8;
+    double maximumMovementInYXPlane = 6;
     return sqrt(_accX * _accX + _accY * _accY) < maximumMovementInYXPlane;
   }
 
+  ///checks if sensory data indicates a gradual upwards motion by checking if
+  ///the latest measured z-Axis acceleration values are greater than currently
+  ///measured z-Axis acceleration value.
   bool _isUpwardsMotion() {
     int counter = 0;
     int thresholdCount = 3;
@@ -130,6 +144,7 @@ class GamePageState extends State<GamePage> {
     return counter > thresholdCount;
   }
 
+  ///Checks whether player has recently landed from a jump.
   bool _recentlyLanded() {
     if (_timeOfLanding == null) {
       return false;
@@ -139,6 +154,7 @@ class GamePageState extends State<GamePage> {
     }
   }
 
+  ///Checks whether player has recently gotten up from ducking.
   bool _recentlyGotUp() {
     if (_timeOfGettingUp == null) {
       return false;
@@ -148,6 +164,7 @@ class GamePageState extends State<GamePage> {
     }
   }
 
+  ///Initializes the Kalman-Filters.
   void _initKalman() {
     _kalmanZ = SimpleKalman(
       errorMeasure: _errorMeasureAcc,
@@ -166,6 +183,7 @@ class GamePageState extends State<GamePage> {
     );
   }
 
+  /// Initializes state and sets up listeners for sensor data.
   @override
   void initState() {
     super.initState();
@@ -185,6 +203,8 @@ class GamePageState extends State<GamePage> {
     _imuSubscription?.cancel();
   }
 
+  ///The widget displaying the hamster hurdle game with the current overlays
+  ///based on the state of the game.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -194,11 +214,8 @@ class GamePageState extends State<GamePage> {
               ? GameWidget(
                   game: game,
                   overlayBuilderMap: {
-                    PlayState.playing.name: (context, game) =>
-                        ActiveGameOverlay(
-                          gameScore: GameScore(
-                            scoreNotifier: _scoreNotifier,
-                          ),
+                    PlayState.playing.name: (context, game) => GameScore(
+                          scoreNotifier: _scoreNotifier,
                         ),
                     PlayState.gameOver.name: (context, game) => GameOverOverlay(
                           finalScore: _scoreNotifier.value,
@@ -231,6 +248,7 @@ class GamePageState extends State<GamePage> {
   }
 }
 
+///The Hamster Hurdle game.
 class HamsterHurdle extends FlameGame<HamsterHurdleWorld>
     with HasCollisionDetection, TapDetector, KeyboardEvents {
   HamsterHurdle()
@@ -238,10 +256,9 @@ class HamsterHurdle extends FlameGame<HamsterHurdleWorld>
           world: HamsterHurdleWorld(),
         );
 
-  DateTime? duckingStartTime;
 
+  ///The current state of the play.
   PlayState _playState = PlayState.playing;
-
   PlayState get playState => _playState;
 
   set playState(PlayState playState) {
@@ -257,33 +274,35 @@ class HamsterHurdle extends FlameGame<HamsterHurdleWorld>
     _playState = playState;
   }
 
+  ///Starts jumping motion for hamster.
   void onJump(GameAction lastAction) {
     world.hamster.jump(lastAction);
   }
 
+  ///Makes hamster get into a ducking position.
   void onDuck() {
     world.hamster.duck();
-    duckingStartTime = DateTime.now();
   }
 
+  ///Makes hamster return to initial position.
   void onGetUp() {
     world.hamster.getUp();
   }
 
+  ///Checks if hamster touches the ground of the hamster tunnel.
   bool hamsterTouchesGround() {
     return world.hamster.isTouchingGround();
   }
 
-  Duration calculateDuckingTime() {
-    return DateTime.now().difference(duckingStartTime!);
-  }
 
+  ///Restarts game on tapping motion, when playState is GameOver.
   @override
   void onTap() {
     super.onTap();
     _restartGame();
   }
 
+  ///Restarts the game when space or enter is pressed and playState is GameOver.
   @override
   KeyEventResult onKeyEvent(
       KeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
@@ -296,6 +315,8 @@ class HamsterHurdle extends FlameGame<HamsterHurdleWorld>
     return KeyEventResult.handled;
   }
 
+  ///Starts the game and resets the playState to playing if playState is
+  ///GameOver.
   void _restartGame() {
     if (_playState == PlayState.gameOver) {
       world.startGame();
@@ -304,17 +325,22 @@ class HamsterHurdle extends FlameGame<HamsterHurdleWorld>
   }
 }
 
+///Encapsulates the different actions a player can make in a game.
 enum GameAction {
   ducking,
   jumping,
   running,
 }
 
+///Encapsulates the different states a Hamster Hurdles game can be in.
 enum PlayState { playing, gameOver }
 
 ///Selects custom font for Text in game.
 class GameText extends StatelessWidget {
+  ///The text to render.
   final String text;
+
+  ///The size at which the text should be rendered.
   final double fontSize;
 
   const GameText({

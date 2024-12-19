@@ -19,6 +19,9 @@ class HamsterHurdleApp extends StatefulWidget {
 }
 
 class _HamsterHurdleState extends State<HamsterHurdleApp> {
+
+  ///A widget that displays to buttons, on leading to the game and the other
+  ///leading to the instruction on how to play the game.
   @override
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
