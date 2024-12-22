@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:open_earable/apps_tab/cpready/utils.dart';
 
+/// Widget that displays a button for starting the CPR procedure.
+/// Is a square with length [size] and performs [onPressed] when pressed.
 class CprStartButton extends StatelessWidget {
   const CprStartButton({
     super.key,
@@ -9,7 +11,10 @@ class CprStartButton extends StatelessWidget {
   })  : _onPressed = onPressed,
         _size = size;
 
+  /// The function that is executed when the button is pressed.
   final VoidCallback _onPressed;
+
+  /// The size of the button which is the width and the height.
   final double _size;
 
   @override

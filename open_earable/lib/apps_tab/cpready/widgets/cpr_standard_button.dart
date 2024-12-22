@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 
+/// A standard Button using [ElevatedButton] for the CPReady app.
+/// Performs [onPressed] when pressed and has a [label].
 class CprStandardButton extends StatelessWidget {
   const CprStandardButton(
       {super.key, required VoidCallback onPressed, required String label,})
       : _onPressed = onPressed,
         _label = label;
 
+  /// The function that is executed when the button is pressed.
   final VoidCallback _onPressed;
+
+  /// The label that is displayed on the button.
   final String _label;
 
   @override

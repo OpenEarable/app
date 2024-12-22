@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 
 /// Enum for the possible instructions during a CPR.
+/// Stores a [messageString] and a [color] for each instruction.
 enum CPRInstruction {
   fine(messageString: "You are doing great!", color: Colors.green),
   faster(messageString: "Go a little bit faster", color: Colors.deepOrangeAccent),

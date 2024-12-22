@@ -5,19 +5,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_timer_countdown/flutter_timer_countdown.dart';
 import 'package:open_earable/apps_tab/cpready/model/data.dart';
 import 'package:open_earable/apps_tab/cpready/utils.dart';
+import 'package:open_earable/apps_tab/cpready/widgets/cpr_animation.dart';
 import 'package:open_earable/apps_tab/cpready/widgets/cpr_instruction_view.dart';
 import 'package:open_earable/apps_tab/cpready/widgets/cpr_standard_button.dart';
 import 'package:open_earable/apps_tab/cpready/widgets/cpr_start_button.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:simple_kalman/simple_kalman.dart';
 
-/// App that helps the user when performing CPR
+/// App that helps the user when performing CPR.
 ///
 /// It provides functionality for measuring the frequency of the CPR procedure.
 /// Also it supports mouth-to-mouth procedure and actively prompts the user to do
 /// so if the feature is activated.
-/// Additionally a metronome is implemented which can give the user an
-/// audible support for performing CPR with a frequency of 110 bpm.
+/// Additionally a metronome and an animation are implemented which can give the user an
+/// audible or visual support for performing CPR with a frequency of 110 bpm.
 class CPReady extends StatefulWidget {
   const CPReady(this._openEarable, {super.key});
 
@@ -28,10 +29,10 @@ class CPReady extends StatefulWidget {
 }
 
 class _CPReadyState extends State<CPReady> {
-  /// The alpha parameter for the exponential smoothing
+  /// The alpha parameter for the exponential smoothing.
   final double _exponentialSmoothingAlpha = 0.5;
 
-  /// The threshold for the acceleration after which a movement should be considered a push
+  /// The threshold for the acceleration after which a movement should be considered a push.
   final double _accelerationThreshold = 2;
 
   /// Error measure for the Kalman filter.
@@ -43,7 +44,7 @@ class _CPReadyState extends State<CPReady> {
   /// Gravity constant [m / (s^2)].
   final double _gravity = 9.81;
 
-  ///Constant for the amounts of pushes between mouth-to-mouth sequences
+  ///Constant for the amounts of pushes between mouth-to-mouth sequences.
   final int _mouthToMouthInterval = 30;
 
   /// The subscription to the imu data.
@@ -60,32 +61,32 @@ class _CPReadyState extends State<CPReady> {
   double _accY = 0.0;
   double _accZ = 0.0;
 
-  /// The current acceleration magnitude
+  /// The current acceleration magnitude.
   double _currentAcc = 0.0;
 
-  /// Current frequency of up and down movements in Hz
+  /// Current frequency of up and down movements in Hz.
   double _currentFrequency = 0;
 
-  /// [DateTime] of the last push that was recorded
+  /// [DateTime] of the last push that was recorded.
   DateTime? _lastPush;
 
-  /// Bool storing if there was a currently a push detected
+  /// Bool storing if there was a currently a push detected.
   bool _detectedPush = false;
 
   /// Bool storing if a cpr is currently executed.
   bool _doingCPR = false;
 
-  /// Instruction currently given to the user
+  /// Counter for counting how many pushes were made since the last mouth-to-mouth.
+  int _pushCounter = 0;
+
+  /// Instruction currently given to the user.
   CPRInstruction _currentInstruction = CPRInstruction.fine;
 
-  /// Timer for the guided CPR
+  /// Timer for the guided CPR.
   Timer? _timer;
 
-  /// Bool for storing if mouth-to-mouth is activated
+  /// Bool for storing if mouth-to-mouth is activated.
   bool _mouthToMouth = true;
-
-  /// Counter for counting how many pushes were made
-  int _pushCounter = 0;
 
   @override
   void initState() {
@@ -106,14 +107,23 @@ class _CPReadyState extends State<CPReady> {
     }
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-    _imuSubscription?.cancel();
-    _timer?.cancel();
-    if (_earableConnected) {
-      widget._openEarable.audioPlayer.setState(AudioPlayerState.stop);
-    }
+  /// Initializes Kalman filters for acceleration data.
+  void _initializeKalmanFilters() {
+    _kalmanX = SimpleKalman(
+      errorMeasure: _errorMeasureAcc,
+      errorEstimate: _errorMeasureAcc,
+      q: 0.9,
+    );
+    _kalmanY = SimpleKalman(
+      errorMeasure: _errorMeasureAcc,
+      errorEstimate: _errorMeasureAcc,
+      q: 0.9,
+    );
+    _kalmanZ = SimpleKalman(
+      errorMeasure: _errorMeasureAcc,
+      errorEstimate: _errorMeasureAcc,
+      q: 0.9,
+    );
   }
 
   /// Sets up listeners to receive sensor data from the OpenEarable device.
@@ -126,6 +136,16 @@ class _CPReadyState extends State<CPReady> {
         _processSensorData(data);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _imuSubscription?.cancel();
+    _timer?.cancel();
+    if (_earableConnected) {
+      widget._openEarable.audioPlayer.setState(AudioPlayerState.stop);
+    }
   }
 
   /// Processes the received sensor [data] and updates the frequency.
@@ -159,7 +179,7 @@ class _CPReadyState extends State<CPReady> {
     }
   }
 
-  /// Updates the frequency of the CPR
+  /// Updates the frequency of the CPR.
   void _updateFrequency() {
     var currentTime = DateTime.now();
     if (_lastPush == null) {
@@ -195,10 +215,10 @@ class _CPReadyState extends State<CPReady> {
     }
   }
 
-  /// Updates the instruction given to the user based on the frequency measured
+  /// Updates the instruction given to the user based on the frequency measured.
   /// by the earable, with which they are currently giving CPR.
   ///
-  /// The recommend CPR frequency is between 100 and 120 bpm
+  /// The recommend CPR frequency is between 100 and 120 bpm.
   /// (Source: [NHS](https://www.nhs.uk/conditions/first-aid/cpr/#:~:text=Keeping%20your%20hands%20on%20their,as%20long%20as%20you%20can.))
   void _updateInstruction() {
     setState(() {
@@ -214,25 +234,6 @@ class _CPReadyState extends State<CPReady> {
         _currentInstruction = CPRInstruction.fine;
       }
     });
-  }
-
-  /// Initializes Kalman filters for acceleration data.
-  void _initializeKalmanFilters() {
-    _kalmanX = SimpleKalman(
-      errorMeasure: _errorMeasureAcc,
-      errorEstimate: _errorMeasureAcc,
-      q: 0.9,
-    );
-    _kalmanY = SimpleKalman(
-      errorMeasure: _errorMeasureAcc,
-      errorEstimate: _errorMeasureAcc,
-      q: 0.9,
-    );
-    _kalmanZ = SimpleKalman(
-      errorMeasure: _errorMeasureAcc,
-      errorEstimate: _errorMeasureAcc,
-      q: 0.9,
-    );
   }
 
   /// Initializes a mouth to mouth sequence.
@@ -411,10 +412,10 @@ class _CPReadyState extends State<CPReady> {
     );
   }
 
-  /// Method that returns the widget that is shown when the user is not doing CPR
+  /// Method that returns the widget that is shown when the user is not doing CPR.
   Widget _buildStartScreen() {
     double mainButtonSize =
-        min(max(MediaQuery.sizeOf(context).width / 2, 300), 500);
+        min(max(MediaQuery.sizeOf(context).width / 2, 300), 400);
 
     return Column(
       children: [
@@ -434,7 +435,7 @@ class _CPReadyState extends State<CPReady> {
     );
   }
 
-  /// Method that returns the widget that is shown when the user is performing CPR
+  /// Method that returns the widget that is shown when the user is performing CPR.
   Widget _buildCprScreen() {
     return Column(
       children: [
@@ -513,6 +514,7 @@ class _CPReadyState extends State<CPReady> {
             ),
           ],
         ),
+        CprAnimation(height: 200, width: 200),
         CprInstructionView(instruction: _currentInstruction),
         Text(
           "Current frequency: ${toBPM(_currentFrequency).round()}",

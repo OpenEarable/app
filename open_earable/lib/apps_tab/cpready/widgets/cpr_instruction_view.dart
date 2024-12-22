@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:open_earable/apps_tab/cpready/model/data.dart';
 import 'package:open_earable/apps_tab/cpready/utils.dart';
 
+/// Widget that displays a [CPRInstruction].
 class CprInstructionView extends StatelessWidget {
-  const CprInstructionView({super.key, required CPRInstruction instruction}) : _instruction = instruction;
+  const CprInstructionView({
+    super.key,
+    required CPRInstruction instruction,
+  }) : _instruction = instruction;
 
   final CPRInstruction _instruction;
 
@@ -15,7 +19,8 @@ class CprInstructionView extends StatelessWidget {
         fontSize: 50,
         color: _instruction.color,
       ),
-      textScaler: TextScaler.linear(textScaleFactor(context, maxTextScaleFactor: 1.5)),
+      textScaler:
+          TextScaler.linear(textScaleFactor(context, maxTextScaleFactor: 1.5)),
     );
   }
 }
