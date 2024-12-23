@@ -33,7 +33,7 @@ class _CprAnimationState extends State<CprAnimation> {
   ];
 
   /// The time an image is displayed in milliseconds.
-  final int _imageTime = 440;
+  final int _imageTime = 260;
 
   /// The index of the current image.
   int _currentIndex = 0;

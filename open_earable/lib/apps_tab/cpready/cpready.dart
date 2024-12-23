@@ -18,7 +18,7 @@ import 'package:simple_kalman/simple_kalman.dart';
 /// Also it supports mouth-to-mouth procedure and actively prompts the user to do
 /// so if the feature is activated.
 /// Additionally a metronome and an animation are implemented which can give the user an
-/// audible or visual support for performing CPR with a frequency of 110 bpm.
+/// audio or visual support for performing CPR with a frequency of 110 bpm.
 class CPReady extends StatefulWidget {
   const CPReady(this._openEarable, {super.key});
 
@@ -46,6 +46,9 @@ class _CPReadyState extends State<CPReady> {
 
   ///Constant for the amounts of pushes between mouth-to-mouth sequences.
   final int _mouthToMouthInterval = 30;
+
+  /// The name of the .wav file that contains the frequency that should be played as an audio assistance.
+  final String _frequencyFileName = "frequency.wav";
 
   /// The subscription to the imu data.
   StreamSubscription? _imuSubscription;
@@ -82,8 +85,8 @@ class _CPReadyState extends State<CPReady> {
   /// Instruction currently given to the user.
   CPRInstruction _currentInstruction = CPRInstruction.fine;
 
-  /// Timer for the guided CPR.
-  Timer? _timer;
+  /// Bool indicating if an audio assistance is given.
+  bool _playingTone = false;
 
   /// Bool for storing if mouth-to-mouth is activated.
   bool _mouthToMouth = true;
@@ -142,7 +145,6 @@ class _CPReadyState extends State<CPReady> {
   void dispose() {
     super.dispose();
     _imuSubscription?.cancel();
-    _timer?.cancel();
     if (_earableConnected) {
       widget._openEarable.audioPlayer.setState(AudioPlayerState.stop);
     }
@@ -282,32 +284,22 @@ class _CPReadyState extends State<CPReady> {
     );
   }
 
-  /// Starts or stops a timer for the metronome.
-  /// Due to the asynchronous communication and jitter, the metronome does not
-  /// play a perfect frequency but can still help.
-  void _startStopMetronomeTimer() {
-    if (_timer == null) {
-      //Sets up a timer that will play a tone with a frequency of approx 110 bpm
-      _timer = Timer.periodic(
-        Duration(milliseconds: 545),
-        (Timer t) {
-          if (_earableConnected) {
-            widget._openEarable.audioPlayer.setState(AudioPlayerState.start);
-            widget._openEarable.audioPlayer.setState(AudioPlayerState.pause);
-          }
-        },
-      );
-
+  /// Starts or stops playing a .wav file that is stored on the SD card of the earable.
+  void _startStopAudioAssistance() {
+    if (!_playingTone) {
+      //Plays an audio file that supports the user while doing CPR.
       if (_earableConnected) {
-        widget._openEarable.audioPlayer.frequency(1, 440, 0.2);
+        widget._openEarable.audioPlayer.wavFile(_frequencyFileName);
       }
     } else {
       if (_earableConnected) {
         widget._openEarable.audioPlayer.setState(AudioPlayerState.pause);
       }
-      _timer!.cancel();
-      _timer = null;
     }
+
+    setState(() {
+      _playingTone = !_playingTone;
+    });
   }
 
   ///Starts or stops a CPR procedure.
@@ -505,8 +497,8 @@ class _CPReadyState extends State<CPReady> {
             Expanded(
               flex: 1,
               child: CprStandardButton(
-                onPressed: _startStopMetronomeTimer,
-                label: _timer == null ? "Start Metronome" : "Stop Metronome",
+                onPressed: _startStopAudioAssistance,
+                label: _playingTone ? "Stop Metronome" : "Start Metronome",
               ),
             ),
             SizedBox(
@@ -514,7 +506,12 @@ class _CPReadyState extends State<CPReady> {
             ),
           ],
         ),
-        CprAnimation(height: 200, width: 200),
+        Visibility(
+          //Animation should only be visible if there is no tone playing due to the two frequencies
+          //not being synced up.
+          visible: !_playingTone,
+          child: CprAnimation(height: 200, width: 200),
+        ),
         CprInstructionView(instruction: _currentInstruction),
         Text(
           "Current frequency: ${toBPM(_currentFrequency).round()}",
