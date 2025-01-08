@@ -61,6 +61,7 @@ dependencies:
   universal_html: ^2.2.4
   flutter_timer_countdown: ^1.0.7
   flutter_svg: ^2.0.16
+  url_launcher: ^6.3.1
 
 dependency_overrides:
   intl: ^0.18.1

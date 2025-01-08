@@ -11,6 +11,7 @@ import 'package:open_earable/apps_tab/cpready/widgets/cpr_standard_button.dart';
 import 'package:open_earable/apps_tab/cpready/widgets/cpr_start_button.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:simple_kalman/simple_kalman.dart';
+import 'package:url_launcher/link.dart';
 
 /// App that helps the user when performing CPR.
 ///
@@ -290,6 +291,7 @@ class _CPReadyState extends State<CPReady> {
       //Plays an audio file that supports the user while doing CPR.
       if (_earableConnected) {
         widget._openEarable.audioPlayer.wavFile(_frequencyFileName);
+        widget._openEarable.audioPlayer.setState(AudioPlayerState.start);
       }
     } else {
       if (_earableConnected) {
@@ -310,6 +312,9 @@ class _CPReadyState extends State<CPReady> {
         _doingCPR = false;
         _lastPush = null;
       });
+      if (_earableConnected) {
+        widget._openEarable.audioPlayer.setState(AudioPlayerState.stop);
+      }
       return;
     }
 
@@ -321,7 +326,7 @@ class _CPReadyState extends State<CPReady> {
       context: context,
       builder: (BuildContext context) => AlertDialog(
         title: Text(
-          "Get in position!",
+          "Get ready!",
           style: TextStyle(color: Colors.white, fontSize: 30),
           textScaler: TextScaler.linear(textScaleFactor(context)),
         ),
@@ -418,10 +423,29 @@ class _CPReadyState extends State<CPReady> {
         SizedBox(
           height: 20,
         ),
-        Text(
-          "First call emergency agencies before performing CPR",
-          style: TextStyle(color: Colors.white, fontSize: 30),
-          textScaler: TextScaler.linear(textScaleFactor(context)),
+        Padding(
+          padding: const EdgeInsets.all(4),
+          child: Text(
+            "First call emergency agencies before performing CPR. For infos on emergency numbers see:",
+            style: TextStyle(color: Colors.white, fontSize: 30),
+            textScaler: TextScaler.linear(textScaleFactor(context)),
+          ),
+        ),
+        SizedBox(height: 5,),
+        Link(
+          uri: Uri.parse("https://nienananas.github.io/EmergencyInfo/"),
+          target: LinkTarget.blank,
+          builder: (BuildContext context, FollowLink? openLink) {
+            return TextButton.icon(
+              onPressed: openLink,
+              label: Text(
+                "EmergencyInfo",
+                style: TextStyle(color: Colors.blueAccent, fontSize: 25),
+                textScaler: TextScaler.linear(textScaleFactor(context)),
+              ),
+              icon: const Icon(Icons.open_in_new, color: Colors.blueAccent,),
+            );
+          },
         ),
       ],
     );
@@ -509,7 +533,7 @@ class _CPReadyState extends State<CPReady> {
         Visibility(
           //Animation should only be visible if there is no tone playing due to the two frequencies
           //not being synced up.
-          visible: !_playingTone,
+          visible: true,
           child: CprAnimation(height: 200, width: 200),
         ),
         CprInstructionView(instruction: _currentInstruction),

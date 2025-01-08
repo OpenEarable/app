@@ -11,7 +11,7 @@ It helps the user while performing CPR.
 
 ## Audio Support
 It is possible to enable audio support.
-For this feature to work, an audio file (.wav format) named "frequency.wav" needs to be on the SD card of the earable.
+For this feature to work, an audio file (.wav format) named "frequency.wav" needs to be on the SD card inserted into the earable.
 This file needs to contain the metronome sound in the desired frequency.
 An exemplary file is provided in the assets folder.
 If the prerequisites are met, the audio support can be enabled with a button while doing CPR.
@@ -22,4 +22,4 @@ This visual support consists of an animation that shows an CPR procedure with a 
 
 ## Mouth-to-mouth resuscitation
 Optionally, the app can prompt the user to do mouth-to-mouth resuscitation.
-This is done by showing a pop-up dialogue after every 30 pushes. 
+This is done by showing a pop-up dialogue after every 30 pushes.
