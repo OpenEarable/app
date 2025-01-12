@@ -16,10 +16,9 @@ import 'package:url_launcher/link.dart';
 /// App that helps the user when performing CPR.
 ///
 /// It provides functionality for measuring the frequency of the CPR procedure.
-/// Also it supports mouth-to-mouth procedure and actively prompts the user to do
-/// so if the feature is activated.
+/// Also, it supports mouth-to-mouth procedure and actively prompts the user to do so if the feature is activated.
 /// Additionally a metronome and an animation are implemented which can give the user an
-/// audio or visual support for performing CPR with a frequency of 110 bpm.
+/// audible or visual support for performing CPR with a frequency of 110 bpm.
 class CPReady extends StatefulWidget {
   const CPReady(this._openEarable, {super.key});
 
@@ -208,6 +207,7 @@ class _CPReadyState extends State<CPReady> {
         _pushCounter++;
 
         if (_pushCounter == _mouthToMouthInterval) {
+          //Start mouth to mouth sequence if the feature is activated
           _pushCounter = 0;
           if (_mouthToMouth) {
             _mouthToMouthSequence();
@@ -253,6 +253,7 @@ class _CPReadyState extends State<CPReady> {
             Navigator.of(builderContext).pop();
           }
           setState(() {
+            //Need to reset the last push so that the frequency can be correctly resumed after the mouth-to-mouth sequence.
             _lastPush = null;
             _pushCounter = 0;
           });
@@ -431,7 +432,9 @@ class _CPReadyState extends State<CPReady> {
             textScaler: TextScaler.linear(textScaleFactor(context)),
           ),
         ),
-        SizedBox(height: 5,),
+        SizedBox(
+          height: 5,
+        ),
         Link(
           uri: Uri.parse("https://nienananas.github.io/EmergencyInfo/"),
           target: LinkTarget.blank,
@@ -443,7 +446,10 @@ class _CPReadyState extends State<CPReady> {
                 style: TextStyle(color: Colors.blueAccent, fontSize: 25),
                 textScaler: TextScaler.linear(textScaleFactor(context)),
               ),
-              icon: const Icon(Icons.open_in_new, color: Colors.blueAccent,),
+              icon: const Icon(
+                Icons.open_in_new,
+                color: Colors.blueAccent,
+              ),
             );
           },
         ),

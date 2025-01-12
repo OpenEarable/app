@@ -9,6 +9,7 @@ class CprInstructionView extends StatelessWidget {
     required CPRInstruction instruction,
   }) : _instruction = instruction;
 
+  /// The instruction that is displayed.
   final CPRInstruction _instruction;
 
   @override
