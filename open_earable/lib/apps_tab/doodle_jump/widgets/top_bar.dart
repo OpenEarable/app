@@ -12,6 +12,9 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 /// [TopBar] widget. It subscribes to sensor data from the [OpenEarable] device
 /// and updates the roll value, which in turn updates the position of the red
 /// indicator in the top bar.
+///
+/// The [loadSensor] method subscribes to the sensor data from the [OpenEarable]
+///
 class TopBar extends StatefulWidget {
   final OpenEarable openEarable;
 

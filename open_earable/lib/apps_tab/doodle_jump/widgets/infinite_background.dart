@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 /// image, one above the screen and one within the screen. As the player
 /// moves, the backgrounds are repositioned to create the illusion of
 /// continuous scrolling.
+///
 class InfiniteBackground extends StatelessWidget {
   final double playerPosition;
 

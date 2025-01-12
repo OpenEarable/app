@@ -20,6 +20,7 @@
 /// - Handling sensor data to move the player left or right.
 /// - Updating the player's position and checking for collisions with platforms.
 /// - Adding new platforms as the player progresses.
+///
 library;
 
 import 'package:flutter/material.dart';

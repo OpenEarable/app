@@ -15,6 +15,7 @@ import '../widgets/infinite_background.dart';
 ///
 /// The [loadSensor] method subscribes to the sensor data from the [OpenEarable]
 /// device and updates the roll value accordingly.
+///
 class GameScreen extends StatefulWidget {
   final Doodle player;
   final List<Platform> platforms;

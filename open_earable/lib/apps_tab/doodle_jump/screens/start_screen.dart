@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 /// connection error message if the `showConnectionError` flag is set to true.
 ///
 /// The `onStartPressed` callback is triggered when the start button is pressed.
-
+///
 class StartScreen extends StatelessWidget {
   final VoidCallback onStartPressed;
   final bool showConnectionError;

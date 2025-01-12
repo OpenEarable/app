@@ -2,6 +2,7 @@
 ///
 /// The platform has a position defined by [x] and [y] coordinates,
 /// and dimensions defined by [width] and [height].
+///
 class Platform {
   double x;
   double y;

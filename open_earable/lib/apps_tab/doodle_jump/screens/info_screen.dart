@@ -12,10 +12,7 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 /// The [InfoScreen] class contains the following methods:
 /// - `initState`: Initializes the animation controller and starts the animation.
 /// - `dispose`: Disposes the animation controller.
-/// - `build`: Builds the UI of the screen.
-/// - `_getTestView`: Returns the widget for the test view.
-/// - `_getControlView`: Returns the widget for the control view.
-/// - `_buildTestBar`: Builds the bar widget for the test view that moves based on sensor data.
+///
 class InfoScreen extends StatefulWidget {
   final OpenEarable openEarable;
 

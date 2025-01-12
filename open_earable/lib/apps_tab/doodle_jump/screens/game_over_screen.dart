@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 ///
 /// This screen displays a "Game Over!" message and a restart button.
 /// When the restart button is pressed, the provided [onRestartPressed] callback is called.
+///
 class GameOverScreen extends StatelessWidget {
   final VoidCallback onRestartPressed;
 

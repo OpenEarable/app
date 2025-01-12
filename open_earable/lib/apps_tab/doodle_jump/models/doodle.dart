@@ -5,6 +5,14 @@ import 'package:open_earable/apps_tab/doodle_jump/models/platform.dart';
 ///
 /// This class handles the player's position, velocity, and movement,
 /// as well as interactions with platforms and the game environment.
+///
+/// The [doodle] class contains the following methods:
+/// - `_jump`: Makes the player jump by setting the vertical velocity to the jump strength.
+/// - `update`: Updates the player's position and velocity based on gravity and time slice.
+/// - `moveLeft`: Moves the player to the left by decreasing the horizontal position.
+/// - `moveRight`: Moves the player to the right by increasing the horizontal position.
+/// - `checkPlatformCollisions`: Checks for collisions with platforms and makes the player jump if a collision is detected.
+///
 class Doodle {
   /// The vertical position of the player.
   double position = 0.0;
@@ -40,7 +48,7 @@ class Doodle {
   bool playerActive = true;
 
   /// Makes the player jump by setting the vertical velocity to the jump strength.
-  void jump() {
+  void _jump() {
     velocity = jumpStrength;
   }
 
@@ -54,7 +62,7 @@ class Doodle {
 
     if (position <= 0 && noPlatformHit) {
       position = 0;
-      jump();
+      _jump();
     } else if (position <= 0 && !noPlatformHit) {
       playerActive = false;
     }
@@ -90,7 +98,7 @@ class Doodle {
           horizontalPosition + width <= platform.x + platform.width &&
           position >= platform.y &&
           position <= platform.y + platform.height) {
-        jump();
+        _jump();
         noPlatformHit = false;
       }
     }
