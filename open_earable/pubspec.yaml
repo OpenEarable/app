@@ -59,6 +59,7 @@ dependencies:
   webview_flutter: ^4.9.0
   intl: ^0.18.1
   universal_html: ^2.2.4
+  numberpicker: ^2.1.2
 
 dependency_overrides:
   intl: ^0.18.1
@@ -132,6 +133,7 @@ flutter:
     - lib/apps_tab/tightness/assets/
     - lib/apps_tab/jump_rope_counter/assets/
     - lib/apps_tab/step_counter/assets/
+    - lib/apps_tab/pomodoro_timer/assets/
 
   fonts:
     - family:  OpenEarableIcon
