@@ -539,7 +539,7 @@ class _CPReadyState extends State<CPReady> {
         Visibility(
           //Animation should only be visible if there is no tone playing due to the two frequencies
           //not being synced up.
-          visible: true,
+          visible: !_playingTone,
           child: CprAnimation(height: 200, width: 200),
         ),
         Padding(
@@ -560,7 +560,7 @@ class _CPReadyState extends State<CPReady> {
         Padding(
           padding: const EdgeInsets.only(left: 4.0, right: 4.0),
           child: Text(
-            "The recommend frequency is between 100 and 120 bpm",
+            "The recommended frequency is between 100 and 120 bpm",
             style: TextStyle(fontSize: 30),
             textScaler: TextScaler.linear(textScaleFactor(context)),
           ),
