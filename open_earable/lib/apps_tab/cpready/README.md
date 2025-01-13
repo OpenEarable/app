@@ -24,3 +24,7 @@ If the prerequisites are met, the audio support can be enabled with a button whi
 ## Mouth-to-mouth resuscitation
 Optionally, the app can prompt the user to do mouth-to-mouth resuscitation.
 This is done by showing a pop-up dialogue after every 30 pushes.
+
+## Tests
+Since I only have an windows laptop and because of the gradle error, I could not test on an Emulator or physical android device.
+The app is therefore only tested on Edge(Web) and Chrome(Web).

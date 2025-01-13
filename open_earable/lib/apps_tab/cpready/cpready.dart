@@ -542,19 +542,28 @@ class _CPReadyState extends State<CPReady> {
           visible: true,
           child: CprAnimation(height: 200, width: 200),
         ),
-        CprInstructionView(instruction: _currentInstruction),
-        Text(
-          "Current frequency: ${toBPM(_currentFrequency).round()}",
-          style: TextStyle(fontSize: 40),
-          textScaler: TextScaler.linear(textScaleFactor(context)),
+        Padding(
+          padding: const EdgeInsets.only(left: 4.0, right: 4.0),
+          child: CprInstructionView(instruction: _currentInstruction),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(left: 4.0, right: 4.0),
+          child: Text(
+            "Current frequency: ${toBPM(_currentFrequency).round()}",
+            style: TextStyle(fontSize: 40),
+            textScaler: TextScaler.linear(textScaleFactor(context)),
+          ),
         ),
         SizedBox(
           height: 20,
         ),
-        Text(
-          "The recommend frequency is between 100 and 120 bpm",
-          style: TextStyle(fontSize: 30),
-          textScaler: TextScaler.linear(textScaleFactor(context)),
+        Padding(
+          padding: const EdgeInsets.only(left: 4.0, right: 4.0),
+          child: Text(
+            "The recommend frequency is between 100 and 120 bpm",
+            style: TextStyle(fontSize: 30),
+            textScaler: TextScaler.linear(textScaleFactor(context)),
+          ),
         ),
       ],
     );
