@@ -9,7 +9,7 @@ class InfoPage extends StatelessWidget {
       r"""The app measures acceleration along the Z-axis to detect a ducking motion and a complementary standing motion. For best results, move quickly and powerfully perpendicular to the ground, keeping your head as straight as possible. A quick squat is the best way to achieve this.""";
 
   final String jumpExplanatoryText =
-      r"""A jump is defined in the app mainly by the falling movement after the jump, to clearly distinguish a jump from a ducking movement. Keep your head straight and jump over obstacles.""";
+      r"""A jump is defined in the app mainly by the falling movement after the jump, to clearly distinguish a jump from a ducking movement. Keep your head straight and jump over obstacles with small jumps.""";
   final String duckImagePath =
       'lib/apps_tab/hamster_hurdle/assets/explanatory_image_duck.jpg';
   final String jumpImagePath =
@@ -23,6 +23,8 @@ class InfoPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(),
       body: Container(
+        width: double.infinity,
+        height: double.infinity,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
