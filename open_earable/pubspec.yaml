@@ -33,11 +33,12 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   open_earable_flutter:
-    git: 
+    git:
       url: https://github.com/OpenEarable/open_earable_flutter.git
   youtube_player_flutter: ^9.1.1
   permission_handler: ^11.3.1
   app_settings: ^5.1.1
+  flame: ^1.21.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -63,12 +64,13 @@ dependencies:
 dependency_overrides:
   intl: ^0.18.1
   web: 0.5.1
-  
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_launcher_icons: ^0.13.1
   flutter_lints: ^5.0.0
+  flame: ^1.21.0
 
 flutter_icons:
   android: true
@@ -124,6 +126,7 @@ flutter:
   #   - images/a_dot_ham.jpeg
   assets:
     - assets/
+    - assets/images/
     - lib/apps_tab/powernapper/assets/
     - lib/apps_tab/recorder/assets/
     - lib/apps_tab/posture_tracker/assets/
@@ -132,14 +135,18 @@ flutter:
     - lib/apps_tab/tightness/assets/
     - lib/apps_tab/jump_rope_counter/assets/
     - lib/apps_tab/step_counter/assets/
+    - lib/apps_tab/hamster_hurdle/assets/
 
   fonts:
-    - family:  OpenEarableIcon
+    - family: OpenEarableIcon
       fonts:
-       - asset: assets/OpenEarableIcon.ttf
+        - asset: assets/OpenEarableIcon.ttf
     - family: Digital
       fonts:
         - asset: assets/digital-7-mono.ttf
+    - family: HamsterHurdleFont
+      fonts:
+        - asset: lib/apps_tab/hamster_hurdle/fonts/JungleAdventurer.ttf
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
 
