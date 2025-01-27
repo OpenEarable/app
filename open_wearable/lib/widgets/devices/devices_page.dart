@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
@@ -60,6 +61,12 @@ class DeviceRow extends StatelessWidget {
             children: [
               Row(
                 children: [
+                  if (wearableIconPath != null)
+                    SvgPicture.asset(
+                      wearableIconPath,
+                      width: 50,
+                      height: 50,
+                    ),
                   Text(_device.name, style: Theme.of(context).textTheme.bodyLarge,),
                   Spacer(),
                   if (_device is DeviceIdentifier)

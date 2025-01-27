@@ -43,6 +43,7 @@ dependencies:
   provider: ^6.1.2
   logger: ^2.5.0
   community_charts_flutter: ^1.0.4
+  flutter_svg: ^2.0.17
 
 dev_dependencies:
   flutter_test:
