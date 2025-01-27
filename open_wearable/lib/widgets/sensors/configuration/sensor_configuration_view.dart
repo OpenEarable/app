@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
@@ -18,28 +18,32 @@ class SensorConfigurationView extends StatelessWidget {
       builder: (context, wearablesProvider, child) {
         return Padding(
           padding: EdgeInsets.all(10),
-          child: ListView(
-            children: [
-              ...wearablesProvider.wearables.map((wearable) {
-                return SensorConfigurationDeviceRow(device: wearable);
-              }),
-              PlatformElevatedButton(
-                onPressed: () {
-                  SensorConfigurationProvider sensorConfigurationProvider = Provider.of<SensorConfigurationProvider>(context, listen: false);
-                  sensorConfigurationProvider.sensorConfigurations.forEach((config, value) {
-                    config.setConfiguration(value);
-                  });
-                  Navigator.of(context).push(
-                    platformPageRoute(
-                      context: context,
-                      builder: (context) => SensorValuesPage(),
-                    ),
-                  );
-                },
-                child: const Text('Set sensor configurations'),
-              )
-            ],
-          )
+          child: wearablesProvider.wearables.isEmpty
+            ? Center(
+              child: Text("No devices connected", style: Theme.of(context).textTheme.titleLarge),
+            )
+            : ListView(
+              children: [
+                ...wearablesProvider.wearables.map((wearable) {
+                  return SensorConfigurationDeviceRow(device: wearable);
+                }),
+                PlatformElevatedButton(
+                  onPressed: () {
+                    SensorConfigurationProvider sensorConfigurationProvider = Provider.of<SensorConfigurationProvider>(context, listen: false);
+                    sensorConfigurationProvider.sensorConfigurations.forEach((config, value) {
+                      config.setConfiguration(value);
+                    });
+                    Navigator.of(context).push(
+                      platformPageRoute(
+                        context: context,
+                        builder: (context) => SensorValuesPage(),
+                      ),
+                    );
+                  },
+                  child: const Text('Set sensor configurations'),
+                )
+              ],
+            )
         );
       },
     );

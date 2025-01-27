@@ -75,13 +75,13 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                 ),
               ),
             
-            if (widget.device is ExtendedBatteryService)
+            if (widget.device is BatteryLevelService)
               ...[
                 Text("Battery Info", style: Theme.of(context).textTheme.titleSmall),
                 PlatformListTile(
                   title: Text("Battery Level", style: Theme.of(context).textTheme.bodyLarge),
                   subtitle: StreamBuilder(
-                    stream: (widget.device as ExtendedBatteryService).batteryPercentageStream,
+                    stream: (widget.device as BatteryLevelService).batteryPercentageStream,
                     builder: (context, snapshot) {
                       if (snapshot.hasData) {
                         return Text("${snapshot.data}%");

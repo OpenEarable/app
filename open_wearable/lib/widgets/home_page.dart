@@ -17,6 +17,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   static final titles = ["Devices", "Sensors"];
+  
   List<BottomNavigationBarItem> items(BuildContext context) {
     return [
       BottomNavigationBarItem(

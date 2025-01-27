@@ -18,12 +18,16 @@ class DevicesPage extends StatelessWidget {
       builder: (context, wearablesProvider, child) {
         return Padding(
           padding: EdgeInsets.all(10),
-          child: ListView.builder(
-            itemCount: wearablesProvider.wearables.length,
-            itemBuilder: (context, index) {
-              return DeviceRow(device: wearablesProvider.wearables[index]);
-            },
-          )
+          child: wearablesProvider.wearables.isEmpty
+                ? Center(
+                  child: Text("No devices connected", style: Theme.of(context).textTheme.titleLarge),
+                )
+              : ListView.builder(
+                  itemCount: wearablesProvider.wearables.length,
+                  itemBuilder: (context, index) {
+                    return DeviceRow(device: wearablesProvider.wearables[index]);
+                  },
+                )
         );
       },
     );
@@ -37,6 +41,9 @@ class DeviceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+
+    String? wearableIconPath = _device.getWearableIconPath();
+
     return GestureDetector(
       onTap: () {
         Navigator.of(context).push(
