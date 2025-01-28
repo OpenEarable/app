@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
+import 'package:open_wearable/widgets/devices/battery_state.dart';
 import 'package:open_wearable/widgets/devices/device_detail_page.dart';
 import 'package:provider/provider.dart';
 
@@ -67,7 +68,16 @@ class DeviceRow extends StatelessWidget {
                       width: 50,
                       height: 50,
                     ),
-                  Text(_device.name, style: Theme.of(context).textTheme.bodyLarge,),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _device.name,
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        BatteryStateView(device: _device)
+                      ],
+                    ),
                   Spacer(),
                   if (_device is DeviceIdentifier)
                     FutureBuilder(

@@ -18,7 +18,10 @@ class SensorConfigurationDeviceRow extends StatelessWidget {
             // Device Title
             Row(
               children: [
-                Text(device.name, style: Theme.of(context).textTheme.bodyLarge),
+                Text(
+                  device.name,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+                ),
                 Spacer(),
                 if (device is DeviceIdentifier)
                   FutureBuilder(
