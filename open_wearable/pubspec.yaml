@@ -44,6 +44,7 @@ dependencies:
   logger: ^2.5.0
   community_charts_flutter: ^1.0.4
   flutter_svg: ^2.0.17
+  flutter_colorpicker: ^1.1.0
 
 dev_dependencies:
   flutter_test:

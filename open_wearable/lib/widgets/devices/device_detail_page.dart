@@ -3,6 +3,7 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/widgets/devices/battery_state.dart';
+import 'package:open_wearable/widgets/devices/rgb_control.dart';
 
 /// A page that displays the details of a device.
 /// 
@@ -93,6 +94,14 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
               ...[
                 Text("Control Status LED", style: Theme.of(context).textTheme.titleSmall),
                 StatusLEDControlWidget(statusLED: widget.device as StatusLed, rgbLed: widget.device as RgbLed),
+              ]
+            else if (widget.device is RgbLed && widget.device is! StatusLed)
+              ...[
+                Text("Control RGB LED", style: Theme.of(context).textTheme.titleSmall),
+                PlatformListTile(
+                  title: Text("LED Color", style: Theme.of(context).textTheme.bodyLarge),
+                  trailing: RgbControlView(rgbLed: widget.device as RgbLed),
+                ),
               ],
           ],
         ),
@@ -117,16 +126,22 @@ class _StatusLEDControlWidgetState extends State<StatusLEDControlWidget> {
   Widget build(BuildContext context) {
     return PlatformListTile(
       title: Text("Override LED Color", style: Theme.of(context).textTheme.bodyLarge),
-      subtitle: Text("Override the LED color to a custom color, otherwise the status of the device will be displayed."),
-      trailing: PlatformSwitch(
-        value: _overrideColor,
-        onChanged: (value) {
-          widget.statusLED.showStatus(!value);
-          setState(() {
-            _overrideColor = value;
-          });
-        },
-      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_overrideColor)
+            RgbControlView(rgbLed: widget.rgbLed),
+          PlatformSwitch(
+            value: _overrideColor,
+            onChanged: (value) async {
+              setState(() {
+                _overrideColor = value;
+              });
+              widget.statusLED.showStatus(!value);
+            },
+          ),
+        ],
+      )
     );
   }
 }

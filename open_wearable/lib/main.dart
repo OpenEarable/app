@@ -14,7 +14,8 @@ class CustomLogFilter extends LogFilter {
   bool shouldLog(LogEvent event) {
     return !(
       event.message.contains('componentData') ||
-      event.message.contains('SensorData')
+      event.message.contains('SensorData') ||
+      event.message.contains('Battery')
     );
   }
 }
