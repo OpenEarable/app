@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/widgets/devices/battery_state.dart';
 
 /// A page that displays the details of a device.
 /// 
@@ -19,14 +21,26 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    String? wearableIconPath = widget.device.getWearableIconPath();
+
     return PlatformScaffold(
       appBar: PlatformAppBar(
-        title: Text(widget.device.name),
+        title: Text("Device details"),
       ),
       body: Padding(
         padding: const EdgeInsets.all(10.0),
         child: ListView(
           children: [
+            Column(
+              children: [
+                Text(widget.device.name, style: Theme.of(context).textTheme.titleLarge),
+                Center(
+                  child: BatteryStateView(device: widget.device),
+                ),
+                if (wearableIconPath != null)
+                  SvgPicture.asset(wearableIconPath, width: 100, height: 100),
+              ],
+            ),
             Text("Device Info", style: Theme.of(context).textTheme.titleSmall),
             PlatformListTile(
               title: Text("Bluetooth Address", style: Theme.of(context).textTheme.bodyLarge),
@@ -74,24 +88,6 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                   },
                 ),
               ),
-            
-            if (widget.device is BatteryLevelService)
-              ...[
-                Text("Battery Info", style: Theme.of(context).textTheme.titleSmall),
-                PlatformListTile(
-                  title: Text("Battery Level", style: Theme.of(context).textTheme.bodyLarge),
-                  subtitle: StreamBuilder(
-                    stream: (widget.device as BatteryLevelService).batteryPercentageStream,
-                    builder: (context, snapshot) {
-                      if (snapshot.hasData) {
-                        return Text("${snapshot.data}%");
-                      } else {
-                        return PlatformCircularProgressIndicator();
-                      }
-                    },
-                  )
-                )
-              ],
 
             if (widget.device is StatusLed)
               ...[

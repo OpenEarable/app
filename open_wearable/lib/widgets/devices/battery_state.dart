@@ -10,6 +10,7 @@ class BatteryStateView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         if (_device is BatteryLevelService)
           StreamBuilder(
@@ -36,14 +37,14 @@ class BatteryStateView extends StatelessWidget {
                 }
 
                 switch (snapshot.data!.chargeLevel) {
-                  case BatteryChargeLevel.good:
-                    return Icon(Icons.battery_full);
-                  case BatteryChargeLevel.low:
-                    return Icon(Icons.battery_3_bar_rounded);
-                  case BatteryChargeLevel.critical:
-                    return Icon(Icons.battery_1_bar_rounded);
-                  case BatteryChargeLevel.unknown:
-                    return Icon(Icons.battery_unknown);
+                case BatteryChargeLevel.good:
+                  return Icon(Icons.battery_full);
+                case BatteryChargeLevel.low:
+                  return Icon(Icons.battery_3_bar_rounded);
+                case BatteryChargeLevel.critical:
+                  return Icon(Icons.battery_1_bar_rounded);
+                case BatteryChargeLevel.unknown:
+                  return Icon(Icons.battery_unknown);
                 }
               } else {
                 return PlatformCircularProgressIndicator();
