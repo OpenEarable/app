@@ -110,27 +110,31 @@ class _SensorChartState extends State<SensorChart> {
           ),
         // Chart display
         Expanded(
-          child: charts.LineChart(
-            _chartData,
-            animate: false,
-            domainAxis: charts.NumericAxisSpec(
-              viewport: xMin != null && xMax != null
-                  ? charts.NumericExtents(xMin.toDouble(), xMax.toDouble())
-                  : null,
-              tickProviderSpec: const charts.BasicNumericTickProviderSpec(zeroBound: false, desiredMinTickCount: 3),
+          child: _chartData.isEmpty ?
+            Center(
+              child: Text('No data available'),
+            ) :
+            charts.LineChart(
+              _chartData,
+              animate: false,
+              domainAxis: charts.NumericAxisSpec(
+                viewport: xMin != null && xMax != null
+                    ? charts.NumericExtents(xMin.toDouble(), xMax.toDouble())
+                    : null,
+                tickProviderSpec: const charts.BasicNumericTickProviderSpec(zeroBound: false, desiredMinTickCount: 3),
+              ),
+              primaryMeasureAxis: charts.NumericAxisSpec(
+                viewport: yMin != null && yMax != null
+                    ? charts.NumericExtents(yMin, yMax)
+                    : null,
+                tickProviderSpec: const charts.BasicNumericTickProviderSpec(zeroBound: false, desiredMinTickCount: 3),
+              ),
+              behaviors: [
+                charts.SeriesLegend(),
+                charts.ChartTitle('Time (ms)', behaviorPosition: charts.BehaviorPosition.bottom),
+                charts.ChartTitle(widget.sensor.axisUnits.first, behaviorPosition: charts.BehaviorPosition.start),
+              ],
             ),
-            primaryMeasureAxis: charts.NumericAxisSpec(
-              viewport: yMin != null && yMax != null
-                  ? charts.NumericExtents(yMin, yMax)
-                  : null,
-              tickProviderSpec: const charts.BasicNumericTickProviderSpec(zeroBound: false, desiredMinTickCount: 3),
-            ),
-            behaviors: [
-              charts.SeriesLegend(),
-              charts.ChartTitle('Time (ms)', behaviorPosition: charts.BehaviorPosition.bottom),
-              charts.ChartTitle(widget.sensor.axisUnits.first, behaviorPosition: charts.BehaviorPosition.start),
-            ],
-          ),
         ),
       ],
     );
