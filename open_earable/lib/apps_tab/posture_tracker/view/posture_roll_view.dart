@@ -47,7 +47,7 @@ class PostureRollView extends StatelessWidget {
             child: ClipOval(
               child: Container(
                 color: roll.abs() > _maxRoll
-                    ? Colors.red.withOpacity(0.5)
+                    ? Colors.red.withValues(alpha: 0.5)
                     : Colors.transparent,
                 child: Stack(
                   children: [

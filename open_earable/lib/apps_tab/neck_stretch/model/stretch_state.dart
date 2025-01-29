@@ -250,8 +250,6 @@ class NeckStretch {
         _viewModel.stopTracking();
         _openEarable.audioPlayer.jingle(2);
         return;
-      default:
-        return;
     }
   }
 }

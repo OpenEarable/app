@@ -52,14 +52,14 @@ class _InternalLedColorCardState extends State<_InternalLedColorCard> {
   void _setLEDColor() {
     _stopRainbowMode();
     widget.openEarableLeft.rgbLed.writeLedColor(
-      r: OpenEarableSettings().selectedColor.red,
-      g: OpenEarableSettings().selectedColor.green,
-      b: OpenEarableSettings().selectedColor.blue,
+      r: (OpenEarableSettings().selectedColor.r * 255).round(),
+      g: (OpenEarableSettings().selectedColor.g * 255).round(),
+      b: (OpenEarableSettings().selectedColor.b * 255).round(),
     );
     widget.openEarableRight.rgbLed.writeLedColor(
-      r: OpenEarableSettings().selectedColor.red,
-      g: OpenEarableSettings().selectedColor.green,
-      b: OpenEarableSettings().selectedColor.blue,
+      r: (OpenEarableSettings().selectedColor.r * 255).round(),
+      g: (OpenEarableSettings().selectedColor.g * 255).round(),
+      b: (OpenEarableSettings().selectedColor.b * 255).round(),
     );
   }
 
