@@ -35,11 +35,16 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
             Column(
               children: [
                 Text(widget.device.name, style: Theme.of(context).textTheme.titleLarge),
-                Center(
-                  child: BatteryStateView(device: widget.device),
-                ),
+                BatteryStateView(device: widget.device),
                 if (wearableIconPath != null)
                   SvgPicture.asset(wearableIconPath, width: 100, height: 100),
+                PlatformElevatedButton(
+                  child: Text("Disconnect"),
+                  onPressed: () {
+                    widget.device.disconnect();
+                    Navigator.of(context).pop();
+                  },
+                )
               ],
             ),
             Text("Device Info", style: Theme.of(context).textTheme.titleSmall),
