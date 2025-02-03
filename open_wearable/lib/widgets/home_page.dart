@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:open_wearable/apps/widgets/apps_page.dart';
 import 'package:open_wearable/widgets/devices/connect_devices_page.dart';
 import 'package:open_wearable/widgets/devices/devices_page.dart';
 import 'package:open_wearable/widgets/sensors/configuration/sensor_configuration_view.dart';
@@ -17,7 +18,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  static final titles = ["Devices", "Sensors"];
+  static final titles = ["Devices", "Sensors", "Apps"];
   
   List<BottomNavigationBarItem> items(BuildContext context) {
     return [
@@ -29,6 +30,10 @@ class _HomePageState extends State<HomePage> {
         icon: Icon(Icons.ssid_chart_rounded),
         label: titles[1],
       ),
+      BottomNavigationBarItem(
+        icon: Icon(Icons.apps_rounded),
+        label: titles[2],
+      )
     ];
   }
 
@@ -43,6 +48,7 @@ class _HomePageState extends State<HomePage> {
     _tabs = [
       DevicesPage(),
       SensorConfigurationView(),
+      const AppsPage(),
     ];
   }
 
