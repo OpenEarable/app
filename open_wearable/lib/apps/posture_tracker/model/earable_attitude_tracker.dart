@@ -7,7 +7,10 @@ import 'package:open_wearable/apps/posture_tracker/model/ewma.dart';
 class EarableAttitudeTracker extends AttitudeTracker {
   final SensorManager _sensorManager;
   final SensorConfigurationManager _sensorConfigurationManager;
-  StreamSubscription<Map<String, dynamic>>? _subscription;
+  StreamSubscription<SensorValue>? _subscription;
+
+  @override
+  bool get isAvailable => true;
 
   @override
   bool get isTracking => _subscription != null && !_subscription!.isPaused;
@@ -25,14 +28,21 @@ class EarableAttitudeTracker extends AttitudeTracker {
       return;
     }
 
-    _sensorManager.writeSensorConfig(_buildSensorConfig());
-    _subscription =
-        _sensorManager.sensorManager.subscribeToSensorData(0).listen((event) {
-      updateAttitude(
-          roll: _rollEWMA.update(event["EULER"]["ROLL"]),
-          pitch: _pitchEWMA.update(event["EULER"]["PITCH"]),
-          yaw: _yawEWMA.update(event["EULER"]["YAW"]),);
-    });
+    SensorConfiguration sensorConfig =
+      _sensorConfigurationManager.sensorConfigurations.firstWhere((element) => element.name == "IMU");
+
+    sensorConfig.setConfiguration(sensorConfig.values.last);
+
+    _subscription = _sensorManager.sensors.firstWhere((s) => s.sensorName == "ATT").sensorStream.listen(
+      (data) {
+        SensorDoubleValue attitude = data as SensorDoubleValue;
+        updateAttitude(
+          roll: _rollEWMA.update(attitude.values[0]),
+          pitch: _pitchEWMA.update(attitude.values[1]),
+          yaw: _yawEWMA.update(attitude.values[2]),
+        );
+      },
+    );
   }
 
   @override
@@ -45,14 +55,5 @@ class EarableAttitudeTracker extends AttitudeTracker {
     stop();
     _subscription?.cancel();
     super.cancel();
-  }
-
-  OpenEarableSensorConfig _buildSensorConfig() {
-    return OpenEarableSensorConfig(sensorId: 0, samplingRate: 30, latency: 0);
-  }
-
-  void setAvailability(bool isAvailable) {
-    _isAvailble = isAvailable;
-    didChangeAvailability(this);
   }
 }
