@@ -283,9 +283,11 @@ packages:
   open_earable_flutter:
     dependency: "direct main"
     description:
-      path: "../../open_earable_flutter"
-      relative: true
-    source: path
+      path: "."
+      ref: AttitudeSensor
+      resolved-ref: "71eefe0c639279d7b017637c31dcfe72257c808a"
+      url: "https://github.com/OpenEarable/open_earable_flutter.git"
+    source: git
     version: "0.0.5"
   path:
     dependency: transitive

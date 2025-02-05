@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
-import 'package:open_wearable/apps/posture_tracker/model/mock_attitude_tracker.dart';
+import 'package:open_wearable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_wearable/apps/posture_tracker/view/posture_tracker_view.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:provider/provider.dart';
@@ -56,7 +55,10 @@ class _SelectEarableViewState extends State<SelectEarableView> {
                   context,
                   platformPageRoute(
                     context: context,
-                    builder: (context) => PostureTrackerView(MockAttitudeTracker()),
+                    builder: (context) {
+                      return PostureTrackerView(EarableAttitudeTracker(_selectedWearable! as SensorManager,
+                        _selectedWearable! as SensorConfigurationManager));
+                    }
                   )
                 );
               }
