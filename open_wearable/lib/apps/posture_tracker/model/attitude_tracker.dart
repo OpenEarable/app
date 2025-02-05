@@ -68,7 +68,7 @@ abstract class AttitudeTracker with ChangeNotifier {
           "Either roll, pitch and yaw or attitude must be provided",);
     }
     // Check if attitude is not null, otherwise use the angles
-    attitude ??= Attitude(roll: roll ?? 0, pitch: pitch ?? 0, yaw: yaw ?? 0);
+    attitude ??= Attitude(roll: -(roll ?? 0), pitch: pitch ?? 0, yaw: yaw ?? 0);
     _rawAttitude = attitude;
     // Update the stream controller with the attitude
     _attitude = attitude - _referenceAttitude;
