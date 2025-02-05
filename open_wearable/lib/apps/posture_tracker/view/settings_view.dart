@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_wearable/apps/posture_tracker/model/bad_posture_reminder.dart';
 import 'package:open_wearable/apps/posture_tracker/view_model/posture_tracker_view_model.dart';
 import 'package:provider/provider.dart';
@@ -36,8 +37,8 @@ class _SettingsViewState extends State<SettingsView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Posture Tracker Settings")),
+    return PlatformScaffold(
+      appBar: PlatformAppBar(title: const Text("Posture Tracker Settings")),
       body: ChangeNotifierProvider<PostureTrackerViewModel>.value(
           value: _viewModel,
           builder: (context, child) => Consumer<PostureTrackerViewModel>(
@@ -49,11 +50,12 @@ class _SettingsViewState extends State<SettingsView> {
   }
 
   Widget _buildSettingsView() {
-    return Column(
+    return Padding(
+      padding: EdgeInsets.all(10),
+      child: Column(
       children: [
         Card(
-          color: Theme.of(context).colorScheme.primary,
-          child: ListTile(
+          child: PlatformListTile(
             title: Text("Status"),
             trailing: Text(_viewModel.isTracking
                 ? "Tracking"
@@ -63,11 +65,11 @@ class _SettingsViewState extends State<SettingsView> {
           ),
         ),
         Card(
-            color: Theme.of(context).colorScheme.primary,
-            child: Column(children: [
-              // add a switch to control the `isActive` property of the `BadPostureSettings`
-              SwitchListTile(
-                title: Text("Bad Posture Reminder"),
+          child: Column(children: [
+            // add a switch to control the `isActive` property of the `BadPostureSettings`
+            PlatformListTile(
+              title: Text("Bad Posture Reminder"),
+              trailing: PlatformSwitch(
                 value: _viewModel.badPostureSettings.isActive,
                 onChanged: (value) {
                   BadPostureSettings settings = _viewModel.badPostureSettings;
@@ -75,122 +77,120 @@ class _SettingsViewState extends State<SettingsView> {
                   _viewModel.setBadPostureSettings(settings);
                 },
               ),
-              Visibility(
-                  visible: _viewModel.badPostureSettings.isActive,
-                  child: Column(children: [
-                    ListTile(
-                      title: Text("Roll Angle Threshold (in degrees)"),
-                      trailing: SizedBox(
-                        height: 37.0,
-                        width: 52,
-                        child: TextField(
-                          controller: _rollAngleThresholdController,
-                          textAlign: TextAlign.end,
-                          style: TextStyle(color: Colors.black),
-                          decoration: InputDecoration(
-                              contentPadding: EdgeInsets.all(10),
-                              floatingLabelBehavior:
-                                  FloatingLabelBehavior.never,
-                              border: OutlineInputBorder(),
-                              labelText: 'Roll',
-                              filled: true,
-                              labelStyle: TextStyle(color: Colors.black),
-                              fillColor: Colors.white,),
-                          keyboardType: TextInputType.number,
-                          onChanged: (_) {
-                            _updatePostureSettings();
-                          },
-                        ),
+            ),
+            Visibility(
+                visible: _viewModel.badPostureSettings.isActive,
+                child: Column(children: [
+                  PlatformListTile(
+                    title: Text("Roll Angle Threshold (in degrees)"),
+                    trailing: SizedBox(
+                      height: 37.0,
+                      width: 52,
+                      child: TextField(
+                        controller: _rollAngleThresholdController,
+                        textAlign: TextAlign.end,
+                        style: TextStyle(color: Colors.black),
+                        decoration: InputDecoration(
+                            contentPadding: EdgeInsets.all(10),
+                            floatingLabelBehavior:
+                                FloatingLabelBehavior.never,
+                            border: OutlineInputBorder(),
+                            labelText: 'Roll',
+                            filled: true,
+                            labelStyle: TextStyle(color: Colors.black),
+                            fillColor: Colors.white,),
+                        keyboardType: TextInputType.number,
+                        onChanged: (_) {
+                          _updatePostureSettings();
+                        },
                       ),
                     ),
-                    ListTile(
-                      title: Text("Pitch Angle Threshold (in degrees)"),
-                      trailing: SizedBox(
-                        height: 37.0,
-                        width: 52,
-                        child: TextField(
-                          controller: _pitchAngleThresholdController,
-                          textAlign: TextAlign.end,
-                          style: TextStyle(color: Colors.black),
-                          decoration: InputDecoration(
-                              contentPadding: EdgeInsets.all(10),
-                              floatingLabelBehavior:
-                                  FloatingLabelBehavior.never,
-                              border: OutlineInputBorder(),
-                              labelText: 'Pitch',
-                              filled: true,
-                              labelStyle: TextStyle(color: Colors.black),
-                              fillColor: Colors.white,),
-                          keyboardType: TextInputType.number,
-                          onChanged: (_) {
-                            _updatePostureSettings();
-                          },
-                        ),
+                  ),
+                  PlatformListTile(
+                    title: Text("Pitch Angle Threshold (in degrees)"),
+                    trailing: SizedBox(
+                      height: 37.0,
+                      width: 52,
+                      child: TextField(
+                        controller: _pitchAngleThresholdController,
+                        textAlign: TextAlign.end,
+                        style: TextStyle(color: Colors.black),
+                        decoration: InputDecoration(
+                            contentPadding: EdgeInsets.all(10),
+                            floatingLabelBehavior:
+                                FloatingLabelBehavior.never,
+                            border: OutlineInputBorder(),
+                            labelText: 'Pitch',
+                            filled: true,
+                            labelStyle: TextStyle(color: Colors.black),
+                            fillColor: Colors.white,),
+                        keyboardType: TextInputType.number,
+                        onChanged: (_) {
+                          _updatePostureSettings();
+                        },
                       ),
                     ),
-                    ListTile(
-                      title: Text("Bad Posture Time Threshold (in seconds)"),
-                      trailing: SizedBox(
-                        height: 37.0,
-                        width: 52,
-                        child: TextField(
-                          controller: _badPostureTimeThresholdController,
-                          textAlign: TextAlign.end,
-                          style: TextStyle(color: Colors.black),
-                          decoration: InputDecoration(
-                              contentPadding: EdgeInsets.all(10),
-                              floatingLabelBehavior:
-                                  FloatingLabelBehavior.never,
-                              border: OutlineInputBorder(),
-                              labelText: 'Seconds',
-                              filled: true,
-                              labelStyle: TextStyle(color: Colors.black),
-                              fillColor: Colors.white,),
-                          keyboardType: TextInputType.number,
-                          onChanged: (_) {
-                            _updatePostureSettings();
-                          },
-                        ),
+                  ),
+                  PlatformListTile(
+                    title: Text("Bad Posture Time Threshold (in seconds)"),
+                    trailing: SizedBox(
+                      height: 37.0,
+                      width: 52,
+                      child: TextField(
+                        controller: _badPostureTimeThresholdController,
+                        textAlign: TextAlign.end,
+                        style: TextStyle(color: Colors.black),
+                        decoration: InputDecoration(
+                            contentPadding: EdgeInsets.all(10),
+                            floatingLabelBehavior:
+                                FloatingLabelBehavior.never,
+                            border: OutlineInputBorder(),
+                            labelText: 'Seconds',
+                            filled: true,
+                            labelStyle: TextStyle(color: Colors.black),
+                            fillColor: Colors.white,),
+                        keyboardType: TextInputType.number,
+                        onChanged: (_) {
+                          _updatePostureSettings();
+                        },
                       ),
                     ),
-                    ListTile(
-                      title: Text("Good Posture Time Threshold (in seconds)"),
-                      trailing: SizedBox(
-                        height: 37.0,
-                        width: 52,
-                        child: TextField(
-                          controller: _goodPostureTimeThresholdController,
-                          textAlign: TextAlign.end,
-                          style: TextStyle(color: Colors.black),
-                          decoration: InputDecoration(
-                              contentPadding: EdgeInsets.all(10),
-                              floatingLabelBehavior:
-                                  FloatingLabelBehavior.never,
-                              border: OutlineInputBorder(),
-                              labelText: 'Seconds',
-                              filled: true,
-                              labelStyle: TextStyle(color: Colors.black),
-                              fillColor: Colors.white,),
-                          keyboardType: TextInputType.number,
-                          onChanged: (_) {
-                            _updatePostureSettings();
-                          },
-                        ),
+                  ),
+                  PlatformListTile(
+                    title: Text("Good Posture Time Threshold (in seconds)"),
+                    trailing: SizedBox(
+                      height: 37.0,
+                      width: 52,
+                      child: TextField(
+                        controller: _goodPostureTimeThresholdController,
+                        textAlign: TextAlign.end,
+                        style: TextStyle(color: Colors.black),
+                        decoration: InputDecoration(
+                            contentPadding: EdgeInsets.all(10),
+                            floatingLabelBehavior:
+                                FloatingLabelBehavior.never,
+                            border: OutlineInputBorder(),
+                            labelText: 'Seconds',
+                            filled: true,
+                            labelStyle: TextStyle(color: Colors.black),
+                            fillColor: Colors.white,),
+                        keyboardType: TextInputType.number,
+                        onChanged: (_) {
+                          _updatePostureSettings();
+                        },
                       ),
                     ),
-                  ],),),
-            ],),),
+                  ),
+                ],),),
+          ],),),
         Padding(
-          padding: EdgeInsets.all(8.0),
+          padding: EdgeInsets.only(top: 8.0),
           child: Row(children: [
             Expanded(
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _viewModel.isTracking
-                      ? Colors.green[300]
-                      : Colors.blue[300],
-                  foregroundColor: Colors.black,
-                ),
+              child: PlatformElevatedButton(
+                color: _viewModel.isTracking
+                    ? Colors.green[300]
+                    : Colors.blue[300],
                 onPressed: _viewModel.isTracking
                     ? () {
                         _viewModel.calibrate();
@@ -205,6 +205,7 @@ class _SettingsViewState extends State<SettingsView> {
           ],),
         ),
       ],
+    )
     );
   }
 
