@@ -45,5 +45,9 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>OpenWearable requires Bluetooth access to connect to your wearable device.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>OpenWearable requires Bluetooth access to connect to your wearable device.</string>
 </dict>
 </plist>
