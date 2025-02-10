@@ -16,36 +16,74 @@ class SensorConfigurationView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<WearablesProvider>(
       builder: (context, wearablesProvider, child) {
-        return Padding(
-          padding: EdgeInsets.all(10),
-          child: wearablesProvider.wearables.isEmpty
-            ? Center(
-              child: Text("No devices connected", style: Theme.of(context).textTheme.titleLarge),
-            )
-            : ListView(
-              children: [
-                ...wearablesProvider.wearables.map((wearable) {
-                  return SensorConfigurationDeviceRow(device: wearable);
-                }),
-                PlatformElevatedButton(
-                  onPressed: () {
-                    SensorConfigurationProvider sensorConfigurationProvider = Provider.of<SensorConfigurationProvider>(context, listen: false);
-                    sensorConfigurationProvider.sensorConfigurations.forEach((config, value) {
-                      config.setConfiguration(value);
-                    });
-                    Navigator.of(context).push(
-                      platformPageRoute(
-                        context: context,
-                        builder: (context) => SensorValuesPage(),
-                      ),
-                    );
-                  },
-                  child: const Text('Set sensor configurations'),
-                )
-              ],
-            )
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth < 600) {
+              return _buildSmallScreenLayout(context, wearablesProvider);
+            } else {
+              return _buildLargeScreenLayout(context, wearablesProvider);
+            }
+          },
         );
       },
+    );
+  }
+
+  Widget _buildSmallScreenLayout(BuildContext context, WearablesProvider wearablesProvider) {
+    if (wearablesProvider.wearables.isEmpty) {
+      return Center(
+        child: Text("No devices connected", style: Theme.of(context).textTheme.titleLarge),
+      );
+    }
+
+    return Padding(
+      padding: EdgeInsets.all(10),
+      child: wearablesProvider.wearables.isEmpty
+        ? Center(
+          child: Text("No devices connected", style: Theme.of(context).textTheme.titleLarge),
+        )
+        : ListView(
+          children: [
+            ...wearablesProvider.wearables.map((wearable) {
+              return SensorConfigurationDeviceRow(device: wearable);
+            }),
+            PlatformElevatedButton(
+              onPressed: () {
+                SensorConfigurationProvider sensorConfigurationProvider = Provider.of<SensorConfigurationProvider>(context, listen: false);
+                sensorConfigurationProvider.sensorConfigurations.forEach((config, value) {
+                  config.setConfiguration(value);
+                });
+                Navigator.of(context).push(
+                  platformPageRoute(
+                    context: context,
+                    builder: (context) => SensorValuesPage(),
+                  ),
+                );
+              },
+              child: const Text('Set sensor configurations'),
+            )
+          ],
+        )
+    );
+  }
+
+  Widget _buildLargeScreenLayout(BuildContext context, WearablesProvider wearablesProvider) {
+    return Padding(
+      padding: EdgeInsets.all(10),
+      child: GridView.builder(
+        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 500,
+          childAspectRatio: 1,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+        ),
+        shrinkWrap: true,
+        physics: NeverScrollableScrollPhysics(),
+        itemCount: wearablesProvider.wearables.length,
+        itemBuilder: (context, index) {
+          return SensorConfigurationDeviceRow(device: wearablesProvider.wearables[index]);
+        },
+      ),
     );
   }
 }

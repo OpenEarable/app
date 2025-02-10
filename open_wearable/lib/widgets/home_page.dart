@@ -4,6 +4,8 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_wearable/widgets/devices/connect_devices_page.dart';
 import 'package:open_wearable/widgets/devices/devices_page.dart';
 import 'package:open_wearable/widgets/sensors/configuration/sensor_configuration_view.dart';
+import 'package:open_wearable/widgets/sensors/sensor_page.dart';
+import 'package:open_wearable/widgets/sensors/values/sensor_values_page.dart';
 
 /// The home page of the app.
 /// 
@@ -47,6 +49,60 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 600) {
+          return _buildSmallScreenLayout(context);
+        } else {
+          return _buildLargeScreenLayout(context);
+        }
+      },
+    );
+  }
+
+  Widget _buildLargeScreenLayout(BuildContext context) {
+    return PlatformScaffold(
+      appBar: PlatformAppBar(
+        title: Text("OpenWearable"),
+        trailingActions: [
+            PlatformIconButton(
+            icon: Icon(context.platformIcons.bluetooth),
+            onPressed: () {
+              if (Theme.of(context).platform == TargetPlatform.iOS) {
+                showCupertinoModalPopup(
+                  context: context,
+                  builder: (context) => ConnectDevicesPage(),
+                );
+              } else {
+                Navigator.of(context).push(
+                  platformPageRoute(
+                    context: context,
+                    builder: (context) => const Material(
+                      child: ConnectDevicesPage(),
+                    ),
+                  )
+                );
+              }
+            }
+          ),
+        ]
+      ),
+      body: SafeArea(
+        child: ListView(
+          children: [
+            Text("Connected Devices"),
+            DevicesPage(),
+            Text("Sensor Configuration"),
+            SensorConfigurationView(),
+            Text("Sensor Values"),
+            SensorValuesPage(),
+          ],
+        )
+      )
+    );
+  }
+
+  Widget _buildSmallScreenLayout(BuildContext context) {
     return PlatformTabScaffold(
       tabController: _controller,
       appBarBuilder: (context, index) => PlatformAppBar(

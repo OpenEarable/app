@@ -5,6 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/devices/battery_state.dart';
+import 'package:open_wearable/widgets/devices/connect_devices_page.dart';
 import 'package:open_wearable/widgets/devices/device_detail_page.dart';
 import 'package:provider/provider.dart';
 
@@ -20,17 +21,69 @@ class DevicesPage extends StatelessWidget {
       builder: (context, wearablesProvider, child) {
         return Padding(
           padding: EdgeInsets.all(10),
-          child: wearablesProvider.wearables.isEmpty
-                ? Center(
-                  child: Text("No devices connected", style: Theme.of(context).textTheme.titleLarge),
-                )
-              : ListView.builder(
-                  itemCount: wearablesProvider.wearables.length,
-                  itemBuilder: (context, index) {
-                    return DeviceRow(device: wearablesProvider.wearables[index]);
-                  },
-                )
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth < 600) {
+                return _buildSmallScreenLayout(context, wearablesProvider);
+              } else {
+                return _buildLargeScreenLayout(context, wearablesProvider);
+              }
+            },
+          )
         );
+      },
+    );
+  }
+
+  Widget _buildSmallScreenLayout(BuildContext context, WearablesProvider wearablesProvider) {
+    if (wearablesProvider.wearables.isEmpty) {
+      return Center(
+        child: Text("No devices connected", style: Theme.of(context).textTheme.titleLarge),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: wearablesProvider.wearables.length,
+      itemBuilder: (context, index) {
+        return DeviceRow(device: wearablesProvider.wearables[index]);
+      },
+    );
+  }
+
+  Widget _buildLargeScreenLayout(BuildContext context, WearablesProvider wearablesProvider) {
+    return GridView.builder(
+      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 500,
+        childAspectRatio: 3,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+      ),
+      shrinkWrap: true,
+      physics: NeverScrollableScrollPhysics(),
+      itemCount: wearablesProvider.wearables.length + 1,
+      itemBuilder: (context, index) {
+        if (index == wearablesProvider.wearables.length) {
+          return GestureDetector(
+            onTap: () {
+              showPlatformModalSheet(
+                context: context,
+                builder: (context) => ConnectDevicesPage(),
+              );
+            },
+            child: Card(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(PlatformIcons(context).add, color: Colors.blue),
+                    Text("Connect Device", style: TextStyle(color: Colors.blue)),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+        return DeviceRow(device: wearablesProvider.wearables[index]);
       },
     );
   }
