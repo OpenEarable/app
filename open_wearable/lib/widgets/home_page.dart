@@ -4,7 +4,6 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_wearable/widgets/devices/connect_devices_page.dart';
 import 'package:open_wearable/widgets/devices/devices_page.dart';
 import 'package:open_wearable/widgets/sensors/configuration/sensor_configuration_view.dart';
-import 'package:open_wearable/widgets/sensors/sensor_page.dart';
 import 'package:open_wearable/widgets/sensors/values/sensor_values_page.dart';
 
 /// The home page of the app.
@@ -64,28 +63,6 @@ class _HomePageState extends State<HomePage> {
     return PlatformScaffold(
       appBar: PlatformAppBar(
         title: Text("OpenWearable"),
-        trailingActions: [
-            PlatformIconButton(
-            icon: Icon(context.platformIcons.bluetooth),
-            onPressed: () {
-              if (Theme.of(context).platform == TargetPlatform.iOS) {
-                showCupertinoModalPopup(
-                  context: context,
-                  builder: (context) => ConnectDevicesPage(),
-                );
-              } else {
-                Navigator.of(context).push(
-                  platformPageRoute(
-                    context: context,
-                    builder: (context) => const Material(
-                      child: ConnectDevicesPage(),
-                    ),
-                  )
-                );
-              }
-            }
-          ),
-        ]
       ),
       body: SafeArea(
         child: ListView(
