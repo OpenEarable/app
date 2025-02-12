@@ -101,6 +101,22 @@ class DeviceRow extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
+        bool isLargeScreen = MediaQuery.of(context).size.width > 600;
+        if (isLargeScreen) {
+          showGeneralDialog(
+            context: context,
+            pageBuilder: (context, animation1, animation2) {
+              return Center(
+                child: SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.5,
+                  height: MediaQuery.of(context).size.height * 0.5,
+                  child: DeviceDetailPage(device: _device),
+                ),
+              );
+            },
+          );
+          return;
+        }
         Navigator.of(context).push(
           platformPageRoute(
             context: context,
