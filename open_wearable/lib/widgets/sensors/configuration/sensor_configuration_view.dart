@@ -70,41 +70,50 @@ class SensorConfigurationView extends StatelessWidget {
   }
 
   Widget _buildLargeScreenLayout(BuildContext context, WearablesProvider wearablesProvider) {
-    if (wearablesProvider.wearables.isEmpty) {
-      return Center(
-        child: Text(
-          "No devices connected",
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
+    final List<Wearable> devices = wearablesProvider.wearables;
+    List<StaggeredGridTile> tiles = _generateTiles(devices);
+    if (tiles.isNotEmpty) {
+      tiles.add(
+        StaggeredGridTile.extent(
+          crossAxisCellCount: 1,
+          mainAxisExtent: 100.0,
+          child: PlatformElevatedButton(
+            onPressed: () {
+              SensorConfigurationProvider sensorConfigurationProvider = Provider.of<SensorConfigurationProvider>(context, listen: false);
+              sensorConfigurationProvider.sensorConfigurations.forEach((config, value) {
+                config.setConfiguration(value);
+              });
+            },
+            child: const Text('Set sensor configurations'),
+          ),
+        )
       );
     }
 
-    final List<Wearable> devices = wearablesProvider.wearables;
-    List<StaggeredGridTile> tiles = _generateTiles(devices);
-    tiles.add(
-      StaggeredGridTile.extent(
-        crossAxisCellCount: 1,
-        mainAxisExtent: 100.0,
-        child: PlatformElevatedButton(
-          onPressed: () {
-            SensorConfigurationProvider sensorConfigurationProvider = Provider.of<SensorConfigurationProvider>(context, listen: false);
-            sensorConfigurationProvider.sensorConfigurations.forEach((config, value) {
-              config.setConfiguration(value);
-            });
-          },
-          child: const Text('Set sensor configurations'),
+    return StaggeredGrid.count(
+      crossAxisCount: (MediaQuery.of(context).size.width / 250).floor().clamp(1, 4), // Adaptive grid
+      mainAxisSpacing: 10,
+      crossAxisSpacing: 10,
+      children: tiles.isNotEmpty ? tiles : [
+        StaggeredGridTile.extent(
+          crossAxisCellCount: 1,
+          mainAxisExtent: 100.0,
+          child: Card(
+            shape: RoundedRectangleBorder(
+              side: BorderSide(
+                color: Colors.grey,
+                width: 1,
+                style: BorderStyle.solid,
+                strokeAlign: -1,
+              ),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Center(
+              child: Text("No devices connected", style: Theme.of(context).textTheme.titleLarge)
+            ),
+          )
         ),
-      )
-    );
-
-    return Padding(
-      padding: const EdgeInsets.all(10),
-      child: StaggeredGrid.count(
-        crossAxisCount: (MediaQuery.of(context).size.width / 250).floor().clamp(1, 4), // Adaptive grid
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
-        children: tiles,
-      ),
+      ],
     );
   }
 

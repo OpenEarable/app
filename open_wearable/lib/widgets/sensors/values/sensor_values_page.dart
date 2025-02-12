@@ -41,30 +41,47 @@ class SensorValuesPage extends StatelessWidget {
       ),
       body: Padding(
         padding: EdgeInsets.all(10),
-        child: ListView(
-          children: charts
-        )
+        child: charts.isEmpty
+          ? Center(
+            child: Text("No sensors connected", style: Theme.of(context).textTheme.titleLarge),
+          )
+          : ListView(
+            children: charts
+          )
       )
     );
   }
 
   Widget _buildLargeScreenLayout(BuildContext context, List<Widget> charts) {
-    return Padding(
-      padding: EdgeInsets.all(10),
-      child: GridView.builder(
-        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: 500,
-          childAspectRatio: 1.5,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-        ),
-        shrinkWrap: true,
-        physics: NeverScrollableScrollPhysics(),
-        itemCount: charts.length,
-        itemBuilder: (context, index) {
-          return charts[index];
-        },
-      )
+    return GridView.builder(
+      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 500,
+        childAspectRatio: 1.5,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+      ),
+      shrinkWrap: true,
+      physics: NeverScrollableScrollPhysics(),
+      itemCount: charts.isEmpty ? 1 : charts.length,
+      itemBuilder: (context, index) {
+        if (charts.isEmpty) {
+          return Card(
+            shape: RoundedRectangleBorder(
+              side: BorderSide(
+                color: Colors.grey,
+                width: 1,
+                style: BorderStyle.solid,
+                strokeAlign: -1,
+              ),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Center(
+              child: Text("No sensors available", style: Theme.of(context).textTheme.titleLarge),
+            ),
+          );
+        }
+        return charts[index];
+      },
     );
   }
 }

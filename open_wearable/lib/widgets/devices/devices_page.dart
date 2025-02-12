@@ -19,17 +19,14 @@ class DevicesPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<WearablesProvider>(
       builder: (context, wearablesProvider, child) {
-        return Padding(
-          padding: EdgeInsets.all(10),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              if (constraints.maxWidth < 600) {
-                return _buildSmallScreenLayout(context, wearablesProvider);
-              } else {
-                return _buildLargeScreenLayout(context, wearablesProvider);
-              }
-            },
-          )
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth < 600) {
+              return _buildSmallScreenLayout(context, wearablesProvider);
+            } else {
+              return _buildLargeScreenLayout(context, wearablesProvider);
+            }
+          },
         );
       },
     );
@@ -42,11 +39,14 @@ class DevicesPage extends StatelessWidget {
       );
     }
 
-    return ListView.builder(
-      itemCount: wearablesProvider.wearables.length,
-      itemBuilder: (context, index) {
-        return DeviceRow(device: wearablesProvider.wearables[index]);
-      },
+    return Padding(
+      padding: EdgeInsets.all(10),
+      child: ListView.builder(
+        itemCount: wearablesProvider.wearables.length,
+        itemBuilder: (context, index) {
+          return DeviceRow(device: wearablesProvider.wearables[index]);
+        },
+      ),
     );
   }
 
@@ -71,12 +71,16 @@ class DevicesPage extends StatelessWidget {
               );
             },
             child: Card(
+              color: Theme.of(context).colorScheme.surfaceTint.withValues(alpha: 0.2),
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(PlatformIcons(context).add, color: Colors.blue),
-                    Text("Connect Device", style: TextStyle(color: Colors.blue)),
+                    Icon(PlatformIcons(context).add, color: Theme.of(context).colorScheme.surfaceTint),
+                    Text(
+                      "Connect Device",
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.surfaceTint),
+                    ),
                   ],
                 ),
               ),

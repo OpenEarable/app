@@ -64,14 +64,24 @@ class _HomePageState extends State<HomePage> {
       appBar: PlatformAppBar(
         title: Text("OpenWearable"),
       ),
-      body: SafeArea(
+      body: Padding(
+        padding: const EdgeInsets.all(10),
         child: ListView(
           children: [
-            Text("Connected Devices"),
+            Text(
+              "Connected Devices",
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.surfaceTint),
+            ),
             DevicesPage(),
-            Text("Sensor Configuration"),
+            Text(
+              "Sensor Configuration",
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.surfaceTint),
+            ),
             SensorConfigurationView(),
-            Text("Sensor Values"),
+            Text(
+              "Sensor Values",
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.surfaceTint),
+            ),
             SensorValuesPage(),
           ],
         )
