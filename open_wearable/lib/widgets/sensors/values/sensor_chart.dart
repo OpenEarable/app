@@ -30,6 +30,12 @@ class _SensorChartState extends State<SensorChart> {
     _listenToSensorStream();
   }
 
+  @override
+  void didUpdateWidget(SensorChart oldWidget) {
+    _listenToSensorStream();
+    super.didUpdateWidget(oldWidget);
+  }
+
   void _listenToSensorStream() {
     _sensorStreamSubscription = widget.sensor.sensorStream.listen((sensorValue) {
       setState(() {
