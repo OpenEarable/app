@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:open_earable/apps_tab/doodle_jump/doodle_jump.dart';
 import 'package:open_earable/apps_tab/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_earable/apps_tab/posture_tracker/view/posture_tracker_view.dart';
 import 'package:open_earable/apps_tab/neck_stretch/view/stretch_app_view.dart';
@@ -30,7 +31,8 @@ class AppsTab extends StatelessWidget {
 
   const AppsTab(this._openEarable, {super.key});
 
-  static List<AppInfo> sampleApps(BuildContext context, OpenEarable openEarable) {
+  static List<AppInfo> sampleApps(
+      BuildContext context, OpenEarable openEarable) {
     return [
       AppInfo(
         logoPath: "lib/apps_tab/recorder/assets/logo.png",
@@ -182,6 +184,27 @@ class AppsTab extends StatelessWidget {
                   child: StretchAppView(
                     EarableAttitudeTracker(openEarable),
                     openEarable,
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+
+      AppInfo(
+        logoPath: "lib/apps_tab/doodle_jump/assets/player.png",
+        title: "Doodle Jump",
+        description: "Play the classic Doodle Jump game.",
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => Material(
+                child: Theme(
+                  data: materialTheme,
+                  child: Material(
+                    child: DoodleJump(openEarable),
                   ),
                 ),
               ),
