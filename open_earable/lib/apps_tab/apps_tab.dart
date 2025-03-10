@@ -10,6 +10,7 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 import '../shared/global_theme.dart';
 import 'package:open_earable/apps_tab/jump_rope_counter/jump_rope_counter.dart';
 import 'powernapper/home_screen.dart';
+import 'breathing_assistant/view/main_page/main_page.dart';
 
 class AppInfo {
   final String logoPath;
@@ -183,6 +184,25 @@ class AppsTab extends StatelessWidget {
                     EarableAttitudeTracker(openEarable),
                     openEarable,
                   ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+      AppInfo(
+        logoPath: "lib/apps_tab/breathing_assistant/assets/logo.png",
+        //iconData: Icons.face_6,
+        title: "Breathing Assistant",
+        description: "Calm your mind with guided breathing",
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => Material(
+                child: Theme(
+                  data: materialTheme,
+                  child: MainPage(openEarable),
                 ),
               ),
             ),
