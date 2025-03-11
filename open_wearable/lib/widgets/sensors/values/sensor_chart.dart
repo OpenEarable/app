@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
@@ -7,8 +8,10 @@ import 'package:community_charts_flutter/community_charts_flutter.dart' as chart
 class SensorChart extends StatefulWidget {
   final Sensor sensor;
   final bool allowToggleAxes;
+  /// Time window in seconds for which data is displayed
+  final int timeWindow;
 
-  const SensorChart({super.key, required this.sensor, this.allowToggleAxes = true});
+  const SensorChart({super.key, required this.sensor, this.allowToggleAxes = true, this.timeWindow = 5});
 
   @override
   State<SensorChart> createState() => _SensorChartState();
@@ -49,7 +52,7 @@ class _SensorChartState extends State<SensorChart> {
         }
 
         // Remove data older than 5 seconds
-        int cutoffTime = sensorValue.timestamp - 5000;
+        int cutoffTime = sensorValue.timestamp - (widget.timeWindow * pow(10, -widget.sensor.timestampExponent) as int);
         _dataPoints.removeWhere((data) => data.time < cutoffTime);
 
         _updateChartData();
@@ -81,13 +84,8 @@ class _SensorChartState extends State<SensorChart> {
 
   @override
   Widget build(BuildContext context) {
-    // Filter only enabled axes data for scaling
-    final filteredPoints = _dataPoints
-        .where((point) => _axisEnabled[point.axisName] ?? false)
-        .toList();
-
-    final xValues = filteredPoints.map((e) => e.time).toList();
-    final yValues = filteredPoints.map((e) => e.value).toList();
+    final xValues = _dataPoints.map((e) => e.time).toList();
+    final yValues = _dataPoints.map((e) => e.value).toList();
 
     final int? xMin = xValues.isNotEmpty ? xValues.reduce((a, b) => a < b ? a : b) : null;
     final int? xMax = xValues.isNotEmpty ? xValues.reduce((a, b) => a > b ? a : b) : null;
@@ -137,7 +135,10 @@ class _SensorChartState extends State<SensorChart> {
               ),
               behaviors: [
                 charts.SeriesLegend(),
-                charts.ChartTitle('Time (ms)', behaviorPosition: charts.BehaviorPosition.bottom),
+                charts.ChartTitle(
+                  'Time (${_timestampUnitPrefix(widget.sensor.timestampExponent)}s)',
+                  behaviorPosition: charts.BehaviorPosition.bottom
+                ),
                 charts.ChartTitle(widget.sensor.axisUnits.first, behaviorPosition: charts.BehaviorPosition.start),
               ],
             ),
@@ -150,6 +151,21 @@ class _SensorChartState extends State<SensorChart> {
   void dispose() {
     super.dispose();
     _sensorStreamSubscription?.cancel();
+  }
+}
+
+String _timestampUnitPrefix(int exponent) {
+  switch (exponent) {
+    case 0:
+      return '';
+    case -3:
+      return 'm';
+    case -6:
+      return 'µ';
+    case -9:
+      return 'n';
+    default:
+      return '?';
   }
 }
 
