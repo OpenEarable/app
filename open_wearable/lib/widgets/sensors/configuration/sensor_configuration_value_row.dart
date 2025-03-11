@@ -29,23 +29,54 @@ class _SensorConfigurationValueRowState extends State<SensorConfigurationValueRo
   Widget build(BuildContext context) {
     return PlatformListTile(
       title: Text(widget.sensorConfiguration.name),
-      trailing: DropdownButton<SensorConfigurationValue>(
-        value: _selectedValue,
-        items: widget.sensorConfiguration.values.map((value) {
-          return DropdownMenuItem<SensorConfigurationValue>(
-            value: value,
-            child: Text(value.toString()),
-          );
-        }).toList(),
-        onChanged: (newValue) {
-          setState(() {
-            _selectedValue = newValue;
-          });
-          if (_selectedValue != null) {
-            Provider.of<SensorConfigurationProvider>(context, listen: false)
-              .addSensorConfiguration(widget.sensorConfiguration, _selectedValue!);
-          }
-        },
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (widget.sensorConfiguration is StreamableSensorConfiguration)
+            ...[
+              // Stream data switch
+              PlatformSwitch(
+                value: (widget.sensorConfiguration as StreamableSensorConfiguration).streamData,
+                onChanged: (value) {
+                  setState(() {
+                    (widget.sensorConfiguration as StreamableSensorConfiguration).streamData = value;
+                  });
+                  Provider.of<SensorConfigurationProvider>(context, listen: false)
+                    .addSensorConfiguration(widget.sensorConfiguration, _selectedValue!);
+                },
+              ),
+            if (widget.sensorConfiguration is RecordableSensorConfig)
+              // Store data switch
+              PlatformSwitch(
+                value: (widget.sensorConfiguration as RecordableSensorConfig).recordData,
+                onChanged: (value) {
+                  setState(() {
+                    (widget.sensorConfiguration as RecordableSensorConfig).recordData = value;
+                  });
+                  Provider.of<SensorConfigurationProvider>(context, listen: false)
+                    .addSensorConfiguration(widget.sensorConfiguration, _selectedValue!);
+                },
+              ),
+            ],
+          DropdownButton<SensorConfigurationValue>(
+            value: _selectedValue,
+            items: widget.sensorConfiguration.values.map((value) {
+              return DropdownMenuItem<SensorConfigurationValue>(
+                value: value,
+                child: Text(value.toString()),
+              );
+            }).toList(),
+            onChanged: (newValue) {
+              setState(() {
+                _selectedValue = newValue;
+              });
+              if (_selectedValue != null) {
+                Provider.of<SensorConfigurationProvider>(context, listen: false)
+                  .addSensorConfiguration(widget.sensorConfiguration, _selectedValue!);
+              }
+            },
+          ),
+        ],
       ),
     );
   }
