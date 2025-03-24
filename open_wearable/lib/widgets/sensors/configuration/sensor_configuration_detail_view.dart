@@ -29,6 +29,7 @@ class _SensorConfigurationDetailViewState extends State<SensorConfigurationDetai
       children: [
         if (widget.sensorConfiguration is StreamableSensorConfiguration)
           PlatformListTile(
+            leading: Icon(Icons.bluetooth),
             title: Text("Stream Data"),
             trailing: Switch(
               value: (widget.sensorConfiguration as StreamableSensorConfiguration).streamData,
@@ -42,6 +43,7 @@ class _SensorConfigurationDetailViewState extends State<SensorConfigurationDetai
           ),
         if (widget.sensorConfiguration is RecordableSensorConfig)
           PlatformListTile(
+            leading: Icon(Icons.file_download_outlined),
             title: Text("Record Data"),
             trailing: Switch(
               value: (widget.sensorConfiguration as RecordableSensorConfig).recordData,
@@ -54,7 +56,8 @@ class _SensorConfigurationDetailViewState extends State<SensorConfigurationDetai
             ),
           ),
         PlatformListTile(
-          title: Text("Value"),
+          leading: Icon(Icons.speed_outlined),
+          title: Text("Sampling Rate"),
           trailing: DropdownButton<SensorConfigurationValue>(
             value: _selectedValue,
             items: widget.sensorConfiguration.values.map((value) {

@@ -29,15 +29,27 @@ class SensorConfigurationValueRow extends StatelessWidget {
       },
       child: PlatformListTile(
         title: Text(sensorConfiguration.name),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (isOn(sensorConfigNotifier, sensorConfiguration))
-              Icon(Icons.check, color: Colors.green)
-            else
-              Icon(Icons.close, color: Colors.red),
-          ],
-        ),
+        trailing: isOn(sensorConfigNotifier, sensorConfiguration) ?
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (sensorConfiguration is StreamableSensorConfiguration)
+                if ((sensorConfiguration as StreamableSensorConfiguration).streamData)
+                  Icon(Icons.bluetooth, color: Theme.of(context).colorScheme.secondary)
+                else
+                  Icon(Icons.bluetooth_disabled, color: Theme.of(context).colorScheme.secondary),
+              if (sensorConfiguration is RecordableSensorConfig)
+                if ((sensorConfiguration as RecordableSensorConfig).recordData)
+                  Icon(Icons.file_download_outlined, color: Theme.of(context).colorScheme.secondary)
+                else
+                  Icon(Icons.file_download_off_outlined, color: Theme.of(context).colorScheme.secondary),
+              Text(
+                "${sensorConfigNotifier.sensorConfigurationValues[sensorConfiguration]} Hz",
+                style: TextStyle(color: Theme.of(context).colorScheme.secondary)
+              ),
+            ],
+          )
+          : Text("Off", style: TextStyle(color: Theme.of(context).colorScheme.secondary)),
       ),
     );
   }
