@@ -47,7 +47,7 @@ class SensorConfigurationView extends StatelessWidget {
         SensorConfigNotifier notifier = _notifiers[device]!;
         for (SensorConfiguration config in (device as SensorConfigurationManager).sensorConfigurations) {
           if (!notifier.sensorConfigurationValues.containsKey(config)) {
-            notifier.sensorConfigurationValues[config] = config.values.first;
+            notifier.addSensorConfiguration(config, config.values.first);
           }
         }
       }
@@ -73,8 +73,8 @@ class SensorConfigurationView extends StatelessWidget {
         : ListView(
           children: [
             ...wearablesProvider.wearables.map((wearable) {
-              return SensorConfigInheritedNotifier(
-                notifier: _notifiers[wearable]!,
+              return ChangeNotifierProvider<SensorConfigNotifier>.value(
+                value: _notifiers[wearable]!,
                 child: SensorConfigurationDeviceRow(device: wearable),
               );
             }),

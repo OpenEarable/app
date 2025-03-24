@@ -4,6 +4,7 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/view_models/sensor_config_notifier.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 import 'package:open_wearable/widgets/sensors/configuration/sensor_configuration_detail_view.dart';
+import 'package:provider/provider.dart';
 
 /// A row that displays a sensor configuration and allows the user to select a value.
 /// 
@@ -15,21 +16,25 @@ class SensorConfigurationValueRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Get the notifier from InheritedNotifier, making this widget reactive to state changes
-    final sensorConfigNotifier = SensorConfigInheritedNotifier.of(context);
+    final sensorConfigNotifier = Provider.of<SensorConfigNotifier>(context);
 
     return GestureDetector(
       onTap: () {
         showPlatformModalSheet(
           context: context,
           builder: (modalContext) {
-            return SensorConfigInheritedNotifier(notifier: sensorConfigNotifier, child: SensorConfigurationDetailView(sensorConfiguration: sensorConfiguration));
+            return ChangeNotifierProvider.value(
+              value: sensorConfigNotifier,
+              child: SensorConfigurationDetailView(
+                sensorConfiguration: sensorConfiguration
+              ),
+            );
           },
         );
       },
       child: PlatformListTile(
         title: Text(sensorConfiguration.name),
-        trailing: isOn(sensorConfigNotifier, sensorConfiguration) ?
+        trailing: _isOn(sensorConfigNotifier, sensorConfiguration) ?
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -54,13 +59,19 @@ class SensorConfigurationValueRow extends StatelessWidget {
     );
   }
 
-  bool isOn(SensorConfigNotifier notifier, SensorConfiguration config) {
+  bool _isOn(SensorConfigNotifier notifier, SensorConfiguration config) {
+    bool isOn = false;
     if (config is StreamableSensorConfiguration) {
-      return (config as StreamableSensorConfiguration).streamData;
+      isOn |= (config as StreamableSensorConfiguration).streamData;
     }
     if (config is RecordableSensorConfig) {
-      return (config as RecordableSensorConfig).recordData;
+      isOn |= (config as RecordableSensorConfig).recordData;
     }
-    return true; // Default case for non-streamable/non-recordable configurations
+
+    if (config is! StreamableSensorConfiguration && config is! RecordableSensorConfig) {
+      isOn = true;
+    }
+
+    return isOn;
   }
 }

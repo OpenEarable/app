@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
-import 'package:open_wearable/view_models/sensor_config_notifier.dart';
 import 'package:open_wearable/widgets/sensors/configuration/sensor_configuration_value_row.dart';
 
 /// A widget that displays a list of sensor configurations for a device.
@@ -11,7 +10,7 @@ class SensorConfigurationDeviceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SensorConfigInheritedNotifier(notifier: SensorConfigNotifier(), child: Card(
+    return Card(
       child: Padding(
         padding: const EdgeInsets.all(10.0),
         child: Column(
@@ -56,6 +55,6 @@ class SensorConfigurationDeviceRow extends StatelessWidget {
           ],
         ),
       ),
-    ));
+    );
   }
 }
