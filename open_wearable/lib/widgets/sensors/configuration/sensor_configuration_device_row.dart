@@ -42,11 +42,8 @@ class SensorConfigurationDeviceRow extends StatelessWidget {
                 physics: NeverScrollableScrollPhysics(),
                 itemCount: (device as SensorConfigurationManager).sensorConfigurations.length,
                 itemBuilder: (context, index) {
-                  return Padding(
-                    padding: const EdgeInsets.all(10.0),
-                    child: SensorConfigurationValueRow(
-                      sensorConfiguration: (device as SensorConfigurationManager).sensorConfigurations[index]
-                    ),
+                  return SensorConfigurationValueRow(
+                    sensorConfiguration: (device as SensorConfigurationManager).sensorConfigurations[index]
                   );
                 },
               )
