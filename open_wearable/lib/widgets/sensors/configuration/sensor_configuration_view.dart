@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/view_models/sensor_config_notifier.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/sensors/configuration/sensor_configuration_device_row.dart';
@@ -12,12 +13,16 @@ import 'package:provider/provider.dart';
 /// 
 /// The specific sensor configurations should be made available via the [SensorConfigurationProvider].
 class SensorConfigurationView extends StatelessWidget {
-  const SensorConfigurationView({super.key});
+  final Map<Wearable, SensorConfigNotifier> _notifiers = {};
+  
+  SensorConfigurationView({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Consumer<WearablesProvider>(
       builder: (context, wearablesProvider, child) {
+        updateNotifiers(wearablesProvider.wearables);
+
         return LayoutBuilder(
           builder: (context, constraints) {
             if (constraints.maxWidth < 600) {
@@ -29,6 +34,27 @@ class SensorConfigurationView extends StatelessWidget {
         );
       },
     );
+  }
+
+  void updateNotifiers(List<Wearable> devices) {
+    logger.d("Updating notifiers for devices: $devices");
+    for (Wearable device in devices) {
+      if (device is SensorConfigurationManager) {
+        if (!_notifiers.containsKey(device)) {
+          _notifiers[device] = SensorConfigNotifier();
+        }
+
+        SensorConfigNotifier notifier = _notifiers[device]!;
+        for (SensorConfiguration config in (device as SensorConfigurationManager).sensorConfigurations) {
+          if (!notifier.sensorConfigurationValues.containsKey(config)) {
+            notifier.sensorConfigurationValues[config] = config.values.first;
+          }
+        }
+      }
+    }
+
+    // remove all notifiers that are not in the devices list
+    _notifiers.removeWhere((key, value) => !devices.contains(key));
   }
 
   Widget _buildSmallScreenLayout(BuildContext context, WearablesProvider wearablesProvider) {
@@ -47,14 +73,19 @@ class SensorConfigurationView extends StatelessWidget {
         : ListView(
           children: [
             ...wearablesProvider.wearables.map((wearable) {
-              return SensorConfigurationDeviceRow(device: wearable);
+              return SensorConfigInheritedNotifier(
+                notifier: _notifiers[wearable]!,
+                child: SensorConfigurationDeviceRow(device: wearable),
+              );
             }),
             PlatformElevatedButton(
               onPressed: () {
-                SensorConfigurationProvider sensorConfigurationProvider = Provider.of<SensorConfigurationProvider>(context, listen: false);
-                sensorConfigurationProvider.sensorConfigurations.forEach((config, value) {
-                  config.setConfiguration(value);
-                });
+                for (SensorConfigNotifier notifier in _notifiers.values) {
+                  logger.d("Setting sensor configurations for notifier: $notifier");
+                  notifier.sensorConfigurationValues.forEach((config, value) {
+                    config.setConfiguration(value);
+                  });
+                }
                 Navigator.of(context).push(
                   platformPageRoute(
                     context: context,
