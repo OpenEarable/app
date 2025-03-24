@@ -84,8 +84,13 @@ class _SensorChartState extends State<SensorChart> {
 
   @override
   Widget build(BuildContext context) {
-    final xValues = _dataPoints.map((e) => e.time).toList();
-    final yValues = _dataPoints.map((e) => e.value).toList();
+    // Filter only enabled axes data for scaling
+    final filteredPoints = _dataPoints
+        .where((point) => _axisEnabled[point.axisName] ?? false)
+        .toList();
+
+    final xValues = filteredPoints.map((e) => e.time).toList();
+    final yValues = filteredPoints.map((e) => e.value).toList();
 
     final int? xMin = xValues.isNotEmpty ? xValues.reduce((a, b) => a < b ? a : b) : null;
     final int? xMax = xValues.isNotEmpty ? xValues.reduce((a, b) => a > b ? a : b) : null;
