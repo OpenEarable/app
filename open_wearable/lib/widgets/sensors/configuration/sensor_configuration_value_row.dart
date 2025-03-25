@@ -25,8 +25,17 @@ class SensorConfigurationValueRow extends StatelessWidget {
           builder: (modalContext) {
             return ChangeNotifierProvider.value(
               value: sensorConfigNotifier,
-              child: SensorConfigurationDetailView(
-                sensorConfiguration: sensorConfiguration
+              child: PlatformScaffold(
+                appBar: PlatformAppBar(
+                  title: Text(sensorConfiguration.name),
+                  leading: IconButton(
+                    icon: Icon(Icons.close),
+                    onPressed: () => Navigator.of(modalContext).pop(),
+                  ),
+                ),
+                body: SensorConfigurationDetailView(
+                  sensorConfiguration: sensorConfiguration,
+                ),
               ),
             );
           },
