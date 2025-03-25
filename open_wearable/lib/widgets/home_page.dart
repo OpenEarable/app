@@ -22,11 +22,11 @@ class _HomePageState extends State<HomePage> {
   List<BottomNavigationBarItem> items(BuildContext context) {
     return [
       BottomNavigationBarItem(
-        icon: Icon(context.platformIcons.phone),
+        icon: Icon(Icons.devices),
         label: titles[0],
       ),
       BottomNavigationBarItem(
-        icon: Icon(context.platformIcons.checkBoxBlankOutlineRounded),
+        icon: Icon(Icons.ssid_chart_rounded),
         label: titles[1],
       ),
     ];
