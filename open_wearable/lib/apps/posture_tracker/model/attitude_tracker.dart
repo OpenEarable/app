@@ -3,8 +3,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:logger/logger.dart';
 
 import 'attitude.dart';
+
+final _logger = Logger();
 
 /// An abstract class for attitude trackers.
 abstract class AttitudeTracker with ChangeNotifier {
@@ -49,8 +52,7 @@ abstract class AttitudeTracker with ChangeNotifier {
 
   void calibrateToCurrentAttitude() async {
     _referenceAttitude = _rawAttitude;
-    print(
-        "calibrated to {roll: ${_referenceAttitude.roll}, pitch: ${_referenceAttitude.pitch}, yaw: ${_referenceAttitude.yaw}}",);
+    _logger.d("calibrated to {roll: ${_referenceAttitude.roll}, pitch: ${_referenceAttitude.pitch}, yaw: ${_referenceAttitude.yaw}}",);
   }
 
   /// Cancle the stream and close the stream controller.
@@ -61,8 +63,7 @@ abstract class AttitudeTracker with ChangeNotifier {
     this._attitudeStreamController.close();
   }
 
-  void updateAttitude(
-      {double? roll, double? pitch, double? yaw, Attitude? attitude,}) {
+  void updateAttitude({double? roll, double? pitch, double? yaw, Attitude? attitude,}) {
     if (roll == null && pitch == null && yaw == null && attitude == null) {
       throw ArgumentError(
           "Either roll, pitch and yaw or attitude must be provided",);
