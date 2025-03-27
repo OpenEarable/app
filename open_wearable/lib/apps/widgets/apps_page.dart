@@ -7,14 +7,12 @@ class AppInfo {
   final String logoPath;
   final String title;
   final String description;
-  final List<WearableType> requiredWearables;
   final Widget widget;
 
   AppInfo({
     required this.logoPath,
     required this.title,
     required this.description,
-    required this.requiredWearables,
     required this.widget,
   });
 }
@@ -24,7 +22,6 @@ List<AppInfo> _apps = [
     logoPath: "lib/apps/posture_tracker/assets/logo.png",
     title: "Posture Tracker",
     description: "Get feedback on bad posture",
-    requiredWearables: [OpenEarableV1Type()],
     widget: SelectEarableView(),
   )
 ];
