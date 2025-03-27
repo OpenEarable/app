@@ -1,5 +1,9 @@
 import 'package:flutter/cupertino.dart';
-import 'package:open_wearable/apps/posture_tracker/view/select_earable_view.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/apps/heart_tracker/widgets.dart/heart_tracker_page.dart';
+import 'package:open_wearable/apps/posture_tracker/model/earable_attitude_tracker.dart';
+import 'package:open_wearable/apps/posture_tracker/view/posture_tracker_view.dart';
+import 'package:open_wearable/apps/widgets/select_earable_view.dart';
 import 'package:open_wearable/apps/widgets/app_tile.dart';
 
 class AppInfo {
@@ -21,8 +25,16 @@ List<AppInfo> _apps = [
     logoPath: "lib/apps/posture_tracker/assets/logo.png",
     title: "Posture Tracker",
     description: "Get feedback on bad posture",
-    widget: SelectEarableView(),
-  )
+    widget: SelectEarableView(startApp: (wearable) {
+      return PostureTrackerView(
+        EarableAttitudeTracker(
+          wearable as SensorManager,
+          wearable.name.endsWith("L")
+        )
+      );
+    }),
+  ),
+
 ];
 
 class AppsPage extends StatelessWidget {
