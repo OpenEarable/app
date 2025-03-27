@@ -1,5 +1,4 @@
 import 'package:flutter/cupertino.dart';
-import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/apps/posture_tracker/view/select_earable_view.dart';
 import 'package:open_wearable/apps/widgets/app_tile.dart';
 
