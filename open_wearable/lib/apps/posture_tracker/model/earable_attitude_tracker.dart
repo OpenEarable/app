@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:math';
 
+import 'package:logger/logger.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/apps/posture_tracker/model/attitude_tracker.dart';
 import 'package:open_wearable/apps/posture_tracker/model/ewma.dart';
@@ -28,21 +30,46 @@ class EarableAttitudeTracker extends AttitudeTracker {
       return;
     }
 
-    SensorConfiguration sensorConfig =
-      _sensorConfigurationManager.sensorConfigurations.firstWhere((element) => element.name == "IMU");
+    final Sensor accelSensor = _sensorManager.sensors.firstWhere((s) => s.sensorName.toLowerCase() == "accelerometer".toLowerCase());
 
-    sensorConfig.setConfiguration(sensorConfig.values.last);
+    final Set<SensorConfiguration> configurations = {};
+    configurations.addAll(accelSensor.relatedConfigurations);
 
-    _subscription = _sensorManager.sensors.firstWhere((s) => s.sensorName == "ATT").sensorStream.listen(
-      (data) {
-        SensorDoubleValue attitude = data as SensorDoubleValue;
-        updateAttitude(
-          roll: _rollEWMA.update(attitude.values[0]),
-          pitch: _pitchEWMA.update(attitude.values[1]),
-          yaw: _yawEWMA.update(attitude.values[2]),
-        );
-      },
-    );
+    for (final SensorConfiguration configuration in configurations) {
+      if (configuration is StreamableSensorConfiguration) {
+        (configuration as StreamableSensorConfiguration).streamData = true;
+      }
+      configuration.setConfiguration(configuration.values.first);
+    }
+
+    accelSensor.sensorStream.listen((data) {
+      if (data is SensorDoubleValue) {
+        final double ax = data.values[0];
+        final double ay = data.values[1];
+        final double az = data.values[2];
+        List<double> angles = _calculateAngles(ax, ay, az);
+        double roll = _rollEWMA.update(angles[0]);
+        double pitch = _pitchEWMA.update(angles[1]);
+        double yaw = _yawEWMA.update(angles[2]);
+
+        updateAttitude(roll: roll, pitch: pitch, yaw: yaw);
+      }
+    });
+  }
+
+  List<double> _calculateAngles(double ax, double ay, double az) {
+    // Normalize accelerometer data
+    double norm = sqrt(ax * ax + ay * ay + az * az);
+    if (norm == 0.0) return [0.0, 0.0, 0.0];
+    ax /= norm;
+    ay /= norm;
+    az /= norm;
+
+    // Calculate roll and pitch angles
+    double roll = atan2(ay, az);
+    double pitch = atan2(-ax, sqrt(ay * ay + az * az));
+
+    return [roll, pitch, 0.0]; // Yaw is not calculated here
   }
 
   @override
