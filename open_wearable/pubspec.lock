@@ -285,7 +285,7 @@ packages:
     description:
       path: "."
       ref: main
-      resolved-ref: aa85d7d49d14ed0ac73031d4683e88ffdf7814c4
+      resolved-ref: faa3a0c278e58ab60cc5656bc6d2b94b1ca0d5bd
       url: "https://github.com/OpenEarable/open_earable_flutter.git"
     source: git
     version: "0.0.5"
