@@ -1,14 +1,13 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:logger/logger.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/apps/posture_tracker/model/attitude.dart';
 import 'package:open_wearable/apps/posture_tracker/model/attitude_tracker.dart';
 import 'package:open_wearable/apps/posture_tracker/model/ewma.dart';
 
 class EarableAttitudeTracker extends AttitudeTracker {
   final SensorManager _sensorManager;
-  final SensorConfigurationManager _sensorConfigurationManager;
   StreamSubscription<SensorValue>? _subscription;
 
   @override
@@ -21,7 +20,9 @@ class EarableAttitudeTracker extends AttitudeTracker {
   final EWMA _pitchEWMA = EWMA(0.5);
   final EWMA _yawEWMA = EWMA(0.5);
 
-  EarableAttitudeTracker(this._sensorManager, this._sensorConfigurationManager);
+  final bool _isLeft;
+
+  EarableAttitudeTracker(this._sensorManager, this._isLeft);
 
   @override
   void start() {
@@ -42,6 +43,14 @@ class EarableAttitudeTracker extends AttitudeTracker {
       configuration.setConfiguration(configuration.values.first);
     }
 
+    calibrate(
+      Attitude(
+        roll: pi / 2 * (_isLeft ? -1 : 1),
+        pitch: 0.0,
+        yaw: 0.0,
+      ),
+    );
+
     _subscription = accelSensor.sensorStream.listen((data) {
       if (data is SensorDoubleValue) {
         final double ax = data.values[0];
@@ -57,6 +66,10 @@ class EarableAttitudeTracker extends AttitudeTracker {
     });
   }
 
+  /// Calculate roll and pitch angles from accelerometer data
+  /// -- [ax] accelerometer x-axis value, pointing backwards
+  /// -- [ay] accelerometer y-axis value, pointing upwards
+  /// -- [az] accelerometer z-axis value, pointing to the left
   List<double> _calculateAngles(double ax, double ay, double az) {
     // Normalize accelerometer data
     double norm = sqrt(ax * ax + ay * ay + az * az);
@@ -66,8 +79,8 @@ class EarableAttitudeTracker extends AttitudeTracker {
     az /= norm;
 
     // Calculate roll and pitch angles
-    double roll = atan2(ay, az);
-    double pitch = atan2(-ax, sqrt(ay * ay + az * az));
+    final double roll = atan2(ay, az);
+    final double pitch = atan2(-ax, sqrt(ay * ay + az * az));
 
     return [roll, pitch, 0.0]; // Yaw is not calculated here
   }

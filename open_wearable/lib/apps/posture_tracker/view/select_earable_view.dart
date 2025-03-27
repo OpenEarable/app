@@ -56,8 +56,12 @@ class _SelectEarableViewState extends State<SelectEarableView> {
                   platformPageRoute(
                     context: context,
                     builder: (context) {
-                      return PostureTrackerView(EarableAttitudeTracker(_selectedWearable! as SensorManager,
-                        _selectedWearable! as SensorConfigurationManager));
+                      return PostureTrackerView(
+                        EarableAttitudeTracker(
+                          _selectedWearable! as SensorManager,
+                          _selectedWearable!.name.endsWith("L")
+                        )
+                      );
                     }
                   )
                 );
