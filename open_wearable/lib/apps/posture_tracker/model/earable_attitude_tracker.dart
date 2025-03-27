@@ -42,11 +42,11 @@ class EarableAttitudeTracker extends AttitudeTracker {
       configuration.setConfiguration(configuration.values.first);
     }
 
-    accelSensor.sensorStream.listen((data) {
+    _subscription = accelSensor.sensorStream.listen((data) {
       if (data is SensorDoubleValue) {
         final double ax = data.values[0];
         final double ay = data.values[1];
-        final double az = data.values[2];
+        final double az = -data.values[2];
         List<double> angles = _calculateAngles(ax, ay, az);
         double roll = _rollEWMA.update(angles[0]);
         double pitch = _pitchEWMA.update(angles[1]);
