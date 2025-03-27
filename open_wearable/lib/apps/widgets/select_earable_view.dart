@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
-import 'package:open_wearable/apps/posture_tracker/model/earable_attitude_tracker.dart';
-import 'package:open_wearable/apps/posture_tracker/view/posture_tracker_view.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:provider/provider.dart';
 
 class SelectEarableView  extends StatefulWidget {
-  const SelectEarableView({super.key});
+  /// Callback to start the app
+  /// -- [wearable] the selected wearable
+  /// returns a [Widget] of the home page of the app
+  final Widget Function(Wearable) startApp;
+
+  const SelectEarableView({super.key, required this.startApp});
 
   @override
   State<SelectEarableView> createState() => _SelectEarableViewState();
@@ -48,7 +51,7 @@ class _SelectEarableViewState extends State<SelectEarableView> {
           ),
 
           PlatformElevatedButton(
-            child: Text("Track Posture"),
+            child: Text("Start App"),
             onPressed: () {
               if (_selectedWearable != null) {
                 Navigator.push(
@@ -56,12 +59,7 @@ class _SelectEarableViewState extends State<SelectEarableView> {
                   platformPageRoute(
                     context: context,
                     builder: (context) {
-                      return PostureTrackerView(
-                        EarableAttitudeTracker(
-                          _selectedWearable! as SensorManager,
-                          _selectedWearable!.name.endsWith("L")
-                        )
-                      );
+                      return widget.startApp(_selectedWearable!);
                     }
                   )
                 );
