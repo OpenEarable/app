@@ -9,36 +9,26 @@ class AppTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          platformPageRoute(context: context, builder: (context) => app.widget)
-        );
-      },
-      child: Card(
-        child: Row(
-          children: [
-            SizedBox(
-              height: 50.0,
-              width: 50.0,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8.0),
-                child: Image.asset(
-                  app.logoPath,
-                  fit: BoxFit.cover,
-                ),
-              ),
+    return PlatformListTile(
+        title: Text(app.title),
+        subtitle: Text(app.description),
+        leading: SizedBox(
+          height: 50.0,
+          width: 50.0,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8.0),
+            child: Image.asset(
+              app.logoPath,
+              fit: BoxFit.cover,
             ),
-            Column(
-              children: [
-                Text(app.title),
-                Text(app.description),
-              ],
-            ),
-          ],
+          ),
         ),
-      )
-    );
+        onTap: () {
+          Navigator.push(
+            context,
+            platformPageRoute(context: context, builder: (context) => app.widget)
+          );
+        },
+      );
   }
 }
