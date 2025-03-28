@@ -53,8 +53,6 @@ class _RollingChartState extends State<RollingChart> {
         // Remove old data outside time window
         int cutoffTime = timestamp - (widget.timeWindow * pow(10, -widget.timestampExponent) as int);
         _data.removeWhere((data) => data.time < cutoffTime);
-
-        _logger.d("Data points: ${_data.length}");
     
         _updateSeries();
       });
@@ -65,14 +63,12 @@ class _RollingChartState extends State<RollingChart> {
     _seriesList = [
         charts.Series<_ChartPoint, int>(
           id: 'Live Data',
-          colorFn: (_, __) => charts.MaterialPalette.blue.shadeDefault,
+          colorFn: (_, __) => charts.MaterialPalette.red.shadeDefault,
           domainFn: (_ChartPoint point, _) => point.time,
           measureFn: (_ChartPoint point, _) => point.value,
           data: List.of(_data),
       )
     ];
-
-    _logger.d("Series List: ${_seriesList.length}");
   }
 
   @override
