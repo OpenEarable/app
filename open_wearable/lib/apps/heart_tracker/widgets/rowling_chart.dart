@@ -44,7 +44,6 @@ class _RollingChartState extends State<RollingChart> {
 
   void _listenToStream() {
     _subscription = widget.dataSteam.listen((event) {
-      _logger.d("Received data: $event");
       final (timestamp, value) = event;
     
       setState(() {

@@ -1,19 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
-import 'package:open_wearable/apps/heart_tracker/model/band_pass_filter.dart';
-import 'package:open_wearable/apps/heart_tracker/model/high_pass_filter.dart';
+import 'package:open_wearable/apps/heart_tracker/model/ppg_filter.dart';
+import 'package:open_wearable/apps/heart_tracker/widgets/beating_heart.dart';
 import 'package:open_wearable/apps/heart_tracker/widgets/rowling_chart.dart';
 
-class HeartTrackerPage extends StatelessWidget {
+class HeartTrackerPage extends StatefulWidget {
   final Sensor ppgSensor;
 
-  HeartTrackerPage({super.key, required this.ppgSensor}) {
-    SensorConfiguration configuration = ppgSensor.relatedConfigurations.first;
+  const HeartTrackerPage({super.key, required this.ppgSensor});
+
+  @override
+  State<HeartTrackerPage> createState() => _HeartTrackerPageState();
+}
+class _HeartTrackerPageState extends State<HeartTrackerPage> {
+  late final PpgFilter ppgFilter;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final sensor = widget.ppgSensor;
+    SensorConfiguration configuration = sensor.relatedConfigurations.first;
     if (configuration is StreamableSensorConfiguration) {
       (configuration as StreamableSensorConfiguration).streamData = true;
     }
     configuration.setConfiguration(configuration.values.first);
+
+    ppgFilter = PpgFilter(
+      inputStream: sensor.sensorStream.asyncMap((data) {
+        SensorDoubleValue sensorData = data as SensorDoubleValue;
+        return (
+          sensorData.timestamp,
+          -(sensorData.values[2] + sensorData.values[3])
+        );
+      }).asBroadcastStream(),
+      sampleFreq: 25,
+      timestampExponent: sensor.timestampExponent,
+    );
   }
 
   @override
@@ -26,6 +50,25 @@ class HeartTrackerPage extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: 10),
         child: ListView(
           children: [
+            StreamBuilder<double>(
+              stream: ppgFilter.heartRateStream,
+              builder: (context, snapshot) {
+                double bpm = snapshot.data ?? double.nan;
+                return Padding(
+                  padding: EdgeInsets.all(10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // BeatingHeart(bpm: bpm.isFinite ? bpm : 60),
+                      Text(
+                        "${bpm.isNaN ? "--" : bpm.toStringAsFixed(0)} BPM",
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
             Card(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -40,43 +83,17 @@ class HeartTrackerPage extends StatelessWidget {
                   SizedBox(
                     height: 200,
                     child: RollingChart(
-                      dataSteam: highPassFilterTupleStream(
-                        input: ppgSensor.sensorStream.asyncMap(
-                          (data) {
-                            return (data.timestamp, -(data as SensorDoubleValue).values[2]);
-                          }
-                        ),
-                        cutoffFreq: 0.5,
-                        sampleFreq: 25,
-                      ),
-                      timestampExponent: ppgSensor.timestampExponent,
+                      dataSteam: ppgFilter.filteredStream,
+                      timestampExponent: widget.ppgSensor.timestampExponent,
                       timeWindow: 5,
                     ),
                   ),
                 ],
-              )
+              ),
             ),
           ],
         ),
       ),
     );
-  }
-
-  Stream<(int, double)> highPassFilterTupleStream({
-    required Stream<(int, double)> input,
-    required double cutoffFreq,
-    required double sampleFreq,
-  }) {
-    final filter = BandPassFilter(
-      sampleFreq: 25.0,
-      lowCut: 0.5,
-      highCut: 3,
-    );
-
-    return input.map((event) {
-      final (timestamp, rawValue) = event;
-      final filteredValue = filter.filter(rawValue);
-      return (timestamp, filteredValue);
-    });
   }
 }
