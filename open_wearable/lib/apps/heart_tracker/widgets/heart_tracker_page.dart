@@ -22,25 +22,42 @@ class HeartTrackerPage extends StatelessWidget {
       appBar: PlatformAppBar(
         title: Text("Heart Tracker"),
       ),
-      body: ListView(
-        children: [
-          SizedBox(
-            height: 300,
-            child: RollingChart(
-              dataSteam: highPassFilterTupleStream(
-                input: ppgSensor.sensorStream.asyncMap(
-                  (data) {
-                    return (data.timestamp, (data as SensorDoubleValue).values[2]);
-                  }
-                ),
-                cutoffFreq: 0.5,
-                sampleFreq: 25,
-              ),
-              timestampExponent: ppgSensor.timestampExponent,
-              timeWindow: 5,
+      body: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 10),
+        child: ListView(
+          children: [
+            Card(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.all(10),
+                    child: Text(
+                      "Blood Flow",
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  SizedBox(
+                    height: 200,
+                    child: RollingChart(
+                      dataSteam: highPassFilterTupleStream(
+                        input: ppgSensor.sensorStream.asyncMap(
+                          (data) {
+                            return (data.timestamp, -(data as SensorDoubleValue).values[2]);
+                          }
+                        ),
+                        cutoffFreq: 0.5,
+                        sampleFreq: 25,
+                      ),
+                      timestampExponent: ppgSensor.timestampExponent,
+                      timeWindow: 5,
+                    ),
+                  ),
+                ],
+              )
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
