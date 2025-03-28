@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:community_charts_flutter/community_charts_flutter.dart' as charts;
 import 'package:logger/logger.dart';
@@ -22,7 +23,7 @@ class RollingChart extends StatefulWidget {
 }
 
 class _RollingChartState extends State<RollingChart> {
-  List<charts.Series<_ChartPoint, DateTime>> _seriesList = [];
+  List<charts.Series<_ChartPoint, int>> _seriesList = [];
   final List<_ChartPoint> _data = [];
   StreamSubscription? _subscription;
 
@@ -45,16 +46,14 @@ class _RollingChartState extends State<RollingChart> {
     _subscription = widget.dataSteam.listen((event) {
       _logger.d("Received data: $event");
       final (timestamp, value) = event;
-      final scaledTimestamp = timestamp ~/ (10 ^ widget.timestampExponent);
-      final pointTime = DateTime.fromMillisecondsSinceEpoch(scaledTimestamp);
     
       setState(() {
-        _data.add(_ChartPoint(pointTime, value));
+        _data.add(_ChartPoint(timestamp, value));
     
         // Remove old data outside time window
-        final cutoff = pointTime.subtract(Duration(seconds: widget.timeWindow));
-        _data.removeWhere((point) => point.time.isBefore(cutoff));
-    
+        int cutoffTime = timestamp - (widget.timeWindow * pow(10, -widget.timestampExponent) as int);
+        _data.removeWhere((data) => data.time < cutoffTime);
+
         _logger.d("Data points: ${_data.length}");
     
         _updateSeries();
@@ -64,7 +63,7 @@ class _RollingChartState extends State<RollingChart> {
 
   void _updateSeries() {
     _seriesList = [
-        charts.Series<_ChartPoint, DateTime>(
+        charts.Series<_ChartPoint, int>(
           id: 'Live Data',
           colorFn: (_, __) => charts.MaterialPalette.blue.shadeDefault,
           domainFn: (_ChartPoint point, _) => point.time,
@@ -83,18 +82,18 @@ class _RollingChartState extends State<RollingChart> {
     final xValues = filteredPoints.map((e) => e.time).toList();
     final yValues = filteredPoints.map((e) => e.value).toList();
 
-    final DateTime? xMin = xValues.isNotEmpty ? xValues.reduce((a, b) => a.isBefore(b) ? a : b) : null;
-    final DateTime? xMax = xValues.isNotEmpty ? xValues.reduce((a, b) => a.isAfter(b) ? a : b) : null;
+    final int? xMin = xValues.isNotEmpty ? xValues.reduce((a, b) => a < b ? a : b) : null;
+    final int? xMax = xValues.isNotEmpty ? xValues.reduce((a, b) => a > b ? a : b) : null;
 
     final double? yMin = yValues.isNotEmpty ? yValues.reduce((a, b) => a < b ? a : b) : null;
     final double? yMax = yValues.isNotEmpty ? yValues.reduce((a, b) => a > b ? a : b) : null;
 
-    return charts.TimeSeriesChart(
+    return charts.LineChart(
       _seriesList,
       animate: false,
-      domainAxis: charts.DateTimeAxisSpec(
+      domainAxis: charts.NumericAxisSpec(
         viewport: xMin != null && xMax != null
-          ? charts.DateTimeExtents(start: xMin, end: xMax)
+          ? charts.NumericExtents(xMin, xMax)
           : null,
       ),
       primaryMeasureAxis: charts.NumericAxisSpec(
@@ -113,7 +112,7 @@ class _RollingChartState extends State<RollingChart> {
 }
 
 class _ChartPoint {
-  final DateTime time;
+  final int time;
   final double value;
 
   _ChartPoint(this.time, this.value);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/apps/heart_tracker/model/high_pass_filter.dart';
 import 'package:open_wearable/apps/heart_tracker/widgets/rowling_chart.dart';
 
 class HeartTrackerPage extends StatelessWidget {
@@ -25,10 +26,14 @@ class HeartTrackerPage extends StatelessWidget {
           SizedBox(
             height: 300,
             child: RollingChart(
-              dataSteam: ppgSensor.sensorStream.asyncMap(
-                (data) {
-                  return (data.timestamp, (data as SensorDoubleValue).values[2]);
-                }
+              dataSteam: highPassFilterTupleStream(
+                input: ppgSensor.sensorStream.asyncMap(
+                  (data) {
+                    return (data.timestamp, (data as SensorDoubleValue).values[2]);
+                  }
+                ),
+                cutoffFreq: 0.5,
+                sampleFreq: 25,
               ),
               timestampExponent: ppgSensor.timestampExponent,
               timeWindow: 5,
@@ -37,5 +42,19 @@ class HeartTrackerPage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Stream<(int, double)> highPassFilterTupleStream({
+    required Stream<(int, double)> input,
+    required double cutoffFreq,
+    required double sampleFreq,
+  }) {
+    final filter = HighPassFilter(cutoffFreq: cutoffFreq, sampleFreq: sampleFreq);
+
+    return input.map((event) {
+      final (timestamp, rawValue) = event;
+      final filteredValue = filter.filter(rawValue);
+      return (timestamp, filteredValue);
+    });
   }
 }
