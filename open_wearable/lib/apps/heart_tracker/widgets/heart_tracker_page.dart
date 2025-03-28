@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/apps/heart_tracker/model/band_pass_filter.dart';
 import 'package:open_wearable/apps/heart_tracker/model/high_pass_filter.dart';
 import 'package:open_wearable/apps/heart_tracker/widgets/rowling_chart.dart';
 
@@ -49,7 +50,11 @@ class HeartTrackerPage extends StatelessWidget {
     required double cutoffFreq,
     required double sampleFreq,
   }) {
-    final filter = HighPassFilter(cutoffFreq: cutoffFreq, sampleFreq: sampleFreq);
+    final filter = BandPassFilter(
+      sampleFreq: 25.0,
+      lowCut: 0.5,
+      highCut: 3,
+    );
 
     return input.map((event) {
       final (timestamp, rawValue) = event;
