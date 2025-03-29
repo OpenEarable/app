@@ -58,6 +58,41 @@ class PpgFilter {
     return _hrEstimate;
   }
 
+  List<(int, double)> smoothBuffer(List<(int, double)> raw, {int radius = 2}) {
+    final smoothed = <(int, double)>[];
+    for (int i = 0; i < raw.length; i++) {
+      int start = max(0, i - radius);
+      int end = min(raw.length - 1, i + radius);
+      final avg = raw.sublist(start, end + 1).map((e) => e.$2).reduce((a, b) => a + b) / (end - start + 1);
+      smoothed.add((raw[i].$1, avg));
+    }
+    return smoothed;
+  }
+
+  List<int> detectPeaks(List<(int, double)> buffer) {
+    buffer = smoothBuffer(buffer, radius: 4);
+    final peakTimestamps = <int>[];
+
+    for (int i = 1; i < buffer.length - 1; i++) {
+      final (tPrev, vPrev) = buffer[i - 1];
+      final (tCurr, vCurr) = buffer[i];
+      final (tNext, vNext) = buffer[i + 1];
+
+      // Skip too-close peaks
+      final lastPeak = peakTimestamps.isNotEmpty ? peakTimestamps.last : 0;
+      if (tCurr - lastPeak < _minPeakDistanceMs) continue;
+
+      // Simple 3-point peak
+      if (vCurr > vPrev && vCurr > vNext &&
+          (vCurr - vPrev) > _minProminence &&
+          (vCurr - vNext) > _minProminence) {
+        peakTimestamps.add(tCurr);
+      }
+    }
+
+    return peakTimestamps;
+  }
+
   Stream<double> get heartRateStream async* {
     int timestampFactor = pow(10, -timestampExponent).toInt();
     int windowDurationMs = 8 * timestampFactor; // 8 seconds
@@ -73,32 +108,11 @@ class PpgFilter {
         continue;
       }
 
-      final peakTimestamps = <int>[];
-
-      for (int i = 1; i < buffer.length - 1; i++) {
-        final (tPrev, vPrev) = buffer[i - 1];
-        final (tCurr, vCurr) = buffer[i];
-        final (tNext, vNext) = buffer[i + 1];
-
-        // Skip too-close peaks
-        final lastPeak = peakTimestamps.isNotEmpty ? peakTimestamps.last : 0;
-        if (tCurr - lastPeak < _minPeakDistanceMs) continue;
-
-        // Simple 3-point peak
-        if (vCurr > vPrev && vCurr > vNext &&
-            (vCurr - vPrev) > _minProminence &&
-            (vCurr - vNext) > _minProminence) {
-          peakTimestamps.add(tCurr);
-        }
-      }
-
-      // // Remove peak timestamps that are not in the buffer
-      // peakTimestamps.removeWhere((peak) =>
-      //     peak < buffer.first.$1 || peak > buffer.last.$1);
+      List<int> peakTimestamps = detectPeaks(buffer);
 
       // Need at least 2 peaks to compute HR
       if (peakTimestamps.length < 2) {
-        _logger.w("not enough peaks");
+        _logger.w("not enough peaks ${peakTimestamps.length}");
         continue;
       }
 
