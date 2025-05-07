@@ -32,6 +32,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
         padding: const EdgeInsets.all(10.0),
         child: ListView(
           children: [
+            // MARK: Device name, icon and battery state
             Column(
               children: [
                 Text(widget.device.name, style: Theme.of(context).textTheme.titleLarge),
@@ -52,6 +53,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
               title: Text("Bluetooth Address", style: Theme.of(context).textTheme.bodyLarge),
               subtitle: Text(widget.device.deviceId),
             ),
+            // MARK: Device Identifier
             if (widget.device is DeviceIdentifier)
               PlatformListTile(
                 title: Text("Device Identifier", style: Theme.of(context).textTheme.bodyLarge),
@@ -66,6 +68,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                   },
                 ),
               ),
+            // MARK: Device Firmware Version
             if (widget.device is DeviceFirmwareVersion)
               PlatformListTile(
                 title: Text("Firmware Version", style: Theme.of(context).textTheme.bodyLarge),
@@ -80,6 +83,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                   },
                 ),
               ),
+            // MARK: Device Hardware Version
             if (widget.device is DeviceHardwareVersion)
               PlatformListTile(
                 title: Text("Hardware Version", style: Theme.of(context).textTheme.bodyLarge),
@@ -95,6 +99,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                 ),
               ),
 
+            // MARK: Status LED control
             if (widget.device is StatusLed)
               ...[
                 Text("Control Status LED", style: Theme.of(context).textTheme.titleSmall),
@@ -108,6 +113,74 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                   trailing: RgbControlView(rgbLed: widget.device as RgbLed),
                 ),
               ],
+
+            // MARK: Device Battery State
+            if (widget.device is BatteryEnergyStatusService)
+              ...[
+                Text("Battery Energy Status", style: Theme.of(context).textTheme.titleSmall),
+                StreamBuilder<BatteryEnergyStatus>(
+                  stream: (widget.device as BatteryEnergyStatusService).energyStatusStream,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return PlatformCircularProgressIndicator();
+                    } else if (snapshot.hasError) {
+                      return Text("Error: ${snapshot.error}");
+                    } else if (!snapshot.hasData) {
+                      return Text("No data available");
+                    } else {
+                      final energyStatus = snapshot.data!;
+                      return Column(
+                        children: [
+                          PlatformListTile(
+                            title: Text("Battery Voltage"),
+                            subtitle: Text("${energyStatus.voltage} V"),
+                          ),
+                          PlatformListTile(
+                            title: Text("Charge Rate"),
+                            subtitle: Text("${energyStatus.chargeRate} A"),
+                          ),
+                          PlatformListTile(
+                            title: Text("Battery Capacity"),
+                            subtitle: Text("${energyStatus.availableCapacity} Ah"),
+                          ),
+                        ],
+                      );
+                    }
+                  },
+                ),
+              ],
+
+            // MARK: Battery Health
+            if (widget.device is BatteryHealthStatusService)
+              ...[
+                Text("Battery Health Status", style: Theme.of(context).textTheme.titleSmall),
+                StreamBuilder<BatteryHealthStatus>(
+                  stream: (widget.device as BatteryHealthStatusService).healthStatusStream,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return PlatformCircularProgressIndicator();
+                    } else if (snapshot.hasError) {
+                      return Text("Error: ${snapshot.error}");
+                    } else if (!snapshot.hasData) {
+                      return Text("No data available");
+                    } else {
+                      final healthStatus = snapshot.data!;
+                      return Column(
+                        children: [
+                          PlatformListTile(
+                            title: Text("Battery Temperature"),
+                            subtitle: Text("${healthStatus.currentTemperature} °C"),
+                          ),
+                          PlatformListTile(
+                            title: Text("Battery Cycle Count"),
+                            subtitle: Text("${healthStatus.cycleCount} cycles"),
+                          ),
+                        ],
+                      );
+                    }
+                  },
+                ),
+              ],
           ],
         ),
       ),
@@ -115,6 +188,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
   }
 }
 
+// MARK: - Status LED Widget
 class StatusLEDControlWidget extends StatefulWidget {
   final StatusLed statusLED;
   final RgbLed rgbLed;
