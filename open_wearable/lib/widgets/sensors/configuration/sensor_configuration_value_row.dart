@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
-import 'package:open_wearable/view_models/sensor_config_notifier.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 import 'package:open_wearable/widgets/sensors/configuration/sensor_configuration_detail_view.dart';
 import 'package:provider/provider.dart';
+
+import 'sensor_config_option_icon_factory.dart';
 
 /// A row that displays a sensor configuration and allows the user to select a value.
 /// 
@@ -16,7 +17,7 @@ class SensorConfigurationValueRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sensorConfigNotifier = Provider.of<SensorConfigNotifier>(context);
+    final sensorConfigNotifier = Provider.of<SensorConfigurationProvider>(context);
 
     return GestureDetector(
       onTap: () {
@@ -44,40 +45,44 @@ class SensorConfigurationValueRow extends StatelessWidget {
       child: PlatformListTile(
         title: Text(sensorConfiguration.name),
         trailing: _isOn(sensorConfigNotifier, sensorConfiguration) ?
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (sensorConfiguration is StreamableSensorConfiguration)
-                if ((sensorConfiguration as StreamableSensorConfiguration).streamData)
-                  Icon(Icons.bluetooth, color: Theme.of(context).colorScheme.secondary)
-                else
-                  Icon(Icons.bluetooth_disabled, color: Theme.of(context).colorScheme.secondary),
-              if (sensorConfiguration is RecordableSensorConfig)
-                if ((sensorConfiguration as RecordableSensorConfig).recordData)
-                  Icon(Icons.file_download_outlined, color: Theme.of(context).colorScheme.secondary)
-                else
-                  Icon(Icons.file_download_off_outlined, color: Theme.of(context).colorScheme.secondary),
-              Text(
-                "${sensorConfigNotifier.sensorConfigurationValues[sensorConfiguration]} Hz",
-                style: TextStyle(color: Theme.of(context).colorScheme.secondary)
-              ),
-            ],
-          )
+          () {
+            if (sensorConfigNotifier.sensorConfigurations[sensorConfiguration] == null) {
+              return Text("Internal Error", style: TextStyle(color: Theme.of(context).colorScheme.secondary));
+            }
+            SensorConfigurationValue value = sensorConfigNotifier.sensorConfigurations[sensorConfiguration]!;
+            if (value is SensorFrequencyConfigurationValue) {
+              SensorFrequencyConfigurationValue freqValue = value;
+              
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (sensorConfiguration is ConfigurableSensorConfiguration)
+                    ...(sensorConfigNotifier.sensorConfigurationOptions[sensorConfiguration] ?? []).map((option) {
+                      return Icon(getSensorConfigurationOptionIcon(option), color: Theme.of(context).colorScheme.secondary);
+                    }),
+                  Text(
+                    "${freqValue.frequencyHz} Hz",
+                    style: TextStyle(color: Theme.of(context).colorScheme.secondary)
+                  ),
+                ],
+              );
+            }
+
+            return Text(value.toString(), style: TextStyle(color: Theme.of(context).colorScheme.secondary));
+          }()
           : Text("Off", style: TextStyle(color: Theme.of(context).colorScheme.secondary)),
       ),
     );
   }
 
-  bool _isOn(SensorConfigNotifier notifier, SensorConfiguration config) {
+  bool _isOn(SensorConfigurationProvider notifier, SensorConfiguration config) {
     bool isOn = false;
-    if (config is StreamableSensorConfiguration) {
-      isOn |= (config as StreamableSensorConfiguration).streamData;
-    }
-    if (config is RecordableSensorConfig) {
-      isOn |= (config as RecordableSensorConfig).recordData;
-    }
-
-    if (config is! StreamableSensorConfiguration && config is! RecordableSensorConfig) {
+    if (config is ConfigurableSensorConfiguration) {
+      isOn = notifier.sensorConfigurationOptions[config]?.isNotEmpty ?? false;
+    } else if (config is SensorFrequencyConfiguration) {
+      SensorFrequencyConfigurationValue? value = notifier.sensorConfigurations[config] as SensorFrequencyConfigurationValue?;
+      isOn = value?.frequencyHz != null && value!.frequencyHz > 0;
+    } else {
       isOn = true;
     }
 
