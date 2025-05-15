@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
-import 'package:open_wearable/view_models/sensor_config_notifier.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/sensors/configuration/sensor_configuration_device_row.dart';
@@ -13,7 +12,7 @@ import 'package:provider/provider.dart';
 /// 
 /// The specific sensor configurations should be made available via the [SensorConfigurationProvider].
 class SensorConfigurationView extends StatelessWidget {
-  final Map<Wearable, SensorConfigNotifier> _notifiers = {};
+  final Map<Wearable, SensorConfigurationProvider> _notifiers = {};
   
   SensorConfigurationView({super.key});
 
@@ -41,12 +40,12 @@ class SensorConfigurationView extends StatelessWidget {
     for (Wearable device in devices) {
       if (device is SensorConfigurationManager) {
         if (!_notifiers.containsKey(device)) {
-          _notifiers[device] = SensorConfigNotifier();
+          _notifiers[device] = SensorConfigurationProvider();
         }
 
-        SensorConfigNotifier notifier = _notifiers[device]!;
+        SensorConfigurationProvider notifier = _notifiers[device]!;
         for (SensorConfiguration config in (device as SensorConfigurationManager).sensorConfigurations) {
-          if (!notifier.sensorConfigurationValues.containsKey(config)) {
+          if (notifier.getSelectedConfigurationValue(config) == null) {
             notifier.addSensorConfiguration(config, config.values.first);
           }
         }
@@ -73,19 +72,13 @@ class SensorConfigurationView extends StatelessWidget {
         : ListView(
           children: [
             ...wearablesProvider.wearables.map((wearable) {
-              return ChangeNotifierProvider<SensorConfigNotifier>.value(
+              return ChangeNotifierProvider<SensorConfigurationProvider>.value(
                 value: _notifiers[wearable]!,
                 child: SensorConfigurationDeviceRow(device: wearable),
               );
             }),
-            PlatformElevatedButton(
+            _buildSetConfigButton(
               onPressed: () {
-                for (SensorConfigNotifier notifier in _notifiers.values) {
-                  logger.d("Setting sensor configurations for notifier: $notifier");
-                  notifier.sensorConfigurationValues.forEach((config, value) {
-                    config.setConfiguration(value);
-                  });
-                }
                 Navigator.of(context).push(
                   platformPageRoute(
                     context: context,
@@ -93,10 +86,26 @@ class SensorConfigurationView extends StatelessWidget {
                   ),
                 );
               },
-              child: const Text('Set sensor configurations'),
-            )
+            ),
           ],
         )
+    );
+  }
+
+  Widget _buildSetConfigButton({ void Function()? onPressed }) {
+    return PlatformElevatedButton(
+      onPressed: () {
+        for (SensorConfigurationProvider notifier in _notifiers.values) {
+          logger.d("Setting sensor configurations for notifier: $notifier");
+          notifier.getSelectedConfigurations().forEach((entry) {
+            SensorConfiguration config = entry.$1;
+            SensorConfigurationValue value = entry.$2;
+            config.setConfiguration(value);
+          });
+        }
+        (onPressed ?? () {})();
+      },
+      child: const Text('Set sensor configurations'),
     );
   }
 
@@ -108,15 +117,7 @@ class SensorConfigurationView extends StatelessWidget {
         StaggeredGridTile.extent(
           crossAxisCellCount: 1,
           mainAxisExtent: 100.0,
-          child: PlatformElevatedButton(
-            onPressed: () {
-              SensorConfigurationProvider sensorConfigurationProvider = Provider.of<SensorConfigurationProvider>(context, listen: false);
-              sensorConfigurationProvider.sensorConfigurations.forEach((config, value) {
-                config.setConfiguration(value);
-              });
-            },
-            child: const Text('Set sensor configurations'),
-          ),
+          child: _buildSetConfigButton(),
         )
       );
     }
@@ -159,7 +160,10 @@ class SensorConfigurationView extends StatelessWidget {
       return StaggeredGridTile.extent(
         crossAxisCellCount: 1, // Dynamic width
         mainAxisExtent: span * 100.0, // Dynamic height based on content
-        child: SensorConfigurationDeviceRow(device: device),
+        child: ChangeNotifierProvider<SensorConfigurationProvider>.value(
+          value: _notifiers[device]!,
+          child: SensorConfigurationDeviceRow(device: device),
+        ),
       );
     }).toList();
   }
