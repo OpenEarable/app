@@ -26,7 +26,7 @@ class _SensorConfigurationDetailViewState extends State<SensorConfigurationDetai
   @override
   Widget build(BuildContext context) {
     SensorConfigurationProvider sensorConfigNotifier = Provider.of<SensorConfigurationProvider>(context);
-    _selectedValue = sensorConfigNotifier.sensorConfigurations[widget.sensorConfiguration];
+    _selectedValue = sensorConfigNotifier.getSelectedConfigurationValue(widget.sensorConfiguration);
 
     return ListView(
       children: [
@@ -36,19 +36,13 @@ class _SensorConfigurationDetailViewState extends State<SensorConfigurationDetai
               leading: Icon(getSensorConfigurationOptionIcon(option)),
               title: Text(option.name),
               trailing: PlatformSwitch(
-                value: sensorConfigNotifier.sensorConfigurationOptions[widget.sensorConfiguration]?.contains(option) ?? false,
+                value: sensorConfigNotifier.getSelectedConfigurationOptions(widget.sensorConfiguration).contains(option),
                 onChanged: (value) {
-                  setState(() {
-                    if (value) {
-                      if (sensorConfigNotifier.sensorConfigurationOptions[widget.sensorConfiguration] == null) {
-                        sensorConfigNotifier.sensorConfigurationOptions[widget.sensorConfiguration] = [];
-                      }
-                      sensorConfigNotifier.sensorConfigurationOptions[widget.sensorConfiguration]?.add(option);
-                    } else {
-                      sensorConfigNotifier.sensorConfigurationOptions[widget.sensorConfiguration]?.remove(option);
-                    }
-                  });
-                  sensorConfigNotifier.addSensorConfiguration(widget.sensorConfiguration, _selectedValue!);
+                  if (value) {
+                    sensorConfigNotifier.addSensorConfigurationOption(widget.sensorConfiguration, option);
+                  } else {
+                    sensorConfigNotifier.removeSensorConfigurationOption(widget.sensorConfiguration, option);
+                  }
                 },
               ),
             );
@@ -57,30 +51,43 @@ class _SensorConfigurationDetailViewState extends State<SensorConfigurationDetai
           leading: Icon(Icons.speed_outlined),
           title: Text("Sampling Rate"),
           trailing: DropdownButton<SensorConfigurationValue>(
-            value: _selectedValue,
-            items: widget.sensorConfiguration is SensorFrequencyConfiguration
-              ? () {
-                List<SensorFrequencyConfigurationValue> values = [];
-
-                for (SensorConfigurationValue value in widget.sensorConfiguration.values) {
-                  double freq = (value as SensorFrequencyConfigurationValue).frequencyHz;
-                  if (!values.any((v) => v.frequencyHz == freq)) {
-                    values.add(value);
-                  }
-                }
-                return values.map((value) {
-                  return DropdownMenuItem<SensorConfigurationValue>(
-                    value: value,
-                    child: Text(value.key),
-                  );
-                }).toList();
-              }()
-              : widget.sensorConfiguration.values.map((value) {
+            value: sensorConfigNotifier.getSelectedConfigurationValue(widget.sensorConfiguration),
+            items: sensorConfigNotifier.getSensorConfigurationValues(widget.sensorConfiguration, distinct: true).map((value) {
+              if (value is SensorFrequencyConfigurationValue) {
                 return DropdownMenuItem<SensorConfigurationValue>(
                   value: value,
-                  child: Text(value.key),
+                  child: Text("${value.frequencyHz}"),
                 );
-              }).toList(),
+              }
+              return DropdownMenuItem<SensorConfigurationValue>(
+                value: value,
+                child: Text(value.key),
+              );
+            }).toList(),
+            
+            // widget.sensorConfiguration is SensorFrequencyConfiguration
+            //   ? () {
+            //     List<SensorFrequencyConfigurationValue> values = [];
+
+            //     for (SensorConfigurationValue value in widget.sensorConfiguration.values) {
+            //       double freq = (value as SensorFrequencyConfigurationValue).frequencyHz;
+            //       if (!values.any((v) => v.frequencyHz == freq)) {
+            //         values.add(value);
+            //       }
+            //     }
+            //     return values.map((value) {
+            //       return DropdownMenuItem<SensorConfigurationValue>(
+            //         value: value,
+            //         child: Text(value.key),
+            //       );
+            //     }).toList();
+            //   }()
+            //   : widget.sensorConfiguration.values.map((value) {
+            //     return DropdownMenuItem<SensorConfigurationValue>(
+            //       value: value,
+            //       child: Text(value.key),
+            //     );
+            //   }).toList(),
             onChanged: (value) {
               setState(() {
                 _selectedValue = value;
