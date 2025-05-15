@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -46,7 +45,7 @@ class SensorConfigurationView extends StatelessWidget {
 
         SensorConfigurationProvider notifier = _notifiers[device]!;
         for (SensorConfiguration config in (device as SensorConfigurationManager).sensorConfigurations) {
-          if (!notifier.sensorConfigurations.containsKey(config)) {
+          if (notifier.getSelectedConfigurationValue(config) == null) {
             notifier.addSensorConfiguration(config, config.values.first);
           }
         }
@@ -78,27 +77,8 @@ class SensorConfigurationView extends StatelessWidget {
                 child: SensorConfigurationDeviceRow(device: wearable),
               );
             }),
-            PlatformElevatedButton(
+            _buildSetConfigButton(
               onPressed: () {
-                for (SensorConfigurationProvider notifier in _notifiers.values) {
-                  logger.d("Setting sensor configurations for notifier: $notifier");
-                  notifier.sensorConfigurations.forEach((config, value) {
-                    if (config is ConfigurableSensorConfiguration) {
-                      List<SensorConfigurationOption> options = notifier.sensorConfigurationOptions[config] ?? [];
-                      ConfigurableSensorConfigurationValue? matchingValue = config.values.where(
-                        (v) => v.withoutOptions() == (value as ConfigurableSensorConfigurationValue).withoutOptions()
-                          && listEquals(v.options, options),
-                      ).firstOrNull;
-                      if (matchingValue != null) {
-                        config.setConfiguration(matchingValue);
-                      } else {
-                        logger.e("No matching value found for ${config.name} with options $options");
-                      }
-                    } else {
-                      config.setConfiguration(value);
-                    }
-                  });
-                }
                 Navigator.of(context).push(
                   platformPageRoute(
                     context: context,
@@ -106,10 +86,26 @@ class SensorConfigurationView extends StatelessWidget {
                   ),
                 );
               },
-              child: const Text('Set sensor configurations'),
-            )
+            ),
           ],
         )
+    );
+  }
+
+  Widget _buildSetConfigButton({ void Function()? onPressed }) {
+    return PlatformElevatedButton(
+      onPressed: () {
+        for (SensorConfigurationProvider notifier in _notifiers.values) {
+          logger.d("Setting sensor configurations for notifier: $notifier");
+          notifier.getSelectedConfigurations().forEach((entry) {
+            SensorConfiguration config = entry.$1;
+            SensorConfigurationValue value = entry.$2;
+            config.setConfiguration(value);
+          });
+        }
+        (onPressed ?? () {})();
+      },
+      child: const Text('Set sensor configurations'),
     );
   }
 
@@ -121,16 +117,7 @@ class SensorConfigurationView extends StatelessWidget {
         StaggeredGridTile.extent(
           crossAxisCellCount: 1,
           mainAxisExtent: 100.0,
-          child: PlatformElevatedButton(
-            onPressed: () {
-              _notifiers.forEach((device, sensorConfigurationProvider) {
-                sensorConfigurationProvider.sensorConfigurations.forEach((config, value) {
-                  config.setConfiguration(value);
-                });
-              });
-            },
-            child: const Text('Set sensor configurations'),
-          ),
+          child: _buildSetConfigButton(),
         )
       );
     }

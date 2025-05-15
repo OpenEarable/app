@@ -46,10 +46,10 @@ class SensorConfigurationValueRow extends StatelessWidget {
         title: Text(sensorConfiguration.name),
         trailing: _isOn(sensorConfigNotifier, sensorConfiguration) ?
           () {
-            if (sensorConfigNotifier.sensorConfigurations[sensorConfiguration] == null) {
+            if (sensorConfigNotifier.getSelectedConfigurationValue(sensorConfiguration) == null) {
               return Text("Internal Error", style: TextStyle(color: Theme.of(context).colorScheme.secondary));
             }
-            SensorConfigurationValue value = sensorConfigNotifier.sensorConfigurations[sensorConfiguration]!;
+            SensorConfigurationValue value = sensorConfigNotifier.getSelectedConfigurationValue(sensorConfiguration)!;
             if (value is SensorFrequencyConfigurationValue) {
               SensorFrequencyConfigurationValue freqValue = value;
               
@@ -57,7 +57,7 @@ class SensorConfigurationValueRow extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (sensorConfiguration is ConfigurableSensorConfiguration)
-                    ...(sensorConfigNotifier.sensorConfigurationOptions[sensorConfiguration] ?? []).map((option) {
+                    ...(sensorConfigNotifier.getSelectedConfigurationOptions(sensorConfiguration)).map((option) {
                       return Icon(getSensorConfigurationOptionIcon(option), color: Theme.of(context).colorScheme.secondary);
                     }),
                   Text(
@@ -78,9 +78,9 @@ class SensorConfigurationValueRow extends StatelessWidget {
   bool _isOn(SensorConfigurationProvider notifier, SensorConfiguration config) {
     bool isOn = false;
     if (config is ConfigurableSensorConfiguration) {
-      isOn = notifier.sensorConfigurationOptions[config]?.isNotEmpty ?? false;
+      isOn = notifier.getSelectedConfigurationOptions(config).isNotEmpty;
     } else if (config is SensorFrequencyConfiguration) {
-      SensorFrequencyConfigurationValue? value = notifier.sensorConfigurations[config] as SensorFrequencyConfigurationValue?;
+      SensorFrequencyConfigurationValue? value = notifier.getSelectedConfigurationValue(config) as SensorFrequencyConfigurationValue?;
       isOn = value?.frequencyHz != null && value!.frequencyHz > 0;
     } else {
       isOn = true;
