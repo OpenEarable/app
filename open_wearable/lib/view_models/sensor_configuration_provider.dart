@@ -43,17 +43,22 @@ class SensorConfigurationProvider with ChangeNotifier {
     }
     if (!possibleValues.contains(selectedValue)) {
       if (selectedValue is ConfigurableSensorConfigurationValue) {
-        SensorConfigurationValue matchingValue = getSensorConfigurationValues(sensorConfiguration).firstWhere((value) {
-          if (value is ConfigurableSensorConfigurationValue) {
-            return value.withoutOptions() == selectedValue.withoutOptions();
-          }
-          return value == selectedValue;
-        }/*, orElse: () {
-          logger.w("No matching value found for $selectedValue in $possibleValues");
-          return possibleValues.last;
-        }*/);
+        final SensorConfigurationValue? matchingValue = getSensorConfigurationValues(sensorConfiguration)
+          .where((value) {
+            if (value is ConfigurableSensorConfigurationValue) {
+              return value.withoutOptions() == selectedValue.withoutOptions();
+            }
+            return value == selectedValue;
+          })
+          .cast<SensorConfigurationValue?>()
+          .toList()
+          .firstOrNull;
+
+        if (matchingValue == null) {
+          logger.w("No matching value found for ${sensorConfiguration.name} with options ${_sensorConfigurationOptions[sensorConfiguration]}");
+        }
     
-        addSensorConfiguration(sensorConfiguration, matchingValue);
+        addSensorConfiguration(sensorConfiguration, matchingValue ?? possibleValues.last);
       } else {
         logger.e("Selected value is not a ConfigurableSensorConfigurationValue and we do not know how to handle it");
       }
