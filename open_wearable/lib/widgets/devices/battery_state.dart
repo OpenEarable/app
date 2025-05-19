@@ -5,16 +5,17 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 class BatteryStateView extends StatelessWidget {
   final Wearable _device;
 
-  const BatteryStateView({super.key, required Wearable device}) : _device = device;
+  const BatteryStateView({super.key, required Wearable device})
+      : _device = device;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (_device is BatteryLevelService)
+        if (_device is BatteryLevelStatus)
           StreamBuilder(
-            stream: (_device as BatteryLevelService).batteryPercentageStream,
+            stream: (_device as BatteryLevelStatus).batteryPercentageStream,
             builder: (context, snapshot) {
               if (snapshot.hasData) {
                 return Text("${snapshot.data}%");
@@ -37,23 +38,23 @@ class BatteryStateView extends StatelessWidget {
                 }
 
                 switch (snapshot.data!.chargeLevel) {
-                case BatteryChargeLevel.good:
-                  return Icon(Icons.battery_full);
-                case BatteryChargeLevel.low:
-                  return Icon(Icons.battery_3_bar_rounded);
-                case BatteryChargeLevel.critical:
-                  return Icon(Icons.battery_1_bar_rounded);
-                case BatteryChargeLevel.unknown:
-                  return Icon(Icons.battery_unknown);
+                  case BatteryChargeLevel.good:
+                    return Icon(Icons.battery_full);
+                  case BatteryChargeLevel.low:
+                    return Icon(Icons.battery_3_bar_rounded);
+                  case BatteryChargeLevel.critical:
+                    return Icon(Icons.battery_1_bar_rounded);
+                  case BatteryChargeLevel.unknown:
+                    return Icon(Icons.battery_unknown);
                 }
               } else {
                 return PlatformCircularProgressIndicator();
               }
             },
           )
-        else if (_device is BatteryLevelService)
+        else if (_device is BatteryLevelStatus)
           StreamBuilder(
-            stream: (_device as BatteryLevelService).batteryPercentageStream,
+            stream: (_device as BatteryLevelStatus).batteryPercentageStream,
             builder: (context, snapshot) {
               if (snapshot.hasData) {
                 return Icon(getBatteryIcon(snapshot.data!));

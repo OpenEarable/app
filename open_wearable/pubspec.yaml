@@ -38,7 +38,7 @@ dependencies:
   open_earable_flutter:
     git:
       url: https://github.com/OpenEarable/open_earable_flutter.git
-      ref: main
+      ref: fota
   flutter_platform_widgets: ^7.0.1
   provider: ^6.1.2
   logger: ^2.5.0
