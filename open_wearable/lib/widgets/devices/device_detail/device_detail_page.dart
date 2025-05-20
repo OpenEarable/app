@@ -1,10 +1,13 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/widgets/devices/battery_state.dart';
-import 'package:open_wearable/widgets/devices/rgb_control.dart';
+import 'package:open_wearable/widgets/devices/device_detail/audio_mode_widget.dart';
+
+import 'rgb_control.dart';
+import 'microphone_selection_widget.dart';
+import 'status_led_widget.dart';
 
 /// A page that displays the details of a device.
 /// 
@@ -21,13 +24,11 @@ class DeviceDetailPage extends StatefulWidget {
 class _DeviceDetailPageState extends State<DeviceDetailPage> {
   bool showStatusLED = true;
   Microphone? selectedMicrophone;
-  AudioMode? selectedAudioMode;
 
   @override
   void initState() {
     super.initState();
     _initSelectedMicrophone();
-    _getSelectedAudioMode();
   }
 
   Future<void> _initSelectedMicrophone() async {
@@ -35,15 +36,6 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
       final mic = await (widget.device as MicrophoneManager).getMicrophone();
       setState(() {
         selectedMicrophone = mic;
-      });
-    }
-  }
-
-  Future<void> _getSelectedAudioMode() async {
-    if (widget.device is AudioModeManager) {
-      final mode = await (widget.device as AudioModeManager).getAudioMode();
-      setState(() {
-        selectedAudioMode = mode;
       });
     }
   }
@@ -78,70 +70,10 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
             ),
             // MARK: Audio Mode
             if (widget.device is AudioModeManager)
-              PlatformWidget(
-                cupertino:(context, platform) => CupertinoSlidingSegmentedControl(
-                  children: {
-                    for (var item in (widget.device as AudioModeManager).availableAudioModes)
-                      item : Text(item.key)
-                  },
-                  onValueChanged: (AudioMode? mode) {
-                    if (mode == null) return;
-                    (widget.device as AudioModeManager).setAudioMode(mode);
-                  },
-                  groupValue: selectedAudioMode,
-                ),
-                material: (context, platform) => SegmentedButton<AudioMode>(
-                  segments: 
-                    (widget.device as AudioModeManager).availableAudioModes.map((item) {
-                      return ButtonSegment<AudioMode>(
-                        value: item,
-                        label: Text(item.key),
-                      );
-                    }).toList(),
-                    onSelectionChanged: (Set<AudioMode> selected) {
-                      if (selected.isEmpty) return;
-                      (widget.device as AudioModeManager).setAudioMode(selected.first);
-                      setState(() {
-                        selectedAudioMode = selected.first;
-                      });
-                    },
-                    selected: selectedAudioMode != null ? {selectedAudioMode!} : {},
-                    emptySelectionAllowed: true,
-                  ),
-              ),
+              AudioModeWidget(device: widget.device as AudioModeManager),
             // MARK: Microphone Control
             if (widget.device is MicrophoneManager)
-              PlatformWidget(
-                cupertino:(context, platform) => CupertinoSlidingSegmentedControl(
-                  children: {
-                    for (var item in (widget.device as MicrophoneManager).availableMicrophones)
-                      item : Text(item.key)
-                  },
-                  onValueChanged: (Microphone? mic) {
-                    if (mic == null) return;
-                    (widget.device as MicrophoneManager).setMicrophone(mic);
-                  },
-                  groupValue: selectedMicrophone,
-                ),
-                material: (context, platform) => SegmentedButton<Microphone>(
-                  segments: 
-                    (widget.device as MicrophoneManager).availableMicrophones.map((item) {
-                      return ButtonSegment<Microphone>(
-                        value: item,
-                        label: Text(item.key),
-                      );
-                    }).toList(),
-                    onSelectionChanged: (Set<Microphone> selected) {
-                      if (selected.isEmpty) return;
-                      (widget.device as MicrophoneManager).setMicrophone(selected.first);
-                      setState(() {
-                        selectedMicrophone = selected.first;
-                      });
-                    },
-                    selected: selectedMicrophone != null ? {selectedMicrophone!} : {},
-                    emptySelectionAllowed: true,
-                  ),
-              ),
+              MicrophoneSelectionWidget(device: widget.device as MicrophoneManager),
             // MARK: Device info
             Text("Device Info", style: Theme.of(context).textTheme.titleSmall),
             PlatformListTile(
@@ -279,43 +211,6 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
           ],
         ),
       ),
-    );
-  }
-}
-
-// MARK: - Status LED Widget
-class StatusLEDControlWidget extends StatefulWidget {
-  final StatusLed statusLED;
-  final RgbLed rgbLed;
-  const StatusLEDControlWidget({super.key, required this.statusLED, required this.rgbLed});
-
-  @override
-  State<StatusLEDControlWidget> createState() => _StatusLEDControlWidgetState();
-}
-
-class _StatusLEDControlWidgetState extends State<StatusLEDControlWidget> {
-  bool _overrideColor = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return PlatformListTile(
-      title: Text("Override LED Color", style: Theme.of(context).textTheme.bodyLarge),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (_overrideColor)
-            RgbControlView(rgbLed: widget.rgbLed),
-          PlatformSwitch(
-            value: _overrideColor,
-            onChanged: (value) async {
-              setState(() {
-                _overrideColor = value;
-              });
-              widget.statusLED.showStatus(!value);
-            },
-          ),
-        ],
-      )
     );
   }
 }
