@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -19,6 +20,33 @@ class DeviceDetailPage extends StatefulWidget {
 
 class _DeviceDetailPageState extends State<DeviceDetailPage> {
   bool showStatusLED = true;
+  Microphone? selectedMicrophone;
+  AudioMode? selectedAudioMode;
+
+  @override
+  void initState() {
+    super.initState();
+    _initSelectedMicrophone();
+    _getSelectedAudioMode();
+  }
+
+  Future<void> _initSelectedMicrophone() async {
+    if (widget.device is MicrophoneManager) {
+      final mic = await (widget.device as MicrophoneManager).getMicrophone();
+      setState(() {
+        selectedMicrophone = mic;
+      });
+    }
+  }
+
+  Future<void> _getSelectedAudioMode() async {
+    if (widget.device is AudioModeManager) {
+      final mode = await (widget.device as AudioModeManager).getAudioMode();
+      setState(() {
+        selectedAudioMode = mode;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,6 +76,73 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                 )
               ],
             ),
+            // MARK: Audio Mode
+            if (widget.device is AudioModeManager)
+              PlatformWidget(
+                cupertino:(context, platform) => CupertinoSlidingSegmentedControl(
+                  children: {
+                    for (var item in (widget.device as AudioModeManager).availableAudioModes)
+                      item : Text(item.key)
+                  },
+                  onValueChanged: (AudioMode? mode) {
+                    if (mode == null) return;
+                    (widget.device as AudioModeManager).setAudioMode(mode);
+                  },
+                  groupValue: selectedAudioMode,
+                ),
+                material: (context, platform) => SegmentedButton<AudioMode>(
+                  segments: 
+                    (widget.device as AudioModeManager).availableAudioModes.map((item) {
+                      return ButtonSegment<AudioMode>(
+                        value: item,
+                        label: Text(item.key),
+                      );
+                    }).toList(),
+                    onSelectionChanged: (Set<AudioMode> selected) {
+                      if (selected.isEmpty) return;
+                      (widget.device as AudioModeManager).setAudioMode(selected.first);
+                      setState(() {
+                        selectedAudioMode = selected.first;
+                      });
+                    },
+                    selected: selectedAudioMode != null ? {selectedAudioMode!} : {},
+                    emptySelectionAllowed: true,
+                  ),
+              ),
+            // MARK: Microphone Control
+            if (widget.device is MicrophoneManager)
+              PlatformWidget(
+                cupertino:(context, platform) => CupertinoSlidingSegmentedControl(
+                  children: {
+                    for (var item in (widget.device as MicrophoneManager).availableMicrophones)
+                      item : Text(item.key)
+                  },
+                  onValueChanged: (Microphone? mic) {
+                    if (mic == null) return;
+                    (widget.device as MicrophoneManager).setMicrophone(mic);
+                  },
+                  groupValue: selectedMicrophone,
+                ),
+                material: (context, platform) => SegmentedButton<Microphone>(
+                  segments: 
+                    (widget.device as MicrophoneManager).availableMicrophones.map((item) {
+                      return ButtonSegment<Microphone>(
+                        value: item,
+                        label: Text(item.key),
+                      );
+                    }).toList(),
+                    onSelectionChanged: (Set<Microphone> selected) {
+                      if (selected.isEmpty) return;
+                      (widget.device as MicrophoneManager).setMicrophone(selected.first);
+                      setState(() {
+                        selectedMicrophone = selected.first;
+                      });
+                    },
+                    selected: selectedMicrophone != null ? {selectedMicrophone!} : {},
+                    emptySelectionAllowed: true,
+                  ),
+              ),
+            // MARK: Device info
             Text("Device Info", style: Theme.of(context).textTheme.titleSmall),
             PlatformListTile(
               title: Text("Bluetooth Address", style: Theme.of(context).textTheme.bodyLarge),
