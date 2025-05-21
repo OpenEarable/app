@@ -38,9 +38,12 @@ class SensorValueCard extends StatelessWidget {
                   Text(wearable.name, style: Theme.of(context).textTheme.bodyMedium),
                 ],
               ),
-              SizedBox(
-                height: 200,
-                child: SensorChart(allowToggleAxes: false,),
+              Padding(
+                padding: const EdgeInsets.only(top: 10.0),
+                  child: SizedBox(
+                  height: 200,
+                  child: SensorChart(allowToggleAxes: false,),
+                ),
               ),
             ],
           ),
