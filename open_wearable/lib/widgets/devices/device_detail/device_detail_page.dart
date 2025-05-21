@@ -3,7 +3,11 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/widgets/devices/battery_state.dart';
-import 'package:open_wearable/widgets/devices/rgb_control.dart';
+import 'package:open_wearable/widgets/devices/device_detail/audio_mode_widget.dart';
+
+import 'rgb_control.dart';
+import 'microphone_selection_widget.dart';
+import 'status_led_widget.dart';
 
 /// A page that displays the details of a device.
 ///
@@ -19,6 +23,22 @@ class DeviceDetailPage extends StatefulWidget {
 
 class _DeviceDetailPageState extends State<DeviceDetailPage> {
   bool showStatusLED = true;
+  Microphone? selectedMicrophone;
+
+  @override
+  void initState() {
+    super.initState();
+    _initSelectedMicrophone();
+  }
+
+  Future<void> _initSelectedMicrophone() async {
+    if (widget.device is MicrophoneManager) {
+      final mic = await (widget.device as MicrophoneManager).getMicrophone();
+      setState(() {
+        selectedMicrophone = mic;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,6 +69,14 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                 )
               ],
             ),
+            // MARK: Audio Mode
+            if (widget.device is AudioModeManager)
+              AudioModeWidget(device: widget.device as AudioModeManager),
+            // MARK: Microphone Control
+            if (widget.device is MicrophoneManager)
+              MicrophoneSelectionWidget(
+                  device: widget.device as MicrophoneManager),
+            // MARK: Device info
             Text("Device Info", style: Theme.of(context).textTheme.titleSmall),
             PlatformListTile(
               title: Text("Bluetooth Address",
@@ -214,42 +242,5 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
         ),
       ),
     );
-  }
-}
-
-// MARK: - Status LED Widget
-class StatusLEDControlWidget extends StatefulWidget {
-  final StatusLed statusLED;
-  final RgbLed rgbLed;
-  const StatusLEDControlWidget(
-      {super.key, required this.statusLED, required this.rgbLed});
-
-  @override
-  State<StatusLEDControlWidget> createState() => _StatusLEDControlWidgetState();
-}
-
-class _StatusLEDControlWidgetState extends State<StatusLEDControlWidget> {
-  bool _overrideColor = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return PlatformListTile(
-        title: Text("Override LED Color",
-            style: Theme.of(context).textTheme.bodyLarge),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (_overrideColor) RgbControlView(rgbLed: widget.rgbLed),
-            PlatformSwitch(
-              value: _overrideColor,
-              onChanged: (value) async {
-                setState(() {
-                  _overrideColor = value;
-                });
-                widget.statusLED.showStatus(!value);
-              },
-            ),
-          ],
-        ));
   }
 }

@@ -6,7 +6,7 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/devices/battery_state.dart';
 import 'package:open_wearable/widgets/devices/connect_devices_page.dart';
-import 'package:open_wearable/widgets/devices/device_detail_page.dart';
+import 'package:open_wearable/widgets/devices/device_detail/device_detail_page.dart';
 import 'package:provider/provider.dart';
 
 /// On this page the user can see all connected devices.

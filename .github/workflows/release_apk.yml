@@ -20,9 +20,9 @@ jobs:
         with:
           channel: 'beta'
           
-      - name: Set up Flutter 3.24.2
+      - name: Set up Flutter 3.29.3
         run: |
-          FLUTTER_URL="https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.24.2-stable.tar.xz"
+          FLUTTER_URL="https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.29.3-stable.tar.xz"
           FLUTTER_DIR="$HOME/flutter"
           mkdir -p $FLUTTER_DIR
           curl -L $FLUTTER_URL -o /tmp/flutter.tar.xz
@@ -30,16 +30,16 @@ jobs:
           chmod +x $FLUTTER_DIR/bin/cache/dart-sdk/bin/dart
           echo "$FLUTTER_DIR/bin" >> $GITHUB_PATH
         
-      - working-directory: ./open_earable
+      - working-directory: ./open_wearable
         run: flutter pub get
-      - working-directory: ./open_earable
+      - working-directory: ./open_wearable
         run: flutter analyze
-      - working-directory: ./open_earable
+      - working-directory: ./open_wearable
         run: flutter build apk
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4.6.2
         with:
           name: release-apk
-          path: open_earable/build/app/outputs/apk/release/app-release.apk
+          path: open_wearable/build/app/outputs/apk/release/app-release.apk
 
   release:
     permissions: write-all
@@ -47,7 +47,7 @@ jobs:
     needs: build
     steps:
       - name: Download APK Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.3.0
         with:
           name: release-apk
           path: ${{ github.workspace }}/release-apk
