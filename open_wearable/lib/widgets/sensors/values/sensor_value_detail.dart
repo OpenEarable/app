@@ -21,7 +21,7 @@ class SensorValueDetail extends StatelessWidget {
           children: [
             Text(wearable.name, style: Theme.of(context).textTheme.bodyMedium),
             Expanded(
-              child: SensorChart(sensor: sensor, allowToggleAxes: true),
+              child: SensorChart(allowToggleAxes: true),
             ),
           ],
         ),
