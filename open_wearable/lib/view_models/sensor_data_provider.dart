@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -9,9 +10,12 @@ class SensorDataProvider with ChangeNotifier {
   final int timeWindow; // seconds
 
   late final int _timestampCutoffMs;
-  final List<SensorValue> sensorValues = [];
+  final Queue<SensorValue> sensorValues = Queue();
 
   StreamSubscription<SensorValue>? _sensorStreamSubscription;
+
+  Timer? _throttleTimer;
+  final Duration _throttleDuration = const Duration(milliseconds: 15);
 
   SensorDataProvider({
     required this.sensor,
@@ -27,6 +31,18 @@ class SensorDataProvider with ChangeNotifier {
       final cutoff = sensorValue.timestamp - _timestampCutoffMs;
       sensorValues.removeWhere((v) => v.timestamp < cutoff);
 
+      while (sensorValues.isNotEmpty && sensorValues.first.timestamp < cutoff) {
+        sensorValues.removeFirst();
+      }
+
+      _throttledNotifyListeners();
+    });
+  }
+
+  void _throttledNotifyListeners() {
+    if (_throttleTimer?.isActive ?? false) return;
+
+    _throttleTimer = Timer(_throttleDuration, () {
       notifyListeners();
     });
   }

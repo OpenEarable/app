@@ -1,4 +1,4 @@
-import 'dart:async';
+import 'dart:collection';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -118,7 +118,7 @@ class _SensorChartState extends State<SensorChart> {
     );
   }
 
-  Map<String, List<FlSpot>> _buildAxisData(Sensor sensor, List<SensorValue> buffer) {
+  Map<String, List<FlSpot>> _buildAxisData(Sensor sensor, Queue<SensorValue> buffer) {
     if (buffer.isEmpty) return { for (var axis in sensor.axisNames) axis: [] };
 
     final scale = pow(10, -sensor.timestampExponent).toDouble();
