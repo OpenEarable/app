@@ -22,9 +22,9 @@ class _SensorChartState extends State<SensorChart> {
   late Map<String, bool> _axisEnabled;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    Sensor sensor = context.watch<SensorDataProvider>().sensor;
+  void initState() {
+    super.initState();
+    final sensor = context.read<SensorDataProvider>().sensor;
     _axisEnabled = { for (var axis in sensor.axisNames) axis: true };
   }
 
