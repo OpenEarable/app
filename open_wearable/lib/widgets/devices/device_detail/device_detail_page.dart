@@ -5,6 +5,7 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/widgets/devices/battery_state.dart';
 import 'package:open_wearable/widgets/devices/device_detail/audio_mode_widget.dart';
 
+import '../../fota/firmware_update.dart';
 import 'rgb_control.dart';
 import 'microphone_selection_widget.dart';
 import 'status_led_widget.dart';

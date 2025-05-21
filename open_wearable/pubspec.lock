@@ -175,7 +175,7 @@ packages:
     source: hosted
     version: "6.0.3"
   flutter_bloc:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: flutter_bloc
       sha256: b594505eac31a0518bdcb4b5b79573b8d9117b193cc80cc12e17d639b10aa27a
@@ -373,7 +373,7 @@ packages:
     description:
       path: "."
       ref: fota
-      resolved-ref: "4680f7e0cb5b43a10e3bb529f7d158f4aa5468b2"
+      resolved-ref: "2b9056aa021a3c22fa278b72cdde85e61c2b6053"
       url: "https://github.com/OpenEarable/open_earable_flutter.git"
     source: git
     version: "0.0.5"
