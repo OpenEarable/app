@@ -1,18 +1,17 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/view_models/sensor_data_provider.dart';
+import 'package:provider/provider.dart';
 
 class SensorChart extends StatefulWidget {
-  final Sensor sensor;
   final bool allowToggleAxes;
-  final int timeWindow; // in seconds
 
   const SensorChart({
     super.key,
-    required this.sensor,
     this.allowToggleAxes = true,
-    this.timeWindow = 5,
   });
 
   @override
@@ -21,71 +20,38 @@ class SensorChart extends StatefulWidget {
 
 class _SensorChartState extends State<SensorChart> {
   late Map<String, bool> _axisEnabled;
-  late Map<String, List<FlSpot>> _axisData;
-  StreamSubscription<SensorValue>? _sensorStreamSubscription;
-  late int _startTime;
 
   @override
-  void initState() {
-    super.initState();
-    _axisEnabled = {
-      for (var name in widget.sensor.axisNames) name: true,
-    };
-    _axisData = {
-      for (var name in widget.sensor.axisNames) name: [],
-    };
-    _startTime = DateTime.now().millisecondsSinceEpoch;
-    _listenToSensorStream();
-  }
-
-  void _listenToSensorStream() {
-    _sensorStreamSubscription?.cancel();
-    _sensorStreamSubscription = widget.sensor.sensorStream.listen((sensorValue) {
-      final currentTime = DateTime.now().millisecondsSinceEpoch;
-      final elapsedTime = (currentTime - _startTime) / 1000.0; // in seconds
-
-      setState(() {
-        for (int i = 0; i < widget.sensor.axisCount; i++) {
-          final axisName = widget.sensor.axisNames[i];
-          final value = sensorValue is SensorDoubleValue
-              ? sensorValue.values[i]
-              : (sensorValue as SensorIntValue).values[i].toDouble();
-
-          _axisData[axisName]?.add(FlSpot(elapsedTime, value));
-
-          // Remove data older than timeWindow
-          _axisData[axisName] = _axisData[axisName]!
-              .where((spot) => elapsedTime - spot.x <= widget.timeWindow)
-              .toList();
-        }
-      });
-    });
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    Sensor sensor = context.watch<SensorDataProvider>().sensor;
+    _axisEnabled = { for (var axis in sensor.axisNames) axis: true };
   }
 
   void _toggleAxis(String axisName, bool value) {
+    logger.d('Toggling axis $axisName to $value');
     setState(() {
       _axisEnabled[axisName] = value;
     });
   }
 
   @override
-  void dispose() {
-    _sensorStreamSubscription?.cancel();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final enabledAxes = widget.sensor.axisNames
+    Sensor sensor = context.watch<SensorDataProvider>().sensor;
+    final enabledAxes = sensor.axisNames
         .where((axis) => _axisEnabled[axis] ?? false)
         .toList();
-
+    final axisData = _buildAxisData(
+      sensor,
+      context.watch<SensorDataProvider>().sensorValues,
+    );
+    
     return Column(
       children: [
         if (widget.allowToggleAxes)
           Wrap(
-            spacing: 8.0,
-            children: widget.sensor.axisNames.map((axisName) {
+            spacing: 8,
+            children: sensor.axisNames.map((axisName) {
               return Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -102,13 +68,13 @@ class _SensorChartState extends State<SensorChart> {
         Expanded(
           child: LineChart(
             LineChartData(
-              lineTouchData: LineTouchData(enabled: false),
+              lineTouchData: LineTouchData(enabled: true),
               gridData: FlGridData(show: true),
               titlesData: FlTitlesData(show: true),
               borderData: FlBorderData(show: false),
               lineBarsData: enabledAxes.map((axisName) {
                 return LineChartBarData(
-                  spots: _axisData[axisName] ?? [],
+                  spots: axisData[axisName] ?? [],
                   isCurved: false,
                   barWidth: 2,
                   isStrokeCapRound: true,
@@ -116,10 +82,28 @@ class _SensorChartState extends State<SensorChart> {
                 );
               }).toList(),
             ),
-            duration: const Duration(microseconds: 0),
+            duration: const Duration(milliseconds: 0),
           ),
         ),
       ],
     );
+  }
+
+  Map<String, List<FlSpot>> _buildAxisData(Sensor sensor, List<SensorValue> buffer) {
+    if (buffer.isEmpty) return { for (var axis in sensor.axisNames) axis: [] };
+
+    final t0 = buffer.first.timestamp.toDouble();
+    final scale = pow(10, -sensor.timestampExponent).toDouble();
+
+    return {
+      for (int i = 0; i < sensor.axisCount; i++)
+        sensor.axisNames[i]: buffer.map((v) {
+          final x = (v.timestamp - t0) / scale;
+          final y = v is SensorDoubleValue
+              ? v.values[i]
+              : (v as SensorIntValue).values[i].toDouble();
+          return FlSpot(x, y);
+        }).toList()
+    };
   }
 }

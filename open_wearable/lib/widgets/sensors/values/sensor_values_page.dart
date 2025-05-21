@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/view_models/sensor_data_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/sensors/values/sensor_value_card.dart';
 import 'package:provider/provider.dart';
 
 class SensorValuesPage extends StatelessWidget {
-  const SensorValuesPage({super.key});
+  final Map<(Wearable, Sensor), SensorDataProvider> _sensorDataProvider = {};
+
+  SensorValuesPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -15,11 +18,25 @@ class SensorValuesPage extends StatelessWidget {
         List<Widget> charts = [];
         for (var wearable in wearablesProvider.wearables) {
           if (wearable is SensorManager) {
-            for (var sensor in (wearable as SensorManager).sensors) {
-              charts.add(SensorValueCard(sensor: sensor, wearable: wearable,));
+            for (Sensor sensor in (wearable as SensorManager).sensors) {
+              if (!_sensorDataProvider.containsKey((wearable, sensor))) {
+                _sensorDataProvider[(wearable, sensor)] = SensorDataProvider(sensor: sensor);
+              }
+              charts.add(
+                ChangeNotifierProvider.value(
+                  value: _sensorDataProvider[(wearable, sensor)],
+                  child: SensorValueCard(sensor: sensor, wearable: wearable,)
+                )
+              );
             }
           }
         }
+
+        _sensorDataProvider.removeWhere((key, _) =>
+          !wearablesProvider.wearables.any((device) => device is SensorManager
+          && device == key.$1
+          && (device as SensorManager).sensors.contains(key.$2))
+        );
 
         return LayoutBuilder(
           builder: (context, constraints) {
