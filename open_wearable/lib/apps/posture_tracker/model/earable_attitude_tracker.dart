@@ -5,9 +5,11 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/apps/posture_tracker/model/attitude.dart';
 import 'package:open_wearable/apps/posture_tracker/model/attitude_tracker.dart';
 import 'package:open_wearable/apps/posture_tracker/model/ewma.dart';
+import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 
 class EarableAttitudeTracker extends AttitudeTracker {
   final SensorManager _sensorManager;
+  final SensorConfigurationProvider _sensorConfigurationProvider;
   StreamSubscription<SensorValue>? _subscription;
 
   @override
@@ -22,7 +24,7 @@ class EarableAttitudeTracker extends AttitudeTracker {
 
   final bool _isLeft;
 
-  EarableAttitudeTracker(this._sensorManager, this._isLeft);
+  EarableAttitudeTracker(this._sensorManager, this._sensorConfigurationProvider, this._isLeft);
 
   @override
   void start() {
@@ -37,10 +39,12 @@ class EarableAttitudeTracker extends AttitudeTracker {
     configurations.addAll(accelSensor.relatedConfigurations);
 
     for (final SensorConfiguration configuration in configurations) {
-      if (configuration is StreamableSensorConfiguration) {
-        (configuration as StreamableSensorConfiguration).streamData = true;
+      if (configuration is ConfigurableSensorConfiguration && configuration.availableOptions.contains(StreamSensorConfigOption())) {
+        _sensorConfigurationProvider.addSensorConfigurationOption(configuration, StreamSensorConfigOption());
       }
-      configuration.setConfiguration(configuration.values.first);
+      List<SensorConfigurationValue> values = _sensorConfigurationProvider.getSensorConfigurationValues(configuration, distinct: true);
+      _sensorConfigurationProvider.addSensorConfiguration(configuration, values.first);
+      configuration.setConfiguration(_sensorConfigurationProvider.getSelectedConfigurationValue(configuration)!);
     }
 
     calibrate(

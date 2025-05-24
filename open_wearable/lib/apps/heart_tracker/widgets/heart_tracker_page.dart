@@ -4,6 +4,8 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/apps/heart_tracker/model/ppg_filter.dart';
 import 'package:open_wearable/apps/heart_tracker/widgets/beating_heart.dart';
 import 'package:open_wearable/apps/heart_tracker/widgets/rowling_chart.dart';
+import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
+import 'package:provider/provider.dart';
 
 class HeartTrackerPage extends StatefulWidget {
   final Sensor ppgSensor;
@@ -13,6 +15,7 @@ class HeartTrackerPage extends StatefulWidget {
   @override
   State<HeartTrackerPage> createState() => _HeartTrackerPageState();
 }
+
 class _HeartTrackerPageState extends State<HeartTrackerPage> {
   late final PpgFilter ppgFilter;
 
@@ -21,23 +24,42 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
     super.initState();
 
     final sensor = widget.ppgSensor;
-    SensorConfiguration configuration = sensor.relatedConfigurations.first;
-    if (configuration is StreamableSensorConfiguration) {
-      (configuration as StreamableSensorConfiguration).streamData = true;
-    }
-    configuration.setConfiguration(configuration.values.first);
 
-    ppgFilter = PpgFilter(
-      inputStream: sensor.sensorStream.asyncMap((data) {
-        SensorDoubleValue sensorData = data as SensorDoubleValue;
-        return (
-          sensorData.timestamp,
-          -(sensorData.values[2] + sensorData.values[3])
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      SensorConfigurationProvider configProvider = Provider.of<SensorConfigurationProvider>(context, listen: false);
+      SensorConfiguration configuration = sensor.relatedConfigurations.first;
+
+      if (configuration is ConfigurableSensorConfiguration &&
+          configuration.availableOptions.contains(StreamSensorConfigOption())) {
+        configProvider.addSensorConfigurationOption(configuration, StreamSensorConfigOption());
+      }
+
+      List<SensorConfigurationValue> values = configProvider.getSensorConfigurationValues(configuration, distinct: true);
+      configProvider.addSensorConfiguration(configuration, values.first);
+      SensorConfigurationValue selectedValue = configProvider.getSelectedConfigurationValue(configuration)!;
+      configuration.setConfiguration(selectedValue);
+
+      double sampleFreq;
+      if (selectedValue is SensorFrequencyConfigurationValue) {
+        sampleFreq = selectedValue.frequencyHz;
+      } else {
+        sampleFreq = 25;
+      }
+
+      setState(() {
+        ppgFilter = PpgFilter(
+          inputStream: sensor.sensorStream.asyncMap((data) {
+            SensorDoubleValue sensorData = data as SensorDoubleValue;
+            return (
+              sensorData.timestamp,
+              -(sensorData.values[2] + sensorData.values[3])
+            );
+          }).asBroadcastStream(),
+          sampleFreq: sampleFreq,
+          timestampExponent: sensor.timestampExponent,
         );
-      }).asBroadcastStream(),
-      sampleFreq: 25,
-      timestampExponent: sensor.timestampExponent,
-    );
+      });
+    });
   }
 
   @override
@@ -48,52 +70,60 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
       ),
       body: Padding(
         padding: EdgeInsets.symmetric(horizontal: 10),
-        child: ListView(
-          children: [
-            StreamBuilder<double>(
-              stream: ppgFilter.heartRateStream,
-              builder: (context, snapshot) {
-                double bpm = snapshot.data ?? double.nan;
-                return Padding(
-                  padding: EdgeInsets.all(10),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // BeatingHeart(bpm: bpm.isFinite ? bpm : 60),
-                      Text(
-                        "${bpm.isNaN ? "--" : bpm.toStringAsFixed(0)} BPM",
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-            Card(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        child: ppgFilterWidget(),
+      ),
+    );
+  }
+
+  Widget ppgFilterWidget() {
+    if (!mounted) {
+      return Center(child: PlatformCircularProgressIndicator());
+    }
+
+    return ListView(
+      children: [
+        StreamBuilder<double>(
+          stream: ppgFilter.heartRateStream,
+          builder: (context, snapshot) {
+            double bpm = snapshot.data ?? double.nan;
+            return Padding(
+              padding: EdgeInsets.all(10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Padding(
-                    padding: EdgeInsets.all(10),
-                    child: Text(
-                      "Blood Flow",
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                  ),
-                  SizedBox(
-                    height: 200,
-                    child: RollingChart(
-                      dataSteam: ppgFilter.filteredStream,
-                      timestampExponent: widget.ppgSensor.timestampExponent,
-                      timeWindow: 5,
-                    ),
+                  // BeatingHeart(bpm: bpm.isFinite ? bpm : 60),
+                  Text(
+                    "${bpm.isNaN ? "--" : bpm.toStringAsFixed(0)} BPM",
+                    style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ],
               ),
-            ),
-          ],
+            );
+          },
         ),
-      ),
+        Card(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: EdgeInsets.all(10),
+                child: Text(
+                  "Blood Flow",
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              SizedBox(
+                height: 200,
+                child: RollingChart(
+                  dataSteam: ppgFilter.filteredStream,
+                  timestampExponent: widget.ppgSensor.timestampExponent,
+                  timeWindow: 5,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

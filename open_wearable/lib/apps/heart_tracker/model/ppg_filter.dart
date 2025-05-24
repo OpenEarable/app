@@ -112,7 +112,7 @@ class PpgFilter {
 
       // Need at least 2 peaks to compute HR
       if (peakTimestamps.length < 2) {
-        _logger.w("not enough peaks ${peakTimestamps.length}");
+        _logger.w("not enough peaks ${peakTimestamps.length}, in buffer of size ${buffer.length}");
         continue;
       }
 
