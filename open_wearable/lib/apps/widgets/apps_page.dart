@@ -26,10 +26,11 @@ List<AppInfo> _apps = [
     logoPath: "lib/apps/posture_tracker/assets/logo.png",
     title: "Posture Tracker",
     description: "Get feedback on bad posture",
-    widget: SelectEarableView(startApp: (wearable) {
+    widget: SelectEarableView(startApp: (wearable, sensorConfigProvider) {
       return PostureTrackerView(
         EarableAttitudeTracker(
           wearable as SensorManager,
+          sensorConfigProvider,
           wearable.name.endsWith("L")
         )
       );
@@ -40,7 +41,7 @@ List<AppInfo> _apps = [
     title: "Heart Tracker",
     description: "Track your heart rate and other vitals",
     widget: SelectEarableView(
-      startApp: (wearable) {
+      startApp: (wearable, _) {
         if (wearable is SensorManager) {
           //TODO: show alert if no ppg sensor is found
           Sensor ppgSensor = (wearable as SensorManager).sensors.firstWhere(
