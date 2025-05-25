@@ -44,7 +44,7 @@ class MyApp extends StatelessWidget {
           materialLightTheme: ThemeData(
             useMaterial3: true, // Enables Material You (Pixel UI)
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-            cardTheme: CardTheme(
+            cardTheme: CardThemeData(
               color: Colors.white,
               elevation: 0, // Subtle shadow
             ),
