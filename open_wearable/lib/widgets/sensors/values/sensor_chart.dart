@@ -131,7 +131,7 @@ class _SensorChartState extends State<SensorChart> {
               ? v.values[i]
               : (v as SensorIntValue).values[i].toDouble();
           return FlSpot(x, y);
-        }).toList()
+        }).toList(),
     };
   }
 

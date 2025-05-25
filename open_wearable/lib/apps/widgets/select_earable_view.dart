@@ -65,15 +65,15 @@ class _SelectEarableViewState extends State<SelectEarableView> {
                               wearablesProvider.getSensorConfigurationProvider(_selectedWearable!),
                             ),
                           );
-                        }
-                      )
+                        },
+                      ),
                     );
                   }
                 },
               ),
             ],
           ),
-      )
+      ),
     );
   }
 }

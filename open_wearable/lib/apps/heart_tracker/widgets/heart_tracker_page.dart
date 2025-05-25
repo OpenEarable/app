@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/apps/heart_tracker/model/ppg_filter.dart';
-import 'package:open_wearable/apps/heart_tracker/widgets/beating_heart.dart';
 import 'package:open_wearable/apps/heart_tracker/widgets/rowling_chart.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 import 'package:provider/provider.dart';

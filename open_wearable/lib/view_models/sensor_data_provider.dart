@@ -42,9 +42,7 @@ class SensorDataProvider with ChangeNotifier {
   void _throttledNotifyListeners() {
     if (_throttleTimer?.isActive ?? false) return;
 
-    _throttleTimer = Timer(_throttleDuration, () {
-      notifyListeners();
-    });
+    _throttleTimer = Timer(_throttleDuration, notifyListeners);
   }
 
   @override

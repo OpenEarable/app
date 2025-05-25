@@ -2,9 +2,6 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:community_charts_flutter/community_charts_flutter.dart' as charts;
-import 'package:logger/logger.dart';
-
-Logger _logger = Logger();
 
 class RollingChart extends StatefulWidget {
   final Stream<(int, double)> dataSteam;
@@ -66,7 +63,7 @@ class _RollingChartState extends State<RollingChart> {
           domainFn: (_ChartPoint point, _) => point.time,
           measureFn: (_ChartPoint point, _) => point.value,
           data: List.of(_data),
-      )
+      ),
     ];
   }
 

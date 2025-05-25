@@ -64,7 +64,7 @@ class SensorConfigurationView extends StatelessWidget {
               },
             ),
           ],
-        )
+        ),
     );
   }
 
@@ -96,7 +96,7 @@ class SensorConfigurationView extends StatelessWidget {
           child: _buildSetConfigButton(
             configProviders: devices.map((device) => wearablesProvider.getSensorConfigurationProvider(device)).toList(),
           ),
-        )
+        ),
       );
     }
 
@@ -119,9 +119,9 @@ class SensorConfigurationView extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Center(
-              child: Text("No devices connected", style: Theme.of(context).textTheme.titleLarge)
+              child: Text("No devices connected", style: Theme.of(context).textTheme.titleLarge),
             ),
-          )
+          ),
         ),
       ],
     );

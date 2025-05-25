@@ -148,7 +148,7 @@ class DeviceRow extends StatelessWidget {
                           _device.name,
                           style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
                         ),
-                        BatteryStateView(device: _device)
+                        BatteryStateView(device: _device),
                       ],
                     ),
                   Spacer(),
@@ -205,9 +205,9 @@ class DeviceRow extends StatelessWidget {
                   ],
                 ),
             ],
-          )
-        )
-      )
+          ),
+        ),
+      ),
     );
   }
 }

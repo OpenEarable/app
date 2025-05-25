@@ -39,7 +39,7 @@ class SensorConfigurationDeviceRow extends StatelessWidget {
               itemCount: (device as SensorConfigurationManager).sensorConfigurations.length,
               itemBuilder: (context, index) {
                 return SensorConfigurationValueRow(
-                  sensorConfiguration: (device as SensorConfigurationManager).sensorConfigurations[index]
+                  sensorConfiguration: (device as SensorConfigurationManager).sensorConfigurations[index],
                 );
               },
             )

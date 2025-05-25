@@ -27,8 +27,8 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (context) => WearablesProvider()),
       ],
-      child: const MyApp()
-    )
+      child: const MyApp(),
+    ),
   );
 }
 
