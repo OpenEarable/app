@@ -16,20 +16,15 @@ jobs:
           java-version: '17'
           cache: 'gradle'
           check-latest: true
+      - name: Get flutter version
+        run: echo "flutter_version=`cat open_wearable/.flutter_version`" >> $GITHUB_ENV
+        id: flutter_version
       - uses: subosito/flutter-action@v2
         with:
-          channel: 'beta'
-          
-      - name: Set up Flutter 3.29.3
-        run: |
-          FLUTTER_URL="https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.29.3-stable.tar.xz"
-          FLUTTER_DIR="$HOME/flutter"
-          mkdir -p $FLUTTER_DIR
-          curl -L $FLUTTER_URL -o /tmp/flutter.tar.xz
-          tar -xf /tmp/flutter.tar.xz -C $FLUTTER_DIR --strip-components=1
-          chmod +x $FLUTTER_DIR/bin/cache/dart-sdk/bin/dart
-          echo "$FLUTTER_DIR/bin" >> $GITHUB_PATH
-        
+          channel: "stable"
+          cache: true
+          flutter-version: ${{ env.flutter_version }}
+
       - working-directory: ./open_wearable
         run: flutter pub get
       - working-directory: ./open_wearable
