@@ -301,10 +301,10 @@ packages:
     description:
       path: "."
       ref: main
-      resolved-ref: bb38a1e2726d4fcc0b084eb6453070e0559f26b7
+      resolved-ref: "1aabfa091d8ea103dfe85f6e15337d233c92fe88"
       url: "https://github.com/OpenEarable/open_earable_flutter.git"
     source: git
-    version: "0.0.5"
+    version: "0.1.0"
   path:
     dependency: transitive
     description:
