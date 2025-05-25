@@ -49,7 +49,7 @@ class BadPostureReminder {
 
   BadPostureReminder({
     required AttitudeTracker attitudeTracker,
-    BadPostureUserNotifier? badPostureUserNotifier
+    BadPostureUserNotifier? badPostureUserNotifier,
   }) : _attitudeTracker = attitudeTracker, _badPostureUserNotifier = badPostureUserNotifier;
 
   bool? _lastPostureWasBad;

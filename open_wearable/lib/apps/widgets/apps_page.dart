@@ -31,10 +31,10 @@ List<AppInfo> _apps = [
         EarableAttitudeTracker(
           wearable as SensorManager,
           sensorConfigProvider,
-          wearable.name.endsWith("L")
-        )
+          wearable.name.endsWith("L"),
+        ),
       );
-    }),
+    },),
   ),
   AppInfo(
     logoPath: "lib/apps/heart_tracker/assets/logo.png",
@@ -45,7 +45,7 @@ List<AppInfo> _apps = [
         if (wearable is SensorManager) {
           //TODO: show alert if no ppg sensor is found
           Sensor ppgSensor = (wearable as SensorManager).sensors.firstWhere(
-            (s) => s.sensorName.toLowerCase() == "photoplethysmography".toLowerCase()
+            (s) => s.sensorName.toLowerCase() == "photoplethysmography".toLowerCase(),
           );
 
           return HeartTrackerPage(ppgSensor: ppgSensor);
@@ -58,9 +58,9 @@ List<AppInfo> _apps = [
             child: Text("No PPG Sensor Found"),
           ),
         );
-      }
+      },
     ),
-  )
+  ),
 ];
 
 class AppsPage extends StatelessWidget {
@@ -75,7 +75,7 @@ class AppsPage extends StatelessWidget {
         itemBuilder: (context, index) {
           return AppTile(app: _apps[index]);
         },
-      )
+      ),
     );
   }
 }

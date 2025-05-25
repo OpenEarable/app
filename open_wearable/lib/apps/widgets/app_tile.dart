@@ -26,7 +26,7 @@ class AppTile extends StatelessWidget {
         onTap: () {
           Navigator.push(
             context,
-            platformPageRoute(context: context, builder: (context) => app.widget)
+            platformPageRoute(context: context, builder: (context) => app.widget),
           );
         },
       );

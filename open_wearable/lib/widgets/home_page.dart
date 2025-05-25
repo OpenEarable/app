@@ -33,7 +33,7 @@ class _HomePageState extends State<HomePage> {
       BottomNavigationBarItem(
         icon: Icon(Icons.apps_rounded),
         label: titles[2],
-      )
+      ),
     ];
   }
 
@@ -90,8 +90,8 @@ class _HomePageState extends State<HomePage> {
             ),
             SensorValuesPage(),
           ],
-        )
-      )
+        ),
+      ),
     );
   }
 
@@ -116,12 +116,12 @@ class _HomePageState extends State<HomePage> {
                     builder: (context) => const Material(
                       child: ConnectDevicesPage(),
                     ),
-                  )
+                  ),
                 );
               }
-            }
+            },
           ),
-        ]
+        ],
       ),
       bodyBuilder: (context, index) => IndexedStack(
         index: index,

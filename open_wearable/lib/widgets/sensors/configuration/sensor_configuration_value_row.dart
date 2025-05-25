@@ -62,7 +62,7 @@ class SensorConfigurationValueRow extends StatelessWidget {
                     }),
                   Text(
                     "${freqValue.frequencyHz} Hz",
-                    style: TextStyle(color: Theme.of(context).colorScheme.secondary)
+                    style: TextStyle(color: Theme.of(context).colorScheme.secondary),
                   ),
                 ],
               );

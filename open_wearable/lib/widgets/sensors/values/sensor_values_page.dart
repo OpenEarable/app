@@ -25,8 +25,8 @@ class SensorValuesPage extends StatelessWidget {
               charts.add(
                 ChangeNotifierProvider.value(
                   value: _sensorDataProvider[(wearable, sensor)],
-                  child: SensorValueCard(sensor: sensor, wearable: wearable,)
-                )
+                  child: SensorValueCard(sensor: sensor, wearable: wearable,),
+                ),
               );
             }
           }
@@ -35,7 +35,7 @@ class SensorValuesPage extends StatelessWidget {
         _sensorDataProvider.removeWhere((key, _) =>
           !wearablesProvider.wearables.any((device) => device is SensorManager
           && device == key.$1
-          && (device as SensorManager).sensors.contains(key.$2))
+          && (device as SensorManager).sensors.contains(key.$2),),
         );
 
         return LayoutBuilder(
@@ -63,9 +63,9 @@ class SensorValuesPage extends StatelessWidget {
             child: Text("No sensors connected", style: Theme.of(context).textTheme.titleLarge),
           )
           : ListView(
-            children: charts
-          )
-      )
+            children: charts,
+          ),
+      ),
     );
   }
 

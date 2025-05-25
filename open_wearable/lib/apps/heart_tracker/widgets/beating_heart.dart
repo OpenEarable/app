@@ -50,7 +50,7 @@ class _BeatingHeartState extends State<BeatingHeart>
     ).animate(CurvedAnimation(
       parent: _controller,
       curve: Curves.easeInOut,
-    ));
+    ),);
   }
 
   @override

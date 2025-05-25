@@ -37,7 +37,7 @@ class _AudioModeWidgetState extends State<AudioModeWidget> {
       cupertino:(context, platform) => CupertinoSlidingSegmentedControl(
         children: {
           for (var item in widget.device.availableAudioModes)
-            item : Text(item.key)
+            item : Text(item.key),
         },
         onValueChanged: (AudioMode? mode) {
           if (mode == null) return;
