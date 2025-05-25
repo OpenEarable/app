@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:open_wearable/apps/posture_tracker/model/attitude_tracker.dart';
 import 'package:open_wearable/apps/posture_tracker/model/bad_posture_user_notifier.dart';
 
@@ -20,12 +21,13 @@ class BadPostureSettings {
   /// The time threshold in seconds for resetting the timer
   int resetTimeThreshold;
 
-  BadPostureSettings(
-      {this.isActive = true,
-      required this.rollAngleThreshold,
-      required this.pitchAngleThreshold,
-      required this.timeThreshold,
-      required this.resetTimeThreshold,});
+  BadPostureSettings({
+    this.isActive = true,
+    required this.rollAngleThreshold,
+    required this.pitchAngleThreshold,
+    required this.timeThreshold,
+    required this.resetTimeThreshold,
+  });
 }
 
 class PostureTimestamps {
@@ -36,10 +38,12 @@ class PostureTimestamps {
 
 class BadPostureReminder {
   BadPostureSettings _settings = BadPostureSettings(
-      rollAngleThreshold: 20,
-      pitchAngleThreshold: 20,
-      timeThreshold: 10,
-      resetTimeThreshold: 1,);
+    rollAngleThreshold: 20,
+    pitchAngleThreshold: 20,
+    timeThreshold: 10,
+    resetTimeThreshold: 1,
+  );
+
   // final OpenEarable _openEarable;
   final AttitudeTracker _attitudeTracker;
   final BadPostureUserNotifier? _badPostureUserNotifier;
@@ -50,7 +54,8 @@ class BadPostureReminder {
   BadPostureReminder({
     required AttitudeTracker attitudeTracker,
     BadPostureUserNotifier? badPostureUserNotifier,
-  }) : _attitudeTracker = attitudeTracker, _badPostureUserNotifier = badPostureUserNotifier;
+  })  : _attitudeTracker = attitudeTracker,
+        _badPostureUserNotifier = badPostureUserNotifier;
 
   bool? _lastPostureWasBad;
 
@@ -103,9 +108,13 @@ class BadPostureReminder {
           int duration = now.difference(_timestamps.lastGoodPosture!).inSeconds;
           // If the duration exceeds the minimum required, reset the last bad state time
           if (duration >= _settings.resetTimeThreshold) {
-            print(
-                "duration: $duration, reset time threshold: ${_settings.resetTimeThreshold}",);
-            print("resetting last bad posture time");
+            if (kDebugMode) {
+              // Print debug information
+              print(
+                "duration: $duration, reset time threshold: ${_settings.resetTimeThreshold}",
+              );
+              print("resetting last bad posture time");
+            }
             _timestamps.lastBadPosture = null;
           }
         }
