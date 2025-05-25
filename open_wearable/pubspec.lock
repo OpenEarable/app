@@ -301,7 +301,7 @@ packages:
     description:
       path: "."
       ref: main
-      resolved-ref: a19f7a6a8c140a14fbd76efab815048b80f9781a
+      resolved-ref: bb38a1e2726d4fcc0b084eb6453070e0559f26b7
       url: "https://github.com/OpenEarable/open_earable_flutter.git"
     source: git
     version: "0.0.5"
@@ -482,10 +482,10 @@ packages:
     dependency: transitive
     description:
       name: vector_graphics_compiler
-      sha256: "1b4b9e706a10294258727674a340ae0d6e64a7231980f9f9a3d12e4b42407aad"
+      sha256: "557a315b7d2a6dbb0aaaff84d857967ce6bdc96a63dc6ee2a57ce5a6ee5d3331"
       url: "https://pub.dev"
     source: hosted
-    version: "1.1.16"
+    version: "1.1.17"
   vector_math:
     dependency: transitive
     description:
