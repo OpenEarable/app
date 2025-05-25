@@ -25,7 +25,7 @@ jobs:
         name: Deploy preview
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_OPEN_EARABLE_WEB }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_open_wearable_WEB }}
           projectId: open-wearable-web
           expires: 28d
           entryPoint: open_wearable/

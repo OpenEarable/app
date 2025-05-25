@@ -14,14 +14,14 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-      - run: (cd open_earable && flutter analyze)
-      - run: (cd open_earable && flutter build web --dart-define=BUILD_COMMIT=$(git
+      - run: (cd open_wearable && flutter analyze)
+      - run: (cd open_wearable && flutter build web --dart-define=BUILD_COMMIT=$(git
           rev-parse --short HEAD) --dart-define=BUILD_BRANCH=$(git rev-parse
           --abbrev-ref HEAD))
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_OPEN_EARABLE_WEB }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_open_wearable_WEB }}
           channelId: live
           projectId: open-earable-web
-          entryPoint: open_earable/
+          entryPoint: open_wearable/
