@@ -1,4 +1,4 @@
-package com.example.open_wearable
+package edu.kit.teco.openWearable
 
 import io.flutter.embedding.android.FlutterActivity
 
