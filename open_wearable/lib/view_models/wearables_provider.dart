@@ -13,7 +13,9 @@ class WearablesProvider with ChangeNotifier {
     _wearables.add(wearable);
     if (wearable is SensorConfigurationManager) {
       if (!_sensorConfigurationProviders.containsKey(wearable)) {
-        _sensorConfigurationProviders[wearable] = SensorConfigurationProvider();
+        _sensorConfigurationProviders[wearable] = SensorConfigurationProvider(
+          sensorConfigurationManager: wearable as SensorConfigurationManager,
+        );
       }
 
       SensorConfigurationProvider notifier = _sensorConfigurationProviders[wearable]!;
