@@ -19,60 +19,68 @@ class _SensorPageState extends State<SensorPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // MARK: Segmented control
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: PlatformWidget(
-            cupertino: (_, __) => CupertinoSlidingSegmentedControl<_SensorsTab>(
-              groupValue: _current,
-              children: const {
-              _SensorsTab.configurations: Text('Configurations'),
-              _SensorsTab.charts: Text('Charts'),
-              },
-              onValueChanged: (value) {
-                if (value != null) {
-                  setState(() {
-                    _current = value;
-                  });
-                }
-              },
-            ),
-            material: (_, __) => SizedBox(
-              width: double.infinity,
-              child: SegmentedButton<_SensorsTab>(
-                emptySelectionAllowed: false,
-                multiSelectionEnabled: false,
-                segments: const [
-                  ButtonSegment<_SensorsTab>(
-                  value: _SensorsTab.configurations,
-                  label: Text('Configuration'),
-                  ),
-                  ButtonSegment<_SensorsTab>(
-                  value: _SensorsTab.charts,
-                  label: Text('Charts'),
-                  ),
-                ],
-                selected: {_current},
-                onSelectionChanged: (Set<_SensorsTab> newSelection) {
-                  setState(() {
-                    _current = newSelection.first;
-                  });
-                },
-              ),
+    return Scaffold(
+      body: NestedScrollView(
+        floatHeaderSlivers: true,
+        headerSliverBuilder: (context, _) => [
+          SliverAppBar(
+            title: const Text('Sensors'),
+            floating: true,
+            snap: true,
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(kToolbarHeight),
+              child: _buildSegmentedControl(),
             ),
           ),
-        ),
-        // MARK: Tab Body
-        Expanded(
-          child: _current == _SensorsTab.configurations
-            ? SensorConfigurationView(
-              onSetConfigPressed: () => setState(() => _current = _SensorsTab.charts),
-            )
-            : SensorValuesPage(),
-        ),
-      ],
+        ],
+        body: _buildBody(),
+      ),
     );
+  }
+
+  // MARK: Segmented Control
+  Widget _buildSegmentedControl() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: PlatformWidget(
+        cupertino: (_, __) => CupertinoSlidingSegmentedControl<_SensorsTab>(
+          groupValue: _current,
+          children: const {
+            _SensorsTab.configurations: Text('Configurations'),
+            _SensorsTab.charts:        Text('Charts'),
+          },
+          onValueChanged: (v) {
+            if (v != null) setState(() => _current = v);
+          },
+        ),
+        material: (_, __) => SegmentedButton<_SensorsTab>(
+          segments: const [
+            ButtonSegment(
+              value: _SensorsTab.configurations,
+              label: Text('Configuration'),
+            ),
+            ButtonSegment(
+              value: _SensorsTab.charts,
+              label: Text('Charts'),
+            ),
+          ],
+          selected: {_current},
+          onSelectionChanged: (s) =>
+            setState(() => _current = s.first),
+        ),
+      ),
+    );
+  }
+
+  // MARK: Tab Body
+  Widget _buildBody() {
+    switch (_current) {
+      case _SensorsTab.charts:
+        return SensorValuesPage();
+      case _SensorsTab.configurations:
+        return SensorConfigurationView(
+          onSetConfigPressed: () => setState(() => _current = _SensorsTab.charts),
+        );
+    }
   }
 }
