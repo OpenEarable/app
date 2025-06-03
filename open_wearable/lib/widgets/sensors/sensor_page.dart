@@ -19,56 +19,23 @@ class _SensorPageState extends State<SensorPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: NestedScrollView(
-        floatHeaderSlivers: true,
-        headerSliverBuilder: (context, _) => [
-          SliverAppBar(
-            title: const Text('Sensors'),
-            floating: true,
-            snap: true,
-            bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(kToolbarHeight),
-              child: _buildSegmentedControl(),
-            ),
-          ),
-        ],
-        body: _buildBody(),
-      ),
-    );
-  }
+    return NestedScrollView(
+      floatHeaderSlivers: true,
+      headerSliverBuilder: (context, _) => [
+        SliverAppBar(
+          title: const Text('Sensors'),
+          pinned: true,
+        ),
 
-  // MARK: Segmented Control
-  Widget _buildSegmentedControl() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: PlatformWidget(
-        cupertino: (_, __) => CupertinoSlidingSegmentedControl<_SensorsTab>(
-          groupValue: _current,
-          children: const {
-            _SensorsTab.configurations: Text('Configurations'),
-            _SensorsTab.charts:        Text('Charts'),
-          },
-          onValueChanged: (v) {
-            if (v != null) setState(() => _current = v);
-          },
+        SliverPersistentHeader(
+          floating: true,
+          delegate: _SegmentsHeader(
+            current: _current,
+            onChanged: (tab) => setState(() => _current = tab),
+          ),
         ),
-        material: (_, __) => SegmentedButton<_SensorsTab>(
-          segments: const [
-            ButtonSegment(
-              value: _SensorsTab.configurations,
-              label: Text('Configuration'),
-            ),
-            ButtonSegment(
-              value: _SensorsTab.charts,
-              label: Text('Charts'),
-            ),
-          ],
-          selected: {_current},
-          onSelectionChanged: (s) =>
-            setState(() => _current = s.first),
-        ),
-      ),
+      ],
+      body: _buildBody(),
     );
   }
 
@@ -83,4 +50,64 @@ class _SensorPageState extends State<SensorPage> {
         );
     }
   }
+}
+
+// MARK: Segmented Control Header
+class _SegmentsHeader extends SliverPersistentHeaderDelegate {
+  final _SensorsTab current;
+  final ValueChanged<_SensorsTab> onChanged;
+  
+  _SegmentsHeader({
+    required this.current,
+    required this.onChanged,
+  });
+
+  @override
+  double get minExtent => kToolbarHeight;
+  @override
+  double get maxExtent => kToolbarHeight;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final segmented = PlatformWidget(
+      cupertino: (_, __) => CupertinoSlidingSegmentedControl<_SensorsTab>(
+        groupValue: current,
+        children: const {
+          _SensorsTab.configurations: Text('Configurations'),
+          _SensorsTab.charts:        Text('Charts'),
+        },
+        onValueChanged: (val) {
+          if (val != null) onChanged(val);
+        },
+      ),
+      material: (_, __) => SizedBox(
+        width: double.infinity,
+        child: SegmentedButton<_SensorsTab>(
+          segments: const [
+            ButtonSegment(
+              value: _SensorsTab.configurations,
+              label: Text('Configuration'),
+            ),
+            ButtonSegment(
+              value: _SensorsTab.charts,
+              label: Text('Charts'),
+            ),
+          ],
+          selected: {current},
+          onSelectionChanged: (set) => onChanged(set.first),
+        ),
+      ),
+    );
+
+    return Container(
+      alignment: Alignment.center,
+      // color: Colors.blue,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: segmented,
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _SegmentsHeader oldDelegate) =>
+      oldDelegate.current != current;
 }
