@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -32,10 +33,38 @@ class DevicesPage extends StatelessWidget {
     );
   }
 
-  Widget _buildSmallScreenLayout(
-    BuildContext context,
-    WearablesProvider wearablesProvider,
-  ) {
+  Widget _buildSmallScreenLayout(BuildContext context, WearablesProvider wearablesProvider) {
+    return PlatformScaffold(
+      appBar: PlatformAppBar(
+        title: Text("Devices"),
+        trailingActions: [
+            PlatformIconButton(
+            icon: Icon(context.platformIcons.bluetooth),
+            onPressed: () {
+              if (Theme.of(context).platform == TargetPlatform.iOS) {
+                showCupertinoModalPopup(
+                  context: context,
+                  builder: (context) => ConnectDevicesPage(),
+                );
+              } else {
+                Navigator.of(context).push(
+                  platformPageRoute(
+                    context: context,
+                    builder: (context) => const Material(
+                      child: ConnectDevicesPage(),
+                    ),
+                  ),
+                );
+              }
+            },
+          ),
+        ],
+      ),
+      body: _buildSmallScreenContent(context, wearablesProvider),
+    );
+  }
+
+  Widget _buildSmallScreenContent(BuildContext context, WearablesProvider wearablesProvider) {
     if (wearablesProvider.wearables.isEmpty) {
       return Center(
         child: Text(

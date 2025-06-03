@@ -1,8 +1,6 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_wearable/apps/widgets/apps_page.dart';
-import 'package:open_wearable/widgets/devices/connect_devices_page.dart';
 import 'package:open_wearable/widgets/devices/devices_page.dart';
 import 'package:open_wearable/widgets/sensors/configuration/sensor_configuration_view.dart';
 import 'package:open_wearable/widgets/sensors/values/sensor_values_page.dart';
@@ -109,32 +107,6 @@ class _HomePageState extends State<HomePage> {
   Widget _buildSmallScreenLayout(BuildContext context) {
     return PlatformTabScaffold(
       tabController: _controller,
-      appBarBuilder: (context, index) => PlatformAppBar(
-        title: Text(titles[index]),
-        trailingActions: [
-          PlatformIconButton(
-            icon: Icon(context.platformIcons.bluetooth),
-            padding: EdgeInsets.zero,
-            onPressed: () {
-              if (Theme.of(context).platform == TargetPlatform.iOS) {
-                showCupertinoModalPopup(
-                  context: context,
-                  builder: (context) => ConnectDevicesPage(),
-                );
-              } else {
-                Navigator.of(context).push(
-                  platformPageRoute(
-                    context: context,
-                    builder: (context) => const Material(
-                      child: ConnectDevicesPage(),
-                    ),
-                  ),
-                );
-              }
-            },
-          ),
-        ],
-      ),
       bodyBuilder: (context, index) => IndexedStack(
         index: index,
         children: _tabs,
