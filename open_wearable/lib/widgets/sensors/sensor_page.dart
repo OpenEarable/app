@@ -39,23 +39,28 @@ class _SensorPageState extends State<SensorPage> {
                 }
               },
             ),
-            material: (_, __) => SegmentedButton<_SensorsTab>(
-              segments: const [
-                ButtonSegment<_SensorsTab>(
+            material: (_, __) => SizedBox(
+              width: double.infinity,
+              child: SegmentedButton<_SensorsTab>(
+                emptySelectionAllowed: false,
+                multiSelectionEnabled: false,
+                segments: const [
+                  ButtonSegment<_SensorsTab>(
                   value: _SensorsTab.configurations,
                   label: Text('Configuration'),
-                ),
-                ButtonSegment<_SensorsTab>(
+                  ),
+                  ButtonSegment<_SensorsTab>(
                   value: _SensorsTab.charts,
                   label: Text('Charts'),
-                ),
-              ],
-              selected: {_current},
-              onSelectionChanged: (Set<_SensorsTab> newSelection) {
-                setState(() {
-                  _current = newSelection.first;
-                });
-              },
+                  ),
+                ],
+                selected: {_current},
+                onSelectionChanged: (Set<_SensorsTab> newSelection) {
+                  setState(() {
+                    _current = newSelection.first;
+                  });
+                },
+              ),
             ),
           ),
         ),
