@@ -52,20 +52,15 @@ class SensorValuesPage extends StatelessWidget {
   }
 
   Widget _buildSmallScreenLayout(BuildContext context, List<Widget> charts) {
-    return PlatformScaffold(
-      appBar: PlatformAppBar(
-        title: Text('Sensor Values'),
-      ),
-      body: Padding(
-        padding: EdgeInsets.all(10),
-        child: charts.isEmpty
-          ? Center(
-            child: Text("No sensors connected", style: Theme.of(context).textTheme.titleLarge),
-          )
-          : ListView(
-            children: charts,
-          ),
-      ),
+    return Padding(
+      padding: EdgeInsets.all(10),
+      child: charts.isEmpty
+        ? Center(
+          child: Text("No sensors connected", style: Theme.of(context).textTheme.titleLarge),
+        )
+        : ListView(
+          children: charts,
+        ),
     );
   }
 
