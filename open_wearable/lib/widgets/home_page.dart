@@ -7,6 +7,8 @@ import 'package:open_wearable/widgets/devices/devices_page.dart';
 import 'package:open_wearable/widgets/sensors/configuration/sensor_configuration_view.dart';
 import 'package:open_wearable/widgets/sensors/values/sensor_values_page.dart';
 
+import 'sensors/sensor_page.dart';
+
 /// The home page of the app.
 ///
 /// The home page contains a tab bar and an AppBar.
@@ -47,7 +49,7 @@ class _HomePageState extends State<HomePage> {
     _controller = PlatformTabController(initialIndex: 0);
     _tabs = [
       DevicesPage(),
-      SensorConfigurationView(),
+      SensorPage(),
       const AppsPage(),
     ];
   }

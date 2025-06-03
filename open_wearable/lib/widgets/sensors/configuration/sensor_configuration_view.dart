@@ -5,14 +5,15 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/sensors/configuration/sensor_configuration_device_row.dart';
-import 'package:open_wearable/widgets/sensors/values/sensor_values_page.dart';
 import 'package:provider/provider.dart';
 
 /// A view that displays the sensor configurations of all connected wearables.
 /// 
 /// The specific sensor configurations should be made available via the [SensorConfigurationProvider].
-class SensorConfigurationView extends StatelessWidget {  
-  const SensorConfigurationView({super.key});
+class SensorConfigurationView extends StatelessWidget {
+  final VoidCallback? onSetConfigPressed;
+
+  const SensorConfigurationView({super.key, this.onSetConfigPressed});
 
   @override
   Widget build(BuildContext context) {
@@ -54,21 +55,13 @@ class SensorConfigurationView extends StatelessWidget {
             }),
             _buildSetConfigButton(
               configProviders: wearablesProvider.wearables.map((wearable) => wearablesProvider.getSensorConfigurationProvider(wearable)).toList(),
-              onPressed: () {
-                Navigator.of(context).push(
-                  platformPageRoute(
-                    context: context,
-                    builder: (context) => SensorValuesPage(),
-                  ),
-                );
-              },
             ),
           ],
         ),
     );
   }
 
-  Widget _buildSetConfigButton({required List<SensorConfigurationProvider> configProviders, void Function()? onPressed }) {
+  Widget _buildSetConfigButton({required List<SensorConfigurationProvider> configProviders}) {
     return PlatformElevatedButton(
       onPressed: () {
         for (SensorConfigurationProvider notifier in configProviders) {
@@ -79,7 +72,7 @@ class SensorConfigurationView extends StatelessWidget {
             config.setConfiguration(value);
           });
         }
-        (onPressed ?? () {})();
+        (onSetConfigPressed ?? () {})();
       },
       child: const Text('Set sensor configurations'),
     );
