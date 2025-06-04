@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/apps/heart_tracker/widgets/heart_tracker_page.dart';
+import 'package:open_wearable/apps/stroke_tracker/view/stroke_tracker_view.dart'; // stroke tracker import
 import 'package:open_wearable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_wearable/apps/posture_tracker/view/posture_tracker_view.dart';
 import 'package:open_wearable/apps/widgets/select_earable_view.dart';
@@ -61,6 +62,16 @@ List<AppInfo> _apps = [
             child: Text("No PPG Sensor Found"),
           ),
         );
+      },
+    ),
+  ),
+  AppInfo(
+    logoPath: "lib/apps/stroke_tracker/assets/logo.png",
+    title: "Stroke Tracker",
+    description: "Run automated stroke detection tests",
+    widget: SelectEarableView(
+      startApp: (wearable, _) {
+        return const StrokeTrackerView();
       },
     ),
   ),

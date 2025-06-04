@@ -78,6 +78,7 @@ flutter:
   assets:
     - lib/apps/posture_tracker/assets/
     - lib/apps/heart_tracker/assets/
+    - lib/apps/stroke_tracker/assets/
 
   # An image asset can refer to one or more resolution-specific "variants", seeq
   # https://flutter.dev/to/resolution-aware-images
