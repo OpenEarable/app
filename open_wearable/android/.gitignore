@@ -8,7 +8,10 @@ GeneratedPluginRegistrant.java
 **/.cxx/
 
 # Remember to never publicly share your keystore.
-# See https://flutter.dev/to/reference-keystore
+# See https://flutter.dev/docs/deployment/android#reference-the-keystore-from-the-app
 key.properties
 **/*.keystore
 **/*.jks
+/fastlane/README.md
+/fastlane/report.xml
+/app/.cxx
