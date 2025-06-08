@@ -1,43 +1,9 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 
 class SensorConfigurationProvider with ChangeNotifier {
-  final SensorConfigurationManager _sensorConfigurationManager;
-  late final StreamSubscription _sensorConfigStateSubscription;
-
   final Map<SensorConfiguration, SensorConfigurationValue> _sensorConfigurations = {};
   final Map<SensorConfiguration, Set<SensorConfigurationOption>> _sensorConfigurationOptions = {};
-
-  SensorConfigurationProvider({required SensorConfigurationManager sensorConfigurationManager})
-      : _sensorConfigurationManager = sensorConfigurationManager {
-    _sensorConfigStateSubscription = _sensorConfigurationManager.sensorConfigurationStream.listen(_updatedValues);
-  }
-
-  void _updatedValues(Map<SensorConfiguration, SensorConfigurationValue> values) {
-    for (var entry in values.entries) {
-      final sensorConfiguration = entry.key;
-      final sensorConfigurationValue = entry.value;
-
-      _sensorConfigurations[sensorConfiguration] = sensorConfigurationValue;
-      if (sensorConfigurationValue is ConfigurableSensorConfigurationValue) {
-        for (SensorConfigurationOption option in sensorConfigurationValue.options) {
-          if (!_sensorConfigurationOptions.containsKey(sensorConfiguration)) {
-            _sensorConfigurationOptions[sensorConfiguration] = {};
-          }
-          _sensorConfigurationOptions[sensorConfiguration]!.add(option);
-        }
-        for (SensorConfigurationOption option in _sensorConfigurationOptions[sensorConfiguration] ?? {}) {
-          if (!sensorConfigurationValue.options.contains(option)) {
-            // Remove options that are no longer valid
-            _sensorConfigurationOptions[sensorConfiguration]!.remove(option);
-          }
-        }
-      }
-    }
-    notifyListeners();
-  }
 
   void addSensorConfiguration(SensorConfiguration sensorConfiguration, SensorConfigurationValue sensorConfigurationValue) {
     _sensorConfigurations[sensorConfiguration] = sensorConfigurationValue;
@@ -72,32 +38,29 @@ class SensorConfigurationProvider with ChangeNotifier {
   void _updateSelectedValue(SensorConfiguration<SensorConfigurationValue> sensorConfiguration) {
     List<SensorConfigurationValue> possibleValues = getSensorConfigurationValues(sensorConfiguration, distinct: true);
     SensorConfigurationValue? selectedValue = _sensorConfigurations[sensorConfiguration];
-
-    if (selectedValue != null && possibleValues.contains(selectedValue)) {
-      return; // Already valid and consistent
+    if (selectedValue == null) {
+      _sensorConfigurations[sensorConfiguration] = possibleValues.first;
     }
+    if (!possibleValues.contains(selectedValue)) {
+      if (selectedValue is ConfigurableSensorConfigurationValue) {
+        final SensorConfigurationValue? matchingValue = getSensorConfigurationValues(sensorConfiguration)
+          .where((value) {
+            if (value is ConfigurableSensorConfigurationValue) {
+              return value.withoutOptions() == selectedValue.withoutOptions();
+            }
+            return value == selectedValue;
+          })
+          .cast<SensorConfigurationValue?>()
+          .toList()
+          .firstOrNull;
 
-    // Try to find a matching value based on options, even if not identical instance
-    if (selectedValue is ConfigurableSensorConfigurationValue) {
-      final SensorConfigurationValue? matchingValue = possibleValues.where(
-        (value) =>
-            value is ConfigurableSensorConfigurationValue &&
-            value.withoutOptions() == selectedValue.withoutOptions(),
-      ).firstOrNull;
-
-      if (matchingValue != null) {
-        // Direct assignment without recursive call
-        _sensorConfigurations[sensorConfiguration] = matchingValue;
-      } else {
-        // Fall back to first available
-        if (possibleValues.isNotEmpty) {
-          _sensorConfigurations[sensorConfiguration] = possibleValues.last;
+        if (matchingValue == null) {
+          logger.w("No matching value found for ${sensorConfiguration.name} with options ${_sensorConfigurationOptions[sensorConfiguration]}");
         }
-      }
-    } else {
-      // Fall back to first available
-      if (possibleValues.isNotEmpty) {
-        _sensorConfigurations[sensorConfiguration] = possibleValues.last;
+    
+        addSensorConfiguration(sensorConfiguration, matchingValue ?? possibleValues.last);
+      } else {
+        logger.e("Selected value is not a ConfigurableSensorConfigurationValue and we do not know how to handle it");
       }
     }
   }
@@ -136,9 +99,4 @@ class SensorConfigurationProvider with ChangeNotifier {
     return sensorConfiguration.values;
   }
 
-  @override
-  void dispose() {
-    _sensorConfigStateSubscription.cancel();
-    super.dispose();
-  }
 }
