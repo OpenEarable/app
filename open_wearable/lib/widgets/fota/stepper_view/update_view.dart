@@ -43,24 +43,30 @@ class UpdateStepView extends StatelessWidget {
                   Row(
                     children: [
                       const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, padding: EdgeInsets.all(4))),
+                        height: 24,
+                        width: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          padding: EdgeInsets.all(4),
+                        ),
+                      ),
                       _currentState(state),
                     ],
                   ),
                 if (state.isComplete && state.updateManager?.logger != null)
                   ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => LoggerScreen(
-                                      logger: state.updateManager!.logger,
-                                    )));
-                      },
-                      child: Text('Show Log')),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => LoggerScreen(
+                            logger: state.updateManager!.logger,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Text('Show Log'),
+                  ),
                 if (state.isComplete)
                   ElevatedButton(
                     onPressed: () {
