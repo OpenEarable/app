@@ -1,12 +1,8 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:open_earable_flutter/open_earable_flutter.dart';
-import 'package:open_earable_flutter/src/models/devices/devkit.dart';
-import 'package:open_earable_flutter/src/managers/ble_manager.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/devices/battery_state.dart';
 import 'package:open_wearable/widgets/devices/connect_devices_page.dart';
@@ -37,11 +33,15 @@ class DevicesPage extends StatelessWidget {
   }
 
   Widget _buildSmallScreenLayout(
-      BuildContext context, WearablesProvider wearablesProvider) {
+    BuildContext context,
+    WearablesProvider wearablesProvider,
+  ) {
     if (wearablesProvider.wearables.isEmpty) {
       return Center(
-        child: Text("No devices connected",
-            style: Theme.of(context).textTheme.titleLarge),
+        child: Text(
+          "No devices connected",
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
       );
     }
 
@@ -57,7 +57,9 @@ class DevicesPage extends StatelessWidget {
   }
 
   Widget _buildLargeScreenLayout(
-      BuildContext context, WearablesProvider wearablesProvider) {
+    BuildContext context,
+    WearablesProvider wearablesProvider,
+  ) {
     return GridView.builder(
       gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 500,
@@ -86,12 +88,15 @@ class DevicesPage extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(PlatformIcons(context).add,
-                        color: Theme.of(context).colorScheme.surfaceTint),
+                    Icon(
+                      PlatformIcons(context).add,
+                      color: Theme.of(context).colorScheme.surfaceTint,
+                    ),
                     Text(
                       "Connect Device",
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Theme.of(context).colorScheme.surfaceTint),
+                            color: Theme.of(context).colorScheme.surfaceTint,
+                          ),
                     ),
                   ],
                 ),

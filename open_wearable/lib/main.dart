@@ -21,11 +21,17 @@ class CustomLogFilter extends LogFilter {
 void main() {
   oe.logger = Logger(level: Level.trace, filter: CustomLogFilter());
 
-  runApp(MultiProvider(providers: [
-    ChangeNotifierProvider(create: (context) => WearablesProvider()),
-    ChangeNotifierProvider(
-        create: (context) => FirmwareUpdateRequestProvider()),
-  ], child: const MyApp()));
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => WearablesProvider()),
+        ChangeNotifierProvider(
+          create: (context) => FirmwareUpdateRequestProvider(),
+        ),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {

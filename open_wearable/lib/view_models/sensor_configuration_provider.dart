@@ -7,14 +7,17 @@ class SensorConfigurationProvider with ChangeNotifier {
   final Map<SensorConfiguration, Set<SensorConfigurationOption>>
       _sensorConfigurationOptions = {};
 
-  void addSensorConfiguration(SensorConfiguration sensorConfiguration,
-      SensorConfigurationValue sensorConfigurationValue) {
+  void addSensorConfiguration(
+    SensorConfiguration sensorConfiguration,
+    SensorConfigurationValue sensorConfigurationValue,
+  ) {
     _sensorConfigurations[sensorConfiguration] = sensorConfigurationValue;
     notifyListeners();
   }
 
   SensorConfigurationValue? getSelectedConfigurationValue(
-      SensorConfiguration sensorConfiguration) {
+    SensorConfiguration sensorConfiguration,
+  ) {
     return _sensorConfigurations[sensorConfiguration];
   }
 
@@ -26,7 +29,8 @@ class SensorConfigurationProvider with ChangeNotifier {
   }
 
   Set<SensorConfigurationOption> getSelectedConfigurationOptions(
-      SensorConfiguration sensorConfiguration) {
+    SensorConfiguration sensorConfiguration,
+  ) {
     return _sensorConfigurationOptions[sensorConfiguration] ?? {};
   }
 
@@ -34,8 +38,10 @@ class SensorConfigurationProvider with ChangeNotifier {
   ///
   /// If the sensor configuration is a [ConfigurableSensorConfiguration], the selected value will be updated
   /// to the first possible value that matches the selected options.
-  void addSensorConfigurationOption(SensorConfiguration sensorConfiguration,
-      SensorConfigurationOption option) {
+  void addSensorConfigurationOption(
+    SensorConfiguration sensorConfiguration,
+    SensorConfigurationOption option,
+  ) {
     if (_sensorConfigurationOptions[sensorConfiguration] == null) {
       _sensorConfigurationOptions[sensorConfiguration] = {};
     }
@@ -45,7 +51,8 @@ class SensorConfigurationProvider with ChangeNotifier {
   }
 
   void _updateSelectedValue(
-      SensorConfiguration<SensorConfigurationValue> sensorConfiguration) {
+    SensorConfiguration<SensorConfigurationValue> sensorConfiguration,
+  ) {
     List<SensorConfigurationValue> possibleValues =
         getSensorConfigurationValues(sensorConfiguration, distinct: true);
     SensorConfigurationValue? selectedValue =
@@ -70,14 +77,18 @@ class SensorConfigurationProvider with ChangeNotifier {
 
         if (matchingValue == null) {
           logger.w(
-              "No matching value found for ${sensorConfiguration.name} with options ${_sensorConfigurationOptions[sensorConfiguration]}");
+            "No matching value found for ${sensorConfiguration.name} with options ${_sensorConfigurationOptions[sensorConfiguration]}",
+          );
         }
 
         addSensorConfiguration(
-            sensorConfiguration, matchingValue ?? possibleValues.last);
+          sensorConfiguration,
+          matchingValue ?? possibleValues.last,
+        );
       } else {
         logger.e(
-            "Selected value is not a ConfigurableSensorConfigurationValue and we do not know how to handle it");
+          "Selected value is not a ConfigurableSensorConfigurationValue and we do not know how to handle it",
+        );
       }
     }
   }
@@ -87,8 +98,10 @@ class SensorConfigurationProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void removeSensorConfigurationOption(SensorConfiguration sensorConfiguration,
-      SensorConfigurationOption option) {
+  void removeSensorConfigurationOption(
+    SensorConfiguration sensorConfiguration,
+    SensorConfigurationOption option,
+  ) {
     _sensorConfigurationOptions[sensorConfiguration]?.remove(option);
     _updateSelectedValue(sensorConfiguration);
     notifyListeners();
@@ -99,8 +112,9 @@ class SensorConfigurationProvider with ChangeNotifier {
   ///
   /// If the sensor configuration is a [ConfigurableSensorConfiguration], the values will be filtered based on the selected options.
   List<SensorConfigurationValue> getSensorConfigurationValues(
-      SensorConfiguration sensorConfiguration,
-      {bool distinct = false}) {
+    SensorConfiguration sensorConfiguration, {
+    bool distinct = false,
+  }) {
     if (sensorConfiguration is ConfigurableSensorConfiguration) {
       List<SensorConfigurationValue> values =
           sensorConfiguration.values.where((value) {
