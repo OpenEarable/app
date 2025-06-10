@@ -57,8 +57,10 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
             // MARK: Device name, icon and battery state
             Column(
               children: [
-                Text(widget.device.name,
-                    style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  widget.device.name,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
                 BatteryStateView(device: widget.device),
                 if (wearableIconPath != null)
                   SvgPicture.asset(wearableIconPath, width: 100, height: 100),
@@ -77,19 +79,24 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
             // MARK: Microphone Control
             if (widget.device is MicrophoneManager)
               MicrophoneSelectionWidget(
-                  device: widget.device as MicrophoneManager),
+                device: widget.device as MicrophoneManager,
+              ),
             // MARK: Device info
             Text("Device Info", style: Theme.of(context).textTheme.titleSmall),
             PlatformListTile(
-              title: Text("Bluetooth Address",
-                  style: Theme.of(context).textTheme.bodyLarge),
+              title: Text(
+                "Bluetooth Address",
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
               subtitle: Text(widget.device.deviceId),
             ),
             // MARK: Device Identifier
             if (widget.device is DeviceIdentifier)
               PlatformListTile(
-                title: Text("Device Identifier",
-                    style: Theme.of(context).textTheme.bodyLarge),
+                title: Text(
+                  "Device Identifier",
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
                 subtitle: FutureBuilder(
                   future: (widget.device as DeviceIdentifier)
                       .readDeviceIdentifier(),
@@ -105,8 +112,10 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
             // MARK: Device Firmware Version
             if (widget.device is DeviceFirmwareVersion)
               PlatformListTile(
-                title: Text("Firmware Version",
-                    style: Theme.of(context).textTheme.bodyLarge),
+                title: Text(
+                  "Firmware Version",
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
                 subtitle: FutureBuilder(
                   future: (widget.device as DeviceFirmwareVersion)
                       .readDeviceFirmwareVersion(),
@@ -146,8 +155,10 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
             // MARK: Device Hardware Version
             if (widget.device is DeviceHardwareVersion)
               PlatformListTile(
-                title: Text("Hardware Version",
-                    style: Theme.of(context).textTheme.bodyLarge),
+                title: Text(
+                  "Hardware Version",
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
                 subtitle: FutureBuilder(
                   future: (widget.device as DeviceHardwareVersion)
                       .readDeviceHardwareVersion(),
@@ -163,26 +174,35 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
 
             // MARK: Status LED control
             if (widget.device is StatusLed) ...[
-              Text("Control Status LED",
-                  style: Theme.of(context).textTheme.titleSmall),
+              Text(
+                "Control Status LED",
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
               StatusLEDControlWidget(
-                  statusLED: widget.device as StatusLed,
-                  rgbLed: widget.device as RgbLed),
+                statusLED: widget.device as StatusLed,
+                rgbLed: widget.device as RgbLed,
+              ),
             ] else if (widget.device is RgbLed &&
                 widget.device is! StatusLed) ...[
-              Text("Control RGB LED",
-                  style: Theme.of(context).textTheme.titleSmall),
+              Text(
+                "Control RGB LED",
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
               PlatformListTile(
-                title: Text("LED Color",
-                    style: Theme.of(context).textTheme.bodyLarge),
+                title: Text(
+                  "LED Color",
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
                 trailing: RgbControlView(rgbLed: widget.device as RgbLed),
               ),
             ],
 
             // MARK: Device Battery State
             if (widget.device is BatteryEnergyStatusService) ...[
-              Text("Battery Energy Status",
-                  style: Theme.of(context).textTheme.titleSmall),
+              Text(
+                "Battery Energy Status",
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
               StreamBuilder<BatteryEnergyStatus>(
                 stream: (widget.device as BatteryEnergyStatusService)
                     .energyStatusStream,
@@ -219,8 +239,10 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
 
             // MARK: Battery Health
             if (widget.device is BatteryHealthStatusService) ...[
-              Text("Battery Health Status",
-                  style: Theme.of(context).textTheme.titleSmall),
+              Text(
+                "Battery Health Status",
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
               StreamBuilder<BatteryHealthStatus>(
                 stream: (widget.device as BatteryHealthStatusService)
                     .healthStatusStream,
