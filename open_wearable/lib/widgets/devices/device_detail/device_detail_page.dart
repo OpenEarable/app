@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/widgets/devices/battery_state.dart';
 import 'package:open_wearable/widgets/devices/device_detail/audio_mode_widget.dart';
+import 'package:provider/provider.dart';
 
 import '../../fota/firmware_update.dart';
 import 'rgb_control.dart';
@@ -120,6 +121,16 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                 trailing: PlatformIconButton(
                   icon: Icon(Icons.upload),
                   onPressed: () {
+                    Provider.of<FirmwareUpdateRequestProvider>(
+                      context,
+                      listen: false,
+                    ).setPeripheral(
+                      SelectedPeripheral(
+                        name: widget.device.name,
+                        identifier: widget.device.deviceId,
+                      ),
+                    );
+                    // Show the firmware update dialog
                     // Navigate to your firmware update screen
                     Navigator.of(context).push(
                       MaterialPageRoute(

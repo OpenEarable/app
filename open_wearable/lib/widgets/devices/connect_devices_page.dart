@@ -53,8 +53,6 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
         trailing: _buildTrailingWidget(device.id),
         onTap: () {
           _connectToDevice(device, context);
-          context.read<FirmwareUpdateRequestProvider>().setPeripheral(
-              SelectedPeripheral(name: device.name, identifier: device.id));
         },
       );
     }).toList();

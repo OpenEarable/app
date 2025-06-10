@@ -1,8 +1,12 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_earable_flutter/src/models/devices/devkit.dart';
+import 'package:open_earable_flutter/src/managers/ble_manager.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/devices/battery_state.dart';
 import 'package:open_wearable/widgets/devices/connect_devices_page.dart';
@@ -10,7 +14,7 @@ import 'package:open_wearable/widgets/devices/device_detail/device_detail_page.d
 import 'package:provider/provider.dart';
 
 /// On this page the user can see all connected devices.
-/// 
+///
 /// Tapping on a device will navigate to the [DeviceDetailPage].
 class DevicesPage extends StatelessWidget {
   const DevicesPage({super.key});
@@ -32,10 +36,12 @@ class DevicesPage extends StatelessWidget {
     );
   }
 
-  Widget _buildSmallScreenLayout(BuildContext context, WearablesProvider wearablesProvider) {
+  Widget _buildSmallScreenLayout(
+      BuildContext context, WearablesProvider wearablesProvider) {
     if (wearablesProvider.wearables.isEmpty) {
       return Center(
-        child: Text("No devices connected", style: Theme.of(context).textTheme.titleLarge),
+        child: Text("No devices connected",
+            style: Theme.of(context).textTheme.titleLarge),
       );
     }
 
@@ -50,7 +56,8 @@ class DevicesPage extends StatelessWidget {
     );
   }
 
-  Widget _buildLargeScreenLayout(BuildContext context, WearablesProvider wearablesProvider) {
+  Widget _buildLargeScreenLayout(
+      BuildContext context, WearablesProvider wearablesProvider) {
     return GridView.builder(
       gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 500,
@@ -71,15 +78,20 @@ class DevicesPage extends StatelessWidget {
               );
             },
             child: Card(
-              color: Theme.of(context).colorScheme.surfaceTint.withValues(alpha: 0.2),
+              color: Theme.of(context)
+                  .colorScheme
+                  .surfaceTint
+                  .withValues(alpha: 0.2),
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(PlatformIcons(context).add, color: Theme.of(context).colorScheme.surfaceTint),
+                    Icon(PlatformIcons(context).add,
+                        color: Theme.of(context).colorScheme.surfaceTint),
                     Text(
                       "Connect Device",
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.surfaceTint),
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: Theme.of(context).colorScheme.surfaceTint),
                     ),
                   ],
                 ),
@@ -96,11 +108,10 @@ class DevicesPage extends StatelessWidget {
 class DeviceRow extends StatelessWidget {
   final Wearable _device;
 
-  const DeviceRow({super.key, required Wearable device}): _device = device;
+  const DeviceRow({super.key, required Wearable device}) : _device = device;
 
   @override
   Widget build(BuildContext context) {
-
     String? wearableIconPath = _device.getWearableIconPath();
 
     return GestureDetector(
@@ -141,22 +152,27 @@ class DeviceRow extends StatelessWidget {
                       width: 50,
                       height: 50,
                     ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _device.name,
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        BatteryStateView(device: _device),
-                      ],
-                    ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _device.name,
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodyLarge
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      BatteryStateView(device: _device),
+                    ],
+                  ),
                   Spacer(),
                   if (_device is DeviceIdentifier)
                     FutureBuilder(
-                      future: (_device as DeviceIdentifier).readDeviceIdentifier(),
+                      future:
+                          (_device as DeviceIdentifier).readDeviceIdentifier(),
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
                           return PlatformCircularProgressIndicator();
                         }
                         if (snapshot.hasError) {
@@ -165,7 +181,8 @@ class DeviceRow extends StatelessWidget {
                         return Text(snapshot.data.toString());
                       },
                     )
-                  else Text(_device.deviceId),
+                  else
+                    Text(_device.deviceId),
                 ],
               ),
               if (_device is DeviceFirmwareVersion)
@@ -173,9 +190,11 @@ class DeviceRow extends StatelessWidget {
                   children: [
                     Text("Firmware Version: "),
                     FutureBuilder(
-                      future: (_device as DeviceFirmwareVersion).readDeviceFirmwareVersion(),
+                      future: (_device as DeviceFirmwareVersion)
+                          .readDeviceFirmwareVersion(),
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
                           return PlatformCircularProgressIndicator();
                         }
                         if (snapshot.hasError) {
@@ -191,9 +210,11 @@ class DeviceRow extends StatelessWidget {
                   children: [
                     Text("Hardware Version: "),
                     FutureBuilder(
-                      future: (_device as DeviceHardwareVersion).readDeviceHardwareVersion(),
+                      future: (_device as DeviceHardwareVersion)
+                          .readDeviceHardwareVersion(),
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
                           return PlatformCircularProgressIndicator();
                         }
                         if (snapshot.hasError) {

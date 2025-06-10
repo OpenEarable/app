@@ -381,7 +381,7 @@ packages:
     description:
       path: "."
       ref: fota
-      resolved-ref: "82cc529f0e0f175383c0f8aa1e76451bbe525eca"
+      resolved-ref: c3cf17f0a88ae9a01cd5a1cb51525822ee88a88a
       url: "https://github.com/OpenEarable/open_earable_flutter.git"
     source: git
     version: "0.1.0"
