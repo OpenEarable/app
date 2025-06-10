@@ -1,0 +1,46 @@
+# This file contains the fastlane.tools configuration
+# You can find the documentation at https://docs.fastlane.tools
+#
+# For a list of all available actions, check out
+#
+#     https://docs.fastlane.tools/actions
+#
+# For a list of all available plugins, check out
+#
+#     https://docs.fastlane.tools/plugins/available-plugins
+#
+
+# Uncomment the line if you want fastlane to automatically update itself
+# update_fastlane
+
+default_platform(:android)
+
+platform :android do
+  lane :internal_deploy do
+    begin
+      sh "./get-flutter-dependencies.sh"
+      sh "flutter build appbundle --release"
+
+      gradle(
+        task: 'bundle',
+        build_type: 'Release',
+        properties: {
+          # This injection seems not to be supported anymore and got replaced in build.gradle
+          # "android.injected.version.code" => version,
+          "android.injected.signing.store.file" => ENV["OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PATH"],
+          "android.injected.signing.store.password" => ENV["OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PASSWORD"],
+          "android.injected.signing.key.alias" => "upload",
+          "android.injected.signing.key.password" => ENV["OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PASSWORD"],
+        }
+      )
+      upload_to_play_store(
+        track: 'internal',
+        # Remove this line after the app is not in Draft state anymore
+        # For now, we need to click something in the Play Console to make it available
+        release_status: 'draft',
+        skip_upload_changelogs: false,
+        aab: "../build/app/outputs/bundle/release/app-release.aab"
+      )
+    end
+  end
+end

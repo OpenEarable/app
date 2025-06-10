@@ -67,7 +67,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                     widget.device.disconnect();
                     Navigator.of(context).pop();
                   },
-                )
+                ),
               ],
             ),
             // MARK: Audio Mode

@@ -114,10 +114,8 @@ class UpdateStepView extends StatelessWidget {
   Widget _remoteFirmwareInfo(BuildContext context, RemoteFirmware firmware) {
     return Column(
       children: [
-        Text('Firmware: ${firmware.application.appName}'),
-        Text('Version: ${firmware.version.version}'),
-        Text('Board: ${firmware.board.name}'),
-        Text('Firmware: ${firmware.firmware.name}'),
+        Text('Firmware: ${firmware.name}'),
+        Text('Url: ${firmware.url}'),
       ],
     );
   }

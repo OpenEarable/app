@@ -1,0 +1,64 @@
+name: Android Build and Deploy to Play Store
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to deploy"
+        required: true
+        default: "main"
+
+jobs:
+  deploy_for_android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: Set up ruby env
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.2.3
+          bundler-cache: true
+
+      - name: Get flutter version
+        run: echo "flutter_version=`cat open_wearable/.flutter_version`" >> $GITHUB_ENV
+        id: flutter_version
+      - name: Install flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+          cache: true
+          flutter-version: ${{ env.flutter_version }}
+      - run: flutter --version
+
+      - name: Get packages
+        run: |
+          cd open_wearable
+          flutter clean
+          flutter pub get
+
+      - name: Analyze source
+        run: |
+          cd open_wearable
+          flutter analyze
+
+      - name: Decode and save OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PATH
+        run: |
+          echo "${{ secrets.OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PATH__FILE }}" | base64 --decode > android_keystore_temp.keystore
+          echo "OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PATH=$(realpath android_keystore_temp.keystore)" >> $GITHUB_ENV
+
+      - name: Decode and save OPEN_WEARABLE_APP_ANDROID_DEPLOYMENT_KEY_PATH
+        run: |
+          echo "${{ secrets.OPEN_WEARABLE_APP_ANDROID_DEPLOYMENT_KEY_PATH__FILE }}" | base64 --decode > android_deployment_key.json
+          echo "OPEN_WEARABLE_APP_ANDROID_DEPLOYMENT_KEY_PATH=$(realpath android_deployment_key.json)" >> $GITHUB_ENV
+
+      - name: Set up fastlane
+        run: (cd open_wearable/android && bundle install)
+
+      - name: Build & deploy Android release
+        run: (cd open_wearable/android && bundle exec fastlane internal_deploy)
+        env:
+          OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PASSWORD }}

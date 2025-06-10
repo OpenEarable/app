@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/widgets/sensors/configuration/edge_recorder_prefix_row.dart';
 import 'package:open_wearable/widgets/sensors/configuration/sensor_configuration_value_row.dart';
 
 /// A widget that displays a list of sensor configurations for a device.
@@ -32,6 +33,10 @@ class SensorConfigurationDeviceRow extends StatelessWidget {
               )
               : null,
           ),
+          if (device is EdgeRecorderManager)
+            EdgeRecorderPrefixRow(
+              manager: device as EdgeRecorderManager,
+            ),
           if (device is SensorConfigurationManager)
             ListView.builder(
               shrinkWrap: true,
@@ -39,7 +44,7 @@ class SensorConfigurationDeviceRow extends StatelessWidget {
               itemCount: (device as SensorConfigurationManager).sensorConfigurations.length,
               itemBuilder: (context, index) {
                 return SensorConfigurationValueRow(
-                  sensorConfiguration: (device as SensorConfigurationManager).sensorConfigurations[index]
+                  sensorConfiguration: (device as SensorConfigurationManager).sensorConfigurations[index],
                 );
               },
             )

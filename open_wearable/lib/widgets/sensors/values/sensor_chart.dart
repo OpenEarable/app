@@ -1,183 +1,158 @@
-import 'dart:async';
+import 'dart:collection';
 import 'dart:math';
-
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
-import 'package:community_charts_flutter/community_charts_flutter.dart' as charts;
+import 'package:open_wearable/view_models/sensor_data_provider.dart';
+import 'package:provider/provider.dart';
 
 class SensorChart extends StatefulWidget {
-  final Sensor sensor;
   final bool allowToggleAxes;
-  /// Time window in seconds for which data is displayed
-  final int timeWindow;
 
-  const SensorChart({super.key, required this.sensor, this.allowToggleAxes = true, this.timeWindow = 5});
+  const SensorChart({
+    super.key,
+    this.allowToggleAxes = true,
+  });
 
   @override
   State<SensorChart> createState() => _SensorChartState();
 }
 
 class _SensorChartState extends State<SensorChart> {
-  List<charts.Series<ChartData, int>> _chartData = [];
-  final List<ChartData> _dataPoints = [];
-
-  // Track which axes are enabled
   late Map<String, bool> _axisEnabled;
-
-  StreamSubscription<SensorValue>? _sensorStreamSubscription;
 
   @override
   void initState() {
     super.initState();
-    _axisEnabled = {for (var name in widget.sensor.axisNames) name: true};
-    _listenToSensorStream();
-  }
-
-  @override
-  void didUpdateWidget(SensorChart oldWidget) {
-    _listenToSensorStream();
-    super.didUpdateWidget(oldWidget);
-  }
-
-  void _listenToSensorStream() {
-    _sensorStreamSubscription = widget.sensor.sensorStream.listen((sensorValue) {
-      setState(() {
-        // Add new data points
-        for (int i = 0; i < widget.sensor.axisCount; i++) {
-          if (sensorValue is SensorDoubleValue) {
-            _dataPoints.add(ChartData(sensorValue.timestamp, sensorValue.values[i], widget.sensor.axisNames[i]));
-          } else if (sensorValue is SensorIntValue) {
-            _dataPoints.add(ChartData(sensorValue.timestamp, sensorValue.values[i].toDouble(), widget.sensor.axisNames[i]));
-          }
-        }
-
-        // Remove data older than 5 seconds
-        int cutoffTime = sensorValue.timestamp - (widget.timeWindow * pow(10, -widget.sensor.timestampExponent) as int);
-        _dataPoints.removeWhere((data) => data.time < cutoffTime);
-
-        _updateChartData();
-      });
-    });
-  }
-
-  void _updateChartData() {
-    // Update chart data based on enabled axes
-    _chartData = [
-      for (int i = 0; i < widget.sensor.axisCount; i++)
-        if (_axisEnabled[widget.sensor.axisNames[i]] ?? false)
-          charts.Series<ChartData, int>(
-            id: widget.sensor.axisNames[i],
-            colorFn: (_, __) => charts.MaterialPalette.blue.makeShades(widget.sensor.axisCount)[i],
-            domainFn: (ChartData point, _) => point.time,
-            measureFn: (ChartData point, _) => point.value,
-            data: _dataPoints.where((point) => point.axisName == widget.sensor.axisNames[i]).toList(),
-          ),
-    ];
+    final sensor = context.read<SensorDataProvider>().sensor;
+    _axisEnabled = { for (var axis in sensor.axisNames) axis: true };
   }
 
   void _toggleAxis(String axisName, bool value) {
+    logger.d('Toggling axis $axisName to $value');
     setState(() {
       _axisEnabled[axisName] = value;
-      _updateChartData();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    // Filter only enabled axes data for scaling
-    final filteredPoints = _dataPoints
-        .where((point) => _axisEnabled[point.axisName] ?? false)
+    Sensor sensor = context.watch<SensorDataProvider>().sensor;
+    final enabledAxes = sensor.axisNames
+        .where((axis) => _axisEnabled[axis] ?? false)
         .toList();
-
-    final xValues = filteredPoints.map((e) => e.time).toList();
-    final yValues = filteredPoints.map((e) => e.value).toList();
-
-    final int? xMin = xValues.isNotEmpty ? xValues.reduce((a, b) => a < b ? a : b) : null;
-    final int? xMax = xValues.isNotEmpty ? xValues.reduce((a, b) => a > b ? a : b) : null;
-
-    final double? yMin = yValues.isNotEmpty ? yValues.reduce((a, b) => a < b ? a : b) : null;
-    final double? yMax = yValues.isNotEmpty ? yValues.reduce((a, b) => a > b ? a : b) : null;
-
+    final axisData = _buildAxisData(
+      sensor,
+      context.watch<SensorDataProvider>().sensorValues,
+    );
+    
     return Column(
       children: [
-        // Checkbox controls for each axis
         if (widget.allowToggleAxes)
           Wrap(
-            spacing: 8.0,
-            children: widget.sensor.axisNames.map((axisName) {
+            spacing: 8,
+            children: sensor.axisNames.map((axisName) {
               return Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Checkbox(
                     value: _axisEnabled[axisName],
-                    onChanged: (value) => _toggleAxis(axisName, value ?? false),
+                    checkColor: Colors.white,
+                    activeColor: _axisColor(axisName),
+                    onChanged: (value) =>
+                        _toggleAxis(axisName, value ?? false),
                   ),
                   Text(axisName),
                 ],
               );
             }).toList(),
           ),
-        // Chart display
         Expanded(
-          child: _chartData.isEmpty ?
-            Center(
-              child: Text('No data available'),
-            ) :
-            charts.LineChart(
-              _chartData,
-              animate: false,
-              domainAxis: charts.NumericAxisSpec(
-                viewport: xMin != null && xMax != null
-                    ? charts.NumericExtents(xMin.toDouble(), xMax.toDouble())
-                    : null,
-                tickProviderSpec: const charts.BasicNumericTickProviderSpec(zeroBound: false, desiredMinTickCount: 3),
-              ),
-              primaryMeasureAxis: charts.NumericAxisSpec(
-                viewport: yMin != null && yMax != null
-                    ? charts.NumericExtents(yMin, yMax)
-                    : null,
-                tickProviderSpec: const charts.BasicNumericTickProviderSpec(zeroBound: false, desiredMinTickCount: 3),
-              ),
-              behaviors: [
-                charts.SeriesLegend(),
-                charts.ChartTitle(
-                  'Time (${_timestampUnitPrefix(widget.sensor.timestampExponent)}s)',
-                  behaviorPosition: charts.BehaviorPosition.bottom
+          child: LineChart(
+            LineChartData(
+              lineTouchData: LineTouchData(enabled: true),
+              gridData: FlGridData(show: true),
+              titlesData: FlTitlesData(
+                leftTitles: AxisTitles(
+                  axisNameWidget: Text(sensor.axisUnits.first),
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 45,
+                  ),
                 ),
-                charts.ChartTitle(widget.sensor.axisUnits.first, behaviorPosition: charts.BehaviorPosition.start),
-              ],
+                rightTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: false,
+                  ),
+                ),
+                topTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: false,
+                  ),
+                ),
+                bottomTitles: AxisTitles(
+                  axisNameWidget: Text('Time (s)'),
+                  axisNameSize: 30,
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 30,
+                  ),
+                ),
+              ),
+              borderData: FlBorderData(show: false),
+              lineBarsData: enabledAxes.map((axisName) {
+                return LineChartBarData(
+                  spots: axisData[axisName] ?? [],
+                  isCurved: false,
+                  barWidth: 2,
+                  color: _axisColor(axisName),
+                  isStrokeCapRound: true,
+                  dotData: FlDotData(show: false),
+                );
+              }).toList(),
             ),
+            duration: const Duration(milliseconds: 0),
+          ),
         ),
       ],
     );
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-    _sensorStreamSubscription?.cancel();
+  Map<String, List<FlSpot>> _buildAxisData(Sensor sensor, Queue<SensorValue> buffer) {
+    if (buffer.isEmpty) return { for (var axis in sensor.axisNames) axis: [] };
+
+    final scale = pow(10, -sensor.timestampExponent).toDouble();
+
+    return {
+      for (int i = 0; i < sensor.axisCount; i++)
+        sensor.axisNames[i]: buffer.map((v) {
+          final x = v.timestamp.toDouble() / scale;
+          final y = v is SensorDoubleValue
+              ? v.values[i]
+              : (v as SensorIntValue).values[i].toDouble();
+          return FlSpot(x, y);
+        }).toList(),
+    };
   }
-}
 
-String _timestampUnitPrefix(int exponent) {
-  switch (exponent) {
-    case 0:
-      return '';
-    case -3:
-      return 'm';
-    case -6:
-      return 'µ';
-    case -9:
-      return 'n';
-    default:
-      return '?';
+  Color _axisColor(String axisName) {
+    final name = axisName.toLowerCase();
+
+    if (name == 'r' || name == 'red') return Colors.red;
+    if (name == 'g' || name == 'green') return Colors.green;
+    if (name == 'b' || name == 'blue') return Colors.blue;
+
+    // Fallback for unrecognized names (e.g., axis4, temp, etc.)
+    final fallbackColors = [
+      Colors.teal,
+      Colors.amber,
+      Colors.indigo,
+      Colors.lime,
+      Colors.brown,
+      Colors.deepOrange,
+      Colors.pink,
+    ];
+    final index = context.read<SensorDataProvider>().sensor.axisNames.indexOf(axisName);
+    return fallbackColors[index % fallbackColors.length];
   }
-}
-
-class ChartData {
-  final int time; // Timestamp in milliseconds
-  final double value; // Sensor value
-  final String axisName; // Name of the axis
-
-  ChartData(this.time, this.value, this.axisName);
 }

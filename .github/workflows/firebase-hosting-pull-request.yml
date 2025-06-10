@@ -13,9 +13,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Get flutter version
+        run: echo "flutter_version=`cat open_wearable/.flutter_version`" >> $GITHUB_ENV
+        id: flutter_version
       - uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          channel: "stable"
+          cache: true
+          flutter-version: ${{ env.flutter_version }}
       - run: (cd open_wearable && flutter analyze)
       - run: (cd open_wearable && flutter build web --dart-define=BUILD_COMMIT=$(git
           rev-parse --short HEAD) --dart-define=BUILD_BRANCH=$(git rev-parse
@@ -25,7 +30,7 @@ jobs:
         name: Deploy preview
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_OPEN_EARABLE_WEB }}
-          projectId: open-wearable-web
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_open_earable_WEB }}
+          projectId: open-earable-web
           expires: 28d
           entryPoint: open_wearable/

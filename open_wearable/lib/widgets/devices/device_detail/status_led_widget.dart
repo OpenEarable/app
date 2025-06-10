@@ -35,7 +35,7 @@ class _StatusLEDControlWidgetState extends State<StatusLEDControlWidget> {
             },
           ),
         ],
-      )
+      ),
     );
   }
 }

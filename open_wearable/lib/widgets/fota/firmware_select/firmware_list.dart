@@ -48,7 +48,7 @@ class FirmwareList extends StatelessWidget {
           future: repository.getFirmwareImages(),
           builder: (context, AsyncSnapshot snapshot) {
             if (snapshot.hasData) {
-              List<Application> apps = snapshot.data.applications;
+              List<RemoteFirmware> apps = snapshot.data;
               return _listBuilder(apps);
             } else if (snapshot.hasError) {
               return Text('${snapshot.error}');
@@ -58,24 +58,14 @@ class FirmwareList extends StatelessWidget {
     );
   }
 
-  Widget _listBuilder(List<Application> apps) {
+  Widget _listBuilder(List<RemoteFirmware> apps) {
     return ListView.builder(
       itemCount: apps.length,
       itemBuilder: (context, index) {
         return ListTile(
-          title: Text(apps[index].appName),
+          title: Text(apps[index].name),
           onTap: () {
-            final app = apps[index];
-            final version = app.versions[0];
-            final board = version.board[0];
-            final firmware = board.buildConfig[0];
-
-            final selectedFW = RemoteFirmware(
-              application: app,
-              version: version,
-              board: board,
-              firmware: firmware,
-            );
+            final selectedFW = apps[index];
             context
                 .read<FirmwareUpdateRequestProvider>()
                 .setFirmware(selectedFW);
