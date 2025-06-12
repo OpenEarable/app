@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import '../logger_screen/logger_screen.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 
@@ -18,7 +19,7 @@ class UpdateStepView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _firmwareInfo(context, request.firmware!),
-                ElevatedButton(
+                PlatformElevatedButton(
                   onPressed: () {
                     context.read<UpdateBloc>().add(BeginUpdateProcess());
                   },

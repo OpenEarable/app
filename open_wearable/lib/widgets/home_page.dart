@@ -8,7 +8,7 @@ import 'package:open_wearable/widgets/sensors/configuration/sensor_configuration
 import 'package:open_wearable/widgets/sensors/values/sensor_values_page.dart';
 
 /// The home page of the app.
-/// 
+///
 /// The home page contains a tab bar and an AppBar.
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -19,7 +19,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   static final titles = ["Devices", "Sensors", "Apps"];
-  
+
   List<BottomNavigationBarItem> items(BuildContext context) {
     return [
       BottomNavigationBarItem(
@@ -76,17 +76,26 @@ class _HomePageState extends State<HomePage> {
           children: [
             Text(
               "Connected Devices",
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.surfaceTint),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyLarge
+                  ?.copyWith(color: Theme.of(context).colorScheme.surfaceTint),
             ),
             DevicesPage(),
             Text(
               "Sensor Configuration",
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.surfaceTint),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyLarge
+                  ?.copyWith(color: Theme.of(context).colorScheme.surfaceTint),
             ),
             SensorConfigurationView(),
             Text(
               "Sensor Values",
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.surfaceTint),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyLarge
+                  ?.copyWith(color: Theme.of(context).colorScheme.surfaceTint),
             ),
             SensorValuesPage(),
           ],
@@ -101,8 +110,9 @@ class _HomePageState extends State<HomePage> {
       appBarBuilder: (context, index) => PlatformAppBar(
         title: Text(titles[index]),
         trailingActions: [
-            PlatformIconButton(
+          PlatformIconButton(
             icon: Icon(context.platformIcons.bluetooth),
+            padding: EdgeInsets.zero,
             onPressed: () {
               if (Theme.of(context).platform == TargetPlatform.iOS) {
                 showCupertinoModalPopup(

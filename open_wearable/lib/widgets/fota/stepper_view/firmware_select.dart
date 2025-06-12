@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:provider/provider.dart';
 
 import '../firmware_select/firmware_list.dart';
@@ -16,7 +17,7 @@ class FirmwareSelect extends StatelessWidget {
       children: [
         if (updateParameters.firmware != null)
           Text(updateParameters.firmware!.name),
-        ElevatedButton(
+        PlatformElevatedButton(
           onPressed: () {
             Navigator.push(
               context,

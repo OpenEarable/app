@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 
 import '../fota/stepper_view/update_view.dart';
 import '../fota/stepper_view/firmware_select.dart';
@@ -17,7 +18,9 @@ class _FirmwareUpdateWidget extends State<FirmwareUpdateWidget> {
   @override
   Widget build(BuildContext context) {
     provider = context.watch<FirmwareUpdateRequestProvider>();
-    return _body(context);
+    return PlatformScaffold(
+      body: _body(context),
+    );
   }
 
   Widget _body(BuildContext context) {
@@ -71,7 +74,7 @@ class _FirmwareUpdateWidget extends State<FirmwareUpdateWidget> {
         }
         return Row(
           children: [
-            ElevatedButton(
+            PlatformElevatedButton(
               onPressed: details.onStepContinue,
               child: Text('Next'),
             ),
@@ -90,7 +93,9 @@ class _FirmwareUpdateWidget extends State<FirmwareUpdateWidget> {
   @override
   void dispose() {
     // Reset the state when this widget is disposed (e.g. popped)
-    provider.reset();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      provider.reset();
+    });
     super.dispose();
   }
 }
