@@ -51,5 +51,7 @@
 	<string>This app requires Bluetooth access to communicate with wearable devices.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Needed for optional file selection functionality.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>
