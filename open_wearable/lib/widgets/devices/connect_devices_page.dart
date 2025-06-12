@@ -10,7 +10,7 @@ import 'package:provider/provider.dart';
 Logger _logger = Logger();
 
 /// Page for connecting to devices
-/// 
+///
 /// All BLE devices are listed and tapping on it will connect to the device.
 /// Connected Wearables are added to the [WearablesProvider].
 class ConnectDevicesPage extends StatefulWidget {
@@ -19,7 +19,6 @@ class ConnectDevicesPage extends StatefulWidget {
   @override
   State<ConnectDevicesPage> createState() => _ConnectDevicesPageState();
 }
-
 
 class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
   final WearableManager _wearableManager = WearableManager();
@@ -36,9 +35,11 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
 
   @override
   Widget build(BuildContext context) {
-    final WearablesProvider wearablesProvider = Provider.of<WearablesProvider>(context);
+    final WearablesProvider wearablesProvider =
+        Provider.of<WearablesProvider>(context);
 
-    List<Widget> connectedDevicesWidgets = wearablesProvider.wearables.map((wearable) {
+    List<Widget> connectedDevicesWidgets =
+        wearablesProvider.wearables.map((wearable) {
       return PlatformListTile(
         title: Text(wearable.name),
         subtitle: Text(wearable.deviceId),
@@ -123,7 +124,8 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
 
     try {
       Wearable wearable = await _wearableManager.connectToDevice(device);
-      Provider.of<WearablesProvider>(context, listen: false).addWearable(wearable);
+      Provider.of<WearablesProvider>(context, listen: false)
+          .addWearable(wearable);
       setState(() {
         discoveredDevices.remove(device);
       });
