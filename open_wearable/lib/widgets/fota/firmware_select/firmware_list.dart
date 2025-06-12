@@ -8,10 +8,26 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:provider/provider.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 
-class FirmwareList extends StatelessWidget {
+class FirmwareList extends StatefulWidget {
+  const FirmwareList({super.key});
+
+  @override
+  State<FirmwareList> createState() => _FirmwareListState();
+}
+
+class _FirmwareListState extends State<FirmwareList> {
+  late Future<List<RemoteFirmware>> _firmwareFuture;
   final repository = FirmwareImageRepository();
 
-  FirmwareList({super.key});
+  @override
+  void initState() {
+    super.initState();
+    _loadFirmwares();
+  }
+
+  void _loadFirmwares() {
+    _firmwareFuture = repository.getFirmwareImages();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +43,6 @@ class FirmwareList extends StatelessWidget {
         ],
       ),
       body: Material(
-        color: Colors.white,
         child: _body(),
       ),
     );
@@ -93,14 +108,28 @@ class FirmwareList extends StatelessWidget {
   Container _body() {
     // ignore: avoid_unnecessary_containers
     return Container(
-      child: FutureBuilder(
-        future: repository.getFirmwareImages(),
-        builder: (context, AsyncSnapshot snapshot) {
+      alignment: Alignment.center,
+      child: FutureBuilder<List<RemoteFirmware>>(
+        future: _firmwareFuture,
+        builder: (context, snapshot) {
           if (snapshot.hasData) {
-            List<RemoteFirmware> apps = snapshot.data;
+            List<RemoteFirmware> apps = snapshot.data!;
             return _listBuilder(apps);
           } else if (snapshot.hasError) {
-            return Text('${snapshot.error}');
+            return Expanded(
+              child: Column(
+                children: [
+                  Text("Could not fetch firmware update, plase try again"),
+                  const SizedBox(height: 16),
+                  PlatformElevatedButton(
+                    onPressed: () {
+                      setState(_loadFirmwares);
+                    },
+                    child: const Text('Reload'),
+                  ),
+                ],
+              ),
+            );
           }
           return const CircularProgressIndicator();
         },
