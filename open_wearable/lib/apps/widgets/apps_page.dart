@@ -67,7 +67,7 @@ List<AppInfo> _apps = [
   ),
   AppInfo(
     logoPath: "lib/apps/stroke_tracker/assets/logo.png",
-    title: "Stroke Tracker",
+    title: "Stroke Test",
     description: "Run automated stroke detection tests",
     widget: SelectEarableView(
       startApp: (wearable, _) {
