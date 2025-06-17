@@ -68,7 +68,7 @@ class _RecorderPrefixRowState extends State<EdgeRecorderPrefixRow> {
         final prefix = snapshot.data ?? '';
 
         return PlatformListTile(
-          title: const Text('On-device recording filename'),
+          title: const Text('On-Device Filename Prefix'),
           trailing: isDone
               ? Row(
                   mainAxisSize: MainAxisSize.min,
