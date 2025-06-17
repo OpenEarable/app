@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -125,6 +126,8 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
     try {
       Wearable wearable = await _wearableManager.connectToDevice(device);
       Provider.of<WearablesProvider>(context, listen: false)
+          .addWearable(wearable);
+      Provider.of<SensorRecorderProvider>(context, listen: false)
           .addWearable(wearable);
       setState(() {
         discoveredDevices.remove(device);

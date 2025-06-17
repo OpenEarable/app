@@ -49,6 +49,7 @@ dependencies:
   fl_chart: ^1.0.0
   file_picker: ^8.3.7
   mcumgr_flutter: ^0.4.2
+  file_selector: ^1.0.3
 
 dev_dependencies:
   flutter_test:
