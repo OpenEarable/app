@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
 import 'package:open_wearable/widgets/home_page.dart';
 import 'package:provider/provider.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' as oe;
@@ -27,6 +28,9 @@ void main() {
         ChangeNotifierProvider(create: (context) => WearablesProvider()),
         ChangeNotifierProvider(
           create: (context) => FirmwareUpdateRequestProvider(),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => SensorRecorderProvider(),
         ),
       ],
       child: const MyApp(),
