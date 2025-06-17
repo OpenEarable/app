@@ -13,14 +13,13 @@ class LocalRecorderView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<SensorRecorderProvider>(
       builder: (context, recorder, _) {
-        final isRecording   = recorder.isRecording;
-        final canRecord     = recorder.hasSensorsConnected || isRecording;
-        final recordPath    = recorder.currentDirectory;
+        final isRecording = recorder.isRecording;
+        final canRecord   = recorder.hasSensorsConnected || isRecording;
+        final recordPath  = recorder.currentDirectory;
 
-        // Dynamic UI bits
-        final tileColor     = isRecording ? Colors.green.shade300 : null;
-        final icon          = isRecording ? Icons.stop : Icons.fiber_manual_record;
-        final iconColor     = isRecording
+        final tileColor = isRecording ? Colors.green.shade300 : null;
+        final icon      = isRecording ? Icons.stop : Icons.fiber_manual_record;
+        final iconColor = isRecording
             ? Colors.white
             : (recorder.hasSensorsConnected ? Colors.red : Colors.grey);
 
@@ -48,16 +47,17 @@ class LocalRecorderView extends StatelessWidget {
                           return;
                         }
 
-                        // --- Pick a target directory ---
                         final dir = await _pickDirectory();
-                        if (dir == null) {
+                        if (dir == null) return;
+
+                        // --------  Check if directory is empty  --------
+                        if (!await _isDirectoryEmpty(dir)) {
                           if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('No directory selected'),
-                            ),
+                          final proceed = await _askOverwriteConfirmation(
+                            context,
+                            dir,
                           );
-                          return;
+                          if (!proceed) return;
                         }
 
                         recorder.startRecording(dir);
@@ -71,20 +71,16 @@ class LocalRecorderView extends StatelessWidget {
   }
 }
 
-/// Lets the user pick a folder cross-platform.  Returns `null` if cancelled.
-///
-/// Android / macOS / Windows / Linux → native directory dialog via file_selector  
-/// iOS → use a “Save as…” trick and strip the filename (file_selector's current
-///       limitation)  
-/// Web is not supported because browsers can’t grant write access to a folder.
+/* ──────────────────────────────────────────────────────────── */
+/*  Helpers                                                    */
+/* ──────────────────────────────────────────────────────────── */
+
+/// Native directory picker (with iOS workaround); `null` if cancelled.
 Future<String?> _pickDirectory() async {
-  // 1. Platforms where file_selector already supports folder selection
   if (!Platform.isIOS && !kIsWeb) {
     return await getDirectoryPath();
   }
 
-  // 2. iOS workaround: ask the user to “save” a throw-away file,
-  //    then use its parent directory.
   if (Platform.isIOS) {
     final result = await getSaveLocation(
       suggestedName: 'choose-this-folder.txt',
@@ -93,6 +89,38 @@ Future<String?> _pickDirectory() async {
     return result == null ? null : Directory(result.path).parent.path;
   }
 
-  // 3. Anything else (e.g., web): gracefully bail
   return null;
+}
+
+/// Returns `true` if `path` doesn’t exist *or* contains no files/folders.
+Future<bool> _isDirectoryEmpty(String path) async {
+  final dir = Directory(path);
+  if (!await dir.exists()) return true;
+  return await dir.list(followLinks: false).isEmpty;
+}
+
+/// Modal confirmation dialog shown when the folder isn’t empty.
+Future<bool> _askOverwriteConfirmation(
+    BuildContext context, String dirPath) async {
+  return await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Directory not empty'),
+          content: Text(
+              '“$dirPath” already contains files or folders.\n\n'
+              'New sensor files will be added; existing files with the same '
+              'names will be overwritten. Continue anyway?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Continue'),
+            ),
+          ],
+        ),
+      ) ??
+      false;
 }
