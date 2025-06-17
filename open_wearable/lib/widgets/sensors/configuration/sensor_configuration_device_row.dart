@@ -33,10 +33,6 @@ class SensorConfigurationDeviceRow extends StatelessWidget {
               )
               : null,
           ),
-          if (device is EdgeRecorderManager)
-            EdgeRecorderPrefixRow(
-              manager: device as EdgeRecorderManager,
-            ),
           if (device is SensorConfigurationManager)
             ListView.builder(
               shrinkWrap: true,
@@ -50,6 +46,12 @@ class SensorConfigurationDeviceRow extends StatelessWidget {
             )
           else
             Text("This device does not support sensors"),
+          if (device is EdgeRecorderManager) ...[
+            const Divider(),
+            EdgeRecorderPrefixRow(
+              manager: device as EdgeRecorderManager,
+            ),
+          ],
         ],
       ),
     );
