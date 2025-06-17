@@ -1,6 +1,9 @@
+// stroke_tracker_view.dart
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 class StrokeTrackerView extends StatefulWidget {
   const StrokeTrackerView({super.key});
@@ -55,7 +58,13 @@ class _StrokeTrackerViewState extends State<StrokeTrackerView> {
     Duration(seconds: 15),
   ];
 
-  final List<int> sectionStarts = [0, 6, 8, 10, 14];
+  final Map<int, List<int>> testRanges = {
+    0: [1],
+    1: [2, 3, 4, 5],
+    2: [6, 7],
+    3: [8, 9],
+    4: [10, 11, 12, 13],
+  };
 
   final List<TestFeedback> testFeedbackList = [
     TestFeedback("Counting Test", LucideIcons.hash),
@@ -68,150 +77,249 @@ class _StrokeTrackerViewState extends State<StrokeTrackerView> {
   int currentIndex = 0;
   Timer? _timer;
   bool isRunning = false;
+  bool isPaused = false;
+  DateTime? _lastStartTime;
+  Duration _elapsed = Duration.zero;
+  List<int>? _retryIndices;
+  int _retryPointer = 0;
+
+  late FlutterTts flutterTts;
+
+  @override
+  void initState() {
+    super.initState();
+    flutterTts = FlutterTts();
+
+    flutterTts.setLanguage("en-US");
+    flutterTts.setPitch(1.0);
+    flutterTts.setSpeechRate(0.5);
+  }
+
+  Future<void> _speak(String text) async {
+    await flutterTts.stop(); // Stop any ongoing speech first
+    await flutterTts.speak(text);
+  }
 
   void _startSequence() {
     if (isRunning) return;
     setState(() {
       isRunning = true;
-      currentIndex = 1;
+      isPaused = false;
+      currentIndex = _retryIndices != null ? _retryIndices!.first : 1;
+      _retryPointer = 0;
+      _elapsed = Duration.zero;
+      _lastStartTime = DateTime.now();
     });
+    _speak(instructions[currentIndex]);
     _scheduleNextInstruction();
   }
 
   void _scheduleNextInstruction() {
     _timer?.cancel();
 
-    if (currentIndex >= instructions.length - 1) {
-      setState(() => isRunning = false);
-      return;
+    if (_retryIndices != null) {
+      if (_retryPointer >= _retryIndices!.length) {
+        setState(() {
+          currentIndex = instructions.length - 1;
+          _retryIndices = null;
+          isRunning = false;
+        });
+        _speak(instructions[currentIndex]);
+        return;
+      }
+      int idx = _retryIndices![_retryPointer];
+      _timer = Timer(durations[idx], () {
+        setState(() {
+          _retryPointer++;
+          currentIndex = _retryPointer < _retryIndices!.length
+              ? _retryIndices![_retryPointer]
+              : instructions.length - 1;
+          _elapsed = Duration.zero;
+          _lastStartTime = DateTime.now();
+        });
+        _speak(instructions[currentIndex]);
+        _scheduleNextInstruction();
+      });
+    } else {
+      if (currentIndex >= instructions.length - 1) {
+        setState(() {
+          currentIndex = instructions.length - 1;
+          isRunning = false;
+        });
+        _speak(instructions[currentIndex]);
+        return;
+      }
+      _timer = Timer(durations[currentIndex], () {
+        setState(() {
+          currentIndex++;
+          _elapsed = Duration.zero;
+          _lastStartTime = DateTime.now();
+        });
+        _speak(instructions[currentIndex]);
+        _scheduleNextInstruction();
+      });
+    }
+  }
+
+  void _retryTest(int index) {
+    _timer?.cancel();
+    flutterTts.stop();
+
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger != null) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text("Restarting ${testFeedbackList[index].name}..."),
+          duration: const Duration(seconds: 2),
+        ),
+      );
     }
 
-    _timer = Timer(durations[currentIndex], () {
-      setState(() {
-        currentIndex++;
-      });
+    setState(() {
+      _retryIndices = testRanges[index]!;
+      currentIndex = _retryIndices!.first;
+      _retryPointer = 0;
+      isRunning = true;
+      _elapsed = Duration.zero;
+      _lastStartTime = DateTime.now();
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _speak(instructions[currentIndex]);
       _scheduleNextInstruction();
     });
   }
 
-  void _skipTest() {
-    for (int start in sectionStarts) {
-      if (start > currentIndex) {
-        setState(() {
-          currentIndex = start;
-        });
-        _scheduleNextInstruction();
-        return;
-      }
-    }
-    setState(() {
-      currentIndex = instructions.length - 1;
-      isRunning = false;
-    });
-    _timer?.cancel();
-  }
-
   void _reset() {
     _timer?.cancel();
+    flutterTts.stop();
     setState(() {
       currentIndex = 0;
       isRunning = false;
+      isPaused = false;
+      _elapsed = Duration.zero;
+      _retryIndices = null;
     });
   }
 
   void _pause() {
+    if (_timer != null && _lastStartTime != null) {
+      _elapsed += DateTime.now().difference(_lastStartTime!);
+    }
     _timer?.cancel();
-    setState(() => isRunning = false);
-  }
-
-  void _retryTest(int index) {
-    if (currentIndex != instructions.length - 1) return;
-
-    _timer?.cancel();
-    String testName = testFeedbackList[index].name;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Restarting $testName section…"),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    flutterTts.stop();
     setState(() {
-      switch (index) {
-        case 0:
-          currentIndex = 1;
-          break;
-        case 1:
-          currentIndex = 3;
-          break;
-        case 2:
-          currentIndex = 6;
-          break;
-        case 3:
-          currentIndex = 8;
-          break;
-        case 4:
-          currentIndex = 10;
-          break;
-      }
-      isRunning = true;
+      isRunning = false;
+      isPaused = true;
     });
-    _scheduleNextInstruction();
   }
+
+  void _resume() {
+    if (isPaused) {
+      setState(() {
+        isRunning = true;
+        isPaused = false;
+        _lastStartTime = DateTime.now();
+      });
+      _speak(instructions[currentIndex]);
+      _scheduleNextInstruction();
+    }
+  }
+
+ void _skipTest() {
+  _timer?.cancel();
+
+  // Find current test index containing currentIndex
+  int? currentTestKey;
+  testRanges.forEach((key, range) {
+    if (range.contains(currentIndex)) {
+      currentTestKey = key;
+    }
+  });
+
+  setState(() {
+    if (currentTestKey == null) {
+      // Not in a test range — go to results
+      currentIndex = instructions.length - 1;
+      isRunning = false;
+      _retryIndices = null;
+    } else {
+      int nextTestKey = currentTestKey! + 1;
+      if (testRanges.containsKey(nextTestKey)) {
+        // Jump to first instruction of next test block
+        currentIndex = testRanges[nextTestKey]!.first;
+        _retryIndices = null;
+        isRunning = true;
+        _elapsed = Duration.zero;
+        _lastStartTime = DateTime.now();
+
+        // Reschedule timer for next instruction
+        _scheduleNextInstruction();
+      } else {
+        // No next test, go to results
+        currentIndex = instructions.length - 1;
+        isRunning = false;
+        _retryIndices = null;
+      }
+    }
+  });
+}
+
 
   @override
   void dispose() {
     _timer?.cancel();
+    flutterTts.stop();
     super.dispose();
   }
 
-Widget _buildFeedbackPanel() {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const Padding(
-        padding: EdgeInsets.symmetric(vertical: 8.0),
-        child: Text(
-          "Test Results",
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
+  Widget _buildFeedbackPanel() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 8.0),
+          child: Text(
+            "Test Results",
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
-      ),
-      Expanded(
-        child: SingleChildScrollView(
-          child: Column(
-            children: testFeedbackList.asMap().entries.map((entry) {
-              final index = entry.key;
-              final feedback = entry.value;
-              return Container(
-                width: double.infinity,
-                margin: const EdgeInsets.only(bottom: 12),
-                child: Card(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  elevation: 3,
-                  child: ListTile(
-                    leading: Icon(feedback.icon, size: 28, color: Colors.blueAccent),
-                    title: Text(feedback.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text("Result: ${feedback.result}", style: const TextStyle(color: Colors.green)),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.refresh),
-                      onPressed: () => _retryTest(index),
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              children: testFeedbackList.asMap().entries.map((entry) {
+                final index = entry.key;
+                final feedback = entry.value;
+                return Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: Card(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    elevation: 3,
+                    child: ListTile(
+                      leading: Icon(feedback.icon, size: 28, color: Colors.blueAccent),
+                      title: Text(feedback.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: Text("Result: ${feedback.result}", style: const TextStyle(color: Colors.green)),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.refresh),
+                        onPressed: () => _retryTest(index),
+                      ),
                     ),
                   ),
-                ),
-              );
-            }).toList(),
+                );
+              }).toList(),
+            ),
           ),
         ),
-      ),
-    ],
-  );
-}
-
+      ],
+    );
+  }
 
   Widget _buildBottomControls(bool isFinished) {
     return Column(
@@ -227,9 +335,9 @@ Widget _buildFeedbackPanel() {
         ),
         if (!isRunning && !isFinished)
           ElevatedButton.icon(
-            onPressed: _startSequence,
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Start Tests'),
+            onPressed: isPaused ? _resume : _startSequence,
+            icon: Icon(isPaused ? Icons.play_arrow : Icons.play_arrow),
+            label: Text(isPaused ? 'Resume' : 'Start Tests'),
           ),
         if (isRunning)
           Row(
@@ -305,11 +413,11 @@ Widget _buildFeedbackPanel() {
                 child: ElevatedButton.icon(
                   onPressed: isRunning ? _skipTest : null,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.cyan,
+                    backgroundColor: Colors.redAccent,
                     minimumSize: const Size(120, 40),
                   ),
                   icon: const Icon(Icons.skip_next),
-                  label: const Text("Skip Test"),
+                  label: const Text("Skip"),
                 ),
               ),
             ],

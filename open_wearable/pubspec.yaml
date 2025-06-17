@@ -49,6 +49,7 @@ dependencies:
   fl_chart: ^1.0.0
   audioplayers: ^6.5.0
   lucide_icons: ^0.247.0
+  flutter_tts: ^3.8.4
   file_picker: ^8.3.7
   mcumgr_flutter: ^0.4.2
   file_selector: ^1.0.3
