@@ -20,14 +20,14 @@ class LocalRecorderView extends StatelessWidget {
         final tileColor = isRecording ? Colors.green.shade300 : null;
         final icon      = isRecording ? Icons.stop : Icons.fiber_manual_record;
         final iconColor = isRecording
-            ? Colors.white
-            : (recorder.hasSensorsConnected ? Colors.red : Colors.grey);
+          ? Colors.white
+          : (recorder.hasSensorsConnected ? Colors.red : Colors.grey);
 
         final subtitle = isRecording
-            ? 'Recording to:\n$recordPath'
-            : recorder.hasSensorsConnected
-                ? 'Tap to choose where to save your data'
-                : 'Connect a device to enable recording';
+          ? 'Recording to:\n$recordPath'
+          : recorder.hasSensorsConnected
+            ? 'Tap to choose where to save your data'
+            : 'Connect a device to enable recording';
 
         return ListView(
           padding: const EdgeInsets.all(10),
@@ -40,28 +40,28 @@ class LocalRecorderView extends StatelessWidget {
                 subtitle: Text(subtitle),
                 trailing: Icon(icon, color: iconColor),
                 onTap: !canRecord
-                    ? null
-                    : () async {
-                        if (isRecording) {
-                          recorder.stopRecording();
-                          return;
-                        }
+                  ? null
+                  : () async {
+                    if (isRecording) {
+                      recorder.stopRecording();
+                      return;
+                    }
 
-                        final dir = await _pickDirectory();
-                        if (dir == null) return;
+                    final dir = await _pickDirectory();
+                    if (dir == null) return;
 
-                        // --------  Check if directory is empty  --------
-                        if (!await _isDirectoryEmpty(dir)) {
-                          if (!context.mounted) return;
-                          final proceed = await _askOverwriteConfirmation(
-                            context,
-                            dir,
-                          );
-                          if (!proceed) return;
-                        }
+                    // --------  Check if directory is empty  --------
+                    if (!await _isDirectoryEmpty(dir)) {
+                      if (!context.mounted) return;
+                      final proceed = await _askOverwriteConfirmation(
+                        context,
+                        dir,
+                      );
+                      if (!proceed) return;
+                    }
 
-                        recorder.startRecording(dir);
-                      },
+                    recorder.startRecording(dir);
+                  },
               ),
             ),
           ],
@@ -100,27 +100,26 @@ Future<bool> _isDirectoryEmpty(String path) async {
 }
 
 /// Modal confirmation dialog shown when the folder isn’t empty.
-Future<bool> _askOverwriteConfirmation(
-    BuildContext context, String dirPath) async {
+Future<bool> _askOverwriteConfirmation(BuildContext context, String dirPath) async {
   return await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Directory not empty'),
-          content: Text(
-              '“$dirPath” already contains files or folders.\n\n'
-              'New sensor files will be added; existing files with the same '
-              'names will be overwritten. Continue anyway?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Continue'),
-            ),
-          ],
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Directory not empty'),
+      content: Text(
+          '“$dirPath” already contains files or folders.\n\n'
+          'New sensor files will be added; existing files with the same '
+          'names will be overwritten. Continue anyway?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('Cancel'),
         ),
-      ) ??
-      false;
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text('Continue'),
+        ),
+      ],
+    ),
+  ) ??
+  false;
 }
