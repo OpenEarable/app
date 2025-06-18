@@ -23,19 +23,8 @@ class SensorConfigurationDeviceRow extends StatelessWidget {
               device.name,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
-            trailing: (device is SensorConfigurationManager)
-              ? Consumer<SensorConfigurationProvider>(
-                builder: (context, sensorConfigNotifier, child) {
-                  return PlatformIconButton(
-                    icon: Icon(PlatformIcons(context).clear),
-                    onPressed: () {
-                      sensorConfigNotifier.turnOffAllSensors();
-                    },
-                  );
-                },
-              )
-              : null,
-            ),
+            trailing: _buildResetButton(context),
+          ),
           if (device is SensorConfigurationManager)
             ListView.builder(
               shrinkWrap: true,
@@ -57,6 +46,33 @@ class SensorConfigurationDeviceRow extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+
+  Widget? _buildResetButton(BuildContext context) {
+    if (device is! SensorConfigurationManager) {
+      return null;
+    }
+
+    return Consumer<SensorConfigurationProvider>(
+      builder: (context, sensorConfigNotifier, child) {
+        bool allSensorsOff = (device as SensorConfigurationManager).sensorConfigurations.every(
+          (config) => sensorConfigNotifier.getSelectedConfigurationValue(config) == config.offValue,
+        );
+
+        if (allSensorsOff) {
+          return SizedBox.shrink();
+        }
+
+        return PlatformTextButton(
+          alignment: Alignment.centerRight,
+          padding: EdgeInsets.zero,
+          onPressed: () {
+            sensorConfigNotifier.turnOffAllSensors();
+          },
+          child: Text("RESET"),
+        );
+      },
     );
   }
 }
