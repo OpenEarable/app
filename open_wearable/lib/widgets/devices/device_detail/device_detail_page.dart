@@ -213,16 +213,16 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                       children: [
                         PlatformListTile(
                           title: Text("Battery Voltage"),
-                          subtitle: Text("${energyStatus.voltage} V"),
+                          subtitle: Text("${energyStatus.voltage.toStringAsFixed(1)} V"),
                         ),
                         PlatformListTile(
                           title: Text("Charge Rate"),
-                          subtitle: Text("${energyStatus.chargeRate} W"),
+                          subtitle: Text("${energyStatus.chargeRate.toStringAsFixed(3)} W"),
                         ),
                         PlatformListTile(
                           title: Text("Battery Capacity"),
-                          subtitle:
-                              Text("${energyStatus.availableCapacity} Wh"),
+                            subtitle:
+                              Text("${energyStatus.availableCapacity.toStringAsFixed(2)} Wh"),
                         ),
                       ],
                     );
