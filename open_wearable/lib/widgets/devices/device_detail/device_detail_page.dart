@@ -225,12 +225,12 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                         ),
                         PlatformListTile(
                           title: Text("Charge Rate"),
-                          subtitle: Text("${energyStatus.chargeRate} A"),
+                          subtitle: Text("${energyStatus.chargeRate} W"),
                         ),
                         PlatformListTile(
                           title: Text("Battery Capacity"),
                           subtitle:
-                              Text("${energyStatus.availableCapacity} Ah"),
+                              Text("${energyStatus.availableCapacity} Wh"),
                         ),
                       ],
                     );
