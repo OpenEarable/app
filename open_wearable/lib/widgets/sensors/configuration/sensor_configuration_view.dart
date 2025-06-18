@@ -74,7 +74,7 @@ class SensorConfigurationView extends StatelessWidget {
         }
         (onSetConfigPressed ?? () {})();
       },
-      child: const Text('Set sensor configurations'),
+      child: const Text('Set Sensor Configurations'),
     );
   }
 
