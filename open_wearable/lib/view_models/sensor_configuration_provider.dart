@@ -93,6 +93,23 @@ class SensorConfigurationProvider with ChangeNotifier {
     }
   }
 
+  void _updateSelectedOptions(SensorConfiguration sensorConfiguration) {
+    if (_sensorConfigurationOptions[sensorConfiguration] == null) {
+      _sensorConfigurationOptions[sensorConfiguration] = {};
+    }
+    if (sensorConfiguration is! ConfigurableSensorConfiguration) {
+      _sensorConfigurationOptions[sensorConfiguration]!.clear();
+      return;
+    }
+    ConfigurableSensorConfigurationValue? selectedValue =
+        _sensorConfigurations[sensorConfiguration] as ConfigurableSensorConfigurationValue?;
+    if (selectedValue == null) {
+      _sensorConfigurationOptions[sensorConfiguration]!.clear();
+      return;
+    }
+    _sensorConfigurationOptions[sensorConfiguration] = selectedValue.options.toSet();
+  }
+
   void removeSensorConfiguration(SensorConfiguration sensorConfiguration) {
     _sensorConfigurations.remove(sensorConfiguration);
     notifyListeners();
@@ -133,5 +150,17 @@ class SensorConfigurationProvider with ChangeNotifier {
       return sensorConfiguration.values.toSet().toList();
     }
     return sensorConfiguration.values;
+  }
+
+  /// Turn off all sensors that have a off configuration value.
+  Future<void> turnOffAllSensors() async {
+    for (final sensorConfiguration in _sensorConfigurations.keys) {
+      final SensorConfigurationValue? value = sensorConfiguration.offValue;
+      if (value != null) {
+        addSensorConfiguration(sensorConfiguration, value);
+        _updateSelectedOptions(sensorConfiguration);
+        notifyListeners();
+      }
+    }
   }
 }
