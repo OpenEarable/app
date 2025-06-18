@@ -3,6 +3,9 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/widgets/sensors/configuration/edge_recorder_prefix_row.dart';
 import 'package:open_wearable/widgets/sensors/configuration/sensor_configuration_value_row.dart';
+import 'package:provider/provider.dart';
+
+import '../../../view_models/sensor_configuration_provider.dart';
 
 /// A widget that displays a list of sensor configurations for a device.
 class SensorConfigurationDeviceRow extends StatelessWidget {
@@ -15,24 +18,24 @@ class SensorConfigurationDeviceRow extends StatelessWidget {
     return Card(
       child: Column(
         children: [
-          PlatformListTile(
+            PlatformListTile(
             title: Text(
               device.name,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
-            trailing: (device is DeviceIdentifier) ?
-              FutureBuilder(
-                future: (device as DeviceIdentifier).readDeviceIdentifier(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.done) {
-                    return Text(snapshot.data.toString());
-                  } else {
-                    return CircularProgressIndicator();
-                  }
+            trailing: (device is SensorConfigurationManager)
+              ? Consumer<SensorConfigurationProvider>(
+                builder: (context, sensorConfigNotifier, child) {
+                  return PlatformIconButton(
+                    icon: Icon(PlatformIcons(context).clear),
+                    onPressed: () {
+                      sensorConfigNotifier.turnOffAllSensors();
+                    },
+                  );
                 },
               )
               : null,
-          ),
+            ),
           if (device is SensorConfigurationManager)
             ListView.builder(
               shrinkWrap: true,
