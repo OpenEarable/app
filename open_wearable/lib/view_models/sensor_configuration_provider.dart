@@ -1,11 +1,36 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 
 class SensorConfigurationProvider with ChangeNotifier {
+  final SensorConfigurationManager _sensorConfigurationManager;
+
   final Map<SensorConfiguration, SensorConfigurationValue>
       _sensorConfigurations = {};
   final Map<SensorConfiguration, Set<SensorConfigurationOption>>
       _sensorConfigurationOptions = {};
+
+  StreamSubscription<Map<SensorConfiguration, SensorConfigurationValue>>?
+      _sensorConfigurationSubscription;
+  
+  SensorConfigurationProvider({
+    required SensorConfigurationManager sensorConfigurationManager,
+  }) : _sensorConfigurationManager = sensorConfigurationManager {
+    _sensorConfigurationSubscription = _sensorConfigurationManager.sensorConfigurationStream.listen((event) {
+      for (final e in event.entries) {
+        final sensorConfiguration = e.key;
+        final sensorConfigurationValue = e.value;
+
+        // Update the selected configuration value
+        _sensorConfigurations[sensorConfiguration] = sensorConfigurationValue;
+
+        // Update the selected options for configurable sensor configurations
+        _updateSelectedOptions(sensorConfiguration);
+      }
+      notifyListeners();
+    });
+  }
 
   void addSensorConfiguration(
     SensorConfiguration sensorConfiguration,
@@ -162,5 +187,11 @@ class SensorConfigurationProvider with ChangeNotifier {
         notifyListeners();
       }
     }
+  }
+
+  @override
+  void dispose() {
+    _sensorConfigurationSubscription?.cancel();
+    super.dispose();
   }
 }
