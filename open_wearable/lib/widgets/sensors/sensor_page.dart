@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_wearable/widgets/sensors/configuration/sensor_configuration_view.dart';
@@ -6,6 +7,7 @@ import 'package:open_wearable/widgets/sensors/values/sensor_values_page.dart';
 import 'package:provider/provider.dart';
 
 import '../../view_models/sensor_recorder_provider.dart';
+import '../devices/connect_devices_page.dart';
 
 
 class SensorPage extends StatelessWidget {
@@ -21,6 +23,28 @@ class SensorPage extends StatelessWidget {
             return [
               SliverAppBar(
                 title: const Text("Sensors"),
+                actions: [
+                  PlatformIconButton(
+                    icon: Icon(context.platformIcons.bluetooth),
+                    onPressed: () {
+                      if (Theme.of(context).platform == TargetPlatform.iOS) {
+                        showCupertinoModalPopup(
+                          context: context,
+                          builder: (context) => ConnectDevicesPage(),
+                        );
+                      } else {
+                        Navigator.of(context).push(
+                          platformPageRoute(
+                            context: context,
+                            builder: (context) => const Material(
+                              child: ConnectDevicesPage(),
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                ],
                 pinned: true,
                 floating: true,
                 snap: true,
