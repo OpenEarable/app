@@ -102,7 +102,14 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                     if (snapshot.connectionState == ConnectionState.done) {
                       return Text(snapshot.data.toString());
                     } else {
-                      return PlatformCircularProgressIndicator();
+                      return Align(
+                        alignment: Alignment.centerLeft,
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: PlatformCircularProgressIndicator(),
+                        ),
+                      );
                     }
                   },
                 ),
@@ -121,7 +128,14 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                     if (snapshot.connectionState == ConnectionState.done) {
                       return Text(snapshot.data.toString());
                     } else {
-                      return PlatformCircularProgressIndicator();
+                      return Align(
+                        alignment: Alignment.centerLeft,
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: PlatformCircularProgressIndicator(),
+                        ),
+                      );
                     }
                   },
                 ),
@@ -160,7 +174,14 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                     if (snapshot.connectionState == ConnectionState.done) {
                       return Text(snapshot.data.toString());
                     } else {
-                      return PlatformCircularProgressIndicator();
+                      return Align(
+                        alignment: Alignment.centerLeft,
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: PlatformCircularProgressIndicator(),
+                        ),
+                      );
                     }
                   },
                 ),
@@ -202,7 +223,14 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                     .energyStatusStream,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return PlatformCircularProgressIndicator();
+                    return Align(
+                      alignment: Alignment.centerLeft,
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: PlatformCircularProgressIndicator(),
+                      ),
+                    );
                   } else if (snapshot.hasError) {
                     return Text("Error: ${snapshot.error}");
                   } else if (!snapshot.hasData) {
@@ -242,7 +270,14 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                     .healthStatusStream,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return PlatformCircularProgressIndicator();
+                    return Align(
+                      alignment: Alignment.centerLeft,
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: PlatformCircularProgressIndicator(),
+                      ),
+                    );
                   } else if (snapshot.hasError) {
                     return Text("Error: ${snapshot.error}");
                   } else if (!snapshot.hasData) {
