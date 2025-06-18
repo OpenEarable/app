@@ -52,11 +52,20 @@ class _SensorConfigurationDetailViewState extends State<SensorConfigurationDetai
           title: Text("Sampling Rate"),
           trailing: DropdownButton<SensorConfigurationValue>(
             value: sensorConfigNotifier.getSelectedConfigurationValue(widget.sensorConfiguration),
-            items: sensorConfigNotifier.getSensorConfigurationValues(widget.sensorConfiguration, distinct: true).map((value) {
+            items: sensorConfigNotifier.getSensorConfigurationValues(widget.sensorConfiguration, distinct: true).where(
+              (value) {
+                if (value is SensorFrequencyConfigurationValue) {
+                  return value.frequencyHz >= 0.1
+                    || value.frequencyHz == 0
+                    || sensorConfigNotifier.getSelectedConfigurationValue(widget.sensorConfiguration) == value;
+                }
+                return true;
+              },
+            ).map((value) {
               if (value is SensorFrequencyConfigurationValue) {
                 return DropdownMenuItem<SensorConfigurationValue>(
                   value: value,
-                  child: Text("${value.frequencyHz}"),
+                    child: Text(value.frequencyHz.toStringAsFixed(2)),
                 );
               }
               return DropdownMenuItem<SensorConfigurationValue>(
@@ -64,30 +73,6 @@ class _SensorConfigurationDetailViewState extends State<SensorConfigurationDetai
                 child: Text(value.key),
               );
             }).toList(),
-            
-            // widget.sensorConfiguration is SensorFrequencyConfiguration
-            //   ? () {
-            //     List<SensorFrequencyConfigurationValue> values = [];
-
-            //     for (SensorConfigurationValue value in widget.sensorConfiguration.values) {
-            //       double freq = (value as SensorFrequencyConfigurationValue).frequencyHz;
-            //       if (!values.any((v) => v.frequencyHz == freq)) {
-            //         values.add(value);
-            //       }
-            //     }
-            //     return values.map((value) {
-            //       return DropdownMenuItem<SensorConfigurationValue>(
-            //         value: value,
-            //         child: Text(value.key),
-            //       );
-            //     }).toList();
-            //   }()
-            //   : widget.sensorConfiguration.values.map((value) {
-            //     return DropdownMenuItem<SensorConfigurationValue>(
-            //       value: value,
-            //       child: Text(value.key),
-            //     );
-            //   }).toList(),
             onChanged: (value) {
               setState(() {
                 _selectedValue = value;
