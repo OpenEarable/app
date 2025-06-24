@@ -1,12 +1,13 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart' show Wearable, SensorManager, Sensor;
 import 'package:open_wearable/apps/heart_tracker/widgets/heart_tracker_page.dart';
-import 'package:open_wearable/apps/stroke_tracker/view/stroke_tracker_view.dart'; // stroke tracker import
+import 'package:open_wearable/apps/stroke_tracker/stroke_tracker_view.dart'; // stroke tracker import
 import 'package:open_wearable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_wearable/apps/posture_tracker/view/posture_tracker_view.dart';
 import 'package:open_wearable/apps/widgets/select_earable_view.dart';
+import 'package:open_wearable/apps/widgets/select_two_earable_view.dart';
 import 'package:open_wearable/apps/widgets/app_tile.dart';
 
 import '../../widgets/devices/connect_devices_page.dart';
@@ -65,14 +66,12 @@ List<AppInfo> _apps = [
       },
     ),
   ),
-  AppInfo(
-    logoPath: "lib/apps/stroke_tracker/assets/logo.png",
-    title: "Stroke Test",
-    description: "Run automated stroke detection tests",
-    widget: SelectEarableView(
-      startApp: (wearable, _) {
-        return const StrokeTrackerView();
-      },
+   AppInfo(
+    logoPath: 'lib/apps/stroke_tracker/assets/logo.png',
+    title: 'Stroke Test',
+    description: 'Run automated stroke detection tests',
+    widget: SelectTwoEarableView(
+      startApp: (_, __, ___, ____) => const StrokeTrackerView(),
     ),
   ),
 ];
