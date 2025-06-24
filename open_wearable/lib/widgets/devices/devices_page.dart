@@ -13,8 +13,25 @@ import 'package:provider/provider.dart';
 /// On this page the user can see all connected devices.
 ///
 /// Tapping on a device will navigate to the [DeviceDetailPage].
-class DevicesPage extends StatelessWidget {
+class DevicesPage extends StatefulWidget {
   const DevicesPage({super.key});
+
+  @override
+  State<DevicesPage> createState() => _DevicesPageState();
+}
+
+class _DevicesPageState extends State<DevicesPage> {
+  @override
+  void initState() {
+    super.initState();
+    WearableManager().connectToSystemDevices().then((wearables) {
+      if (!mounted) return;
+      final provider = Provider.of<WearablesProvider>(context, listen: false);
+      for (var wearable in wearables) {
+        provider.addWearable(wearable);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,21 +83,46 @@ class DevicesPage extends StatelessWidget {
 
   Widget _buildSmallScreenContent(BuildContext context, WearablesProvider wearablesProvider) {
     if (wearablesProvider.wearables.isEmpty) {
-      return Center(
-        child: Text(
-          "No devices connected",
-          style: Theme.of(context).textTheme.titleLarge,
+      return RefreshIndicator(
+        onRefresh: () {
+          return WearableManager().connectToSystemDevices().then((wearables) {
+            for (var wearable in wearables) {
+              wearablesProvider.addWearable(wearable);
+            }
+          });
+        },
+        child: ListView(
+          children: [
+            SizedBox(
+              height: MediaQuery.of(context).size.height * 0.8,
+              child: Center(
+                child: Text(
+                  "No devices connected",
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+            ),
+          ],
         ),
       );
     }
 
-    return Padding(
-      padding: EdgeInsets.all(10),
-      child: ListView.builder(
-        itemCount: wearablesProvider.wearables.length,
-        itemBuilder: (context, index) {
-          return DeviceRow(device: wearablesProvider.wearables[index]);
-        },
+    return RefreshIndicator(
+      onRefresh: () {
+        return WearableManager().connectToSystemDevices().then((wearables) {
+          for (var wearable in wearables) {
+            wearablesProvider.addWearable(wearable);
+          }
+        });
+      },
+      child: Padding(
+        padding: EdgeInsets.all(10),
+        child: ListView.builder(
+          itemCount: wearablesProvider.wearables.length,
+          itemBuilder: (context, index) {
+            return DeviceRow(device: wearablesProvider.wearables[index]);
+          },
+        ),
       ),
     );
   }
