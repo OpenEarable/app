@@ -10,6 +10,10 @@ class WearablesProvider with ChangeNotifier {
   Map<Wearable, SensorConfigurationProvider> get sensorConfigurationProviders => _sensorConfigurationProviders;
 
   void addWearable(Wearable wearable) {
+    // ignore all wearables that are already added
+    if (_wearables.any((w) => w.deviceId == wearable.deviceId)) {
+      return;
+    }
     _wearables.add(wearable);
     if (wearable is SensorConfigurationManager) {
       if (!_sensorConfigurationProviders.containsKey(wearable)) {
