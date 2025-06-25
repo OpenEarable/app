@@ -388,10 +388,10 @@ packages:
     dependency: "direct main"
     description:
       name: logger
-      sha256: be4b23575aac7ebf01f225a241eb7f6b5641eeaf43c6a8613510fc2f8cf187d1
+      sha256: "2621da01aabaf223f8f961e751f2c943dbb374dc3559b982f200ccedadaa6999"
       url: "https://pub.dev"
     source: hosted
-    version: "2.5.0"
+    version: "2.6.0"
   logging:
     dependency: transitive
     description:
@@ -445,7 +445,7 @@ packages:
     description:
       path: "."
       ref: HEAD
-      resolved-ref: "833241c1965680d45260beac8a24eb9673b81f53"
+      resolved-ref: e736b963fb20dc2ff144b80a27817f99dfe47035
       url: "https://github.com/OpenEarable/open_earable_flutter.git"
     source: git
     version: "0.1.0"
