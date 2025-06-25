@@ -1,132 +1,154 @@
-// lib/stroke_tracker/touch_test.dart
+// File: lib/apps/stroke_tracker/tests/touch_test.dart
 
+
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart';
 
-/// Provider to track the left-right touch sequence for stroke detection.
+
+/// Provider to track left-right touch sequence for stroke detection.
 class TouchTestProvider extends ChangeNotifier {
-  /// Callback to invoke when the sequence is complete.
-  final VoidCallback onComplete;
+ final VoidCallback onComplete;
+ bool _leftTapped = false;
+ bool _rightTapped = false;
 
-  bool _leftTapped = false;
-  bool _rightTapped = false;
 
-  bool get leftTapped => _leftTapped;
-  bool get rightTapped => _rightTapped;
-  bool get isComplete => _leftTapped && _rightTapped;
+ bool get leftTapped => _leftTapped;
+ bool get rightTapped => _rightTapped;
+ bool get isComplete => _leftTapped && _rightTapped;
 
-  TouchTestProvider({required this.onComplete});
 
-  /// Call when left earphone is tapped
-  void tapLeft() {
-    if (!_leftTapped) {
-      _leftTapped = true;
-      notifyListeners();
-    }
-  }
+ StreamSubscription? _leftSub;
+ StreamSubscription? _rightSub;
 
-  /// Call when right earphone is tapped
-  void tapRight() {
-    if (_leftTapped && !_rightTapped) {
-      _rightTapped = true;
-      notifyListeners();
-      onComplete();
-    }
-  }
 
-  /// Reset the test
-  void reset() {
-    _leftTapped = false;
-    _rightTapped = false;
-    notifyListeners();
-  }
+ TouchTestProvider({required this.onComplete});
+
+
+ /// Subscribe to the touch sensor streams on each manager.
+ void startListening({
+   required SensorManager leftManager,
+   required SensorManager rightManager,
+ }) {
+   final leftTouch = leftManager.sensors.firstWhere(
+     (s) => s.sensorName.toLowerCase().contains('touch'),
+   );
+   final rightTouch = rightManager.sensors.firstWhere(
+     (s) => s.sensorName.toLowerCase().contains('touch'),
+   );
+
+
+   _leftSub = leftTouch.sensorStream.listen((_) {
+     if (!_leftTapped) {
+       _leftTapped = true;
+       notifyListeners();
+     }
+   });
+
+
+   _rightSub = rightTouch.sensorStream.listen((_) {
+     if (_leftTapped && !_rightTapped) {
+       _rightTapped = true;
+       notifyListeners();
+       onComplete();
+     }
+   });
+ }
+
+
+ /// Cancel subscriptions.
+ void stopListening() {
+   _leftSub?.cancel();
+   _rightSub?.cancel();
+ }
+
+
+ /// Reset state and subscriptions.
+ void reset() {
+   stopListening();
+   _leftTapped = false;
+   _rightTapped = false;
+   notifyListeners();
+ }
 }
 
-/// Widget that displays two touch zones (left/right) for the stroke touch test.
-class TouchTest extends StatelessWidget {
-  /// Title shown in the AppBar
-  final String title;
-  /// Called when the user has successfully tapped left then right
-  final VoidCallback onCompleted;
 
-  const TouchTest({
-    Key? key,
-    this.title = 'Stroke Touch Test',
-    required this.onCompleted,
-  }) : super(key: key);
+/// Widget for the stroke touch test using two earable devices.
+class TouchTest extends StatefulWidget {
+ final String title;
+ final SensorManager leftManager;
+ final SensorManager rightManager;
+ final VoidCallback onCompleted;
 
-  @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider<TouchTestProvider>(
-      create: (_) => TouchTestProvider(onComplete: onCompleted),
-      child: Scaffold(
-        appBar: AppBar(title: Text(title)),
-        body: Consumer<TouchTestProvider>(
-          builder: (context, provider, _) {
-            String instruction;
-            if (!provider.leftTapped) {
-              instruction = 'Please tap the LEFT earphone';
-            } else if (!provider.rightTapped) {
-              instruction = 'Now tap the RIGHT earphone';
-            } else {
-              instruction = 'Test complete! 🎉';
-            }
 
-            return Column(
-              children: [
-                SizedBox(height: 20),
-                Text(instruction, style: TextStyle(fontSize: 20)),
-                Expanded(
-                  child: Row(
-                    children: [
-                      // Left earphone zone
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: provider.tapLeft,
-                          behavior: HitTestBehavior.opaque,
-                          child: Container(
-                            margin: EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: provider.leftTapped ? Colors.green[200] : Colors.grey[300],
-                              border: Border.all(color: Colors.black),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Center(child: Text('LEFT', style: TextStyle(fontSize: 18))),
-                          ),
-                        ),
-                      ),
-                      // Right earphone zone
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: provider.tapRight,
-                          behavior: HitTestBehavior.opaque,
-                          child: Container(
-                            margin: EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: provider.rightTapped ? Colors.green[200] : Colors.grey[300],
-                              border: Border.all(color: Colors.black),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Center(child: Text('RIGHT', style: TextStyle(fontSize: 18))),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (provider.isComplete) ...[
-                  SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed: provider.reset,
-                    child: Text('Reset Test'),
-                  ),
-                  SizedBox(height: 20),
-                ],
-              ],
-            );
-          },
-        ),
-      ),
-    );
-  }
+ const TouchTest({
+   Key? key,
+   this.title = 'Stroke Touch Test',
+   required this.leftManager,
+   required this.rightManager,
+   required this.onCompleted,
+ }) : super(key: key);
+
+
+ @override
+ _TouchTestState createState() => _TouchTestState();
 }
+
+
+class _TouchTestState extends State<TouchTest> {
+ late final TouchTestProvider provider;
+
+
+ @override
+ void initState() {
+   super.initState();
+   provider = TouchTestProvider(onComplete: widget.onCompleted);
+   provider.startListening(
+     leftManager: widget.leftManager,
+     rightManager: widget.rightManager,
+   );
+ }
+
+
+ @override
+ void dispose() {
+   provider.stopListening();
+   super.dispose();
+ }
+
+
+ @override
+ Widget build(BuildContext context) {
+   return ChangeNotifierProvider.value(
+     value: provider,
+     child: Consumer<TouchTestProvider>(
+       builder: (_, p, __) {
+         String instruction;
+         if (!p.leftTapped) {
+           instruction = 'Tap the LEFT earable';
+         } else if (!p.rightTapped) {
+           instruction = 'Now tap the RIGHT earable';
+         } else {
+           instruction = 'Test complete! 🎉';
+         }
+
+
+         return Scaffold(
+           appBar: AppBar(title: Text(widget.title)),
+           body: Center(child: Text(instruction, style: TextStyle(fontSize: 24))),
+           floatingActionButton: p.isComplete
+               ? FloatingActionButton(
+                   onPressed: provider.reset,
+                   child: Icon(Icons.refresh),
+                 )
+               : null,
+         );
+       },
+     ),
+   );
+ }
+}
+
+
+
