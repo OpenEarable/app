@@ -24,6 +24,39 @@ class _DevicesPageState extends State<DevicesPage> {
   @override
   void initState() {
     super.initState();
+
+    _startBluetooth();
+  }
+
+  void _startBluetooth() async {
+    if (!await WearableManager().hasPermissions()) {
+      if (mounted) {
+        // show a dialog to request permissions
+        await showPlatformDialog(
+          context: context,
+          builder: (context) {
+            return PlatformAlertDialog(
+              title: Text("Permissions Required"),
+              content: Text(
+                "This app requires Bluetooth and Location permissions to function properly.\n"
+                "Location access is needed for Bluetooth scanning to work. Please enable both "
+                "Bluetooth and Location services and grant the necessary permissions.\n"
+                "No data will be collected or sent to any server and will remain only on your device.",
+              ),
+              actions: [
+                PlatformDialogAction(
+                  child: Text("OK"),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      }
+    }
+
     WearableManager().connectToSystemDevices().then((wearables) {
       if (!mounted) return;
       final provider = Provider.of<WearablesProvider>(context, listen: false);
