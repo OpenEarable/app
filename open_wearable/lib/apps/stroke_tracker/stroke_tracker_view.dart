@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
-
+import 'package:open_earable_flutter/open_earable_flutter.dart' show SensorManager; // for managing sensors
 import 'models/test_feedback.dart';
 import 'widgets/test_feedback_panel.dart';
 import 'widgets/test_progress_bubbles.dart';
@@ -12,7 +12,15 @@ import 'tests/repetition_test.dart';
 import 'tests/mouth_movement_test.dart';
 
 class StrokeTrackerView extends StatefulWidget {
-  const StrokeTrackerView({super.key});
+  // Managers for left/right earable sensors
+  final SensorManager leftManager;
+  final SensorManager rightManager;
+
+  const StrokeTrackerView({
+    Key? key,
+    required this.leftManager,
+    required this.rightManager,
+  }) : super(key: key);
   @override
   State<StrokeTrackerView> createState() => _StrokeTrackerViewState();
 }
@@ -99,10 +107,9 @@ class _StrokeTrackerViewState extends State<StrokeTrackerView> {
       _lastStartTime = DateTime.now();
     });
     _speak(instructions[currentIndex]);
-    // _scheduleNext(); <-- No auto-schedule! Wait for sensor or skip
+    _scheduleNext();
   }
 
-  // This is now ONLY for "retry" logic, otherwise advancing is controlled by completion or skip
   void _scheduleNext() {
     _timer?.cancel();
     if (_retryIndices != null) {
@@ -113,13 +120,15 @@ class _StrokeTrackerViewState extends State<StrokeTrackerView> {
         _speak(instructions[currentIndex]);
         return;
       }
-      setState(() {
-        currentIndex++;
-        _elapsed = Duration.zero;
-        _lastStartTime = DateTime.now();
+      _timer = Timer(durations[currentIndex], () {
+        setState(() {
+          currentIndex++;
+          _elapsed = Duration.zero;
+          _lastStartTime = DateTime.now();
+        });
+        _speak(instructions[currentIndex]);
+        _scheduleNext();
       });
-      _speak(instructions[currentIndex]);
-      // Do not auto-schedule next!
     }
   }
 
@@ -143,7 +152,7 @@ class _StrokeTrackerViewState extends State<StrokeTrackerView> {
       _lastStartTime = DateTime.now();
     });
     _speak(instructions[currentIndex]);
-    // No auto-schedule! Wait for sensor or skip
+    _scheduleNext();
   }
 
   void _reset() {
@@ -169,64 +178,36 @@ class _StrokeTrackerViewState extends State<StrokeTrackerView> {
       _lastStartTime = DateTime.now();
     });
     _speak(instructions[currentIndex]);
-    // No auto-schedule!
-  }
-
-  /// Call this when test is finished (sensor-detected, or test widget tells us).
-  void _onTestCompleted() {
-    if (currentIndex < instructions.length - 2) { // -2 for last "results" step
-      setState(() {
-        currentIndex++;
-        _elapsed = Duration.zero;
-        _lastStartTime = DateTime.now();
-      });
-      _speak(instructions[currentIndex]);
-      // Don't schedule next! Wait for sensor again.
-    } else {
-      setState(() => isRunning = false);
-      _speak(instructions.last);
-      // End of test sequence!
-    }
-  }
-
-  /// Called by Skip button. Skips *current* test and moves to next.
-  void _skipCurrentTest() {
-    if (currentIndex < instructions.length - 2) {
-      setState(() {
-        currentIndex++;
-        _elapsed = Duration.zero;
-        _lastStartTime = DateTime.now();
-      });
-      _speak("Test skipped. " + instructions[currentIndex]);
-    } else {
-      setState(() => isRunning = false);
-      _speak(instructions.last);
-    }
+    _scheduleNext();
   }
 
   Widget _buildTestWidget() {
-    // Only build widgets for running/active tests (not intro/results screens)
     switch (currentIndex) {
       case 1:
-        return CountingTest(onCompleted: _onTestCompleted); // Sensor or widget calls this
+        return CountingTest(onCompleted: _scheduleNext);
       case 2:
-        return DirectionTest(onCompleted: _onTestCompleted);
+        return DirectionTest(onCompleted: _scheduleNext);
       case 3:
-      case 4:
-        return TouchTest(onCompleted: _onTestCompleted);
-      case 5:
+          return TouchTest(
+            leftManager: widget.leftManager,
+            rightManager: widget.rightManager,
+            onCompleted: _scheduleNext,
+          );
+        case 4:
+          return TouchTest(
+            leftManager: widget.leftManager,
+            rightManager: widget.rightManager,
+            onCompleted: _scheduleNext,
+          );
+        case 5:
       case 6:
-        return RepetitionTest(onCompleted: _onTestCompleted);
+        return RepetitionTest(onCompleted: _scheduleNext);
       case 7:
       case 8:
-        return MouthMovementTest(onCompleted: _onTestCompleted);
+        return MouthMovementTest(onCompleted: _scheduleNext);
       default:
         return Center(
-          child: Text(
-            instructions[currentIndex],
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 20),
-          ),
+          child: Text(instructions[currentIndex], textAlign: TextAlign.center),
         );
     }
   }
@@ -278,7 +259,7 @@ class _StrokeTrackerViewState extends State<StrokeTrackerView> {
                           SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2)),
+                              child: CircularProgressIndicator(strokeWidth: 2),),
                         ],
                       ),
                     if (isFinished && !isRunning)
@@ -316,8 +297,10 @@ class _StrokeTrackerViewState extends State<StrokeTrackerView> {
               Expanded(
                 child: ElevatedButton.icon(
                   icon: const Icon(Icons.skip_next),
-                  label: const Text("Skip Test"),
-                  onPressed: isRunning ? _skipCurrentTest : null,
+                  label: const Text("Skip to End"),
+                  onPressed: isRunning
+                      ? () => setState(() => currentIndex = instructions.length - 1)
+                      : null,
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
                 ),
               ),
