@@ -68,6 +68,7 @@ class UpdateStepView extends StatelessWidget {
                     },
                     child: Text('Show Log'),
                   ),
+                /*
                 if (state.isComplete)
                   ElevatedButton(
                     onPressed: () {
@@ -75,6 +76,17 @@ class UpdateStepView extends StatelessWidget {
                       provider.reset();
                     },
                     child: Text('Update Again'),
+                  ),
+                  */
+
+                if (state.isComplete &&
+                    state.history.last is UpdateCompleteSuccess)
+                  const Text(
+                    'Firmware upload complete.\n\n'
+                    'The image has been successfully uploaded and is now being verified by the device. '
+                    'The device will automatically restart once verification is complete.\n\n'
+                    'This may take up to 3 minutes. Please keep the device powered on and nearby.',
+                    textAlign: TextAlign.start,
                   ),
               ],
             );
@@ -98,7 +110,10 @@ class UpdateStepView extends StatelessWidget {
     if (currentState == null) {
       return Text('Unknown state');
     } else if (currentState is UpdateProgressFirmware) {
-      return Text("Uploading ${currentState.progress}%");
+      var core = currentState.imageNumber == 0 ? "application" : "network";
+      return Text(
+        "Uploading $core core (image ${currentState.imageNumber}) ${currentState.progress}%",
+      );
     } else {
       return Text(currentState.stage);
     }
