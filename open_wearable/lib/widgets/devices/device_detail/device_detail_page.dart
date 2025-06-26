@@ -4,6 +4,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/widgets/devices/battery_state.dart';
 import 'package:open_wearable/widgets/devices/device_detail/audio_mode_widget.dart';
+import 'package:open_wearable/widgets/fota/firmware_update.dart';
+import 'package:provider/provider.dart';
 
 import 'rgb_control.dart';
 import 'microphone_selection_widget.dart';
@@ -142,19 +144,25 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                 trailing: PlatformIconButton(
                   icon: Icon(Icons.upload),
                   onPressed: () {
-                    showPlatformDialog(
-                      context: context,
-                      builder: (_) => PlatformAlertDialog(
-                        title: Text('Firmware Update'),
-                        content: Text(
-                          'Firmware Over-The-Air (FOTA) updates will be available in a future version of this app.\n\nFor now, please use the nRF Connect app to update your device firmware.',
-                        ),
-                        actions: [
-                          PlatformDialogAction(
-                            child: Text('OK'),
-                            onPressed: () => Navigator.of(context).pop(),
+                    Provider.of<FirmwareUpdateRequestProvider>(
+                      context,
+                      listen: false,
+                    ).setPeripheral(
+                      SelectedPeripheral(
+                        name: widget.device.name,
+                        identifier: widget.device.deviceId,
+                      ),
+                    );
+                    // Show the firmware update dialog
+                    // Navigate to your firmware update screen
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => PlatformScaffold(
+                          appBar: PlatformAppBar(
+                            title: Text("Update Firmware"),
                           ),
-                        ],
+                          body: Material(child: FirmwareUpdateWidget()),
+                        ),
                       ),
                     );
                   },
@@ -241,16 +249,21 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                       children: [
                         PlatformListTile(
                           title: Text("Battery Voltage"),
-                          subtitle: Text("${energyStatus.voltage.toStringAsFixed(1)} V"),
+                          subtitle: Text(
+                            "${energyStatus.voltage.toStringAsFixed(1)} V",
+                          ),
                         ),
                         PlatformListTile(
                           title: Text("Charge Rate"),
-                          subtitle: Text("${energyStatus.chargeRate.toStringAsFixed(3)} W"),
+                          subtitle: Text(
+                            "${energyStatus.chargeRate.toStringAsFixed(3)} W",
+                          ),
                         ),
                         PlatformListTile(
                           title: Text("Battery Capacity"),
-                            subtitle:
-                              Text("${energyStatus.availableCapacity.toStringAsFixed(2)} Wh"),
+                          subtitle: Text(
+                            "${energyStatus.availableCapacity.toStringAsFixed(2)} Wh",
+                          ),
                         ),
                       ],
                     );
