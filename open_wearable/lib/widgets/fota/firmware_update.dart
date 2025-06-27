@@ -19,7 +19,8 @@ class _FirmwareUpdateWidget extends State<FirmwareUpdateWidget> {
   Widget build(BuildContext context) {
     provider = context.watch<FirmwareUpdateRequestProvider>();
     return PlatformScaffold(
-      body: _body(context),
+      appBar: PlatformAppBar(title: Text("Update Firmware")),
+      body: Material(type: MaterialType.transparency, child: _body(context)),
     );
   }
 
