@@ -6,6 +6,7 @@ import 'package:logger/logger.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
+import 'package:open_wearable/widgets/fota/firmware_update.dart';
 import 'package:provider/provider.dart';
 
 Logger _logger = Logger();
@@ -132,12 +133,71 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
       setState(() {
         discoveredDevices.remove(device);
       });
+      checkForNewerFirmware(wearable);
     } catch (e) {
       _logger.e('Failed to connect to device: ${device.name}, error: $e');
     } finally {
       setState(() {
         connectingDevices.remove(device.id);
       });
+    }
+  }
+
+  void checkForNewerFirmware(Wearable wearable) async {
+    _logger.d('Checking for newer firmware for ${wearable.name}');
+    if (wearable is DeviceFirmwareVersion) {
+      final currentVersion =
+          await (wearable as DeviceFirmwareVersion).readDeviceFirmwareVersion();
+      if (currentVersion == null || currentVersion.isEmpty) {
+        return;
+      }
+      final firmwareImageRepository = FirmwareImageRepository();
+      var latestVersion = await firmwareImageRepository
+          .getLatestFirmwareVersion()
+          .then((version) => version.toString());
+      if (firmwareImageRepository.isNewerVersion(
+        latestVersion,
+        currentVersion,
+      )) {
+        print("Checking");
+        if (!mounted) return;
+        showDialog(
+          context: context,
+          builder: (context) => PlatformAlertDialog(
+            title: const Text('Firmware Update Available'),
+            content: Text(
+              'A newer firmware version ($latestVersion) is available. You are using version $currentVersion.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Later'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Provider.of<FirmwareUpdateRequestProvider>(
+                    context,
+                    listen: false,
+                  ).setPeripheral(
+                    SelectedPeripheral(
+                      name: wearable.name,
+                      identifier: wearable.deviceId,
+                    ),
+                  );
+                  Navigator.of(context).pop();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const FirmwareUpdateWidget(),
+                    ),
+                  );
+                },
+                child: const Text('Update Now'),
+              ),
+            ],
+          ),
+        );
+      }
     }
   }
 

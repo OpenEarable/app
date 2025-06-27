@@ -43,6 +43,7 @@ class _FirmwareListState extends State<FirmwareList> {
         ],
       ),
       body: Material(
+        type: MaterialType.transparency,
         child: _body(),
       ),
     );
@@ -141,14 +142,51 @@ class _FirmwareListState extends State<FirmwareList> {
     return ListView.builder(
       itemCount: apps.length,
       itemBuilder: (context, index) {
+        final firmware = apps[index];
+        final isLatest = index == 0;
+
         return ListTile(
-          title: Text(apps[index].name),
+          title: Text(
+            firmware.name,
+            style: TextStyle(
+              color: isLatest ? Colors.black : Colors.grey,
+            ),
+          ),
           onTap: () {
-            final selectedFW = apps[index];
-            context
-                .read<FirmwareUpdateRequestProvider>()
-                .setFirmware(selectedFW);
-            Navigator.pop(context, 'Firmware $index');
+            if (!isLatest) {
+              showDialog(
+                context: context,
+                builder: (context) => PlatformAlertDialog(
+                  title: const Text('Warning'),
+                  content: const Text(
+                    'You are selecting an old firmware version. We recommend installing the newest version.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        final selectedFW = apps[index];
+                        context
+                            .read<FirmwareUpdateRequestProvider>()
+                            .setFirmware(selectedFW);
+                        Navigator.of(context).pop();
+                        Navigator.pop(context, 'Firmware $index');
+                      },
+                      child: const Text('Proceed'),
+                    ),
+                  ],
+                ),
+              );
+            } else {
+              final selectedFW = apps[index];
+              context
+                  .read<FirmwareUpdateRequestProvider>()
+                  .setFirmware(selectedFW);
+              Navigator.pop(context, 'Firmware $index');
+            }
           },
         );
       },

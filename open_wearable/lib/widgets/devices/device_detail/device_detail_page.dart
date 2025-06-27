@@ -157,12 +157,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                     // Navigate to your firmware update screen
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (context) => PlatformScaffold(
-                          appBar: PlatformAppBar(
-                            title: Text("Update Firmware"),
-                          ),
-                          body: Material(child: FirmwareUpdateWidget()),
-                        ),
+                        builder: (context) => const FirmwareUpdateWidget(),
                       ),
                     );
                   },
