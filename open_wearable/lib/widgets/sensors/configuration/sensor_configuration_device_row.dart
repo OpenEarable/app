@@ -70,7 +70,7 @@ class SensorConfigurationDeviceRow extends StatelessWidget {
           onPressed: () {
             sensorConfigNotifier.turnOffAllSensors();
           },
-          child: Text("RESET"),
+          child: Text("ALL OFF"),
         );
       },
     );
