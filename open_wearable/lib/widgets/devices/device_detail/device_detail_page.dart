@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/widgets/devices/battery_state.dart';
 import 'package:open_wearable/widgets/devices/device_detail/audio_mode_widget.dart';
+import 'package:open_wearable/widgets/devices/device_detail/file_explorer_page.dart';
 import 'package:open_wearable/widgets/fota/firmware_update.dart';
 import 'package:provider/provider.dart';
 
@@ -307,6 +308,33 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                     );
                   }
                 },
+              ),
+            ],
+            // MARK: File System Manager
+            if (widget.device is FileSystemManager) ...[
+              Text(
+                "File System Manager",
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              PlatformListTile(
+                title: Text(
+                  "Open File Explorer",
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+                trailing: PlatformIconButton(
+                  icon: Icon(Icons.folder_open),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => FileExplorerPage(
+                          rootDirectory: '/',
+                          fileSystemManager:
+                              widget.device as FileSystemManager,
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ),
             ],
           ],
