@@ -75,7 +75,7 @@ class _StrokeTrackerViewState extends State<StrokeTrackerView> {
   bool isPaused = false;
   Timer? _timer;
   DateTime? _lastStartTime;
-  Duration _elapsed = Duration.zero;
+  Duration _elapsed = Duration.zero; 
   List<int>? _retryIndices;
   int _retryPointer = 0;
 
@@ -186,7 +186,7 @@ class _StrokeTrackerViewState extends State<StrokeTrackerView> {
       case 1:
         return CountingTest(onCompleted: _scheduleNext);
       case 2:
-        return DirectionTest(onCompleted: _scheduleNext);
+        return DirectionTestPlaceholder(onCompleted: _scheduleNext);
       case 3:
           return TouchTest(
             leftManager: widget.leftManager,

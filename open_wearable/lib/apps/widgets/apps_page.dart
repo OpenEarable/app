@@ -1,8 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:open_earable_flutter/open_earable_flutter.dart' show Wearable, SensorManager, Sensor;
-import 'package:open_earable_flutter/open_earable_flutter.dart' show Wearable, SensorConfigurationManager, Sensor;
+import 'package:open_earable_flutter/open_earable_flutter.dart' show Wearable, SensorManager, Sensor, SensorConfigurationManager;
 import 'package:open_wearable/apps/heart_tracker/widgets/heart_tracker_page.dart';
 import 'package:open_wearable/apps/stroke_tracker/stroke_tracker_view.dart'; // stroke tracker import
 import 'package:open_wearable/apps/posture_tracker/model/earable_attitude_tracker.dart';

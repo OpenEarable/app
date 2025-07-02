@@ -1,154 +1,186 @@
-// File: lib/apps/stroke_tracker/tests/touch_test.dart
-
-
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 
-
-/// Provider to track left-right touch sequence for stroke detection.
 class TouchTestProvider extends ChangeNotifier {
- final VoidCallback onComplete;
- bool _leftTapped = false;
- bool _rightTapped = false;
+  final VoidCallback onComplete;
+  int _leftTapCount = 0;
+  int _rightTapCount = 0;
 
+  bool get leftTapped => _leftTapCount >= 3;
+  bool get rightTapped => _rightTapCount >= 3;
+  bool get isComplete => leftTapped && rightTapped;
 
- bool get leftTapped => _leftTapped;
- bool get rightTapped => _rightTapped;
- bool get isComplete => _leftTapped && _rightTapped;
+  StreamSubscription? _leftSub;
+  StreamSubscription? _rightSub;
 
+  TouchTestProvider({required this.onComplete});
 
- StreamSubscription? _leftSub;
- StreamSubscription? _rightSub;
+  static const double deltaThreshold = 0.07;
+  double? _previousLeftMagnitude;
+  double? _previousRightMagnitude;
 
+  void startListening({
+    required SensorManager leftManager,
+    required SensorManager rightManager,
+  }) {
+    final leftAccel = leftManager.sensors.firstWhere(
+      (s) => s.sensorName.toLowerCase().contains('accelerometer'),
+      orElse: () => throw Exception('Left accelerometer not found'),
+    );
 
- TouchTestProvider({required this.onComplete});
+    final rightAccel = rightManager.sensors.firstWhere(
+      (s) => s.sensorName.toLowerCase().contains('accelerometer'),
+      orElse: () => throw Exception('Right accelerometer not found'),
+    );
 
+    _configureSensor(leftAccel);
+    _configureSensor(rightAccel);
 
- /// Subscribe to the touch sensor streams on each manager.
- void startListening({
-   required SensorManager leftManager,
-   required SensorManager rightManager,
- }) {
-   final leftTouch = leftManager.sensors.firstWhere(
-     (s) => s.sensorName.toLowerCase().contains('touch'),
-   );
-   final rightTouch = rightManager.sensors.firstWhere(
-     (s) => s.sensorName.toLowerCase().contains('touch'),
-   );
+    _leftSub = leftAccel.sensorStream.listen((data) {
+      if (data is SensorDoubleValue) {
+        final delta = _processDelta(data, isLeft: true);
+        if (delta > deltaThreshold) {
+          _leftTapCount++;
+          print("Left tap detected \$_leftTapCount times");
+          notifyListeners();
+        }
+      }
+    });
 
+    _rightSub = rightAccel.sensorStream.listen((data) {
+      if (data is SensorDoubleValue && leftTapped) {
+        final delta = _processDelta(data, isLeft: false);
+        if (delta > deltaThreshold) {
+          _rightTapCount++;
+          print("Right tap detected \$_rightTapCount times");
+          notifyListeners();
+          if (isComplete) onComplete();
+        }
+      }
+    });
+  }
 
-   _leftSub = leftTouch.sensorStream.listen((_) {
-     if (!_leftTapped) {
-       _leftTapped = true;
-       notifyListeners();
-     }
-   });
+  double _processDelta(SensorDoubleValue sensorData, {required bool isLeft}) {
+    final ax = sensorData.values[0].toDouble();
+    final ay = sensorData.values[1].toDouble();
+    final az = sensorData.values[2].toDouble();
+    final magnitude = sqrt(ax * ax + ay * ay + az * az);
 
+    final previous = isLeft ? _previousLeftMagnitude : _previousRightMagnitude;
+    final delta = previous == null ? 0.0 : (magnitude - previous).abs();
 
-   _rightSub = rightTouch.sensorStream.listen((_) {
-     if (_leftTapped && !_rightTapped) {
-       _rightTapped = true;
-       notifyListeners();
-       onComplete();
-     }
-   });
- }
+    if (isLeft) {
+      _previousLeftMagnitude = magnitude;
+    } else {
+      _previousRightMagnitude = magnitude;
+    }
+    print("${isLeft ? 'Left' : 'Right'} sensor delta: \$delta");
+    return delta;
+  }
 
+  void _configureSensor(Sensor sensor) {
+    for (var cfg in sensor.relatedConfigurations) {
+      SensorConfigurationValue? streamConfig;
+      for (var value in cfg.values) {
+        if (value is ConfigurableSensorConfigurationValue &&
+            value.options.any((o) => o is StreamSensorConfigOption)) {
+          streamConfig = value;
+          break;
+        }
+      }
+      if (streamConfig != null) {
+        cfg.setConfiguration(streamConfig);
+        return;
+      }
+    }
+    throw Exception('No streaming configuration found for \${sensor.sensorName}');
+  }
 
- /// Cancel subscriptions.
- void stopListening() {
-   _leftSub?.cancel();
-   _rightSub?.cancel();
- }
+  void stopListening() {
+    _leftSub?.cancel();
+    _rightSub?.cancel();
+  }
 
-
- /// Reset state and subscriptions.
- void reset() {
-   stopListening();
-   _leftTapped = false;
-   _rightTapped = false;
-   notifyListeners();
- }
+  void reset() {
+    stopListening();
+    _leftTapCount = 0;
+    _rightTapCount = 0;
+    _previousLeftMagnitude = null;
+    _previousRightMagnitude = null;
+    notifyListeners();
+  }
 }
 
-
-/// Widget for the stroke touch test using two earable devices.
 class TouchTest extends StatefulWidget {
- final String title;
- final SensorManager leftManager;
- final SensorManager rightManager;
- final VoidCallback onCompleted;
+  final SensorManager leftManager;
+  final SensorManager rightManager;
+  final VoidCallback onCompleted;
 
+  const TouchTest({
+    Key? key,
+    required this.leftManager,
+    required this.rightManager,
+    required this.onCompleted,
+  }) : super(key: key);
 
- const TouchTest({
-   Key? key,
-   this.title = 'Stroke Touch Test',
-   required this.leftManager,
-   required this.rightManager,
-   required this.onCompleted,
- }) : super(key: key);
-
-
- @override
- _TouchTestState createState() => _TouchTestState();
+  @override
+  State<TouchTest> createState() => _TouchTestState();
 }
-
 
 class _TouchTestState extends State<TouchTest> {
- late final TouchTestProvider provider;
+  late final TouchTestProvider provider;
 
+  @override
+  void initState() {
+    super.initState();
+    provider = TouchTestProvider(onComplete: widget.onCompleted);
+    provider.startListening(
+      leftManager: widget.leftManager,
+      rightManager: widget.rightManager,
+    );
+  }
 
- @override
- void initState() {
-   super.initState();
-   provider = TouchTestProvider(onComplete: widget.onCompleted);
-   provider.startListening(
-     leftManager: widget.leftManager,
-     rightManager: widget.rightManager,
-   );
- }
+  @override
+  void dispose() {
+    provider.stopListening();
+    super.dispose();
+  }
 
+  @override
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider.value(
+      value: provider,
+      child: Consumer<TouchTestProvider>(
+        builder: (_, p, __) {
+          String instruction;
+          if (!p.leftTapped) {
+            instruction = 'Touch the LEFT earable 3 times';
+          } else if (!p.rightTapped) {
+            instruction = 'Touch the RIGHT earable 3 times';
+          } else {
+            instruction = 'Test complete! 🎉';
+          }
 
- @override
- void dispose() {
-   provider.stopListening();
-   super.dispose();
- }
-
-
- @override
- Widget build(BuildContext context) {
-   return ChangeNotifierProvider.value(
-     value: provider,
-     child: Consumer<TouchTestProvider>(
-       builder: (_, p, __) {
-         String instruction;
-         if (!p.leftTapped) {
-           instruction = 'Tap the LEFT earable';
-         } else if (!p.rightTapped) {
-           instruction = 'Now tap the RIGHT earable';
-         } else {
-           instruction = 'Test complete! 🎉';
-         }
-
-
-         return Scaffold(
-           appBar: AppBar(title: Text(widget.title)),
-           body: Center(child: Text(instruction, style: TextStyle(fontSize: 24))),
-           floatingActionButton: p.isComplete
-               ? FloatingActionButton(
-                   onPressed: provider.reset,
-                   child: Icon(Icons.refresh),
-                 )
-               : null,
-         );
-       },
-     ),
-   );
- }
+          return Scaffold(
+            body: Center(
+              child: Text(
+                instruction,
+                style: TextStyle(fontSize: 24),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            floatingActionButton: p.isComplete
+                ? FloatingActionButton(
+                    onPressed: provider.reset,
+                    child: Icon(Icons.refresh),
+                  )
+                : null,
+          );
+        },
+      ),
+    );
+  }
 }
-
-
-
