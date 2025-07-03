@@ -83,9 +83,35 @@ class _FileExplorerPageState extends State<FileExplorerPage> {
                     isDirectory ? Icons.folder : Icons.insert_drive_file,
                     color: isDirectory ? Colors.amber : null,
                   ),
+                  trailing: PlatformIconButton(
+                    icon: Icon(context.platformIcons.delete),
+                    onPressed: () async {
+                      final confirmed = await showPlatformDialog(
+                        context: context,
+                        builder: (_) => PlatformAlertDialog(
+                          title: Text('Delete ${item.name}?'),
+                          content: Text('This action cannot be undone.'),
+                          actions: [
+                            PlatformDialogAction(
+                              child: Text('Cancel'),
+                              onPressed: () => Navigator.pop(context, false),
+                            ),
+                            PlatformDialogAction(
+                              child: Text('Delete'),
+                              onPressed: () => Navigator.pop(context, true),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirmed == true) {
+                        await widget.fileSystemManager.remove('$currentPath/${item.name}');
+                        _loadDirectory(currentPath);
+                      }
+                    },
+                  ),
                   onTap: isDirectory
-                      ? () => _onDirectoryTapped(item.name)
-                      : null,
+                    ? () => _onDirectoryTapped(item.name)
+                    : null,
                 );
               },
             ),
