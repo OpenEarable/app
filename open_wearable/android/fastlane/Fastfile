@@ -35,9 +35,6 @@ platform :android do
       )
       upload_to_play_store(
         track: 'internal',
-        # Remove this line after the app is not in Draft state anymore
-        # For now, we need to click something in the Play Console to make it available
-        release_status: 'draft',
         skip_upload_changelogs: false,
         aab: "../build/app/outputs/bundle/release/app-release.aab"
       )
