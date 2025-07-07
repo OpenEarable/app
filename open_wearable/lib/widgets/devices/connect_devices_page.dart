@@ -178,12 +178,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                   Provider.of<FirmwareUpdateRequestProvider>(
                     context,
                     listen: false,
-                  ).setPeripheral(
-                    SelectedPeripheral(
-                      name: wearable.name,
-                      identifier: wearable.deviceId,
-                    ),
-                  );
+                  ).setSelectedPeripheral(wearable);
                   Navigator.of(context).pop();
                   Navigator.push(
                     context,
