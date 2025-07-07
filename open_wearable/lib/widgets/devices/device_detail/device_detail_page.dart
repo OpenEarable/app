@@ -147,12 +147,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                     Provider.of<FirmwareUpdateRequestProvider>(
                       context,
                       listen: false,
-                    ).setPeripheral(
-                      SelectedPeripheral(
-                        name: widget.device.name,
-                        identifier: widget.device.deviceId,
-                      ),
-                    );
+                    ).setSelectedPeripheral(widget.device);
                     // Show the firmware update dialog
                     // Navigate to your firmware update screen
                     Navigator.of(context).push(

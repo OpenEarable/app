@@ -68,7 +68,6 @@ class UpdateStepView extends StatelessWidget {
                     },
                     child: Text('Show Log'),
                   ),
-                /*
                 if (state.isComplete)
                   ElevatedButton(
                     onPressed: () {
@@ -77,8 +76,6 @@ class UpdateStepView extends StatelessWidget {
                     },
                     child: Text('Update Again'),
                   ),
-                  */
-
                 if (state.isComplete &&
                     state.history.last is UpdateCompleteSuccess)
                   const Text(

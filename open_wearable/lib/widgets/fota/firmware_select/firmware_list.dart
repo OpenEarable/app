@@ -18,22 +18,38 @@ class FirmwareList extends StatefulWidget {
 class _FirmwareListState extends State<FirmwareList> {
   late Future<List<RemoteFirmware>> _firmwareFuture;
   final repository = FirmwareImageRepository();
+  String? firmwareVersion;
+  bool _expanded = false;
 
   @override
   void initState() {
     super.initState();
     _loadFirmwares();
+    _loadFirmwareVersion();
   }
 
   void _loadFirmwares() {
     _firmwareFuture = repository.getFirmwareImages();
   }
 
+  void _loadFirmwareVersion() async {
+    final wearable =
+        Provider.of<FirmwareUpdateRequestProvider>(context, listen: false)
+            .selectedWearable;
+    if (wearable is DeviceFirmwareVersion) {
+      final version =
+          await (wearable as DeviceFirmwareVersion).readDeviceFirmwareVersion();
+      setState(() {
+        firmwareVersion = version;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return PlatformScaffold(
       appBar: PlatformAppBar(
-        title: const Text('Firmware List'),
+        title: const Text('Select Firmware'),
         trailingActions: [
           IconButton(
             onPressed: () => onFirmwareSelect(context),
@@ -139,57 +155,133 @@ class _FirmwareListState extends State<FirmwareList> {
   }
 
   Widget _listBuilder(List<RemoteFirmware> apps) {
-    return ListView.builder(
-      itemCount: apps.length,
-      itemBuilder: (context, index) {
-        final firmware = apps[index];
-        final isLatest = index == 0;
+    final visibleApps = _expanded ? apps : [apps.first];
 
-        return ListTile(
-          title: Text(
-            firmware.name,
-            style: TextStyle(
-              color: isLatest ? Colors.black : Colors.grey,
-            ),
-          ),
-          onTap: () {
-            if (!isLatest) {
-              showDialog(
-                context: context,
-                builder: (context) => PlatformAlertDialog(
-                  title: const Text('Warning'),
-                  content: const Text(
-                    'You are selecting an old firmware version. We recommend installing the newest version.',
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Cancel'),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        final selectedFW = apps[index];
-                        context
-                            .read<FirmwareUpdateRequestProvider>()
-                            .setFirmware(selectedFW);
-                        Navigator.of(context).pop();
-                        Navigator.pop(context, 'Firmware $index');
-                      },
-                      child: const Text('Proceed'),
-                    ),
-                  ],
-                ),
-              );
-            } else {
-              final selectedFW = apps[index];
-              context
-                  .read<FirmwareUpdateRequestProvider>()
-                  .setFirmware(selectedFW);
-              Navigator.pop(context, 'Firmware $index');
+    return Column(
+      children: [
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: visibleApps.length,
+          itemBuilder: (context, index) {
+            final firmware = visibleApps[index];
+            final isLatest = firmware == apps.first;
+            final remarks = <String>[];
+            bool isInstalled = false;
+
+            if (firmwareVersion != null &&
+                firmware.version
+                    .contains(firmwareVersion!.replaceAll('\x00', ''))) {
+              remarks.add('Current');
+              isInstalled = true;
             }
+
+            if (isLatest) {
+              remarks.add('Latest');
+            }
+
+            return ListTile(
+              title: Text(
+                firmware.name,
+                style: TextStyle(
+                  color: isLatest ? Colors.black : Colors.grey,
+                ),
+              ),
+              subtitle: Text(
+                remarks.join(', '),
+                style: TextStyle(
+                  color: isLatest ? Colors.black : Colors.grey,
+                ),
+              ),
+              onTap: () {
+                if (isInstalled) {
+                  showDialog(
+                    context: context,
+                    builder: (context) => PlatformAlertDialog(
+                      title: const Text('Already Installed'),
+                      content: const Text(
+                        'This firmware version is already installed on the device.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            final selectedFW = apps[index];
+                            context
+                                .read<FirmwareUpdateRequestProvider>()
+                                .setFirmware(selectedFW);
+                            Navigator.of(context).pop();
+                            Navigator.pop(context, 'Firmware $index');
+                          },
+                          child: const Text('Install Anyway'),
+                        ),
+                      ],
+                    ),
+                  );
+                } else if (!isLatest) {
+                  showDialog(
+                    context: context,
+                    builder: (context) => PlatformAlertDialog(
+                      title: const Text('Warning'),
+                      content: const Text(
+                        'You are selecting an old firmware version. We recommend installing the newest version.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            final selectedFW = apps[index];
+                            context
+                                .read<FirmwareUpdateRequestProvider>()
+                                .setFirmware(selectedFW);
+                            Navigator.of(context).pop();
+                            Navigator.pop(context, 'Firmware $index');
+                          },
+                          child: const Text('Proceed'),
+                        ),
+                      ],
+                    ),
+                  );
+                } else {
+                  context
+                      .read<FirmwareUpdateRequestProvider>()
+                      .setFirmware(firmware);
+                  Navigator.pop(context, 'Firmware $index');
+                }
+              },
+            );
           },
-        );
-      },
+        ),
+        if (apps.length > 1)
+          PlatformTextButton(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _expanded ? 'Hide older versions' : 'Show older versions',
+                  style: TextStyle(color: Colors.black),
+                ),
+                SizedBox(width: 8),
+                Icon(
+                  _expanded
+                      ? Icons.keyboard_arrow_up
+                      : Icons.keyboard_arrow_down,
+                ),
+              ],
+            ),
+            onPressed: () {
+              setState(() {
+                _expanded = !_expanded;
+              });
+            },
+          ),
+      ],
     );
   }
 }

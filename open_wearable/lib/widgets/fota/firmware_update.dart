@@ -15,6 +15,7 @@ class FirmwareUpdateWidget extends StatefulWidget {
 
 class _FirmwareUpdateWidget extends State<FirmwareUpdateWidget> {
   late FirmwareUpdateRequestProvider provider;
+
   @override
   Widget build(BuildContext context) {
     provider = context.watch<FirmwareUpdateRequestProvider>();
@@ -51,7 +52,9 @@ class _FirmwareUpdateWidget extends State<FirmwareUpdateWidget> {
           state:
               provider.currentStep > 0 ? StepState.complete : StepState.indexed,
           title: Text('Select Firmware'),
-          content: Center(child: FirmwareSelect()),
+          content: Center(
+            child: FirmwareSelect(),
+          ),
           isActive: provider.currentStep >= 0,
         ),
         Step(
