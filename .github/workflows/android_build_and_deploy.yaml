@@ -16,6 +16,9 @@ on:
           - internal
           - production
 
+permissions:
+  contents: write
+
 jobs:
   deploy_for_android:
     runs-on: ubuntu-latest
@@ -83,3 +86,38 @@ jobs:
           bundle exec fastlane production_deploy
         env:
           OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PASSWORD }}
+
+      - name: Bump version after production release
+        if: ${{ github.event.inputs.release_type == 'production' }}
+        shell: bash
+        env:
+          VERSION_FILE: open_wearable/pubspec.yaml
+        run: |
+          # Configure Git user
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Read current version
+          line=$(grep '^version:' "$VERSION_FILE")
+          raw_version=${line#version: }
+          version=${raw_version//\"/}
+          echo "Current version: $version"
+          echo "old_version=$version" >> $GITHUB_OUTPUT
+
+          # Split into semver and build metadata
+          semver=${version%%+*}
+          build=${version#*+}
+          IFS='.' read -r major minor patch <<< "$semver"
+
+          # Increment patch
+          new_patch=$((patch + 1))
+          new_version="${major}.${minor}.${new_patch}+${build}"
+
+          # Update version in pubspec.yaml
+          sed -i "s|^version: .*|version: $new_version|" "$VERSION_FILE"
+          echo "New version set to: $new_version"
+
+          # Commit the bump
+          git add "$VERSION_FILE"
+          git commit -m "Bump version to ${major}.${minor}.${new_patch}"
+          git push
