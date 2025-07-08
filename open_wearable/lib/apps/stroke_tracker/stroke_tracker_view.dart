@@ -8,6 +8,7 @@ import 'widgets/test_progress_bubbles.dart';
 import 'tests/counting_test.dart';
 import 'tests/direction_test.dart';
 import 'tests/touch_test.dart';
+import 'tests/naming_test.dart';
 import 'tests/repetition_test.dart';
 import 'tests/mouth_movement_test.dart';
 
@@ -19,7 +20,7 @@ class StrokeTrackerView extends StatefulWidget {
 
 class _StrokeTrackerViewState extends State<StrokeTrackerView> {
   final List<String> instructions = [
-    "Press Start to begin tests.",
+    "We will now begin the test. Please remain seated calmly. I will guide you step by step.", // plays immediately
     "Please count from 0 to 10 out loud.",
     "Turn your head in the direction the sound played.",
     "Touch your left earphone with your right hand.",
@@ -28,43 +29,64 @@ class _StrokeTrackerViewState extends State<StrokeTrackerView> {
     "Repeat: The quick brown fox jumps over the lazy dog.",
     "Hold a neutral expression.",
     "Now smile.",
+    "Name the large gray animal that roams in Africa.",
     "Processing results...",
     "Stroke Probability: RESULTS HERE",
   ];
 
   final List<Duration> durations = [
-    Duration(seconds: 0),
-    Duration(seconds: 15),
-    Duration(seconds: 8),
-    Duration(seconds: 6),
-    Duration(seconds: 6),
-    Duration(seconds: 15),
-    Duration(seconds: 15),
-    Duration(seconds: 6),
-    Duration(seconds: 6),
-    Duration(seconds: 3),
+    Duration(seconds: 8), // Intro duration
+    Duration(seconds: 15), // Counting
+    Duration(seconds: 8),  // Direction
+    Duration(seconds: 6),  // Touch left
+    Duration(seconds: 6),  // Touch right
+    Duration(seconds: 15), // Repeat phrase 1
+    Duration(seconds: 15), // Repeat phrase 2
+    Duration(seconds: 6),  // Neutral expression
+    Duration(seconds: 6),  // Smile
+    Duration(seconds: 10), // Naming test
+    Duration(seconds: 3),  // Processing results
     Duration.zero,
   ];
 
   final Map<int, List<int>> testRanges = {
-    0: [1],
-    1: [2],
-    2: [3, 4],
-    3: [5, 6],
-    4: [7, 8],
+    0: [1],        // Counting
+    1: [2],        // Direction
+    2: [3, 4],     // Touch
+    3: [5, 6],     // Repetition
+    4: [7, 8],     // Mouth Movement
+    5: [9],        // Naming test
   };
 
-  final List<TestFeedback> testFeedbackList = [
+late List<TestFeedback> testFeedbackList;
+
+@override
+void initState() {
+  super.initState();
+  flutterTts = FlutterTts()
+    ..setLanguage("en-US")
+    ..setPitch(1.0)
+    ..setSpeechRate(0.5);
+
+  testFeedbackList = [
     TestFeedback("Counting Test", Icons.format_list_numbered),
     TestFeedback("Direction Test", Icons.explore),
     TestFeedback("Touch Test", Icons.touch_app),
     TestFeedback("Repetition Test", Icons.repeat),
     TestFeedback("Mouth Movement Test", Icons.sentiment_satisfied),
+    TestFeedback("Naming Test", Icons.text_fields),
   ];
+
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    _playIntroThenEnableStart();
+  });
+}
+
 
   int currentIndex = 0;
   bool isRunning = false;
   bool isPaused = false;
+  bool _introComplete = false;
   Timer? _timer;
   DateTime? _lastStartTime;
   Duration _elapsed = Duration.zero;
@@ -73,14 +95,12 @@ class _StrokeTrackerViewState extends State<StrokeTrackerView> {
 
   late FlutterTts flutterTts;
 
-  @override
-  void initState() {
-    super.initState();
-    flutterTts = FlutterTts()
-      ..setLanguage("en-US")
-      ..setPitch(1.0)
-      ..setSpeechRate(0.5);
-  }
+  void _playIntroThenEnableStart() async {
+  await _speak(instructions[0]); // Play the intro
+  setState(() {
+    _introComplete = true; // Show the button
+  });
+}
 
   Future<void> _speak(String text) async {
     await flutterTts.stop();
@@ -172,22 +192,30 @@ class _StrokeTrackerViewState extends State<StrokeTrackerView> {
     // No auto-schedule!
   }
 
-  /// Call this when test is finished (sensor-detected, or test widget tells us).
   void _onTestCompleted() {
-    if (currentIndex < instructions.length - 2) { // -2 for last "results" step
-      setState(() {
-        currentIndex++;
-        _elapsed = Duration.zero;
-        _lastStartTime = DateTime.now();
-      });
-      _speak(instructions[currentIndex]);
-      // Don't schedule next! Wait for sensor again.
-    } else {
-      setState(() => isRunning = false);
-      _speak(instructions.last);
-      // End of test sequence!
-    }
+  if (currentIndex < instructions.length - 2) { // -2 for last "results" step
+    setState(() {
+      // Mark the CURRENT test as finished before incrementing currentIndex
+      for (final entry in testRanges.entries) {
+        if (entry.value.contains(currentIndex)) {
+          final testKey = entry.key;
+          testFeedbackList[testKey].result = "100%"; // test now complete
+        }
+      }
+
+      // then move to NEXT test
+      currentIndex++;
+      _elapsed = Duration.zero;
+      _lastStartTime = DateTime.now();
+    });
+
+    _speak(instructions[currentIndex]);
+  } else {
+    setState(() => isRunning = false);
+    _speak(instructions.last);
   }
+}
+
 
   /// Called by Skip button. Skips *current* test and moves to next.
   void _skipCurrentTest() {
@@ -212,14 +240,23 @@ class _StrokeTrackerViewState extends State<StrokeTrackerView> {
       case 2:
         return DirectionTest(onCompleted: _onTestCompleted);
       case 3:
+        return TouchTest(
+          onCompleted: _onTestCompleted,
+          side: 'left',
+        );
       case 4:
-        return TouchTest(onCompleted: _onTestCompleted);
+        return TouchTest(
+          onCompleted: _onTestCompleted,
+          side: 'right',
+        );
       case 5:
       case 6:
         return RepetitionTest(onCompleted: _onTestCompleted);
       case 7:
       case 8:
         return MouthMovementTest(onCompleted: _onTestCompleted);
+      case 9:
+        return NamingTest(onCompleted: _onTestCompleted);
       default:
         return Center(
           child: Text(
