@@ -11,6 +11,10 @@ class CountingTest extends StatelessWidget {
       children: [
         const Text("Please count from 0 to 10 out loud."),
         const SizedBox(height: 12),
+        ElevatedButton(
+          onPressed: onCompleted, // When clicked, proceed to the next test
+          child: const Text("Done"),
+        ),
       ],
     );
   }

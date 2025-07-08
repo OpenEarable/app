@@ -12,6 +12,8 @@ class TestFeedbackPanel extends StatelessWidget {
     required this.onRetry,
   }) : super(key: key);
 
+  bool isInProgress(String result) => result == "In Progress";
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -29,14 +31,18 @@ class TestFeedbackPanel extends StatelessWidget {
             itemCount: feedbackList.length,
             itemBuilder: (_, i) {
               final fb = feedbackList[i];
+              final inProgress = isInProgress(fb.result);
+
               return Card(
                 margin: const EdgeInsets.only(bottom: 8),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 child: ListTile(
-                  leading: Icon(fb.icon, size: 28, color: Colors.blueAccent),
+                  leading: Icon(fb.icon, size: 28, color: inProgress ? Colors.orange : Colors.blueAccent),
                   title: Text(fb.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                  subtitle: Text("Result: ${fb.result}",
-                      style: const TextStyle(color: Colors.green)),
+                  subtitle: Text(
+                    inProgress ? fb.result : "Result: ${fb.result}",
+                    style: TextStyle(color: inProgress ? Colors.orange : Colors.green),
+                  ),
                   trailing: IconButton(
                     icon: const Icon(Icons.refresh),
                     onPressed: () async {

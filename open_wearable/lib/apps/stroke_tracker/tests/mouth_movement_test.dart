@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 class MouthMovementTest extends StatelessWidget {
   final VoidCallback onCompleted;
+
   const MouthMovementTest({Key? key, required this.onCompleted}) : super(key: key);
 
   @override
@@ -9,8 +10,16 @@ class MouthMovementTest extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text("Hold a neutral expression,\nthen smile when prompted."),
-        const SizedBox(height: 12),
+        const Text(
+          "Hold a neutral expression,\nthen smile when prompted.",
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 16),
+        ),
+        const SizedBox(height: 16),
+        ElevatedButton(
+          onPressed: onCompleted,
+          child: const Text("Done"),
+        ),
       ],
     );
   }

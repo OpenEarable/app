@@ -12,6 +12,10 @@ class DirectionTest extends StatelessWidget {
         const Text("Turn your head in the direction the sound played.",
             textAlign: TextAlign.center),
         const SizedBox(height: 12),
+        ElevatedButton(
+          onPressed: onCompleted, // When clicked, proceed to the next test
+          child: const Text("Done"),
+        ),
       ],
     );
   }

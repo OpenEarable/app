@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-class RepetitionTest extends StatelessWidget {
+class NamingTest extends StatelessWidget {
   final VoidCallback onCompleted;
 
-  const RepetitionTest({Key? key, required this.onCompleted}) : super(key: key);
+  const NamingTest({Key? key, required this.onCompleted}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -11,14 +11,14 @@ class RepetitionTest extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         const Text(
-          "Repeat aloud:\n• Today is a sunny day.\n• The quick brown fox jumps over the lazy dog.",
+          "Please name the large gray animal that roams in Africa.",
+          style: TextStyle(fontSize: 18),
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 16),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
         ElevatedButton(
           onPressed: onCompleted,
-          child: const Text("Done"),
+          child: const Text("Complete Test"),
         ),
       ],
     );
