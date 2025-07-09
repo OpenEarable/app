@@ -93,9 +93,6 @@ class _SensorConfigurationDeviceRowState extends State<SensorConfigurationDevice
           _content = content;
         });
       } else {
-        SensorConfigurationProvider provider =
-            Provider.of<SensorConfigurationProvider>(context, listen: false);
-        
         setState(() {
           _content = [PlatformCircularProgressIndicator()];
         });
@@ -116,10 +113,29 @@ class _SensorConfigurationDeviceRowState extends State<SensorConfigurationDevice
             return PlatformListTile(
               onTap: () {
                 // Load the selected configuration
-                SensorConfigurationStorage.loadConfiguration(key).then((config) {
+                SensorConfigurationStorage.loadConfiguration(key).then((config) async {
                   if (mounted) {
-                    Provider.of<SensorConfigurationProvider>(context, listen: false)
+                    bool result = await Provider.of<SensorConfigurationProvider>(context, listen: false)
                         .restoreFromJson(config);
+
+                    if (!result && mounted) {
+                      showPlatformDialog(
+                        context: context,
+                        builder: (context) {
+                          return PlatformAlertDialog(
+                            title: Text("Error"),
+                            content: Text("Failed to load configuration: $key"),
+                            actions: [
+                              PlatformDialogAction(
+                                child: PlatformText("OK"),
+                                onPressed: () => Navigator.of(context).pop(),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                      return;
+                    }
                     // switch the tab to the first one
                     _tabController.index = 0;
                     _buildContent(context);
