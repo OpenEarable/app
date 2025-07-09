@@ -23,7 +23,6 @@ class SensorConfigurationDeviceRow extends StatefulWidget {
 class _SensorConfigurationDeviceRowState extends State<SensorConfigurationDeviceRow>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-
   List<Widget> _content = [];
 
   @override
@@ -31,12 +30,12 @@ class _SensorConfigurationDeviceRowState extends State<SensorConfigurationDevice
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
-      if (_tabController.indexIsChanging) {
-        _buildContent(context);
+      if (!_tabController.indexIsChanging) {
+        _updateContent();
       }
     });
     _content = [PlatformCircularProgressIndicator()];
-    _buildContent(context);
+    _updateContent();
   }
 
   @override
@@ -66,97 +65,11 @@ class _SensorConfigurationDeviceRowState extends State<SensorConfigurationDevice
     );
   }
 
-  Future<void> _buildContent(BuildContext context) async {
-    final device = widget.device;
+  Future<void> _updateContent() async {
+    final Wearable device = widget.device;
 
-    if (device is SensorConfigurationManager) {
-      if (_tabController.index == 0) {
-        List<Widget> content = (device as SensorConfigurationManager).sensorConfigurations
-            .map((config) => SensorConfigurationValueRow(sensorConfiguration: config)).cast<Widget>()
-            .toList();
-
-        // Store Config
-        content.addAll([
-          const Divider(),
-          SaveConfigRow(),
-        ]);
-
-        if (device is EdgeRecorderManager) {
-          content.addAll([
-            const Divider(),
-            EdgeRecorderPrefixRow(
-              manager: device as EdgeRecorderManager,
-            ),
-          ]);
-        }
-        setState(() {
-          _content = content;
-        });
-      } else {
-        setState(() {
-          _content = [PlatformCircularProgressIndicator()];
-        });
-
-        List<String> configKeys = await SensorConfigurationStorage.listConfigurationKeys();
-
-        if (configKeys.isEmpty) {
-          setState(() {
-            _content = [
-              PlatformListTile(title: Text("No configurations found")),
-            ];
-          });
-          return;
-        }
-
-        setState(() {
-          _content = configKeys.map((key) {
-            return PlatformListTile(
-              onTap: () {
-                // Load the selected configuration
-                SensorConfigurationStorage.loadConfiguration(key).then((config) async {
-                  if (mounted) {
-                    bool result = await Provider.of<SensorConfigurationProvider>(context, listen: false)
-                        .restoreFromJson(config);
-
-                    if (!result && mounted) {
-                      showPlatformDialog(
-                        context: context,
-                        builder: (context) {
-                          return PlatformAlertDialog(
-                            title: Text("Error"),
-                            content: Text("Failed to load configuration: $key"),
-                            actions: [
-                              PlatformDialogAction(
-                                child: PlatformText("OK"),
-                                onPressed: () => Navigator.of(context).pop(),
-                              ),
-                            ],
-                          );
-                        },
-                      );
-                      return;
-                    }
-                    // switch the tab to the first one
-                    _tabController.index = 0;
-                    _buildContent(context);
-                  }
-                });
-              },
-              title: Text(key),
-              trailing: PlatformIconButton(
-                icon: Icon(context.platformIcons.delete),
-                onPressed: () async {
-                    await SensorConfigurationStorage.deleteConfiguration(key);
-                  if (mounted) {
-                    _buildContent(context);
-                  }
-                },
-              ),
-            );
-          }).toList();
-        });
-      }
-    } else {
+    if (device is! SensorConfigurationManager) {
+      if (!mounted) return;
       setState(() {
         _content = [
           const Padding(
@@ -165,11 +78,109 @@ class _SensorConfigurationDeviceRowState extends State<SensorConfigurationDevice
           ),
         ];
       });
+      return;
     }
+
+    final SensorConfigurationManager sensorManager = device as SensorConfigurationManager;
+
+    if (_tabController.index == 0) {
+      _buildNewTabContent(sensorManager);
+    } else {
+      await _buildLoadTabContent(sensorManager);
+    }
+  }
+
+  void _buildNewTabContent(SensorConfigurationManager device) {
+    final List<Widget> content = device.sensorConfigurations
+        .map((config) => SensorConfigurationValueRow(sensorConfiguration: config))
+        .cast<Widget>()
+        .toList();
+
+    content.addAll([
+      const Divider(),
+      const SaveConfigRow(),
+    ]);
+
+    if (device is EdgeRecorderManager) {
+      content.addAll([
+        const Divider(),
+        EdgeRecorderPrefixRow(manager: device as EdgeRecorderManager),
+      ]);
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _content = content;
+    });
+  }
+
+  Future<void> _buildLoadTabContent(SensorConfigurationManager device) async {
+    if (!mounted) return;
+    setState(() {
+      _content = [PlatformCircularProgressIndicator()];
+    });
+
+    final configKeys = await SensorConfigurationStorage.listConfigurationKeys();
+
+    if (!mounted) return;
+
+    if (configKeys.isEmpty) {
+      setState(() {
+        _content = [
+          PlatformListTile(title: const Text("No configurations found")),
+        ];
+      });
+      return;
+    }
+
+    final widgets = configKeys.map((key) {
+      return PlatformListTile(
+        title: Text(key),
+        onTap: () async {
+          final config = await SensorConfigurationStorage.loadConfiguration(key);
+          if (!mounted) return;
+
+          final result = await Provider.of<SensorConfigurationProvider>(context, listen: false)
+              .restoreFromJson(config);
+
+          if (!result && mounted) {
+            showPlatformDialog(
+              context: context,
+              builder: (_) => PlatformAlertDialog(
+                title: const Text("Error"),
+                content: Text("Failed to load configuration: $key"),
+                actions: [
+                  PlatformDialogAction(
+                    child: PlatformText("OK"),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+            );
+            return;
+          }
+
+          _tabController.index = 0;
+          _updateContent();
+        },
+        trailing: PlatformIconButton(
+          icon: Icon(context.platformIcons.delete),
+          onPressed: () async {
+            await SensorConfigurationStorage.deleteConfiguration(key);
+            if (mounted) _updateContent();
+          },
+        ),
+      );
+    }).toList();
+
+    setState(() {
+      _content = widgets;
+    });
   }
 
   Widget? _buildTabBar(BuildContext context) {
     if (widget.device is! SensorConfigurationManager) return null;
+
     return SizedBox(
       width: MediaQuery.of(context).size.width * 0.4,
       child: TabBar.secondary(
