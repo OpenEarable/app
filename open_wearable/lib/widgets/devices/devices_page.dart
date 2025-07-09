@@ -10,6 +10,8 @@ import 'package:open_wearable/widgets/devices/connect_devices_page.dart';
 import 'package:open_wearable/widgets/devices/device_detail/device_detail_page.dart';
 import 'package:provider/provider.dart';
 
+import '../../view_models/sensor_recorder_provider.dart';
+
 /// On this page the user can see all connected devices.
 ///
 /// Tapping on a device will navigate to the [DeviceDetailPage].
@@ -60,8 +62,11 @@ class _DevicesPageState extends State<DevicesPage> {
     WearableManager().connectToSystemDevices().then((wearables) {
       if (!mounted) return;
       final provider = Provider.of<WearablesProvider>(context, listen: false);
+      final sensorRecorderProvider =
+          Provider.of<SensorRecorderProvider>(context, listen: false);
       for (var wearable in wearables) {
         provider.addWearable(wearable);
+        sensorRecorderProvider.addWearable(wearable);
       }
     });
   }
