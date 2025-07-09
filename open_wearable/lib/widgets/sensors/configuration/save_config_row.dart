@@ -22,11 +22,18 @@ class _SaveConfigRowState extends State<SaveConfigRow> {
   Widget build(BuildContext context) {
     return PlatformListTile(
       title: PlatformTextField(
-        onSubmitted: (value) async {
+        onChanged: (value) {
           setState(() {
             _configName = value;
           });
         },
+        onSubmitted: (value) async {
+          setState(() {
+            _configName = value.trim();
+          });
+        },
+        onTapOutside: (event) => FocusScope.of(context).unfocus(),
+        hintText: "Save as...",
       ),
       trailing: PlatformElevatedButton(
         onPressed: () async {
@@ -37,7 +44,7 @@ class _SaveConfigRowState extends State<SaveConfigRow> {
           _logger.d("Saving configuration: $_configName with data: $config");
 
           if (_configName.isNotEmpty) {
-            await SensorConfigurationStorage.saveConfiguration(_configName, config);
+            await SensorConfigurationStorage.saveConfiguration(_configName.trim(), config);
           } else {
             showPlatformDialog(
               context: context,
