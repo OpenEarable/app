@@ -189,6 +189,36 @@ class SensorConfigurationProvider with ChangeNotifier {
     }
   }
 
+  Map<String, String> toJson() {
+    return _sensorConfigurations.map((config, value) =>
+        MapEntry(config.name, value.key),);
+  }
+
+  Future<bool> restoreFromJson(Map<String, String> jsonMap) async {
+    Map<SensorConfiguration, SensorConfigurationValue>
+        restoredConfigurations = {};
+    for (final config in _sensorConfigurations.keys) {
+      final selectedKey = jsonMap[config.name];
+      if (selectedKey == null) continue;
+
+      try {
+        final SensorConfigurationValue matchingValue = config.values.firstWhere(
+          (v) => v.key == selectedKey,
+        );
+        restoredConfigurations[config] = matchingValue;
+      } on StateError {
+        logger.e("Failed to restore configuration for ${config.name}");
+        return false;
+      }
+    }
+    for (final config in restoredConfigurations.keys) {
+      _sensorConfigurations[config] = restoredConfigurations[config]!;
+      _updateSelectedOptions(config);
+    }
+    notifyListeners();
+    return true;
+  }
+
   @override
   void dispose() {
     _sensorConfigurationSubscription?.cancel();
