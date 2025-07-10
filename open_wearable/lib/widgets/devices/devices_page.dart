@@ -30,7 +30,7 @@ class _DevicesPageState extends State<DevicesPage> {
     _startBluetooth();
   }
 
-  void _startBluetooth() async {
+  Future<void> _startBluetooth() async {
     if (!await WearableManager().hasPermissions()) {
       if (mounted) {
         // show a dialog to request permissions
@@ -122,12 +122,8 @@ class _DevicesPageState extends State<DevicesPage> {
   Widget _buildSmallScreenContent(BuildContext context, WearablesProvider wearablesProvider) {
     if (wearablesProvider.wearables.isEmpty) {
       return RefreshIndicator(
-        onRefresh: () {
-          return WearableManager().connectToSystemDevices().then((wearables) {
-            for (var wearable in wearables) {
-              wearablesProvider.addWearable(wearable);
-            }
-          });
+        onRefresh: () async {
+          await _startBluetooth();
         },
         child: ListView(
           children: [
