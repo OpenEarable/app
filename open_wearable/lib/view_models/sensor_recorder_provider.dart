@@ -90,5 +90,7 @@ class SensorRecorderProvider with ChangeNotifier {
       _recorders.isEmpty ||
       _recorders.values.every((sensors) => sensors.isEmpty)
     );
+
+    notifyListeners();
   }
 }
