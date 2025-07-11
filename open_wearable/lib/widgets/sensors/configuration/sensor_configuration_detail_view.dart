@@ -50,37 +50,39 @@ class _SensorConfigurationDetailViewState extends State<SensorConfigurationDetai
         PlatformListTile(
           leading: Icon(Icons.speed_outlined),
           title: Text("Sampling Rate"),
-          trailing: DropdownButton<SensorConfigurationValue>(
-            value: sensorConfigNotifier.getSelectedConfigurationValue(widget.sensorConfiguration),
-            items: sensorConfigNotifier.getSensorConfigurationValues(widget.sensorConfiguration, distinct: true).where(
-              (value) {
+          trailing: Material(
+            child: DropdownButton<SensorConfigurationValue>(
+              value: sensorConfigNotifier.getSelectedConfigurationValue(widget.sensorConfiguration),
+              items: sensorConfigNotifier.getSensorConfigurationValues(widget.sensorConfiguration, distinct: true).where(
+                (value) {
+                  if (value is SensorFrequencyConfigurationValue) {
+                    return value.frequencyHz >= 0.1
+                      || value.frequencyHz == 0
+                      || sensorConfigNotifier.getSelectedConfigurationValue(widget.sensorConfiguration) == value;
+                  }
+                  return true;
+                },
+              ).map((value) {
                 if (value is SensorFrequencyConfigurationValue) {
-                  return value.frequencyHz >= 0.1
-                    || value.frequencyHz == 0
-                    || sensorConfigNotifier.getSelectedConfigurationValue(widget.sensorConfiguration) == value;
+                  return DropdownMenuItem<SensorConfigurationValue>(
+                    value: value,
+                      child: Text(value.frequencyHz.toStringAsFixed(2)),
+                  );
                 }
-                return true;
-              },
-            ).map((value) {
-              if (value is SensorFrequencyConfigurationValue) {
                 return DropdownMenuItem<SensorConfigurationValue>(
                   value: value,
-                    child: Text(value.frequencyHz.toStringAsFixed(2)),
+                  child: Text(value.key),
                 );
-              }
-              return DropdownMenuItem<SensorConfigurationValue>(
-                value: value,
-                child: Text(value.key),
-              );
-            }).toList(),
-            onChanged: (value) {
-              setState(() {
-                _selectedValue = value;
-              });
-              if (_selectedValue != null) {
-                sensorConfigNotifier.addSensorConfiguration(widget.sensorConfiguration, _selectedValue!);
-              }
-            },
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedValue = value;
+                });
+                if (_selectedValue != null) {
+                  sensorConfigNotifier.addSensorConfiguration(widget.sensorConfiguration, _selectedValue!);
+                }
+              },
+            ),
           ),
         ),
       ],
