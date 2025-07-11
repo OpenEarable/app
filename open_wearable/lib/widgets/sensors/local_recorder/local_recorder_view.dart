@@ -3,11 +3,26 @@ import 'dart:io';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:logger/logger.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
 
+Logger _logger = Logger();
+
 class LocalRecorderView extends StatelessWidget {
   const LocalRecorderView({super.key});
+
+  static const MethodChannel platform = MethodChannel('edu.teco.open_folder');
+
+  Future<void> _openFolder(String path) async {
+    try {
+      await platform.invokeMethod('openFolder', {'path': "shareddocuments://$path"});
+    } on PlatformException catch (e) {
+      print("Failed to open folder: '${e.message}'.");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,9 +55,12 @@ class LocalRecorderView extends StatelessWidget {
                 subtitle: Text(subtitle),
                 trailing: Icon(icon, color: iconColor),
                 onTap: !canRecord
-                  ? null
+                  ? () {
+                    _logger.w('Recording not available');
+                  }
                   : () async {
                     if (isRecording) {
+                      _logger.i('Stopping local recording');
                       recorder.stopRecording();
                       return;
                     }
@@ -64,6 +82,19 @@ class LocalRecorderView extends StatelessWidget {
                   },
               ),
             ),
+            if (Platform.isIOS)
+              // show a card that opens the iOS Files app in the recording directory
+              Card(
+                child: ListTile(
+                  title: const Text('Show Recordings'),
+                  trailing: const Icon(Icons.folder_open),
+                  onTap: () async {
+                    Directory recordDir = await getIOSDirectory();
+                    // Open recordDir in the iOS Files app
+                    _openFolder(recordDir.path);
+                  },
+                ),
+              ),
           ],
         );
       },
@@ -82,14 +113,31 @@ Future<String?> _pickDirectory() async {
   }
 
   if (Platform.isIOS) {
-    final result = await getSaveLocation(
-      suggestedName: 'choose-this-folder.txt',
-      confirmButtonText: 'Use this folder',
-    );
-    return result == null ? null : Directory(result.path).parent.path;
+    final recordingName = 'OpenWearable_Recording_${DateTime.now().toIso8601String()}';
+
+    // create a directory in the appDocDir
+    String dirPath = '${await getIOSDirectory()}/$recordingName';
+    Directory dir = Directory(dirPath);
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
+    }
+    // return the path of the created directory
+    return dirPath;
   }
 
   return null;
+}
+
+Future<Directory> getIOSDirectory() async {
+  Directory appDocDir = await getApplicationDocumentsDirectory();
+  final dirPath = '${appDocDir.path}/Recordings';
+  final dir = Directory(dirPath);
+    
+  if (!await dir.exists()) {
+    await dir.create(recursive: true);
+  }
+  
+  return dir;
 }
 
 /// Returns `true` if `path` doesn’t exist *or* contains no files/folders.
