@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
-
+import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'models/test_feedback.dart';
 import 'widgets/test_feedback_panel.dart';
 import 'widgets/test_progress_bubbles.dart';
@@ -13,7 +13,11 @@ import 'tests/repetition_test.dart';
 import 'tests/mouth_movement_test.dart';
 
 class StrokeTrackerView extends StatefulWidget {
-  const StrokeTrackerView({super.key});
+
+  final Wearable leftWearable;
+  final Wearable rightWearable;
+
+  const StrokeTrackerView({super.key, required this.leftWearable, required this.rightWearable});
   @override
   State<StrokeTrackerView> createState() => _StrokeTrackerViewState();
 }
@@ -241,13 +245,17 @@ void initState() {
         return DirectionTest(onCompleted: _onTestCompleted);
       case 3:
         return TouchTest(
+          key: ValueKey('left'),
           onCompleted: _onTestCompleted,
           side: 'left',
+          wearable: widget.leftWearable,
         );
       case 4:
         return TouchTest(
+          key: ValueKey('right'),
           onCompleted: _onTestCompleted,
           side: 'right',
+          wearable: widget.rightWearable,
         );
       case 5:
       case 6:

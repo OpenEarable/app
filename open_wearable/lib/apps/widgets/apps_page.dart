@@ -71,7 +71,7 @@ List<AppInfo> _apps = [
     title: 'Stroke Test',
     description: 'Run automated stroke detection tests',
     widget: SelectTwoEarableView(
-      startApp: (_, __, ___, ____) => const StrokeTrackerView(),
+      startApp: (left, __, right, ____) => StrokeTrackerView(leftWearable: left, rightWearable: right,),
     ),
   ),
 ];
