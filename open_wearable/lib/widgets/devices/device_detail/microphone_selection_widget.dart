@@ -37,7 +37,7 @@ class _MicrophoneSelectionWidgetState extends State<MicrophoneSelectionWidget> {
       cupertino:(context, platform) => CupertinoSlidingSegmentedControl(
         children: {
           for (var item in widget.device.availableMicrophones)
-            item : Text(item.key),
+            item : PlatformText(item.key),
         },
         onValueChanged: (Microphone? mode) {
           if (mode == null) return;
@@ -50,7 +50,7 @@ class _MicrophoneSelectionWidgetState extends State<MicrophoneSelectionWidget> {
           widget.device.availableMicrophones.map((item) {
             return ButtonSegment<Microphone>(
               value: item,
-              label: Text(item.key),
+              label: PlatformText(item.key),
             );
           }).toList(),
           onSelectionChanged: (Set<Microphone> selected) {

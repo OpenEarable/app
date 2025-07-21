@@ -55,10 +55,10 @@ List<AppInfo> _apps = [
         }
         return PlatformScaffold(
           appBar: PlatformAppBar(
-            title: Text("Heart Tracker"),
+            title: PlatformText("Heart Tracker"),
           ),
           body: Center(
-            child: Text("No PPG Sensor Found"),
+            child: PlatformText("No PPG Sensor Found"),
           ),
         );
       },
@@ -73,7 +73,7 @@ class AppsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return PlatformScaffold(
       appBar: PlatformAppBar(
-        title: Text("Apps"),
+        title: PlatformText("Apps"),
         trailingActions: [
             PlatformIconButton(
             icon: Icon(context.platformIcons.bluetooth),

@@ -49,7 +49,7 @@ class _FirmwareListState extends State<FirmwareList> {
   Widget build(BuildContext context) {
     return PlatformScaffold(
       appBar: PlatformAppBar(
-        title: const Text('Select Firmware'),
+        title: PlatformText('Select Firmware'),
         trailingActions: [
           IconButton(
             onPressed: () => onFirmwareSelect(context),
@@ -69,20 +69,20 @@ class _FirmwareListState extends State<FirmwareList> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => PlatformAlertDialog(
-        title: const Text('Disclaimer'),
-        content: const Text(
+        title: PlatformText('Disclaimer'),
+        content: PlatformText(
           'By selecting a custom firmware file, you acknowledge that you are doing so at your own risk. The developers are not responsible for any damage caused.',
         ),
         actions: <Widget>[
           PlatformDialogAction(
-            child: const Text(
+            child: PlatformText(
               'Cancel',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             onPressed: () => Navigator.of(context).pop(false),
           ),
           PlatformDialogAction(
-            child: const Text(
+            child: PlatformText(
               'Continue',
               style: TextStyle(color: Colors.red),
             ),
@@ -136,13 +136,13 @@ class _FirmwareListState extends State<FirmwareList> {
             return Expanded(
               child: Column(
                 children: [
-                  Text("Could not fetch firmware update, plase try again"),
+                  PlatformText("Could not fetch firmware update, plase try again"),
                   const SizedBox(height: 16),
                   PlatformElevatedButton(
                     onPressed: () {
                       setState(_loadFirmwares);
                     },
-                    child: const Text('Reload'),
+                    child: PlatformText('Reload'),
                   ),
                 ],
               ),
@@ -181,13 +181,13 @@ class _FirmwareListState extends State<FirmwareList> {
             }
 
             return ListTile(
-              title: Text(
+              title: PlatformText(
                 firmware.name,
                 style: TextStyle(
                   color: isLatest ? Colors.black : Colors.grey,
                 ),
               ),
-              subtitle: Text(
+              subtitle: PlatformText(
                 remarks.join(', '),
                 style: TextStyle(
                   color: isLatest ? Colors.black : Colors.grey,
@@ -198,16 +198,16 @@ class _FirmwareListState extends State<FirmwareList> {
                   showDialog(
                     context: context,
                     builder: (context) => PlatformAlertDialog(
-                      title: const Text('Already Installed'),
-                      content: const Text(
+                      title: PlatformText('Already Installed'),
+                      content: PlatformText(
                         'This firmware version is already installed on the device.',
                       ),
                       actions: [
-                        TextButton(
+                        PlatformTextButton(
                           onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('Cancel'),
+                          child: PlatformText('Cancel'),
                         ),
-                        TextButton(
+                        PlatformTextButton(
                           onPressed: () {
                             final selectedFW = apps[index];
                             context
@@ -216,7 +216,7 @@ class _FirmwareListState extends State<FirmwareList> {
                             Navigator.of(context).pop();
                             Navigator.pop(context, 'Firmware $index');
                           },
-                          child: const Text('Install Anyway'),
+                          child: PlatformText('Install Anyway'),
                         ),
                       ],
                     ),
@@ -225,16 +225,16 @@ class _FirmwareListState extends State<FirmwareList> {
                   showDialog(
                     context: context,
                     builder: (context) => PlatformAlertDialog(
-                      title: const Text('Warning'),
-                      content: const Text(
+                      title: PlatformText('Warning'),
+                      content: PlatformText(
                         'You are selecting an old firmware version. We recommend installing the newest version.',
                       ),
                       actions: [
-                        TextButton(
+                        PlatformTextButton(
                           onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('Cancel'),
+                          child: PlatformText('Cancel'),
                         ),
-                        TextButton(
+                        PlatformTextButton(
                           onPressed: () {
                             final selectedFW = apps[index];
                             context
@@ -243,7 +243,7 @@ class _FirmwareListState extends State<FirmwareList> {
                             Navigator.of(context).pop();
                             Navigator.pop(context, 'Firmware $index');
                           },
-                          child: const Text('Proceed'),
+                          child: PlatformText('Proceed'),
                         ),
                       ],
                     ),
@@ -263,7 +263,7 @@ class _FirmwareListState extends State<FirmwareList> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
+                PlatformText(
                   _expanded ? 'Hide older versions' : 'Show older versions',
                   style: TextStyle(color: Colors.black),
                 ),

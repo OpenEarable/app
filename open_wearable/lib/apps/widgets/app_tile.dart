@@ -10,8 +10,8 @@ class AppTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PlatformListTile(
-        title: Text(app.title),
-        subtitle: Text(app.description),
+        title: PlatformText(app.title),
+        subtitle: PlatformText(app.description),
         leading: SizedBox(
           height: 50.0,
           width: 50.0,

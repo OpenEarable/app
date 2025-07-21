@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/view_models/sensor_data_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
@@ -55,7 +56,7 @@ class SensorValuesPage extends StatelessWidget {
       padding: EdgeInsets.all(10),
       child: charts.isEmpty
         ? Center(
-          child: Text("No sensors connected", style: Theme.of(context).textTheme.titleLarge),
+          child: PlatformText("No sensors connected", style: Theme.of(context).textTheme.titleLarge),
         )
         : ListView(
           children: charts,
@@ -87,7 +88,7 @@ class SensorValuesPage extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Center(
-              child: Text("No sensors available", style: Theme.of(context).textTheme.titleLarge),
+              child: PlatformText("No sensors available", style: Theme.of(context).textTheme.titleLarge),
             ),
           );
         }

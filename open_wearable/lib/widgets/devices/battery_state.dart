@@ -18,7 +18,7 @@ class BatteryStateView extends StatelessWidget {
             stream: (_device as BatteryLevelStatus).batteryPercentageStream,
             builder: (context, snapshot) {
               if (snapshot.hasData) {
-                return Text("${snapshot.data}%");
+                return PlatformText("${snapshot.data}%");
               } else {
                 return PlatformCircularProgressIndicator();
               }

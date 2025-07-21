@@ -35,7 +35,7 @@ class SensorConfigurationView extends StatelessWidget {
   Widget _buildSmallScreenLayout(BuildContext context, WearablesProvider wearablesProvider) {
     if (wearablesProvider.wearables.isEmpty) {
       return Center(
-        child: Text("No devices connected", style: Theme.of(context).textTheme.titleLarge),
+        child: PlatformText("No devices connected", style: Theme.of(context).textTheme.titleLarge),
       );
     }
 
@@ -43,7 +43,7 @@ class SensorConfigurationView extends StatelessWidget {
       padding: EdgeInsets.all(10),
       child: wearablesProvider.wearables.isEmpty
         ? Center(
-          child: Text("No devices connected", style: Theme.of(context).textTheme.titleLarge),
+          child: PlatformText("No devices connected", style: Theme.of(context).textTheme.titleLarge),
         )
         : ListView(
           children: [
@@ -74,7 +74,7 @@ class SensorConfigurationView extends StatelessWidget {
         }
         (onSetConfigPressed ?? () {})();
       },
-      child: const Text('Set Sensor Configurations'),
+      child: PlatformText('Set Sensor Configurations'),
     );
   }
 
@@ -112,7 +112,7 @@ class SensorConfigurationView extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Center(
-              child: Text("No devices connected", style: Theme.of(context).textTheme.titleLarge),
+              child: PlatformText("No devices connected", style: Theme.of(context).textTheme.titleLarge),
             ),
           ),
         ),

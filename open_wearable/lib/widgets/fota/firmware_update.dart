@@ -20,7 +20,7 @@ class _FirmwareUpdateWidget extends State<FirmwareUpdateWidget> {
   Widget build(BuildContext context) {
     provider = context.watch<FirmwareUpdateRequestProvider>();
     return PlatformScaffold(
-      appBar: PlatformAppBar(title: Text("Update Firmware")),
+      appBar: PlatformAppBar(title: PlatformText("Update Firmware")),
       body: Material(type: MaterialType.transparency, child: _body(context)),
     );
   }
@@ -51,7 +51,7 @@ class _FirmwareUpdateWidget extends State<FirmwareUpdateWidget> {
         Step(
           state:
               provider.currentStep > 0 ? StepState.complete : StepState.indexed,
-          title: Text('Select Firmware'),
+          title: PlatformText('Select Firmware'),
           content: Center(
             child: FirmwareSelect(),
           ),
@@ -60,8 +60,8 @@ class _FirmwareUpdateWidget extends State<FirmwareUpdateWidget> {
         Step(
           state:
               provider.currentStep > 1 ? StepState.complete : StepState.indexed,
-          title: Text('Update'),
-          content: Text('Update'),
+          title: PlatformText('Update'),
+          content: PlatformText('Update'),
           isActive: provider.currentStep >= 1,
         ),
       ],
@@ -80,7 +80,7 @@ class _FirmwareUpdateWidget extends State<FirmwareUpdateWidget> {
           children: [
             PlatformElevatedButton(
               onPressed: details.onStepContinue,
-              child: Text('Next'),
+              child: PlatformText('Next'),
             ),
           ],
         );
