@@ -38,7 +38,7 @@ class _SettingsViewState extends State<SettingsView> {
   @override
   Widget build(BuildContext context) {
     return PlatformScaffold(
-      appBar: PlatformAppBar(title: const Text("Posture Tracker Settings")),
+      appBar: PlatformAppBar(title: PlatformText("Posture Tracker Settings")),
       body: ChangeNotifierProvider<PostureTrackerViewModel>.value(
           value: _viewModel,
           builder: (context, child) => Consumer<PostureTrackerViewModel>(
@@ -56,8 +56,8 @@ class _SettingsViewState extends State<SettingsView> {
       children: [
         Card(
           child: PlatformListTile(
-            title: Text("Status"),
-            trailing: Text(_viewModel.isTracking
+            title: PlatformText("Status"),
+            trailing: PlatformText(_viewModel.isTracking
                 ? "Tracking"
                 : _viewModel.isAvailable
                     ? "Available"
@@ -68,7 +68,7 @@ class _SettingsViewState extends State<SettingsView> {
           child: Column(children: [
             // add a switch to control the `isActive` property of the `BadPostureSettings`
             PlatformListTile(
-              title: Text("Bad Posture Reminder"),
+              title: PlatformText("Bad Posture Reminder"),
               trailing: PlatformSwitch(
                 value: _viewModel.badPostureSettings.isActive,
                 onChanged: (value) {
@@ -82,10 +82,11 @@ class _SettingsViewState extends State<SettingsView> {
                 visible: _viewModel.badPostureSettings.isActive,
                 child: Column(children: [
                   PlatformListTile(
-                    title: Text("Roll Angle Threshold (in degrees)"),
+                    title: PlatformText("Roll Angle Threshold (in degrees)"),
                     trailing: SizedBox(
                       height: 37.0,
                       width: 52,
+                      //TODO: use cupertino text field on ios
                       child: TextField(
                         controller: _rollAngleThresholdController,
                         textAlign: TextAlign.end,
@@ -107,10 +108,11 @@ class _SettingsViewState extends State<SettingsView> {
                     ),
                   ),
                   PlatformListTile(
-                    title: Text("Pitch Angle Threshold (in degrees)"),
+                    title: PlatformText("Pitch Angle Threshold (in degrees)"),
                     trailing: SizedBox(
                       height: 37.0,
                       width: 52,
+                      //TODO: use cupertino text field on ios
                       child: TextField(
                         controller: _pitchAngleThresholdController,
                         textAlign: TextAlign.end,
@@ -132,10 +134,11 @@ class _SettingsViewState extends State<SettingsView> {
                     ),
                   ),
                   PlatformListTile(
-                    title: Text("Bad Posture Time Threshold (in seconds)"),
+                    title: PlatformText("Bad Posture Time Threshold (in seconds)"),
                     trailing: SizedBox(
                       height: 37.0,
                       width: 52,
+                      //TODO: use cupertino text field on ios
                       child: TextField(
                         controller: _badPostureTimeThresholdController,
                         textAlign: TextAlign.end,
@@ -157,10 +160,11 @@ class _SettingsViewState extends State<SettingsView> {
                     ),
                   ),
                   PlatformListTile(
-                    title: Text("Good Posture Time Threshold (in seconds)"),
+                    title: PlatformText("Good Posture Time Threshold (in seconds)"),
                     trailing: SizedBox(
                       height: 37.0,
                       width: 52,
+                      //TODO: use cupertino text field on ios
                       child: TextField(
                         controller: _goodPostureTimeThresholdController,
                         textAlign: TextAlign.end,
@@ -197,7 +201,7 @@ class _SettingsViewState extends State<SettingsView> {
                         Navigator.of(context).pop();
                       }
                     : () => _viewModel.startTracking(),
-                child: Text(_viewModel.isTracking
+                child: PlatformText(_viewModel.isTracking
                     ? "Calibrate as Main Posture"
                     : "Start Calibration",),
               ),

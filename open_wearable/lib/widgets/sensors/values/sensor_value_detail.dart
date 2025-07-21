@@ -13,13 +13,13 @@ class SensorValueDetail extends StatelessWidget {
   Widget build(BuildContext context) {
     return PlatformScaffold(
       appBar: PlatformAppBar(
-        title: Text(sensor.sensorName, style: Theme.of(context).textTheme.titleMedium),
+        title: PlatformText(sensor.sensorName, style: Theme.of(context).textTheme.titleMedium),
       ),
       body: Padding(
         padding: EdgeInsets.all(10),
         child: Column(
           children: [
-            Text(wearable.name, style: Theme.of(context).textTheme.bodyMedium),
+            PlatformText(wearable.name, style: Theme.of(context).textTheme.bodyMedium),
             Expanded(
               child: SensorChart(allowToggleAxes: true),
             ),

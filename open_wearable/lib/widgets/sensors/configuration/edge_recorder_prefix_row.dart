@@ -32,7 +32,7 @@ class _RecorderPrefixRowState extends State<EdgeRecorderPrefixRow> {
     final result = await showPlatformDialog<bool>(
       context: context,
       builder: (context) => PlatformAlertDialog(
-        title: const Text('Set Recording Prefix'),
+        title: PlatformText('Set Recording Prefix'),
         content: PlatformTextField(
           controller: controller,
           autofocus: true,
@@ -42,11 +42,11 @@ class _RecorderPrefixRowState extends State<EdgeRecorderPrefixRow> {
         ),
         actions: <Widget>[
           PlatformDialogAction(
-            child: const Text('Cancel'),
+            child: PlatformText('Cancel'),
             onPressed: () => Navigator.pop(context, false),
           ),
           PlatformDialogAction(
-            child: const Text('Save'),
+            child: PlatformText('Save'),
             onPressed: () => Navigator.pop(context, true),
           ),
         ],
@@ -68,12 +68,12 @@ class _RecorderPrefixRowState extends State<EdgeRecorderPrefixRow> {
         final prefix = snapshot.data ?? '';
 
         return PlatformListTile(
-          title: const Text('On-Device Filename Prefix'),
+          title: PlatformText('On-Device Filename Prefix'),
           trailing: isDone
               ? Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(prefix),
+                    PlatformText(prefix),
                     const SizedBox(width: 8),
                     GestureDetector(
                       onTap: () => _showEditDialog(prefix),

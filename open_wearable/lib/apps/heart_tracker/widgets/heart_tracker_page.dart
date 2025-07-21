@@ -65,7 +65,7 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
   Widget build(BuildContext context) {
     return PlatformScaffold(
       appBar: PlatformAppBar(
-        title: Text("Heart Tracker"),
+        title: PlatformText("Heart Tracker"),
       ),
       body: Padding(
         padding: EdgeInsets.symmetric(horizontal: 10),
@@ -91,7 +91,7 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // BeatingHeart(bpm: bpm.isFinite ? bpm : 60),
-                  Text(
+                  PlatformText(
                     "${bpm.isNaN ? "--" : bpm.toStringAsFixed(0)} BPM",
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
@@ -106,7 +106,7 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
             children: [
               Padding(
                 padding: EdgeInsets.all(10),
-                child: Text(
+                child: PlatformText(
                   "Blood Flow",
                   style: Theme.of(context).textTheme.titleMedium,
                 ),

@@ -2,6 +2,7 @@ import 'dart:collection';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/view_models/sensor_data_provider.dart';
 import 'package:provider/provider.dart';
@@ -62,7 +63,7 @@ class _SensorChartState extends State<SensorChart> {
                     onChanged: (value) =>
                         _toggleAxis(axisName, value ?? false),
                   ),
-                  Text(axisName),
+                  PlatformText(axisName),
                 ],
               );
             }).toList(),
@@ -74,7 +75,7 @@ class _SensorChartState extends State<SensorChart> {
               gridData: FlGridData(show: true),
               titlesData: FlTitlesData(
                 leftTitles: AxisTitles(
-                  axisNameWidget: Text(sensor.axisUnits.first),
+                  axisNameWidget: PlatformText(sensor.axisUnits.first),
                   sideTitles: SideTitles(
                     showTitles: true,
                     reservedSize: 45,
@@ -91,7 +92,7 @@ class _SensorChartState extends State<SensorChart> {
                   ),
                 ),
                 bottomTitles: AxisTitles(
-                  axisNameWidget: Text('Time (s)'),
+                  axisNameWidget: PlatformText('Time (s)'),
                   axisNameSize: 30,
                   sideTitles: SideTitles(
                     showTitles: true,

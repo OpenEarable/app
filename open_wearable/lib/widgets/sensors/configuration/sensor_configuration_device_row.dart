@@ -53,7 +53,7 @@ class _SensorConfigurationDeviceRowState extends State<SensorConfigurationDevice
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           PlatformListTile(
-            title: Text(
+            title: PlatformText(
               device.name,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
@@ -72,9 +72,9 @@ class _SensorConfigurationDeviceRowState extends State<SensorConfigurationDevice
       if (!mounted) return;
       setState(() {
         _content = [
-          const Padding(
-            padding: EdgeInsets.all(8.0),
-            child: Text("This device does not support sensors"),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: PlatformText("This device does not support sensors"),
           ),
         ];
       });
@@ -127,7 +127,7 @@ class _SensorConfigurationDeviceRowState extends State<SensorConfigurationDevice
     if (configKeys.isEmpty) {
       setState(() {
         _content = [
-          PlatformListTile(title: const Text("No configurations found")),
+          PlatformListTile(title: PlatformText("No configurations found")),
         ];
       });
       return;
@@ -135,7 +135,7 @@ class _SensorConfigurationDeviceRowState extends State<SensorConfigurationDevice
 
     final widgets = configKeys.map((key) {
       return PlatformListTile(
-        title: Text(key),
+        title: PlatformText(key),
         onTap: () async {
           final config = await SensorConfigurationStorage.loadConfiguration(key);
           if (!mounted) return;
@@ -147,8 +147,8 @@ class _SensorConfigurationDeviceRowState extends State<SensorConfigurationDevice
             showPlatformDialog(
               context: context,
               builder: (_) => PlatformAlertDialog(
-                title: const Text("Error"),
-                content: Text("Failed to load configuration: $key"),
+                title: PlatformText("Error"),
+                content: PlatformText("Failed to load configuration: $key"),
                 actions: [
                   PlatformDialogAction(
                     child: PlatformText("OK"),

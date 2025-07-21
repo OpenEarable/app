@@ -23,7 +23,7 @@ class UpdateStepView extends StatelessWidget {
                   onPressed: () {
                     context.read<UpdateBloc>().add(BeginUpdateProcess());
                   },
-                  child: Text('Update'),
+                  child: PlatformText('Update'),
                 ),
               ],
             );
@@ -37,7 +37,7 @@ class UpdateStepView extends StatelessWidget {
                         state,
                         Colors.green,
                       ),
-                      Text(state.stage),
+                      PlatformText(state.stage),
                     ],
                   ),
                 if (state.currentState != null)
@@ -66,7 +66,7 @@ class UpdateStepView extends StatelessWidget {
                         ),
                       );
                     },
-                    child: Text('Show Log'),
+                    child: PlatformText('Show Log'),
                   ),
                 if (state.isComplete)
                   ElevatedButton(
@@ -74,11 +74,11 @@ class UpdateStepView extends StatelessWidget {
                       BlocProvider.of<UpdateBloc>(context).add(ResetUpdate());
                       provider.reset();
                     },
-                    child: Text('Update Again'),
+                    child: PlatformText('Update Again'),
                   ),
                 if (state.isComplete &&
                     state.history.last is UpdateCompleteSuccess)
-                  const Text(
+                  PlatformText(
                     'Firmware upload complete.\n\n'
                     'The image has been successfully uploaded and is now being verified by the device. '
                     'The device will automatically restart once verification is complete.\n\n'
@@ -88,7 +88,7 @@ class UpdateStepView extends StatelessWidget {
               ],
             );
           default:
-            return Text('Unknown state');
+            return PlatformText('Unknown state');
         }
       },
     );
@@ -102,17 +102,17 @@ class UpdateStepView extends StatelessWidget {
     }
   }
 
-  Text _currentState(UpdateFirmwareStateHistory state) {
+  PlatformText _currentState(UpdateFirmwareStateHistory state) {
     final currentState = state.currentState;
     if (currentState == null) {
-      return Text('Unknown state');
+      return PlatformText('Unknown state');
     } else if (currentState is UpdateProgressFirmware) {
       var core = currentState.imageNumber == 0 ? "application" : "network";
-      return Text(
+      return PlatformText(
         "Uploading $core core (image ${currentState.imageNumber}) ${currentState.progress}%",
       );
     } else {
-      return Text(currentState.stage);
+      return PlatformText(currentState.stage);
     }
   }
 
@@ -122,19 +122,19 @@ class UpdateStepView extends StatelessWidget {
     } else if (firmware is RemoteFirmware) {
       return _remoteFirmwareInfo(context, firmware);
     } else {
-      return Text('Unknown firmware type');
+      return PlatformText('Unknown firmware type');
     }
   }
 
   Widget _localFirmwareInfo(BuildContext context, LocalFirmware firmware) {
-    return Text('Firmware: ${firmware.name}');
+    return PlatformText('Firmware: ${firmware.name}');
   }
 
   Widget _remoteFirmwareInfo(BuildContext context, RemoteFirmware firmware) {
     return Column(
       children: [
-        Text('Firmware: ${firmware.name}'),
-        Text('Url: ${firmware.url}'),
+        PlatformText('Firmware: ${firmware.name}'),
+        PlatformText('Url: ${firmware.url}'),
       ],
     );
   }

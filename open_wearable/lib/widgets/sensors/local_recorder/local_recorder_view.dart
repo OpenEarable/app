@@ -4,6 +4,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
@@ -51,8 +52,8 @@ class LocalRecorderView extends StatelessWidget {
               color: tileColor,
               child: ListTile(
                 enabled: canRecord,
-                title: const Text('Local Recorder'),
-                subtitle: Text(subtitle),
+                title: PlatformText('Local Recorder'),
+                subtitle: PlatformText(subtitle),
                 trailing: Icon(icon, color: iconColor),
                 onTap: !canRecord
                   ? () {
@@ -86,7 +87,7 @@ class LocalRecorderView extends StatelessWidget {
               // show a card that opens the iOS Files app in the recording directory
               Card(
                 child: ListTile(
-                  title: const Text('Show Recordings'),
+                  title: PlatformText('Show Recordings'),
                   trailing: const Icon(Icons.folder_open),
                   onTap: () async {
                     Directory recordDir = await getIOSDirectory();
@@ -152,19 +153,19 @@ Future<bool> _askOverwriteConfirmation(BuildContext context, String dirPath) asy
   return await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: const Text('Directory not empty'),
-      content: Text(
+      title: PlatformText('Directory not empty'),
+      content: PlatformText(
           '“$dirPath” already contains files or folders.\n\n'
           'New sensor files will be added; existing files with the same '
           'names will be overwritten. Continue anyway?'),
       actions: [
-        TextButton(
+        PlatformTextButton(
           onPressed: () => Navigator.pop(ctx, false),
-          child: const Text('Cancel'),
+          child: PlatformText('Cancel'),
         ),
-        TextButton(
+        PlatformTextButton(
           onPressed: () => Navigator.pop(ctx, true),
-          child: const Text('Continue'),
+          child: PlatformText('Continue'),
         ),
       ],
     ),

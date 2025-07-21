@@ -68,13 +68,13 @@ class _HomePageState extends State<HomePage> {
   Widget _buildLargeScreenLayout(BuildContext context) {
     return PlatformScaffold(
       appBar: PlatformAppBar(
-        title: Text("OpenWearable"),
+        title: PlatformText("OpenWearable"),
       ),
       body: Padding(
         padding: const EdgeInsets.all(10),
         child: ListView(
           children: [
-            Text(
+            PlatformText(
               "Connected Devices",
               style: Theme.of(context)
                   .textTheme
@@ -82,7 +82,7 @@ class _HomePageState extends State<HomePage> {
                   ?.copyWith(color: Theme.of(context).colorScheme.surfaceTint),
             ),
             DevicesPage(),
-            Text(
+            PlatformText(
               "Sensor Configuration",
               style: Theme.of(context)
                   .textTheme
@@ -90,7 +90,7 @@ class _HomePageState extends State<HomePage> {
                   ?.copyWith(color: Theme.of(context).colorScheme.surfaceTint),
             ),
             SensorConfigurationView(),
-            Text(
+            PlatformText(
               "Sensor Values",
               style: Theme.of(context)
                   .textTheme

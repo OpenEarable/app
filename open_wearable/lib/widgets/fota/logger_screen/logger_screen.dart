@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mcumgr_flutter/mcumgr_flutter.dart';
 
 class LoggerScreen extends StatelessWidget {
@@ -9,7 +10,7 @@ class LoggerScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Log'),
+        title: PlatformText('Log'),
       ),
       body: _logFutureBuilder(),
     );
@@ -25,7 +26,7 @@ class LoggerScreen extends StatelessWidget {
               .toList();
           return _messageList(messages);
         } else if (snapshot.hasError) {
-          return Text(snapshot.error.toString());
+          return PlatformText(snapshot.error.toString());
         }
         return CircularProgressIndicator();
       },
@@ -36,7 +37,7 @@ class LoggerScreen extends StatelessWidget {
         itemCount: messages.length,
         itemBuilder: (context, index) {
           final message = messages[index];
-          return Text(
+          return PlatformText(
             message.message,
             style: TextStyle(color: _colorForLevel(message.level)),
           );
