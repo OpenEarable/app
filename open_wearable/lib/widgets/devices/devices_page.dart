@@ -1,4 +1,5 @@
-import 'package:flutter/cupertino.dart';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -31,7 +32,7 @@ class _DevicesPageState extends State<DevicesPage> {
   }
 
   Future<void> _startBluetooth() async {
-    if (!await WearableManager().hasPermissions()) {
+    if (!await WearableManager().hasPermissions() && !Platform.isIOS) {
       if (mounted) {
         // show a dialog to request permissions
         await showPlatformDialog(
@@ -99,9 +100,7 @@ class _DevicesPageState extends State<DevicesPage> {
               Navigator.of(context).push(
                 platformPageRoute(
                   context: context,
-                  builder: (context) => const Material(
-                    child: ConnectDevicesPage(),
-                  ),
+                  builder: (context) => const ConnectDevicesPage(),
                 ),
               );
             },
@@ -208,6 +207,11 @@ class _DevicesPageState extends State<DevicesPage> {
   }
 }
 
+
+// MARK: DeviceRow
+
+/// This widget represents a single device in the list/grid.
+/// Tapping on it will navigate to the [DeviceDetailPage].
 class DeviceRow extends StatelessWidget {
   final Wearable _device;
 
