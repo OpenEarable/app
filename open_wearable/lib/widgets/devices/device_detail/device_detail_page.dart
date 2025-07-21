@@ -48,7 +48,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
 
     return PlatformScaffold(
       appBar: PlatformAppBar(
-        title: Text("Device details"),
+        title: PlatformText("Device details"),
       ),
       body: Padding(
         padding: const EdgeInsets.all(10.0),
@@ -57,7 +57,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
             // MARK: Device name, icon and battery state
             Column(
               children: [
-                Text(
+                PlatformText(
                   widget.device.name,
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
@@ -65,7 +65,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                 if (wearableIconPath != null)
                   SvgPicture.asset(wearableIconPath, width: 100, height: 100),
                 PlatformElevatedButton(
-                  child: Text("Disconnect"),
+                  child: PlatformText("Disconnect"),
                   onPressed: () {
                     widget.device.disconnect();
                     Navigator.of(context).pop();
@@ -82,18 +82,18 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                 device: widget.device as MicrophoneManager,
               ),
             // MARK: Device info
-            Text("Device Info", style: Theme.of(context).textTheme.titleSmall),
+            PlatformText("Device Info", style: Theme.of(context).textTheme.titleSmall),
             PlatformListTile(
-              title: Text(
+              title: PlatformText(
                 "Bluetooth Address",
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
-              subtitle: Text(widget.device.deviceId),
+              subtitle: PlatformText(widget.device.deviceId),
             ),
             // MARK: Device Identifier
             if (widget.device is DeviceIdentifier)
               PlatformListTile(
-                title: Text(
+                title: PlatformText(
                   "Device Identifier",
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
@@ -102,7 +102,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                       .readDeviceIdentifier(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.done) {
-                      return Text(snapshot.data.toString());
+                      return PlatformText(snapshot.data.toString());
                     } else {
                       return Align(
                         alignment: Alignment.centerLeft,
@@ -119,7 +119,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
             // MARK: Device Firmware Version
             if (widget.device is DeviceFirmwareVersion)
               PlatformListTile(
-                title: Text(
+                title: PlatformText(
                   "Firmware Version",
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
@@ -128,7 +128,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                       .readDeviceFirmwareVersion(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.done) {
-                      return Text(snapshot.data.toString());
+                      return PlatformText(snapshot.data.toString());
                     } else {
                       return Align(
                         alignment: Alignment.centerLeft,
@@ -161,7 +161,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
             // MARK: Device Hardware Version
             if (widget.device is DeviceHardwareVersion)
               PlatformListTile(
-                title: Text(
+                title: PlatformText(
                   "Hardware Version",
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
@@ -170,7 +170,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                       .readDeviceHardwareVersion(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.done) {
-                      return Text(snapshot.data.toString());
+                      return PlatformText(snapshot.data.toString());
                     } else {
                       return Align(
                         alignment: Alignment.centerLeft,
@@ -187,7 +187,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
 
             // MARK: Status LED control
             if (widget.device is StatusLed) ...[
-              Text(
+              PlatformText(
                 "Control Status LED",
                 style: Theme.of(context).textTheme.titleSmall,
               ),
@@ -197,12 +197,12 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
               ),
             ] else if (widget.device is RgbLed &&
                 widget.device is! StatusLed) ...[
-              Text(
+              PlatformText(
                 "Control RGB LED",
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               PlatformListTile(
-                title: Text(
+                title: PlatformText(
                   "LED Color",
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
@@ -212,7 +212,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
 
             // MARK: Device Battery State
             if (widget.device is BatteryEnergyStatusService) ...[
-              Text(
+              PlatformText(
                 "Battery Energy Status",
                 style: Theme.of(context).textTheme.titleSmall,
               ),
@@ -230,28 +230,28 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                       ),
                     );
                   } else if (snapshot.hasError) {
-                    return Text("Error: ${snapshot.error}");
+                    return PlatformText("Error: ${snapshot.error}");
                   } else if (!snapshot.hasData) {
-                    return Text("No data available");
+                    return PlatformText("No data available");
                   } else {
                     final energyStatus = snapshot.data!;
                     return Column(
                       children: [
                         PlatformListTile(
-                          title: Text("Battery Voltage"),
-                          subtitle: Text(
+                          title: PlatformText("Battery Voltage"),
+                          subtitle: PlatformText(
                             "${energyStatus.voltage.toStringAsFixed(1)} V",
                           ),
                         ),
                         PlatformListTile(
-                          title: Text("Charge Rate"),
-                          subtitle: Text(
+                          title: PlatformText("Charge Rate"),
+                          subtitle: PlatformText(
                             "${energyStatus.chargeRate.toStringAsFixed(3)} W",
                           ),
                         ),
                         PlatformListTile(
-                          title: Text("Battery Capacity"),
-                          subtitle: Text(
+                          title: PlatformText("Battery Capacity"),
+                          subtitle: PlatformText(
                             "${energyStatus.availableCapacity.toStringAsFixed(2)} Wh",
                           ),
                         ),
@@ -264,7 +264,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
 
             // MARK: Battery Health
             if (widget.device is BatteryHealthStatusService) ...[
-              Text(
+              PlatformText(
                 "Battery Health Status",
                 style: Theme.of(context).textTheme.titleSmall,
               ),
@@ -282,21 +282,21 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                       ),
                     );
                   } else if (snapshot.hasError) {
-                    return Text("Error: ${snapshot.error}");
+                    return PlatformText("Error: ${snapshot.error}");
                   } else if (!snapshot.hasData) {
-                    return Text("No data available");
+                    return PlatformText("No data available");
                   } else {
                     final healthStatus = snapshot.data!;
                     return Column(
                       children: [
                         PlatformListTile(
-                          title: Text("Battery Temperature"),
+                          title: PlatformText("Battery Temperature"),
                           subtitle:
-                              Text("${healthStatus.currentTemperature} °C"),
+                              PlatformText("${healthStatus.currentTemperature} °C"),
                         ),
                         PlatformListTile(
-                          title: Text("Battery Cycle Count"),
-                          subtitle: Text("${healthStatus.cycleCount} cycles"),
+                          title: PlatformText("Battery Cycle Count"),
+                          subtitle: PlatformText("${healthStatus.cycleCount} cycles"),
                         ),
                       ],
                     );

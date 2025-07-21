@@ -34,7 +34,7 @@ class _SensorConfigurationDetailViewState extends State<SensorConfigurationDetai
           ...(widget.sensorConfiguration as ConfigurableSensorConfiguration).availableOptions.map((option) {
             return PlatformListTile(
               leading: Icon(getSensorConfigurationOptionIcon(option)),
-              title: Text(option.name),
+              title: PlatformText(option.name),
               trailing: PlatformSwitch(
                 value: sensorConfigNotifier.getSelectedConfigurationOptions(widget.sensorConfiguration).contains(option),
                 onChanged: (value) {
@@ -49,7 +49,7 @@ class _SensorConfigurationDetailViewState extends State<SensorConfigurationDetai
           }),
         PlatformListTile(
           leading: Icon(Icons.speed_outlined),
-          title: Text("Sampling Rate"),
+          title: PlatformText("Sampling Rate"),
           trailing: Material(
             child: DropdownButton<SensorConfigurationValue>(
               value: sensorConfigNotifier.getSelectedConfigurationValue(widget.sensorConfiguration),
@@ -66,12 +66,12 @@ class _SensorConfigurationDetailViewState extends State<SensorConfigurationDetai
                 if (value is SensorFrequencyConfigurationValue) {
                   return DropdownMenuItem<SensorConfigurationValue>(
                     value: value,
-                      child: Text(value.frequencyHz.toStringAsFixed(2)),
+                      child: PlatformText(value.frequencyHz.toStringAsFixed(2)),
                   );
                 }
                 return DropdownMenuItem<SensorConfigurationValue>(
                   value: value,
-                  child: Text(value.key),
+                  child: PlatformText(value.key),
                 );
               }).toList(),
               onChanged: (value) {

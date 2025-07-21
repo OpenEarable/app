@@ -24,7 +24,7 @@ class _SelectEarableViewState extends State<SelectEarableView> {
   Widget build(BuildContext context) {
     return PlatformScaffold(
       appBar: PlatformAppBar(
-        title: Text("Select Earable"),
+        title: PlatformText("Select Earable"),
       ),
       body: Consumer(
         builder: (context, WearablesProvider wearablesProvider, child) =>
@@ -37,8 +37,8 @@ class _SelectEarableViewState extends State<SelectEarableView> {
                 itemBuilder: (context, index) {
                   Wearable wearable = wearablesProvider.wearables[index];
                   return PlatformListTile(
-                    title: Text(wearable.name),
-                    subtitle: Text(wearable.deviceId), //TODO: use device ID
+                    title: PlatformText(wearable.name),
+                    subtitle: PlatformText(wearable.deviceId), //TODO: use device ID
                     trailing: _selectedWearable == wearable
                         ? Icon(Icons.check)
                         : null,
@@ -50,7 +50,7 @@ class _SelectEarableViewState extends State<SelectEarableView> {
               ),
 
               PlatformElevatedButton(
-                child: Text("Start App"),
+                child: PlatformText("Start App"),
                 onPressed: () {
                   if (_selectedWearable != null) {
                     Navigator.push(

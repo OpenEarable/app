@@ -1,6 +1,7 @@
 // ignore_for_file: unnecessary_this
 
 import 'package:flutter/material.dart';
+import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_wearable/apps/posture_tracker/model/attitude_tracker.dart';
 import 'package:open_wearable/apps/posture_tracker/model/bad_posture_reminder.dart';
 import 'package:open_wearable/apps/posture_tracker/view/posture_roll_view.dart';
@@ -26,7 +27,7 @@ class _PostureTrackerViewState extends State<PostureTrackerView> {
         builder: (context, child) => Consumer<PostureTrackerViewModel>(
             builder: (context, postureTrackerViewModel, child) => Scaffold(
                   appBar: AppBar(
-                    title: const Text("Posture Tracker"),
+                    title: PlatformText("Posture Tracker"),
                     actions: [
                       IconButton(
                           onPressed: () => Navigator.of(context).push(
@@ -104,15 +105,15 @@ class _PostureTrackerViewState extends State<PostureTrackerView> {
           foregroundColor: Colors.black,
         ),
         child: postureTrackerViewModel.isTracking
-            ? const Text("Stop Tracking")
-            : const Text("Start Tracking"),
+            ? PlatformText("Stop Tracking")
+            : PlatformText("Start Tracking"),
       ),
       Visibility(
         visible: !postureTrackerViewModel.isAvailable,
         maintainState: true,
         maintainAnimation: true,
         maintainSize: true,
-        child: Text(
+        child: PlatformText(
           "No Earable Connected",
           style: TextStyle(
             color: Colors.red,

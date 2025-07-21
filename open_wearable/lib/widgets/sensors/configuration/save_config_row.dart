@@ -50,8 +50,8 @@ class _SaveConfigRowState extends State<SaveConfigRow> {
               context: context,
               builder: (context) {
                 return PlatformAlertDialog(
-                  title: Text("Configuration Name Required"),
-                  content: Text("Please enter a name for the configuration."),
+                  title: PlatformText("Configuration Name Required"),
+                  content: PlatformText("Please enter a name for the configuration."),
                   actions: [
                     PlatformDialogAction(
                       child: PlatformText("OK"),
@@ -63,7 +63,7 @@ class _SaveConfigRowState extends State<SaveConfigRow> {
             );
           }
         },
-        child: Text("Save"),
+        child: PlatformText("Save"),
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 
 class RgbControlView extends StatefulWidget {
@@ -19,7 +20,7 @@ class _RgbControlViewState extends State<RgbControlView> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Pick a color for the RGB LED'),
+          title: PlatformText('Pick a color for the RGB LED'),
           content: SingleChildScrollView(
             child: ColorPicker(
               pickerColor: _currentColor,
@@ -33,8 +34,8 @@ class _RgbControlViewState extends State<RgbControlView> {
             ),
           ),
           actions: <Widget>[
-            TextButton(
-              child: const Text('Done'),
+            PlatformTextButton(
+              child: PlatformText('Done'),
               onPressed: () {
                 widget.rgbLed.writeLedColor(
                   r: (255 *_currentColor.r).round(),
@@ -60,7 +61,7 @@ class _RgbControlViewState extends State<RgbControlView> {
             ? Colors.black
             : Colors.white,
       ),
-      child: const Text('Color'),
+      child: PlatformText('Color'),
     );
   }
 }

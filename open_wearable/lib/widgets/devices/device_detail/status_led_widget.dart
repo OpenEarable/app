@@ -19,7 +19,7 @@ class _StatusLEDControlWidgetState extends State<StatusLEDControlWidget> {
   @override
   Widget build(BuildContext context) {
     return PlatformListTile(
-      title: Text("Override LED Color", style: Theme.of(context).textTheme.bodyLarge),
+      title: PlatformText("Override LED Color", style: Theme.of(context).textTheme.bodyLarge),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
