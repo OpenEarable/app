@@ -43,15 +43,15 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
     List<Widget> connectedDevicesWidgets =
         wearablesProvider.wearables.map((wearable) {
       return PlatformListTile(
-        title: Text(wearable.name),
-        subtitle: Text(wearable.deviceId),
+        title: PlatformText(wearable.name),
+        subtitle: PlatformText(wearable.deviceId),
         trailing: Icon(PlatformIcons(context).checkMark),
       );
     }).toList();
     List<Widget> discoveredDevicesWidgets = discoveredDevices.map((device) {
       return PlatformListTile(
-        title: Text(device.name),
-        subtitle: Text(device.id),
+        title: PlatformText(device.name),
+        subtitle: PlatformText(device.id),
         trailing: _buildTrailingWidget(device.id),
         onTap: () {
           _connectToDevice(device, context);
@@ -61,7 +61,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
 
     return PlatformScaffold(
       appBar: PlatformAppBar(
-        title: const Text('Connect Devices'),
+        title: PlatformText('Connect Devices'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(10.0),
@@ -70,7 +70,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
           children: [
             Padding(
               padding: const EdgeInsets.all(8.0),
-              child: Text(
+              child: PlatformText(
                 'Connected Devices',
                 style: Theme.of(context).textTheme.titleSmall,
               ),
@@ -78,7 +78,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
             ...connectedDevicesWidgets,
             Padding(
               padding: const EdgeInsets.all(8.0),
-              child: Text(
+              child: PlatformText(
                 'Discovered Devices',
                 style: Theme.of(context).textTheme.titleSmall,
               ),
@@ -86,7 +86,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
             ...discoveredDevicesWidgets,
             PlatformElevatedButton(
               onPressed: _startScanning,
-              child: const Text('Scan'),
+              child: PlatformText('Scan'),
             ),
           ],
         ),
@@ -164,16 +164,16 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
         showDialog(
           context: context,
           builder: (context) => PlatformAlertDialog(
-            title: const Text('Firmware Update Available'),
-            content: Text(
+            title: PlatformText('Firmware Update Available'),
+            content: PlatformText(
               'A newer firmware version ($latestVersion) is available. You are using version $currentVersion.',
             ),
             actions: [
-              TextButton(
+              PlatformTextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Later'),
+                child: PlatformText('Later'),
               ),
-              TextButton(
+              PlatformTextButton(
                 onPressed: () {
                   Provider.of<FirmwareUpdateRequestProvider>(
                     context,
@@ -187,7 +187,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                     ),
                   );
                 },
-                child: const Text('Update Now'),
+                child: PlatformText('Update Now'),
               ),
             ],
           ),

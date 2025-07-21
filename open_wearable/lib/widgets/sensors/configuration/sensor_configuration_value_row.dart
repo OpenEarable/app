@@ -32,7 +32,7 @@ class SensorConfigurationValueRow extends StatelessWidget {
               value: sensorConfigNotifier,
               child: PlatformScaffold(
                 appBar: PlatformAppBar(
-                  title: Text(sensorConfiguration.name),
+                  title: PlatformText(sensorConfiguration.name),
                   leading: IconButton(
                     icon: Icon(Icons.close),
                     onPressed: () => Navigator.of(modalContext).pop(),
@@ -46,13 +46,13 @@ class SensorConfigurationValueRow extends StatelessWidget {
           },
         );
       },
-      title: Text(sensorConfiguration.name),
+      title: PlatformText(sensorConfiguration.name),
       trailing: _isOn(sensorConfigNotifier, sensorConfiguration)
           ? () {
               if (sensorConfigNotifier
                       .getSelectedConfigurationValue(sensorConfiguration) ==
                   null) {
-                return Text(
+                return PlatformText(
                   "Internal Error",
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.secondary,
@@ -78,7 +78,7 @@ class SensorConfigurationValueRow extends StatelessWidget {
                           );
                         },
                       ),
-                    Text(
+                    PlatformText(
                       "${freqValue.frequencyHz} Hz",
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.secondary,
@@ -88,14 +88,14 @@ class SensorConfigurationValueRow extends StatelessWidget {
                 );
               }
 
-              return Text(
+              return PlatformText(
                 value.toString(),
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.secondary,
                 ),
               );
             }()
-          : Text(
+          : PlatformText(
               "Off",
               style: TextStyle(color: Theme.of(context).colorScheme.secondary),
             ),

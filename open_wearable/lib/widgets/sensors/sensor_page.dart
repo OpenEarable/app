@@ -22,7 +22,7 @@ class SensorPage extends StatelessWidget {
           headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
             return [
               SliverAppBar(
-                title: const Text("Sensors"),
+                title: PlatformText("Sensors"),
                 actions: [
                   PlatformIconButton(
                     icon: Icon(context.platformIcons.bluetooth),
@@ -50,14 +50,14 @@ class SensorPage extends StatelessWidget {
                 snap: true,
                 forceElevated: innerBoxIsScrolled,
                 bottom: TabBar(
-                  tabs: const [
-                    Tab(text: 'Configuration'),
-                    Tab(text: 'Charts'),
+                  tabs: [
+                    const Tab(text: 'Configuration'),
+                    const Tab(text: 'Charts'),
                     Tab(
                       child: Row(
                         children: [
-                          _RecordingIndicator(),
-                          Text('Recorder'),
+                          const _RecordingIndicator(),
+                          PlatformText('Recorder'),
                         ],
                       ),
                     ),

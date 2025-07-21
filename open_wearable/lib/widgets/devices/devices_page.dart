@@ -38,8 +38,8 @@ class _DevicesPageState extends State<DevicesPage> {
           context: context,
           builder: (context) {
             return PlatformAlertDialog(
-              title: Text("Permissions Required"),
-              content: Text(
+              title: PlatformText("Permissions Required"),
+              content: PlatformText(
                 "This app requires Bluetooth and Location permissions to function properly.\n"
                 "Location access is needed for Bluetooth scanning to work. Please enable both "
                 "Bluetooth and Location services and grant the necessary permissions.\n"
@@ -47,7 +47,7 @@ class _DevicesPageState extends State<DevicesPage> {
               ),
               actions: [
                 PlatformDialogAction(
-                  child: Text("OK"),
+                  child: PlatformText("OK"),
                   onPressed: () {
                     Navigator.of(context).pop();
                   },
@@ -91,26 +91,19 @@ class _DevicesPageState extends State<DevicesPage> {
   Widget _buildSmallScreenLayout(BuildContext context, WearablesProvider wearablesProvider) {
     return PlatformScaffold(
       appBar: PlatformAppBar(
-        title: Text("Devices"),
+        title: PlatformText("Devices"),
         trailingActions: [
             PlatformIconButton(
             icon: Icon(context.platformIcons.bluetooth),
             onPressed: () {
-              if (Theme.of(context).platform == TargetPlatform.iOS) {
-                showCupertinoModalPopup(
+              Navigator.of(context).push(
+                platformPageRoute(
                   context: context,
-                  builder: (context) => ConnectDevicesPage(),
-                );
-              } else {
-                Navigator.of(context).push(
-                  platformPageRoute(
-                    context: context,
-                    builder: (context) => const Material(
-                      child: ConnectDevicesPage(),
-                    ),
+                  builder: (context) => const Material(
+                    child: ConnectDevicesPage(),
                   ),
-                );
-              }
+                ),
+              );
             },
           ),
         ],
@@ -130,7 +123,7 @@ class _DevicesPageState extends State<DevicesPage> {
             SizedBox(
               height: MediaQuery.of(context).size.height * 0.8,
               child: Center(
-                child: Text(
+                child: PlatformText(
                   "No devices connected",
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
@@ -197,7 +190,7 @@ class _DevicesPageState extends State<DevicesPage> {
                       PlatformIcons(context).add,
                       color: Theme.of(context).colorScheme.surfaceTint,
                     ),
-                    Text(
+                    PlatformText(
                       "Connect Device",
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                             color: Theme.of(context).colorScheme.surfaceTint,
@@ -265,7 +258,7 @@ class DeviceRow extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      PlatformText(
                         _device.name,
                         style: Theme.of(context)
                             .textTheme
@@ -286,19 +279,19 @@ class DeviceRow extends StatelessWidget {
                           return PlatformCircularProgressIndicator();
                         }
                         if (snapshot.hasError) {
-                          return Text("Error: ${snapshot.error}");
+                          return PlatformText("Error: ${snapshot.error}");
                         }
-                        return Text(snapshot.data.toString());
+                        return PlatformText(snapshot.data.toString());
                       },
                     )
                   else
-                    Text(_device.deviceId),
+                    PlatformText(_device.deviceId),
                 ],
               ),
               if (_device is DeviceFirmwareVersion)
                 Row(
                   children: [
-                    Text("Firmware Version: "),
+                    PlatformText("Firmware Version: "),
                     FutureBuilder(
                       future: (_device as DeviceFirmwareVersion)
                           .readDeviceFirmwareVersion(),
@@ -308,9 +301,9 @@ class DeviceRow extends StatelessWidget {
                           return PlatformCircularProgressIndicator();
                         }
                         if (snapshot.hasError) {
-                          return Text("Error: ${snapshot.error}");
+                          return PlatformText("Error: ${snapshot.error}");
                         }
-                        return Text(snapshot.data.toString());
+                        return PlatformText(snapshot.data.toString());
                       },
                     ),
                   ],
@@ -318,7 +311,7 @@ class DeviceRow extends StatelessWidget {
               if (_device is DeviceHardwareVersion)
                 Row(
                   children: [
-                    Text("Hardware Version: "),
+                    PlatformText("Hardware Version: "),
                     FutureBuilder(
                       future: (_device as DeviceHardwareVersion)
                           .readDeviceHardwareVersion(),
@@ -328,9 +321,9 @@ class DeviceRow extends StatelessWidget {
                           return PlatformCircularProgressIndicator();
                         }
                         if (snapshot.hasError) {
-                          return Text("Error: ${snapshot.error}");
+                          return PlatformText("Error: ${snapshot.error}");
                         }
-                        return Text(snapshot.data.toString());
+                        return PlatformText(snapshot.data.toString());
                       },
                     ),
                   ],
