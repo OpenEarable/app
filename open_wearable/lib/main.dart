@@ -61,7 +61,10 @@ class MyApp extends StatelessWidget {
             DefaultCupertinoLocalizations.delegate,
           ],
           title: 'Open Wearable',
-          home: HomePage(),
+          home: HeroMode(
+            enabled: false, //TODO: Remove this when Hero animations are fixed
+            child: const HomePage(),
+          ),
         ),
       ),
     );
