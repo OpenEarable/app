@@ -57,8 +57,8 @@ class _TouchTestState extends State<TouchTest> {
  @override
  Widget build(BuildContext context) {
    final instruction = widget.side == 'left'
-       ? 'Please tap the LEFT earphone'
-       : 'Please tap the RIGHT earphone';
+       ? 'Please press the LEFT earphone button'
+       : 'Please press the RIGHT earphone button';
 
 
    return Center(

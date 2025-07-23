@@ -373,16 +373,16 @@ class _DirectionTestState extends State<DirectionTest> {
   }
 }
 
-// Integration helper class to connect with your existing AttitudeTracker
+// Integration helper class to connect with existing AttitudeTracker
 class DirectionTestIntegration {
   final DirectionTracker directionTracker;
   StreamSubscription? _attitudeSubscription;
   
   DirectionTestIntegration(this.directionTracker);
   
-  // Call this method to connect your existing AttitudeTracker
+  // Call this method to connect existing AttitudeTracker
   void connectToAttitudeTracker(dynamic attitudeTracker) {
-    // Listen to your existing attitude tracker and forward the data
+    // Listen to existing attitude tracker and forward the data
     attitudeTracker.listen((attitude) {
       directionTracker.updateAttitude(attitude);
     });
