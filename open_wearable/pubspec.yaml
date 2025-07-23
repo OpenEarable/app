@@ -54,6 +54,7 @@ dependencies:
   mcumgr_flutter: ^0.4.2
   file_selector: ^1.0.3
   path_provider: ^2.1.5
+  speech_to_text: ^7.2.0
 
 dev_dependencies:
   flutter_test:
