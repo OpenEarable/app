@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:flutter_tts/flutter_tts.dart';
 
 class RepetitionTest extends StatefulWidget {
   final VoidCallback onCompleted;
@@ -11,11 +12,12 @@ class RepetitionTest extends StatefulWidget {
 
 class _RepetitionTestState extends State<RepetitionTest> {
   late stt.SpeechToText _speech;
+  late FlutterTts _flutterTts;
   bool _isListening = false;
   bool _speechEnabled = false;
+  bool _ttsEnabled = false;
   String _text = '';
   String? _feedback;
-  double _soundLevel = 0.0;
   String _currentLocale = '';
   
   int _currentPhraseIndex = 0;
@@ -30,14 +32,34 @@ class _RepetitionTestState extends State<RepetitionTest> {
   void initState() {
     super.initState();
     _speech = stt.SpeechToText();
+    _flutterTts = FlutterTts();
     _initializeSpeech();
+    _initializeTts();
+  }
+
+  void _initializeTts() async {
+    try {
+      await _flutterTts.setLanguage("en-US");
+      await _flutterTts.setSpeechRate(0.5);
+      await _flutterTts.setVolume(0.8);
+      await _flutterTts.setPitch(1.0);
+      setState(() => _ttsEnabled = true);
+    } catch (e) {
+      print('TTS initialization error: $e');
+      setState(() => _ttsEnabled = false);
+    }
+  }
+
+  void _speakPhrase(String phrase) async {
+    if (_ttsEnabled) {
+      await _flutterTts.speak(phrase);
+    }
   }
 
   void _initializeSpeech() async {
     try {
       bool available = await _speech.initialize(
         onStatus: (status) {
-          print('Speech status: $status');
           if (status == stt.SpeechToText.listeningStatus) {
             setState(() => _isListening = true);
           } else if (status == stt.SpeechToText.notListeningStatus) {
@@ -45,7 +67,6 @@ class _RepetitionTestState extends State<RepetitionTest> {
           }
         },
         onError: (error) {
-          print('Speech error: ${error.errorMsg}');
           setState(() {
             _isListening = false;
             _feedback = 'Error: ${error.errorMsg}';
@@ -55,21 +76,20 @@ class _RepetitionTestState extends State<RepetitionTest> {
 
       if (available) {
         setState(() => _speechEnabled = true);
-        
-        // Get available locales
+
         List<stt.LocaleName> locales = await _speech.locales();
-        print('Available locales: ${locales.map((l) => l.localeId).join(', ')}');
-        
-        // Find the best English locale
         String? bestLocale = locales
             .where((l) => l.localeId.startsWith('en'))
             .map((l) => l.localeId)
             .firstOrNull;
         
         _currentLocale = bestLocale ?? 'en_US';
-        print('Using locale: $_currentLocale');
         
         setState(() => _feedback = 'Speech recognition ready. Click "Start" to begin.');
+        
+        Future.delayed(const Duration(milliseconds: 500), () {
+          _speakPhrase(_phrases[0]);
+        });
       } else {
         setState(() {
           _speechEnabled = false;
@@ -77,7 +97,6 @@ class _RepetitionTestState extends State<RepetitionTest> {
         });
       }
     } catch (e) {
-      print('Speech initialization error: $e');
       setState(() {
         _speechEnabled = false;
         _feedback = 'Failed to initialize speech recognition';
@@ -99,30 +118,24 @@ class _RepetitionTestState extends State<RepetitionTest> {
     try {
       setState(() {
         _text = '';
-        _feedback = 'Listening... Please say: "${_phrases[_currentPhraseIndex]}"';
-        _soundLevel = 0.0;
       });
+
+      // _speakPhrase(_phrases[_currentPhraseIndex]);
 
       await _speech.listen(
         onResult: (result) {
-          print('Speech result: "${result.recognizedWords}" (final: ${result.finalResult})');
           setState(() {
             _text = result.recognizedWords;
-            // Check on partial results too
             _checkRepetition(result.recognizedWords);
           });
         },
-        onSoundLevelChange: (level) {
-          setState(() => _soundLevel = level);
-        },
-        listenFor: const Duration(seconds: 90), // Long duration like counting test
-        pauseFor: const Duration(seconds: 5),   // Longer pause tolerance
+        listenFor: const Duration(seconds: 90),
+        pauseFor: const Duration(seconds: 5),
         partialResults: true,
         localeId: _currentLocale,
         cancelOnError: false,
       );
     } catch (e) {
-      print('Listen error: $e');
       setState(() {
         _isListening = false;
         _feedback = 'Error starting speech recognition';
@@ -140,24 +153,24 @@ class _RepetitionTestState extends State<RepetitionTest> {
   void _checkRepetition(String spokenText) {
     if (spokenText.isEmpty || _currentPhraseIndex >= _phrases.length) return;
 
-    print('Checking phrase ${_currentPhraseIndex + 1}: "$spokenText"');
-    
     String targetPhrase = _phrases[_currentPhraseIndex].toLowerCase();
     String spokenLower = spokenText.toLowerCase().trim();
     
-    // Calculate similarity - more flexible matching
     double similarity = _calculateSimilarity(targetPhrase, spokenLower);
-    print('Similarity: $similarity');
     
-    if (similarity > 0.7) { // 70% similarity threshold
+    if (similarity > 0.7) {
       setState(() {
         _completedPhrases[_currentPhraseIndex] = true;
-        _feedback = '✅ Great! Moving to next phrase...';
+        
+        if (_currentPhraseIndex == _phrases.length - 1) {
+          _feedback = '✅ Excellent! All phrases completed successfully!';
+        } else {
+          _feedback = '✅ Great! Moving to next phrase...';
+        }
       });
       
       _stopListening();
       
-      // Move to next phrase after a short delay
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) {
           setState(() {
@@ -166,13 +179,20 @@ class _RepetitionTestState extends State<RepetitionTest> {
           });
           
           if (_currentPhraseIndex >= _phrases.length) {
-            _completeTest();
+            bool allCompleted = _completedPhrases.every((completed) => completed);
+            if (allCompleted) {
+              _completeTest();
+            } else {
+              _currentPhraseIndex = _completedPhrases.indexWhere((completed) => !completed);
+              setState(() => _feedback = 'Please complete the remaining phrases. Click "Start" when ready.');
+            }
           } else {
             setState(() => _feedback = 'Ready for next phrase. Click "Start" when ready.');
+            _speakPhrase(_phrases[_currentPhraseIndex]);
           }
         }
       });
-    } else if (similarity > 0.4) { // Partial match
+    } else if (similarity > 0.4) {
       setState(() => _feedback = '⚠️ Close! Please try to repeat more clearly: "${_phrases[_currentPhraseIndex]}"');
     } else {
       setState(() => _feedback = '❌ Please repeat: "${_phrases[_currentPhraseIndex]}"');
@@ -180,14 +200,12 @@ class _RepetitionTestState extends State<RepetitionTest> {
   }
   
   double _calculateSimilarity(String target, String spoken) {
-    // Simple word-based similarity calculation
     List<String> targetWords = target.split(' ');
     List<String> spokenWords = spoken.split(' ');
     
     int matches = 0;
     for (String targetWord in targetWords) {
       for (String spokenWord in spokenWords) {
-        // Check for exact match or close match (handles common speech-to-text variations)
         if (spokenWord.contains(targetWord) || targetWord.contains(spokenWord) ||
             _levenshteinDistance(targetWord, spokenWord) <= 2) {
           matches++;
@@ -232,8 +250,16 @@ class _RepetitionTestState extends State<RepetitionTest> {
   }
 
   void _completeTest() {
-    setState(() => _feedback = '✅ All phrases completed successfully!');
-    Future.delayed(const Duration(seconds: 2), widget.onCompleted);
+    bool allCompleted = _completedPhrases.every((completed) => completed);
+    if (allCompleted) {
+      setState(() => _feedback = '✅ Repetition test completed! Both phrases repeated correctly.');
+      Future.delayed(const Duration(seconds: 2), widget.onCompleted);
+    } else {
+      setState(() {
+        _feedback = 'Please complete all phrases before finishing the test.';
+        _currentPhraseIndex = _completedPhrases.indexWhere((completed) => !completed);
+      });
+    }
   }
 
   void _resetTest() {
@@ -241,109 +267,29 @@ class _RepetitionTestState extends State<RepetitionTest> {
       _currentPhraseIndex = 0;
       _completedPhrases = [false, false];
       _text = '';
-      _feedback = 'Test reset. Click "Start" to begin.';
+      _feedback = 'Test reset. Click "Start" to begin with the first phrase.';
     });
     _stopListening();
+    Future.delayed(const Duration(milliseconds: 500), () {
+      _speakPhrase(_phrases[0]);
+    });
   }
 
   @override
-  Widget build(BuildContext context) {
+    Widget build(BuildContext context) {
     return SingleChildScrollView(
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            "Repetition Test - Phrase ${_currentPhraseIndex + 1} of ${_phrases.length}",
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
-          
-          // Show current phrase to repeat
           if (_currentPhraseIndex < _phrases.length) ...[
             const Text("Please repeat:", style: TextStyle(fontSize: 14)),
             const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blue.shade200),
-              ),
-              child: Text(
-                '"${_phrases[_currentPhraseIndex]}"',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ],
-          
-          const SizedBox(height: 16),
-          
-          // Progress indicators
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: _phrases.asMap().entries.map((entry) {
-              int index = entry.key;
-              return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                child: Icon(
-                  _completedPhrases[index] 
-                    ? Icons.check_circle 
-                    : (index == _currentPhraseIndex ? Icons.radio_button_unchecked : Icons.circle_outlined),
-                  color: _completedPhrases[index] 
-                    ? Colors.green 
-                    : (index == _currentPhraseIndex ? Colors.blue : Colors.grey),
-                ),
-              );
-            }).toList(),
-          ),
-          
-          const SizedBox(height: 16),
-          
-          if (_isListening) ...[
-            const Text("Listening...", style: TextStyle(color: Colors.blue)),
-            const SizedBox(height: 4),
-            // Compact sound level indicator
-            Container(
-              width: 120,
-              height: 6,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey),
-                borderRadius: BorderRadius.circular(3),
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(3),
-                child: LinearProgressIndicator(
-                  value: _soundLevel,
-                  backgroundColor: Colors.grey.shade200,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    _soundLevel > 0.3 ? Colors.green : Colors.red,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-          ],
-          
-          Text(
-            _text.isEmpty ? "(Your speech will appear here)" : _text,
-            style: const TextStyle(fontSize: 16),
-            textAlign: TextAlign.center,
-          ),
-          
-          if (_feedback != null) ...[
-            const SizedBox(height: 8),
             Text(
-              _feedback!,
-              style: TextStyle(
-                color: _feedback!.startsWith('✅') ? Colors.green : 
-                       _feedback!.startsWith('⚠️') ? Colors.orange :
-                       _feedback!.startsWith('❌') ? Colors.red : Colors.blue,
-              ),
+              '"${_phrases[_currentPhraseIndex]}"',  // Just a regular Text widget
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               textAlign: TextAlign.center,
             ),
           ],
-          
+
           const SizedBox(height: 16),
           
           Wrap(
@@ -358,12 +304,11 @@ class _RepetitionTestState extends State<RepetitionTest> {
                   ? (_isListening ? _stopListening : _startListening) 
                   : null,
               ),
-              if (_currentPhraseIndex > 0 && _currentPhraseIndex < _phrases.length)
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.refresh),
-                  label: const Text("Reset"),
-                  onPressed: _resetTest,
-                ),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.refresh),
+                label: const Text("Reset"),
+                onPressed: _resetTest,
+              ),
               ElevatedButton(
                 onPressed: widget.onCompleted,
                 child: const Text("Skip/Done"),

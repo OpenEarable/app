@@ -94,7 +94,7 @@ class _CountingTestState extends State<CountingTest> {
     try {
       setState(() {
         _text = '';
-        _feedback = 'Listening... Say numbers 0 to 10';
+        _feedback = 'Listening... Say numbers 1 to 10';
         _soundLevel = 0.0;
       });
 
@@ -146,9 +146,9 @@ class _CountingTestState extends State<CountingTest> {
     List<RegExp> patterns = [
       // Numbers as words: "one two three four five six seven eight nine ten"
       RegExp(r'\b(one|two|three|four|five|six|seven|eight|nine|ten)\b'),
-      // Numbers as digits: "0 1 2 3 4 5 6 7 8 9 10"
+      // Numbers as digits: "1 2 3 4 5 6 7 8 9 10"
       RegExp(r'\b([1-9]|10)\b'),
-      // Mixed: "0 one 2 three" etc.
+      // Mixed: "1 2 three" etc.
     ];
 
     // Extract all number-like words
@@ -161,7 +161,7 @@ class _CountingTestState extends State<CountingTest> {
 
     // Convert words to numbers for easier comparison
     Map<String, int> wordToNum = {
-      'zero': 0, 'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
+      'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
       'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10,
       '0': 0, '1': 1, '2': 2, '3': 3, '4': 4, '5': 5,
       '6': 6, '7': 7, '8': 8, '9': 9, '10': 10,
@@ -179,9 +179,9 @@ class _CountingTestState extends State<CountingTest> {
     List<int> sortedFound = foundInts.toList()..sort();
     
     // Success if we have at least 8 numbers and they include 1 and some high numbers
-    bool hasGoodRange = foundInts.contains(0) && 
+    bool hasGoodRange = foundInts.contains(1) && 
                        foundInts.where((n) => n >= 7).isNotEmpty &&
-                       foundInts.length >= 8;
+                       foundInts.length >= 10;
 
     // Real time feedback checking if user has counted fully from 1 to 10
     if (hasGoodRange) {
@@ -189,9 +189,9 @@ class _CountingTestState extends State<CountingTest> {
       _stopListening();
       Future.delayed(const Duration(seconds: 2), widget.onCompleted);
     } else if (foundInts.length >= 4) {
-      setState(() => _feedback = '⚠️ Good start! Please try to count all numbers from 0 to 10');
+      setState(() => _feedback = '⚠️ Good start! Please try to count all numbers from 1 to 10');
     } else {
-      setState(() => _feedback = '❌ Please count clearly from 0 to 10');
+      setState(() => _feedback = '❌ Please count clearly from 1 to 10');
     }
   }
 
@@ -201,7 +201,7 @@ class _CountingTestState extends State<CountingTest> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text("Please count from 0 to 10 out loud."),
+          const Text("Please count from 1 to 10 out loud."),
           const SizedBox(height: 8),
           
           if (_isListening) ...[
@@ -234,17 +234,17 @@ class _CountingTestState extends State<CountingTest> {
             style: const TextStyle(fontSize: 16),
           ),
           
-          if (_feedback != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              _feedback!,
-              style: TextStyle(
-                color: _feedback!.startsWith('✅') ? Colors.green : 
-                       _feedback!.startsWith('⚠️') ? Colors.orange :
-                       _feedback!.startsWith('❌') ? Colors.red : Colors.blue,
-              ),
-            ),
-          ],
+          // if (_feedback != null) ...[
+          //   const SizedBox(height: 6),
+          //   Text(
+          //     _feedback!,
+          //     style: TextStyle(
+          //       color: _feedback!.startsWith('✅') ? Colors.green : 
+          //              _feedback!.startsWith('⚠️') ? Colors.orange :
+          //              _feedback!.startsWith('❌') ? Colors.red : Colors.blue,
+          //     ),
+          //   ),
+          // ],
           
           const SizedBox(height: 12),
           

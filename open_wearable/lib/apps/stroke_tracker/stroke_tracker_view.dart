@@ -30,7 +30,7 @@ class _StrokeTrackerViewState extends State<StrokeTrackerView> {
     "We will now begin the test. Please remain seated calmly. I will guide you step by step.", // plays immediately
     "Please count from 1 to 10 out loud.",
     "Turn your head in the direction the sound played.",
-    "Press left earphone with your right hand.",
+    "Press your left earphone with your right hand.",
     "Press your right earphone with your left hand.",
     "Repeat: Today is a sunny day.",
     "Repeat: The quick brown fox jumps over the lazy dog.",
@@ -272,10 +272,10 @@ void initState() {
           side: 'right',
           wearable: widget.rightWearable,
         );
-      case 5:
+      // case 5:
       case 6:
         return RepetitionTest(onCompleted: _onTestCompleted);
-      case 7:
+      // case 7:
       case 8:
         return MouthMovementTest(onCompleted: _onTestCompleted);
       case 9:
