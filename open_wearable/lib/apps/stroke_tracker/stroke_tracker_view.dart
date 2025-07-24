@@ -12,6 +12,8 @@ import 'tests/naming_test.dart';
 import 'tests/repetition_test.dart';
 import 'tests/mouth_movement_test.dart';
 
+
+// Main view that runs the stroke test sequence
 class StrokeTrackerView extends StatefulWidget {
 
   final Wearable leftWearable;
@@ -23,12 +25,13 @@ class StrokeTrackerView extends StatefulWidget {
 }
 
 class _StrokeTrackerViewState extends State<StrokeTrackerView> {
+  // Instructions to be spoken aloud at each stage of the test
   final List<String> instructions = [
     "We will now begin the test. Please remain seated calmly. I will guide you step by step.", // plays immediately
-    "Please count from 0 to 10 out loud.",
+    "Please count from 1 to 10 out loud.",
     "Turn your head in the direction the sound played.",
-    "Touch your left earphone with your right hand.",
-    "Touch your right earphone with your left hand.",
+    "Press left earphone with your right hand.",
+    "Press your right earphone with your left hand.",
     "Repeat: Today is a sunny day.",
     "Repeat: The quick brown fox jumps over the lazy dog.",
     "Hold a neutral expression.",
@@ -38,6 +41,7 @@ class _StrokeTrackerViewState extends State<StrokeTrackerView> {
     "Stroke Probability: RESULTS HERE",
   ];
 
+  // How long each test should run (if time-based)
   final List<Duration> durations = [
     Duration(seconds: 8), // Intro duration
     Duration(seconds: 15), // Counting
@@ -53,6 +57,7 @@ class _StrokeTrackerViewState extends State<StrokeTrackerView> {
     Duration.zero,
   ];
 
+  // Mapping test categories to their instruction index range
   final Map<int, List<int>> testRanges = {
     0: [1],        // Counting
     1: [2],        // Direction
@@ -72,6 +77,7 @@ void initState() {
     ..setPitch(1.0)
     ..setSpeechRate(0.5);
 
+  // Populating feedbck panel
   testFeedbackList = [
     TestFeedback("Counting Test", Icons.format_list_numbered),
     TestFeedback("Direction Test", Icons.explore),
@@ -86,7 +92,7 @@ void initState() {
   });
 }
 
-
+  // Test state variables
   int currentIndex = 0;
   bool isRunning = false;
   bool isPaused = false;
@@ -94,11 +100,13 @@ void initState() {
   Timer? _timer;
   DateTime? _lastStartTime;
   Duration _elapsed = Duration.zero;
-  List<int>? _retryIndices;
+  List<int>? _retryIndices; // Stores range of steps to retry
   int _retryPointer = 0;
 
+  // Iniatlizie test-to-speech
   late FlutterTts flutterTts;
 
+  // Plays the intro audio and then enables the start button
   void _playIntroThenEnableStart() async {
   await _speak(instructions[0]); // Play the intro
   setState(() {
@@ -106,11 +114,13 @@ void initState() {
   });
 }
 
+  // Speaks the given string using TTS
   Future<void> _speak(String text) async {
     await flutterTts.stop();
     await flutterTts.speak(text);
   }
 
+  // Starts the test sequence
   void _startSequence() {
     if (isRunning) return;
     setState(() {
@@ -147,6 +157,7 @@ void initState() {
     }
   }
 
+  // Pauses the test
   void _pause() {
     if (_timer != null && _lastStartTime != null) {
       _elapsed += DateTime.now().difference(_lastStartTime!);
@@ -159,6 +170,7 @@ void initState() {
     });
   }
 
+  // Resumes a paused test
   void _resume() {
     if (!isPaused) return;
     setState(() {
@@ -170,6 +182,7 @@ void initState() {
     // No auto-schedule! Wait for sensor or skip
   }
 
+  // Fully resets the test sequence
   void _reset() {
     _timer?.cancel();
     flutterTts.stop();
@@ -182,6 +195,7 @@ void initState() {
     });
   }
 
+  // Restarts a given test section
   void _onRetry(int testKey) {
     final range = testRanges[testKey]!;
     setState(() {
@@ -196,6 +210,7 @@ void initState() {
     // No auto-schedule!
   }
 
+  // Called by each test widget once it's completed successfully
   void _onTestCompleted() {
   if (currentIndex < instructions.length - 2) { // -2 for last "results" step
     setState(() {
@@ -207,7 +222,7 @@ void initState() {
         }
       }
 
-      // then move to NEXT test
+      // Move to the next test
       currentIndex++;
       _elapsed = Duration.zero;
       _lastStartTime = DateTime.now();
@@ -237,7 +252,7 @@ void initState() {
   }
 
   Widget _buildTestWidget() {
-    // Only build widgets for running/active tests (not intro/results screens)
+    // Dynamically builds the correct test widget based on the current index
     switch (currentIndex) {
       case 1:
         return CountingTest(onCompleted: _onTestCompleted); // Sensor or widget calls this

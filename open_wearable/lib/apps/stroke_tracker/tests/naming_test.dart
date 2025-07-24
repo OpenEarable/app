@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
+// A speech-based naming test widget that prompts the user to name an animal
+// (expected: "elephant") and provides feedback based on the spoken input
+// using speech recognition.
+
 class NamingTest extends StatefulWidget {
   final VoidCallback onCompleted;
 
@@ -26,6 +30,7 @@ class _NamingTestState extends State<NamingTest> {
     _initializeSpeech();
   }
 
+  // Initializes the speech recognition engine and chooses the best locale.
   void _initializeSpeech() async {
     try {
       bool available = await _speech.initialize(
@@ -46,6 +51,8 @@ class _NamingTestState extends State<NamingTest> {
 
       if (available) {
         setState(() => _speechEnabled = true);
+
+        // Picks the best available English locale
         List<stt.LocaleName> locales = await _speech.locales();
         String? bestLocale = locales.where((l) => l.localeId.startsWith('en')).map((l) => l.localeId).firstOrNull;
         _currentLocale = bestLocale ?? 'en_US';
@@ -63,6 +70,8 @@ class _NamingTestState extends State<NamingTest> {
     }
   }
 
+
+  // Begins listening for speech and handles recognition results
   void _startListening() async {
     if (!_speechEnabled) {
       setState(() => _feedback = 'Speech recognition not available');
@@ -100,6 +109,8 @@ class _NamingTestState extends State<NamingTest> {
     }
   }
 
+
+  // Stops speech recognition and resets the state
   void _stopListening() {
     if (_speech.isListening) {
       _speech.stop();
@@ -107,6 +118,7 @@ class _NamingTestState extends State<NamingTest> {
     setState(() => _isListening = false);
   }
 
+  // Validates the spoken text against accepted variations of "elephant".
   void _checkAnswer(String spokenText) {
     if (spokenText.isEmpty) return;
 
@@ -122,7 +134,8 @@ class _NamingTestState extends State<NamingTest> {
       "big elephant"
     ];
 
-    // If the answer includes "elephant" at all, that's enough
+    // If the answer includes "elephant" at all, that's enough, a partial match
+    // is considered correct.
     bool containsElephant = answer.contains("elephant");
 
     if (acceptable.contains(answer) || containsElephant) {
@@ -146,6 +159,7 @@ class _NamingTestState extends State<NamingTest> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 12),
+          // Shows live feedback when listening
           if (_isListening) ...[
             const Text("Listening...", style: TextStyle(color: Colors.blue)),
             const SizedBox(height: 4),
@@ -185,6 +199,7 @@ class _NamingTestState extends State<NamingTest> {
           ],
           const SizedBox(height: 12),
           Row(
+            // Control buttons: stop/start speech or skip
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               ElevatedButton.icon(

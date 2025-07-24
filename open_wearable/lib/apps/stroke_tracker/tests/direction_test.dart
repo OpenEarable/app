@@ -3,7 +3,16 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-// First, let's define the Attitude class if it's not available
+// Monitors yaw from head orientation (Attitude) data.
+// It detects sustained head turns (left/right) beyond a threshold angle for a duration.
+// Use `calibrate()` to set a neutral reference position.
+// Use `updateAttitude()` to stream new data from sensors.
+// This can trigger onDirectionStarted, onDirectionDetected, and onReturnToCenter callbacks.
+
+// Currently not working as expected
+
+
+// Data class that represents head or orientation using roll, pitch, and yew
 class Attitude {
   final double roll;
   final double pitch;
@@ -15,6 +24,8 @@ class Attitude {
     this.yaw = 0.0,
   });
 
+
+  // Subtracts another Attitude to find the delta
   Attitude operator -(Attitude other) {
     return Attitude(
       roll: roll - other.roll,
@@ -24,6 +35,7 @@ class Attitude {
   }
 }
 
+// Enum representing the current head turn direction state
 enum TurnDirection { left, right, none }
 
 class DirectionSettings {
@@ -178,14 +190,17 @@ class DirectionTracker {
     }
   }
 
+  // Call to update the current head orientation
   void updateAttitude(Attitude attitude) {
     _attitudeController.add(attitude);
   }
 
+  // Set the neutral reference position here (calibration)
   void setReferenceAttitude(Attitude attitude) {
     _referenceAttitude = attitude;
   }
 
+  // Optional method to call for calibration
   void dispose() {
     _subscription?.cancel();
     _attitudeController.close();

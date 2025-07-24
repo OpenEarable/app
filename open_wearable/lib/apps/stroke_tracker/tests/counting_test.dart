@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
+// A test widget that prompts the user to count aloud from 1 to 10. Uses
+// speech recognition to detect spoken numbers and provides feedback.
+// Completes test automatically once the spoken input matches the expected
+// numeric range.
+
 class CountingTest extends StatefulWidget {
   final VoidCallback onCompleted;
   const CountingTest({Key? key, required this.onCompleted}) : super(key: key);
@@ -25,6 +30,8 @@ class _CountingTestState extends State<CountingTest> {
     _initializeSpeech();
   }
 
+  // Initializes the speech recognition engine and chooses the best locale.
+  // (Which is typically English).
   void _initializeSpeech() async {
     try {
       bool available = await _speech.initialize(
@@ -77,6 +84,7 @@ class _CountingTestState extends State<CountingTest> {
     }
   }
 
+// Starts the speech recognition session and listens for spoken numbers.
   void _startListening() async {
     if (!_speechEnabled) {
       setState(() => _feedback = 'Speech recognition not available');
@@ -117,6 +125,7 @@ class _CountingTestState extends State<CountingTest> {
     }
   }
 
+  // Stops the speech recognition session and resets the state.
   void _stopListening() {
     if (_speech.isListening) {
       _speech.stop();
@@ -124,6 +133,7 @@ class _CountingTestState extends State<CountingTest> {
     setState(() => _isListening = false);
   }
 
+  // Parses the recognized text and checks for numbers 1 to 10.
   void _checkCounting(String spokenText) {
     if (spokenText.isEmpty) return;
 
@@ -134,10 +144,10 @@ class _CountingTestState extends State<CountingTest> {
     
     // Define number patterns to match
     List<RegExp> patterns = [
-      // Numbers as words: "zero one two three four five six seven eight nine ten"
-      RegExp(r'\b(zero|one|two|three|four|five|six|seven|eight|nine|ten)\b'),
+      // Numbers as words: "one two three four five six seven eight nine ten"
+      RegExp(r'\b(one|two|three|four|five|six|seven|eight|nine|ten)\b'),
       // Numbers as digits: "0 1 2 3 4 5 6 7 8 9 10"
-      RegExp(r'\b([0-9]|10)\b'),
+      RegExp(r'\b([1-9]|10)\b'),
       // Mixed: "0 one 2 three" etc.
     ];
 
@@ -149,7 +159,7 @@ class _CountingTestState extends State<CountingTest> {
 
     print('Found numbers: $foundNumbers');
 
-    // Convert words to numbers for comparison
+    // Convert words to numbers for easier comparison
     Map<String, int> wordToNum = {
       'zero': 0, 'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
       'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10,
@@ -168,11 +178,12 @@ class _CountingTestState extends State<CountingTest> {
     // Check if we have enough sequential numbers
     List<int> sortedFound = foundInts.toList()..sort();
     
-    // Success if we have at least 8 numbers and they include 0 and some high numbers
+    // Success if we have at least 8 numbers and they include 1 and some high numbers
     bool hasGoodRange = foundInts.contains(0) && 
                        foundInts.where((n) => n >= 7).isNotEmpty &&
                        foundInts.length >= 8;
 
+    // Real time feedback checking if user has counted fully from 1 to 10
     if (hasGoodRange) {
       setState(() => _feedback = '✅ Great! Counting recognized successfully!');
       _stopListening();
