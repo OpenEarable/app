@@ -42,7 +42,9 @@ class LocalRecorderView extends StatelessWidget {
         final subtitle = isRecording
           ? 'Recording to:\n$recordPath'
           : recorder.hasSensorsConnected
-            ? 'Tap to choose where to save your data'
+            ? Platform.isIOS
+                ? 'Tap to start recording'
+                : 'Tap to choose where to save your data'
             : 'Connect a device to enable recording';
 
         return ListView(
@@ -117,7 +119,7 @@ Future<String?> _pickDirectory() async {
     final recordingName = 'OpenWearable_Recording_${DateTime.now().toIso8601String()}';
 
     // create a directory in the appDocDir
-    String dirPath = '${await getIOSDirectory()}/$recordingName';
+    String dirPath = '${(await getIOSDirectory()).path}/$recordingName';
     Directory dir = Directory(dirPath);
     if (!await dir.exists()) {
       await dir.create(recursive: true);
