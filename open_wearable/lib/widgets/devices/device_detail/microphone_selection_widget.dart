@@ -42,6 +42,9 @@ class _MicrophoneSelectionWidgetState extends State<MicrophoneSelectionWidget> {
         onValueChanged: (Microphone? mode) {
           if (mode == null) return;
           widget.device.setMicrophone(mode);
+          setState(() {
+            _selectedMicrophone = mode;
+          });
         },
         groupValue: _selectedMicrophone,
       ),

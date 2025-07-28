@@ -42,6 +42,9 @@ class _AudioModeWidgetState extends State<AudioModeWidget> {
         onValueChanged: (AudioMode? mode) {
           if (mode == null) return;
           widget.device.setAudioMode(mode);
+          setState(() {
+            _selectedAudioMode = mode;
+          });
         },
         groupValue: _selectedAudioMode,
       ),
