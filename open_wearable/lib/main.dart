@@ -45,6 +45,9 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PlatformProvider(
+      settings: PlatformSettingsData(
+        iosUsesMaterialWidgets: true,
+      ),
       builder: (context) => PlatformTheme(
         materialLightTheme: ThemeData(
           useMaterial3: true, // Enables Material You (Pixel UI)
