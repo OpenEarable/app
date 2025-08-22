@@ -252,6 +252,7 @@ class DeviceRow extends StatelessWidget {
           child: Column(
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (wearableIconPath != null)
                     SvgPicture.asset(
@@ -269,7 +270,36 @@ class DeviceRow extends StatelessWidget {
                             .bodyLarge
                             ?.copyWith(fontWeight: FontWeight.bold),
                       ),
-                      BatteryStateView(device: _device),
+                      Row(children: [
+                        BatteryStateView(device: _device),
+                        if (_device is StereoDevice)
+                          FutureBuilder(
+                            future: (_device as StereoDevice).position,
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return PlatformCircularProgressIndicator();
+                              }
+                              if (snapshot.hasError) {
+                                return PlatformText("Error: ${snapshot.error}");
+                              }
+                              if (!snapshot.hasData) {
+                                return PlatformText("N/A");
+                              }
+                              if (snapshot.data == null) {
+                                return PlatformText("N/A");
+                              }
+                              switch (snapshot.data) {
+                                case DevicePosition.left:
+                                  return PlatformText("Left");
+                                case DevicePosition.right:
+                                  return PlatformText("Right");
+                                default:
+                                  return PlatformText("Unknown");
+                              }
+                            },
+                          ),
+                      ],),
                     ],
                   ),
                   Spacer(),
