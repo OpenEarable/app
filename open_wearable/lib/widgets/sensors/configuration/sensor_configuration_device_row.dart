@@ -8,6 +8,7 @@ import 'package:open_wearable/widgets/sensors/configuration/sensor_configuration
 import 'package:provider/provider.dart';
 
 import '../../../view_models/sensor_configuration_provider.dart';
+import '../../devices/device_detail/stereo_pos_label.dart';
 
 /// A widget that displays a list of sensor configurations for a device.
 class SensorConfigurationDeviceRow extends StatefulWidget {
@@ -53,9 +54,16 @@ class _SensorConfigurationDeviceRowState extends State<SensorConfigurationDevice
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           PlatformListTile(
-            title: PlatformText(
-              device.name,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                PlatformText(
+                  device.name,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                if (device is StereoDevice)
+                  StereoPosLabel(device: device as StereoDevice),
+              ],
             ),
             trailing: _buildTabBar(context),
           ),
