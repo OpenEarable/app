@@ -67,7 +67,10 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                   children: [
                     BatteryStateView(device: widget.device),
                     if (widget.device is StereoDevice)
-                      StereoPosLabel(device: widget.device as StereoDevice),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8.0),
+                        child: StereoPosLabel(device: widget.device as StereoDevice),
+                      ),
                   ],
                 ),
                 if (wearableIconPath != null)

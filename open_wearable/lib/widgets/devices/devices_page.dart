@@ -12,6 +12,7 @@ import 'package:open_wearable/widgets/devices/device_detail/device_detail_page.d
 import 'package:provider/provider.dart';
 
 import '../../view_models/sensor_recorder_provider.dart';
+import 'device_detail/stereo_pos_label.dart';
 
 /// On this page the user can see all connected devices.
 ///
@@ -273,37 +274,16 @@ class DeviceRow extends StatelessWidget {
                       Row(children: [
                         BatteryStateView(device: _device),
                         if (_device is StereoDevice)
-                          FutureBuilder(
-                            future: (_device as StereoDevice).position,
-                            builder: (context, snapshot) {
-                              if (snapshot.connectionState ==
-                                  ConnectionState.waiting) {
-                                return PlatformCircularProgressIndicator();
-                              }
-                              if (snapshot.hasError) {
-                                return PlatformText("Error: ${snapshot.error}");
-                              }
-                              if (!snapshot.hasData) {
-                                return PlatformText("N/A");
-                              }
-                              if (snapshot.data == null) {
-                                return PlatformText("N/A");
-                              }
-                              switch (snapshot.data) {
-                                case DevicePosition.left:
-                                  return PlatformText("Left");
-                                case DevicePosition.right:
-                                  return PlatformText("Right");
-                                default:
-                                  return PlatformText("Unknown");
-                              }
-                            },
+                          Padding(
+                            padding: EdgeInsets.only(left: 8.0),
+                            child: StereoPosLabel(device: _device as StereoDevice),
                           ),
-                      ],),
-                    ],
-                  ),
-                  Spacer(),
-                  if (_device is DeviceIdentifier)
+                      ],
+                    ),
+                  ],
+                ),
+                Spacer(),
+                if (_device is DeviceIdentifier)
                     FutureBuilder(
                       future:
                           (_device as DeviceIdentifier).readDeviceIdentifier(),
