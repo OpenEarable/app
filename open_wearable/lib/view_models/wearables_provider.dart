@@ -9,11 +9,12 @@ class WearablesProvider with ChangeNotifier {
   List<Wearable> get wearables => _wearables;
   Map<Wearable, SensorConfigurationProvider> get sensorConfigurationProviders => _sensorConfigurationProviders;
 
-  void addWearable(Wearable wearable) {
+  void addWearable(Wearable wearable) async {
     // ignore all wearables that are already added
     if (_wearables.any((w) => w.deviceId == wearable.deviceId)) {
       return;
     }
+
     _wearables.add(wearable);
     if (wearable is SensorConfigurationManager) {
       if (!_sensorConfigurationProviders.containsKey(wearable)) {
@@ -33,6 +34,21 @@ class WearablesProvider with ChangeNotifier {
       removeWearable(wearable);
       notifyListeners();
     });
+
+    if (wearable is StereoDevice) {
+      if (await (wearable as StereoDevice).pairedDevice == null) {
+        List<StereoDevice> possiblePairs =
+          await WearableManager().findValidPairsFor((wearable as StereoDevice), _wearables.whereType<StereoDevice>().toList());
+
+        logger.d("possible pairs: $possiblePairs");
+
+        if (possiblePairs.isNotEmpty) {
+          (wearable as StereoDevice).pair(possiblePairs.first);
+          logger.i("Paired ${wearable.name} with ${(wearable as StereoDevice).pairedDevice}");
+        }
+      }
+    }
+    
     notifyListeners();
   }
 
