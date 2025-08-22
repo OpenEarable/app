@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import 'rgb_control.dart';
 import 'microphone_selection_widget.dart';
 import 'status_led_widget.dart';
+import 'stereo_pos_label.dart';
 
 /// A page that displays the details of a device.
 ///
@@ -61,7 +62,14 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                   widget.device.name,
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
-                BatteryStateView(device: widget.device),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    BatteryStateView(device: widget.device),
+                    if (widget.device is StereoDevice)
+                      StereoPosLabel(device: widget.device as StereoDevice),
+                  ],
+                ),
                 if (wearableIconPath != null)
                   SvgPicture.asset(wearableIconPath, width: 100, height: 100),
                 PlatformElevatedButton(
