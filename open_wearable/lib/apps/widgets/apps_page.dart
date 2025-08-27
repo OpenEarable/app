@@ -9,6 +9,8 @@ import 'package:open_wearable/apps/widgets/select_earable_view.dart';
 import 'package:open_wearable/apps/widgets/app_tile.dart';
 
 import '../../widgets/devices/connect_devices_page.dart';
+import '../stroke_tracker_data/widgets/introduction_page.dart';
+import 'select_two_earable_view.dart';
 
 class AppInfo {
   final String logoPath;
@@ -63,6 +65,14 @@ List<AppInfo> _apps = [
         );
       },
     ),
+  ),
+  AppInfo(
+    logoPath: "",
+    title: "Stroke Test Data",
+    description: "Collect data for the stroke test.",
+    widget: SelectTwoEarableView(startApp: (leftWearable, leftConfigProv, rightWearable, rightConfigProv) {
+      return IntroductionPage();
+    },),
   ),
 ];
 
