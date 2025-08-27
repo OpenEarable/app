@@ -37,6 +37,10 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
 
+    <!-- camera and audio permissions -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
     <!-- internet persmission, for fetching firmware update -->
     <uses-permission android:name="android.permission.INTERNET"/>
 </manifest>
