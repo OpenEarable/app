@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 class AssetVideoPlayer extends StatefulWidget {
-  final String assetPath;
-  const AssetVideoPlayer({super.key, required this.assetPath});
+  final VideoPlayerController _controller;
+  const AssetVideoPlayer({super.key, required VideoPlayerController controller})
+      : _controller = controller;
 
   @override
   State<AssetVideoPlayer> createState() => _AssetVideoPlayerState();
@@ -16,11 +17,12 @@ class _AssetVideoPlayerState extends State<AssetVideoPlayer> {
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.asset(widget.assetPath);
+    _controller = widget._controller;
     _initFuture = _controller.initialize().then((_) {
       setState(() {}); // refresh once ready
     });
-    _controller.setLooping(true);
+    _controller.setLooping(false);
+    _controller.play();
   }
 
   @override
@@ -41,8 +43,7 @@ class _AssetVideoPlayerState extends State<AssetVideoPlayer> {
               alignment: Alignment.bottomCenter,
               children: [
                 VideoPlayer(_controller),
-                _ControlsOverlay(controller: _controller),
-                VideoProgressIndicator(_controller, allowScrubbing: true),
+                VideoProgressIndicator(_controller, allowScrubbing: false),
               ],
             ),
           );
@@ -50,28 +51,6 @@ class _AssetVideoPlayerState extends State<AssetVideoPlayer> {
           return const Center(child: CircularProgressIndicator());
         }
       },
-    );
-  }
-}
-
-class _ControlsOverlay extends StatelessWidget {
-  final VideoPlayerController controller;
-  const _ControlsOverlay({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        controller.value.isPlaying ? controller.pause() : controller.play();
-      },
-      child: Stack(
-        children: [
-          if (!controller.value.isPlaying)
-            const Center(
-              child: Icon(Icons.play_arrow, size: 64, color: Colors.white),
-            ),
-        ],
-      ),
     );
   }
 }
