@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:open_wearable/apps/stroke_tracker_data/widgets/asset_video_player.dart';
 import 'package:provider/provider.dart';
 
 import '../controller/stroke_test_flow_controller.dart';
@@ -21,7 +22,7 @@ class TestExplanationPage extends StatelessWidget {
           Text(strokeTest.description),
         ],
       ),
-      body: Text("Body"),
+      body: AssetVideoPlayer(assetPath: strokeTest.explainerVideoAsset ?? ''),
       redoHidden: true,
     );
   }

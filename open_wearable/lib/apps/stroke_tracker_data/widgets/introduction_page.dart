@@ -10,6 +10,8 @@ class IntroductionPage extends StatelessWidget {
       title: 'Test 1',
       description: 'Description for Test 1',
       id: 'Prep',
+      explainerVideoAsset: 'lib/apps/stroke_tracker_data/assets/example-video.mp4',
+      recordingDuration: Duration(seconds: 10),
     ),
     StrokeTest(
       title: 'Test 2',
