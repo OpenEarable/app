@@ -64,6 +64,9 @@ class TestRecordPage extends StatelessWidget {
             Center(child: CountdownView()),
         ],
       ),
+      redoHidden: true,
+      nextHidden: true,
+      timerHidden: ctrl.currentStage != StrokeTestStage.recording,
     );
   }
 }
