@@ -13,6 +13,9 @@ class TestStagePage extends StatelessWidget {
   final Widget body;
   final bool nextHidden;
   final bool redoHidden;
+  final bool timerHidden;
+
+  final void Function()? onRedo;
 
   const TestStagePage({
     super.key,
@@ -20,6 +23,8 @@ class TestStagePage extends StatelessWidget {
     required this.body,
     this.nextHidden = false,
     this.redoHidden = false,
+    this.timerHidden = false,
+    this.onRedo,
   });
 
   @override
@@ -67,38 +72,40 @@ class TestStagePage extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Directionality(
                       textDirection: Directionality.of(context),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          CountdownView(compact: true,),
-                          // Leading corner: Redo
-                          if (!redoHidden)
-                            PlatformIconButton(
-                              icon: const Icon(Icons.refresh),
-                              onPressed: () {
-                                // TODO: redo current stage
-                              },
-                              cupertino: (_, __) =>
-                                  CupertinoIconButtonData(padding: EdgeInsets.zero),
-                              material: (_, __) =>
-                                  MaterialIconButtonData(padding: EdgeInsets.zero),
-                            )
-                          else
-                            const SizedBox(width: 48), // keep spacing symmetric
+                          if (!timerHidden)
+                            CountdownView(),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              // Leading corner: Redo
+                              if (!redoHidden)
+                                PlatformElevatedButton(
+                                  child: const Icon(Icons.refresh),
+                                  onPressed: () {
+                                    onRedo?.call();
+                                  },
+                                )
+                              else
+                                const SizedBox(width: 48), // keep spacing symmetric
 
-                          // Trailing corner: Next
-                          if (!nextHidden)
-                            PlatformElevatedButton(
-                              child: const Text('Next'),
-                              onPressed: () {
-                                if (ctrl.currentStage == StrokeTestStage.completed) {
-                                  // TODO: advance to next test or finish
-                                }
-                                context.read<StrokeTestFlowController>().nextStage();
-                              },
-                            )
-                          else
-                            const SizedBox(width: 48),
+                              // Trailing corner: Next
+                              if (!nextHidden)
+                                PlatformElevatedButton(
+                                  child: const Text('Next'),
+                                  onPressed: () {
+                                    if (ctrl.currentStage == StrokeTestStage.completed) {
+                                      // TODO: advance to next test or finish
+                                    }
+                                    context.read<StrokeTestFlowController>().nextStage();
+                                  },
+                                )
+                              else
+                                const SizedBox(width: 48),
+                            ],
+                          ),
                         ],
                       ),
                     ),
