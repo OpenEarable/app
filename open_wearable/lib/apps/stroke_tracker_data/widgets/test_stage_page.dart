@@ -31,7 +31,7 @@ class TestStagePage extends StatelessWidget {
     return PlatformScaffold(
       // Keep the native-looking title bar; content goes behind custom header/footer
       appBar: PlatformAppBar(
-        title: PlatformText('Stroke Tracker Data Collection'),
+        title: PlatformText(ctrl.currentTest?.title ?? "No Test"),
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {

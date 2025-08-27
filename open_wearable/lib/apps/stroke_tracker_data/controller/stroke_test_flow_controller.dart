@@ -36,11 +36,9 @@ class StrokeTestFlowController with ChangeNotifier {
   StrokeTestFlowController({List<StrokeTest> strokeTests = const []})
       : _strokeTests = strokeTests;
 
-  StrokeTest next() {
-    if (isLast) {
-      throw StateError('No more tests available');
-    }
+  StrokeTest? next() {
     _testIndex++;
+    setStage(StrokeTestStage.explanation);
     notifyListeners();
     return currentTest!;
   }

@@ -4,8 +4,8 @@ import 'package:provider/provider.dart';
 
 import '../controller/stroke_test_flow_controller.dart';
 import '../models/stroke_test.dart';
+import 'no_tests_left_page.dart';
 import 'test_explanation_page.dart';
-import 'test_prep_page.dart';
 
 class StrokeTestRunnerPage extends StatelessWidget {
   final List<StrokeTest> strokeTests;
@@ -26,23 +26,15 @@ class _RunnerScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<StrokeTestFlowController>(
       builder: (context, ctrl, child) {
-        Widget body;
-        switch (ctrl.currentStage) {
-          case StrokeTestStage.explanation:
-            body = TestExplanationPage();
-            break;
-          case StrokeTestStage.preparation:
-            body = TestPrepPage();
-            break;
-          case StrokeTestStage.recording:
-            body = TestRecordPage();
-            break;
-          case StrokeTestStage.completed:
-            body = Center(child: Text('Completed: '));
-            break;
+        if (ctrl.currentTest == null) {
+          return NoTestsLeftPage();
         }
-
-        return body;
+        return switch (ctrl.currentStage) {
+          StrokeTestStage.explanation => TestExplanationPage(),
+          StrokeTestStage.preparation => TestRecordPage(),
+          StrokeTestStage.recording => TestRecordPage(),
+          StrokeTestStage.completed => TestRecordPage(),
+        };
       },
     );
   }
