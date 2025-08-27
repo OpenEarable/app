@@ -52,6 +52,7 @@ dependencies:
   file_selector: ^1.0.3
   path_provider: ^2.1.5
   camera: ^0.11.2
+  video_player: ^2.10.0
 
 dev_dependencies:
   flutter_test:
@@ -79,6 +80,7 @@ flutter:
   assets:
     - lib/apps/posture_tracker/assets/
     - lib/apps/heart_tracker/assets/
+    - lib/apps/stroke_tracker_data/assets/
 
   # An image asset can refer to one or more resolution-specific "variants", seeq
   # https://flutter.dev/to/resolution-aware-images
