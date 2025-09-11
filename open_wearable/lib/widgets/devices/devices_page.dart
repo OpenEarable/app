@@ -320,6 +320,29 @@ class DeviceRow extends StatelessWidget {
                         return PlatformText(snapshot.data.toString());
                       },
                     ),
+                    FutureBuilder(
+                      future: (_device as DeviceFirmwareVersion)
+                          .isFirmwareSupported(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return PlatformCircularProgressIndicator();
+                        }
+                        if (snapshot.hasError) {
+                          return PlatformText("Error: ${snapshot.error}");
+                        }
+                        if (snapshot.data == false) {
+                          return Padding(
+                            padding: const EdgeInsets.only(left: 8.0),
+                            child: Icon(
+                              PlatformIcons(context).error,
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          );
+                        }
+                        return Container();
+                      },
+                    ),
                   ],
                 ),
               if (_device is DeviceHardwareVersion)
