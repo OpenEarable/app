@@ -54,34 +54,37 @@ class _MyAppState extends State<MyApp> {
   StreamSubscription? _unsupportedFirmwareSub;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Avoid re-subscribing on hot reload
-    _unsupportedFirmwareSub ??=
-        context.read<WearablesProvider>().unsupportedFirmwareStream.listen((evt) async {
-      final ctx = rootNavigatorKey.currentContext;
-      if (ctx == null) return;
-      if (!mounted) return;
+  void initState() {
+    super.initState();
 
-      // Guard context usage with mounted check after async gap
-      await showPlatformDialog(
-        context: ctx,
-        builder: (_) => PlatformAlertDialog(
-          title: const Text('Firmware nicht unterstützt'),
-          content: Text(
-            'The device "${evt.wearable.name}" has a firmware unsupported by this app. '
-            'Please update the app to ensure all features are working as expected.',
-          ),
-          actions: <Widget>[
-            PlatformDialogAction(
-              cupertino: (_, __) => CupertinoDialogActionData(isDefaultAction: true),
-              child: const Text('OK'),
-              onPressed: () {
-                if (!mounted) return;
-                Navigator.of(ctx, rootNavigator: true).pop();
-              },
+    // Read provider without listening, allowed in initState with Provider
+    final wearables = context.read<WearablesProvider>();
+
+    _unsupportedFirmwareSub = wearables.unsupportedFirmwareStream.listen((evt) {
+      // No async/await here. No widget context usage either.
+      final nav = rootNavigatorKey.currentState;
+      if (nav == null || !mounted) return;
+
+      // Push a dialog route via NavigatorState (no BuildContext from this widget)
+      nav.push(
+        DialogRoute<void>(
+          context: rootNavigatorKey.currentContext!, // from navigator, not this widget
+          barrierDismissible: true,
+          builder: (_) => PlatformAlertDialog(
+            title: const Text('Firmware unsupported'),
+            content: Text(
+              'The device "${evt.wearable.name}" has a firmware unsupported by this app. '
+              'Please update the app to ensure all features are working as expected.',
             ),
-          ],
+            actions: <Widget>[
+              PlatformDialogAction(
+                cupertino: (_, __) => CupertinoDialogActionData(isDefaultAction: true),
+                child: const Text('OK'),
+                // Close via navigator state; no widget context
+                onPressed: () => rootNavigatorKey.currentState?.pop(),
+              ),
+            ],
+          ),
         ),
       );
     });
