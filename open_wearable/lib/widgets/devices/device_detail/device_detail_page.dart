@@ -134,24 +134,48 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                   "Firmware Version",
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
-                subtitle: FutureBuilder(
-                  future: (widget.device as DeviceFirmwareVersion)
-                      .readDeviceFirmwareVersion(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.done) {
-                      return PlatformText(snapshot.data.toString());
-                    } else {
-                      return Align(
-                        alignment: Alignment.centerLeft,
-                        child: SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: PlatformCircularProgressIndicator(),
-                        ),
-                      );
-                    }
-                  },
-                ),
+                subtitle: Row(children: [
+                  FutureBuilder(
+                    future: (widget.device as DeviceFirmwareVersion)
+                        .readDeviceFirmwareVersion(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.done) {
+                        return PlatformText(snapshot.data.toString());
+                      } else {
+                        return Align(
+                          alignment: Alignment.centerLeft,
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: PlatformCircularProgressIndicator(),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  FutureBuilder(
+                    future: (widget.device as DeviceFirmwareVersion)
+                        .isFirmwareSupported(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.done) {
+                        final supported = snapshot.data ?? true;
+                        if (supported) {
+                          return Padding(
+                            padding: const EdgeInsets.only(left: 8.0),
+                            child: Icon(Icons.check_circle, color: Colors.green),
+                          );
+                        } else {
+                          return Padding(
+                            padding: const EdgeInsets.only(left: 8.0),
+                            child: Icon(Icons.error, color: Colors.red),
+                          );
+                        }
+                      } else {
+                        return Container();
+                      }
+                    },
+                  ),
+                ],),
                 trailing: PlatformIconButton(
                   icon: Icon(Icons.upload),
                   onPressed: () {
