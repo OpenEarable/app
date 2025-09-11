@@ -19,54 +19,93 @@ class WearablesProvider with ChangeNotifier {
   final _unsupportedFirmwareEventsController = StreamController<UnsupportedFirmwareEvent>.broadcast();
   Stream<UnsupportedFirmwareEvent> get unsupportedFirmwareStream => _unsupportedFirmwareEventsController.stream;
 
-  void addWearable(Wearable wearable) async {
-    // ignore all wearables that are already added
+  void addWearable(Wearable wearable) {
+    // 1) Fast path: ignore duplicates and push into lists/maps synchronously
     if (_wearables.any((w) => w.deviceId == wearable.deviceId)) {
       return;
     }
 
     _wearables.add(wearable);
-    if (wearable is SensorConfigurationManager) {
-      if (!_sensorConfigurationProviders.containsKey(wearable)) {
-        _sensorConfigurationProviders[wearable] = SensorConfigurationProvider(
-          sensorConfigurationManager: wearable as SensorConfigurationManager,
-        );
-      }
 
-      SensorConfigurationProvider notifier = _sensorConfigurationProviders[wearable]!;
-      for (SensorConfiguration config in (wearable as SensorConfigurationManager).sensorConfigurations) {
-        if (notifier.getSelectedConfigurationValue(config) == null) {
+    // Init SensorConfigurationProvider synchronously (no awaits here)
+    if (wearable is SensorConfigurationManager) {
+      _ensureSensorConfigProvider(wearable);
+      final notifier = _sensorConfigurationProviders[wearable]!;
+      for (final config in (wearable as SensorConfigurationManager).sensorConfigurations) {
+        if (notifier.getSelectedConfigurationValue(config) == null && config.values.isNotEmpty) {
           notifier.addSensorConfiguration(config, config.values.first);
         }
       }
     }
+
+    // Disconnect listener (sync)
     wearable.addDisconnectListener(() {
       removeWearable(wearable);
       notifyListeners();
     });
 
-    if (wearable is StereoDevice) {
-      if (await (wearable as StereoDevice).pairedDevice == null) {
-        List<StereoDevice> possiblePairs =
-          await WearableManager().findValidPairsFor((wearable as StereoDevice), _wearables.whereType<StereoDevice>().toList());
-
-        logger.d("possible pairs: $possiblePairs");
-
-        if (possiblePairs.isNotEmpty) {
-          (wearable as StereoDevice).pair(possiblePairs.first);
-          logger.i("Paired ${wearable.name} with ${(wearable as StereoDevice).pairedDevice}");
-        }
-      }
-    }
-
-    if (wearable is DeviceFirmwareVersion) {
-      bool isFirmwareSupported = await (wearable as DeviceFirmwareVersion).isFirmwareSupported();
-      if (!isFirmwareSupported) {
-        _unsupportedFirmwareEventsController.add(UnsupportedFirmwareEvent(wearable));
-      }
-    }
-    
+    // Notify ASAP so UI updates with the newly connected device
     notifyListeners();
+
+    // 2) Slow/async work: run in microtasks so it doesn't block the add
+    // Stereo pairing (if applicable)
+    if (wearable is StereoDevice) {
+      Future.microtask(() => _maybeAutoPairStereoAsync(wearable as StereoDevice));
+    }
+
+    // Firmware support check (if applicable)
+    if (wearable is DeviceFirmwareVersion) {
+      Future.microtask(() => _maybeEmitUnsupportedFirmwareAsync(wearable as DeviceFirmwareVersion));
+    }
+  }
+
+  // --- Helpers ---------------------------------------------------------------
+
+  void _ensureSensorConfigProvider(Wearable wearable) {
+    if (!_sensorConfigurationProviders.containsKey(wearable)) {
+      _sensorConfigurationProviders[wearable] = SensorConfigurationProvider(
+        sensorConfigurationManager: wearable as SensorConfigurationManager,
+      );
+    }
+  }
+
+  /// Attempts to pair a stereo device with a matching partner among the
+  /// already-known wearables. Runs asynchronously and logs results.
+  /// Non-blocking for the caller.
+  Future<void> _maybeAutoPairStereoAsync(StereoDevice stereo) async {
+    try {
+      final alreadyPaired = await stereo.pairedDevice;
+      if (alreadyPaired != null) return;
+
+      final stereoList = _wearables.whereType<StereoDevice>().toList();
+      final possiblePairs = await WearableManager().findValidPairsFor(stereo, stereoList);
+
+      logger.d('possible pairs for ${stereo.toString()}: $possiblePairs');
+
+      if (possiblePairs.isNotEmpty) {
+        await stereo.pair(possiblePairs.first);
+        final partner = await stereo.pairedDevice;
+        logger.i('Paired ${(stereo as Wearable).name} with $partner');
+      }
+    } catch (e, st) {
+      logger.w('Auto-pair failed for ${(stereo as Wearable).name}: $e\n$st');
+    }
+  }
+
+  /// Checks firmware support and emits the event if unsupported.
+  /// Non-blocking for the caller.
+  Future<void> _maybeEmitUnsupportedFirmwareAsync(DeviceFirmwareVersion dev) async {
+    try {
+      // In your abstraction, isFirmwareSupported is a Future<bool> getter.
+      final supported = await dev.isFirmwareSupported();
+      if (!supported) {
+        _unsupportedFirmwareEventsController.add(
+          UnsupportedFirmwareEvent(dev as Wearable),
+        );
+      }
+    } catch (e, st) {
+      logger.w('Firmware check failed for ${(dev as Wearable).name}: $e\n$st');
+    }
   }
 
   void removeWearable(Wearable wearable) {
