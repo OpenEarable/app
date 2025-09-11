@@ -1,6 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
+
+class UnsupportedFirmwareEvent {
+  final Wearable wearable;
+  UnsupportedFirmwareEvent(this.wearable);
+}
 
 class WearablesProvider with ChangeNotifier {
   final List<Wearable> _wearables = [];
@@ -8,6 +15,9 @@ class WearablesProvider with ChangeNotifier {
 
   List<Wearable> get wearables => _wearables;
   Map<Wearable, SensorConfigurationProvider> get sensorConfigurationProviders => _sensorConfigurationProviders;
+
+  final _unsupportedFirmwareEventsController = StreamController<UnsupportedFirmwareEvent>.broadcast();
+  Stream<UnsupportedFirmwareEvent> get unsupportedFirmwareStream => _unsupportedFirmwareEventsController.stream;
 
   void addWearable(Wearable wearable) async {
     // ignore all wearables that are already added
@@ -46,6 +56,13 @@ class WearablesProvider with ChangeNotifier {
           (wearable as StereoDevice).pair(possiblePairs.first);
           logger.i("Paired ${wearable.name} with ${(wearable as StereoDevice).pairedDevice}");
         }
+      }
+    }
+
+    if (wearable is DeviceFirmwareVersion) {
+      bool isFirmwareSupported = await (wearable as DeviceFirmwareVersion).isFirmwareSupported();
+      if (!isFirmwareSupported) {
+        _unsupportedFirmwareEventsController.add(UnsupportedFirmwareEvent(wearable));
       }
     }
     
