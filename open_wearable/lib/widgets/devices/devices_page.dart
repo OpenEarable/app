@@ -11,7 +11,6 @@ import 'package:open_wearable/widgets/devices/connect_devices_page.dart';
 import 'package:open_wearable/widgets/devices/device_detail/device_detail_page.dart';
 import 'package:provider/provider.dart';
 
-import '../../view_models/sensor_recorder_provider.dart';
 import 'device_detail/stereo_pos_label.dart';
 
 /// On this page the user can see all connected devices.
@@ -25,54 +24,6 @@ class DevicesPage extends StatefulWidget {
 }
 
 class _DevicesPageState extends State<DevicesPage> {
-  @override
-  void initState() {
-    super.initState();
-
-    _startBluetooth();
-  }
-
-  Future<void> _startBluetooth() async {
-    if (!await WearableManager().hasPermissions() && !Platform.isIOS) {
-      if (mounted) {
-        // show a dialog to request permissions
-        await showPlatformDialog(
-          context: context,
-          builder: (context) {
-            return PlatformAlertDialog(
-              title: PlatformText("Permissions Required"),
-              content: PlatformText(
-                "This app requires Bluetooth and Location permissions to function properly.\n"
-                "Location access is needed for Bluetooth scanning to work. Please enable both "
-                "Bluetooth and Location services and grant the necessary permissions.\n"
-                "No data will be collected or sent to any server and will remain only on your device.",
-              ),
-              actions: [
-                PlatformDialogAction(
-                  child: PlatformText("OK"),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                ),
-              ],
-            );
-          },
-        );
-      }
-    }
-
-    WearableManager().connectToSystemDevices().then((wearables) {
-      if (!mounted) return;
-      final provider = Provider.of<WearablesProvider>(context, listen: false);
-      final sensorRecorderProvider =
-          Provider.of<SensorRecorderProvider>(context, listen: false);
-      for (var wearable in wearables) {
-        provider.addWearable(wearable);
-        sensorRecorderProvider.addWearable(wearable);
-      }
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Consumer<WearablesProvider>(
@@ -116,7 +67,8 @@ class _DevicesPageState extends State<DevicesPage> {
     if (wearablesProvider.wearables.isEmpty) {
       return RefreshIndicator(
         onRefresh: () async {
-          await _startBluetooth();
+          // await _startBluetooth();
+          //TODO: implement refresh logic
         },
         child: ListView(
           children: [
