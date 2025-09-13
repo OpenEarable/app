@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/models/wearable_connector.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
 import 'package:open_wearable/widgets/home_page.dart';
 import 'package:provider/provider.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' as oe;
 
+import 'models/bluetooth_auto_connector.dart';
 import 'view_models/wearables_provider.dart';
 
 // 1) Global navigator key so we can open dialogs from anywhere
@@ -24,6 +26,7 @@ class CustomLogFilter extends LogFilter {
 }
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   oe.logger = Logger(level: Level.trace, filter: CustomLogFilter());
 
   runApp(
@@ -36,6 +39,7 @@ void main() {
         ChangeNotifierProvider(
           create: (context) => SensorRecorderProvider(),
         ),
+        Provider.value(value: WearableConnector()),
       ],
       child: const MyApp(),
     ),
@@ -50,17 +54,21 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
-  StreamSubscription? _unsupportedFirmwareSub;
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  late final StreamSubscription _unsupportedFirmwareSub;
+  late final StreamSubscription _wearableEventSub;
+  late final BluetoothAutoConnector _autoConnector;
 
   @override
   void initState() {
     super.initState();
 
-    // Read provider without listening, allowed in initState with Provider
-    final wearables = context.read<WearablesProvider>();
+    WidgetsBinding.instance.addObserver(this);
 
-    _unsupportedFirmwareSub = wearables.unsupportedFirmwareStream.listen((evt) {
+    // Read provider without listening, allowed in initState with Provider
+    final wearablesProvider = context.read<WearablesProvider>();
+
+    _unsupportedFirmwareSub = wearablesProvider.unsupportedFirmwareStream.listen((evt) {
       // No async/await here. No widget context usage either.
       final nav = rootNavigatorKey.currentState;
       if (nav == null || !mounted) return;
@@ -85,6 +93,34 @@ class _MyAppState extends State<MyApp> {
         ),
       );
     });
+
+    final WearableConnector connector = context.read<WearableConnector>();
+    
+    final SensorRecorderProvider sensorRecorderProvider = context.read<SensorRecorderProvider>();
+    _autoConnector = BluetoothAutoConnector(
+      navStateGetter: () => rootNavigatorKey.currentState,
+      wearableManager: WearableManager(),
+      connector: connector,
+    );
+
+    _wearableEventSub = connector.events.listen((event) {
+      if (event is WearableConnectEvent) {
+        wearablesProvider.addWearable(event.wearable);
+        sensorRecorderProvider.addWearable(event.wearable);
+      }
+    });
+
+    _autoConnector.start();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      _autoConnector.start();
+    } else if (state == AppLifecycleState.paused) {
+      _autoConnector.stop();
+    }
   }
 
   Text getUnsupportedAlertText(UnsupportedFirmwareEvent evt) {
@@ -108,7 +144,10 @@ class _MyAppState extends State<MyApp> {
 
   @override
   void dispose() {
-    _unsupportedFirmwareSub?.cancel();
+    _unsupportedFirmwareSub.cancel();
+    _wearableEventSub.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    _autoConnector.stop();
     super.dispose();
   }
 
