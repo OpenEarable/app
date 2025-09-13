@@ -4,10 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
-import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/fota/firmware_update.dart';
 import 'package:provider/provider.dart';
+
+import '../../models/wearable_connector.dart';
 
 Logger _logger = Logger();
 
@@ -125,11 +126,8 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
     });
 
     try {
-      Wearable wearable = await _wearableManager.connectToDevice(device);
-      Provider.of<WearablesProvider>(context, listen: false)
-          .addWearable(wearable);
-      Provider.of<SensorRecorderProvider>(context, listen: false)
-          .addWearable(wearable);
+      WearableConnector connector = context.read<WearableConnector>();
+      Wearable wearable = await connector.connect(device);
       setState(() {
         discoveredDevices.remove(device);
       });
@@ -144,6 +142,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
   }
 
   void checkForNewerFirmware(Wearable wearable) async {
+    // TODO: move this to wearablesProvider
     _logger.d('Checking for newer firmware for ${wearable.name}');
     if (wearable is DeviceFirmwareVersion) {
       final currentVersion =
