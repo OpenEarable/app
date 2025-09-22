@@ -4,9 +4,16 @@ import 'package:flutter/foundation.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 
-class UnsupportedFirmwareEvent {
+abstract class UnsupportedFirmwareEvent {
   final Wearable wearable;
   UnsupportedFirmwareEvent(this.wearable);
+}
+
+class FirmwareTooOldEvent extends UnsupportedFirmwareEvent {
+  FirmwareTooOldEvent(super.wearable);
+}
+class FirmwareTooNewEvent extends UnsupportedFirmwareEvent {
+  FirmwareTooNewEvent(super.wearable);
 }
 
 class WearablesProvider with ChangeNotifier {
@@ -97,11 +104,19 @@ class WearablesProvider with ChangeNotifier {
   Future<void> _maybeEmitUnsupportedFirmwareAsync(DeviceFirmwareVersion dev) async {
     try {
       // In your abstraction, isFirmwareSupported is a Future<bool> getter.
-      final supported = await dev.isFirmwareSupported();
-      if (!supported) {
-        _unsupportedFirmwareEventsController.add(
-          UnsupportedFirmwareEvent(dev as Wearable),
-        );
+      final supportStatus = await dev.checkFirmwareSupport();
+      switch (supportStatus) {
+        case FirmwareSupportStatus.supported:
+          // All good, nothing to do.
+          break;
+        case FirmwareSupportStatus.tooNew:
+          _unsupportedFirmwareEventsController.add(FirmwareTooNewEvent(dev as Wearable));
+          break;
+        case FirmwareSupportStatus.tooOld:
+          _unsupportedFirmwareEventsController.add(FirmwareTooOldEvent(dev as Wearable));
+        case FirmwareSupportStatus.unknown:
+          logger.w('Firmware support unknown for ${(dev as Wearable).name}');
+          break;
       }
     } catch (e, st) {
       logger.w('Firmware check failed for ${(dev as Wearable).name}: $e\n$st');

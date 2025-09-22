@@ -322,7 +322,7 @@ class DeviceRow extends StatelessWidget {
                     ),
                     FutureBuilder(
                       future: (_device as DeviceFirmwareVersion)
-                          .isFirmwareSupported(),
+                          .checkFirmwareSupport(),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState ==
                             ConnectionState.waiting) {
@@ -331,16 +331,24 @@ class DeviceRow extends StatelessWidget {
                         if (snapshot.hasError) {
                           return PlatformText("Error: ${snapshot.error}");
                         }
-                        if (snapshot.data == false) {
-                          return Padding(
-                            padding: const EdgeInsets.only(left: 8.0),
-                            child: Icon(
-                              PlatformIcons(context).error,
-                              color: Theme.of(context).colorScheme.error,
-                            ),
-                          );
+                        switch (snapshot.data) {
+                          case FirmwareSupportStatus.supported:
+                            return SizedBox.shrink();
+                          case FirmwareSupportStatus.tooOld:
+                          case FirmwareSupportStatus.tooNew:
+                            return Icon(
+                              Icons.warning,
+                              color: Colors.orange,
+                              size: 16,
+                            );
+                          case FirmwareSupportStatus.unknown:
+                          default:
+                            return Icon(
+                              Icons.help,
+                              color: Colors.grey,
+                              size: 16,
+                            );
                         }
-                        return Container();
                       },
                     ),
                   ],

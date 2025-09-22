@@ -72,10 +72,7 @@ class _MyAppState extends State<MyApp> {
           barrierDismissible: true,
           builder: (_) => PlatformAlertDialog(
             title: const Text('Firmware unsupported'),
-            content: Text(
-              'The device "${evt.wearable.name}" has a firmware unsupported by this app. '
-              'Please update the app to ensure all features are working as expected.',
-            ),
+            content: getUnsupportedAlertText(evt),
             actions: <Widget>[
               PlatformDialogAction(
                 cupertino: (_, __) => CupertinoDialogActionData(isDefaultAction: true),
@@ -88,6 +85,25 @@ class _MyAppState extends State<MyApp> {
         ),
       );
     });
+  }
+
+  Text getUnsupportedAlertText(UnsupportedFirmwareEvent evt) {
+    if (evt is FirmwareTooOldEvent) {
+      return const Text(
+        'The device has a firmware version that is too old and not supported by this app. '
+        'Please update the device firmware to ensure all features are working as expected.',
+      );
+    } else if (evt is FirmwareTooNewEvent) {
+      return const Text(
+        'The device has a firmware version that is too new and not supported by this app. '
+        'Please update the app to ensure all features are working as expected.',
+      );
+    } else {
+      return const Text(
+        'The device has a firmware unsupported by this app. '
+        'Please update the app and Firmware to the newest version to ensure all features are working as expected.',
+      );
+    }
   }
 
   @override

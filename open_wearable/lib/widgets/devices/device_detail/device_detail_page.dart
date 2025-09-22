@@ -155,20 +155,25 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                   ),
                   FutureBuilder(
                     future: (widget.device as DeviceFirmwareVersion)
-                        .isFirmwareSupported(),
+                        .checkFirmwareSupport(),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.done) {
-                        final supported = snapshot.data ?? true;
-                        if (supported) {
-                          return Padding(
-                            padding: const EdgeInsets.only(left: 8.0),
-                            child: Icon(Icons.check_circle, color: Colors.green),
-                          );
-                        } else {
-                          return Padding(
-                            padding: const EdgeInsets.only(left: 8.0),
-                            child: Icon(Icons.error, color: Colors.red),
-                          );
+                        switch (snapshot.data) {
+                          case FirmwareSupportStatus.supported:
+                            return SizedBox.shrink();
+                          case FirmwareSupportStatus.tooNew:
+                          case FirmwareSupportStatus.tooOld:
+                            return Padding(
+                              padding: const EdgeInsets.only(left: 8.0),
+                              child: Icon(Icons.warning, color: Colors.orange),
+                            );
+                          case FirmwareSupportStatus.unknown:
+                            return Padding(
+                              padding: const EdgeInsets.only(left: 8.0),
+                              child: Icon(Icons.help, color: Colors.grey),
+                            );
+                          default:
+                            return Container();
                         }
                       } else {
                         return Container();
