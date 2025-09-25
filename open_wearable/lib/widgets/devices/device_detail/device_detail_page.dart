@@ -75,12 +75,38 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                 ),
                 if (wearableIconPath != null)
                   SvgPicture.asset(wearableIconPath, width: 100, height: 100),
-                PlatformElevatedButton(
-                  child: PlatformText("Disconnect"),
-                  onPressed: () {
-                    widget.device.disconnect();
-                    Navigator.of(context).pop();
-                  },
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    if (widget.device is SystemDevice && (widget.device as SystemDevice).isConnectedViaSystem)
+                      PlatformElevatedButton(
+                        child: PlatformText("Forget Device"),
+                        onPressed: () {
+                          // Show an alert that the device has to be ignored via the system settings
+                          showPlatformDialog(
+                            context: context,
+                            builder: (_) => PlatformAlertDialog(
+                              title: PlatformText('Forget'),
+                              content: PlatformText('To disconnect this device permanently, please go to your system Bluetooth settings and ignore the device from there.'),
+                              actions: <Widget>[
+                                PlatformDialogAction(
+                                  cupertino: (_, __) => CupertinoDialogActionData(isDefaultAction: true),
+                                  child: PlatformText('OK'),
+                                  onPressed: () => Navigator.of(context).pop(),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    PlatformElevatedButton(
+                      child: PlatformText("Disconnect"),
+                      onPressed: () {
+                        widget.device.disconnect();
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),
