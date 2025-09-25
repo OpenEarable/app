@@ -27,7 +27,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
   final WearableManager _wearableManager = WearableManager();
   StreamSubscription? _scanSubscription;
 
-  List discoveredDevices = [];
+  List<DiscoveredDevice> discoveredDevices = [];
   Map<String, bool> connectingDevices = {};
 
   @override
@@ -120,7 +120,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
     });
   }
 
-  Future<void> _connectToDevice(device, context) async {
+  Future<void> _connectToDevice(DiscoveredDevice device, BuildContext context) async {
     setState(() {
       connectingDevices[device.id] = true;
     });
