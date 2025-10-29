@@ -36,9 +36,9 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   open_earable_flutter:
-    # git:
-    #   url: https://github.com/OpenEarable/open_earable_flutter.git
-    path: ../../open_earable_flutter
+    git:
+      url: https://github.com/OpenEarable/open_earable_flutter.git
+      ref: file_manager
   flutter_platform_widgets: ^7.0.1
   provider: ^6.1.2
   logger: ^2.5.0
