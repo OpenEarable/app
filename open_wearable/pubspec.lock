@@ -443,12 +443,11 @@ packages:
   open_earable_flutter:
     dependency: "direct main"
     description:
-      path: "."
-      ref: HEAD
-      resolved-ref: c20ece1d0936f3afeaae9978905d5d59a24a3e0d
-      url: "https://github.com/OpenEarable/open_earable_flutter.git"
-    source: git
-    version: "0.1.0"
+      name: open_earable_flutter
+      sha256: "16d8c76e332138afd6b94c49ff3dcfb1467724c1a85af6352f5c8616a06bee10"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.2.0"
   path:
     dependency: transitive
     description:
@@ -601,6 +600,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.1.5+1"
+  pub_semver:
+    dependency: transitive
+    description:
+      name: pub_semver
+      sha256: "5bfcf68ca79ef689f8990d1160781b4bad40a3bd5e5218ad4076ddb7f4081585"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.2.0"
   rxdart:
     dependency: transitive
     description:
