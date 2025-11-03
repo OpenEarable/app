@@ -9,6 +9,10 @@ abstract class UnsupportedFirmwareEvent {
   UnsupportedFirmwareEvent(this.wearable);
 }
 
+class FirmwareUnsupportedEvent extends UnsupportedFirmwareEvent {
+  FirmwareUnsupportedEvent(super.wearable);
+}
+
 class FirmwareTooOldEvent extends UnsupportedFirmwareEvent {
   FirmwareTooOldEvent(super.wearable);
 }
@@ -111,6 +115,9 @@ class WearablesProvider with ChangeNotifier {
           break;
         case FirmwareSupportStatus.tooNew:
           _unsupportedFirmwareEventsController.add(FirmwareTooNewEvent(dev as Wearable));
+          break;
+        case FirmwareSupportStatus.unsupported:
+          _unsupportedFirmwareEventsController.add(FirmwareUnsupportedEvent(dev as Wearable));
           break;
         case FirmwareSupportStatus.tooOld:
           _unsupportedFirmwareEventsController.add(FirmwareTooOldEvent(dev as Wearable));
