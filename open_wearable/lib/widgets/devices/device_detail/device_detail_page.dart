@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -210,6 +212,25 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                 trailing: PlatformIconButton(
                   icon: Icon(Icons.upload),
                   onPressed: () {
+                    if (Platform.isIOS || Platform.isMacOS) {
+                      // Show alert that firmware update is not supported on iOS/MacOS
+                      showPlatformDialog(
+                        context: context,
+                        builder: (_) => PlatformAlertDialog(
+                          title: PlatformText('Firmware Update'),
+                          content: PlatformText('Firmware update is not supported on iOS or MacOS devices at this time. Please use an Android device to update the firmware.'),
+                          actions: <Widget>[
+                            PlatformDialogAction(
+                              cupertino: (_, __) => CupertinoDialogActionData(isDefaultAction: true),
+                              child: PlatformText('OK'),
+                              onPressed: () => Navigator.of(context).pop(),
+                            ),
+                          ],
+                        ),
+                      );
+                      return;
+                    }
+
                     Provider.of<FirmwareUpdateRequestProvider>(
                       context,
                       listen: false,
