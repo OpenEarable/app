@@ -8,7 +8,6 @@ class FotaWarningPage extends StatelessWidget {
   const FotaWarningPage({super.key});
 
   Future<void> _openGitHubLink() async {
-    print("Opening GitHub link for manual update instructions");
     final uri = Uri.parse('https://github.com/OpenEarable/open-earable-2?tab=readme-ov-file#setup');
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.platformDefault);
