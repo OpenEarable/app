@@ -1,12 +1,10 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/widgets/devices/battery_state.dart';
 import 'package:open_wearable/widgets/devices/device_detail/audio_mode_widget.dart';
-import 'package:open_wearable/widgets/fota/firmware_update.dart';
+import 'package:open_wearable/widgets/fota/fota_warning_page.dart';
 import 'package:provider/provider.dart';
 
 import 'rgb_control.dart';
@@ -212,25 +210,6 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                 trailing: PlatformIconButton(
                   icon: Icon(Icons.upload),
                   onPressed: () {
-                    if (Platform.isIOS || Platform.isMacOS) {
-                      // Show alert that firmware update is not supported on iOS/MacOS
-                      showPlatformDialog(
-                        context: context,
-                        builder: (_) => PlatformAlertDialog(
-                          title: PlatformText('Firmware Update'),
-                          content: PlatformText('Firmware update is not supported on iOS or MacOS devices at this time. Please use an Android device to update the firmware.'),
-                          actions: <Widget>[
-                            PlatformDialogAction(
-                              cupertino: (_, __) => CupertinoDialogActionData(isDefaultAction: true),
-                              child: PlatformText('OK'),
-                              onPressed: () => Navigator.of(context).pop(),
-                            ),
-                          ],
-                        ),
-                      );
-                      return;
-                    }
-
                     Provider.of<FirmwareUpdateRequestProvider>(
                       context,
                       listen: false,
@@ -239,7 +218,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                     // Navigate to your firmware update screen
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (context) => const FirmwareUpdateWidget(),
+                        builder: (context) => const FotaWarningPage(),
                       ),
                     );
                   },
