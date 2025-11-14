@@ -73,10 +73,12 @@ class _FotaVerificationBannerState extends State<FotaVerificationBanner> {
 }
 
 void showFotaVerificationBanner(BuildContext context) {
-  final AppBanner banner = AppBanner(
-    content: const FotaVerificationBanner(),
-    backgroundColor: Colors.orange,
-  );
   final controller = Provider.of<AppBannerController>(context, listen: false);
-  controller.showBanner(banner, Duration(minutes: 3));
+  controller.showBanner((id) => AppBanner(
+      content: FotaVerificationBanner(key: ValueKey(id)),
+      backgroundColor: Colors.orange,
+      key: ValueKey(id),
+    ),
+    duration: Duration(minutes: 3),
+  );
 }
