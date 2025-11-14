@@ -6,11 +6,13 @@ import 'package:logger/logger.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/models/wearable_connector.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
+import 'package:open_wearable/widgets/global_app_banner_overlay.dart';
 import 'package:open_wearable/widgets/home_page.dart';
 import 'package:provider/provider.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' as oe;
 
 import 'models/bluetooth_auto_connector.dart';
+import 'view_models/app_banner_controller.dart';
 import 'view_models/wearables_provider.dart';
 
 // 1) Global navigator key so we can open dialogs from anywhere
@@ -40,6 +42,9 @@ void main() {
           create: (context) => SensorRecorderProvider(),
         ),
         Provider.value(value: WearableConnector()),
+        ChangeNotifierProvider(
+          create: (context) => AppBannerController(),
+        ),
       ],
       child: const MyApp(),
     ),
@@ -166,18 +171,19 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             elevation: 0,
           ),
         ),
-        builder: (context) => PlatformApp(
-          // 3) Attach the navigator key here
-          navigatorKey: rootNavigatorKey,
-          localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
-            DefaultMaterialLocalizations.delegate,
-            DefaultWidgetsLocalizations.delegate,
-            DefaultCupertinoLocalizations.delegate,
-          ],
-          title: 'Open Wearable',
-          home: const HeroMode(
-            enabled: false, //TODO: Remove this when Hero animations are fixed
-            child: HomePage(),
+        builder: (context) => GlobalAppBannerOverlay(
+          child: PlatformApp(
+            navigatorKey: rootNavigatorKey,
+            localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+              DefaultMaterialLocalizations.delegate,
+              DefaultWidgetsLocalizations.delegate,
+              DefaultCupertinoLocalizations.delegate,
+            ],
+            title: 'Open Wearable',
+            home: const HeroMode(
+              enabled: false, //TODO: Remove this when Hero animations are fixed
+              child: HomePage(),
+            ),
           ),
         ),
       ),

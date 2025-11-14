@@ -69,7 +69,7 @@ class _PostureTrackerViewState extends State<PostureTrackerView> {
     );
   }
 
-  List<Widget> _createHeadViews(postureTrackerViewModel) {
+  List<Widget> _createHeadViews(PostureTrackerViewModel postureTrackerViewModel) {
     return [
       this._buildHeadView(
           "lib/apps/posture_tracker/assets/Head_Front.png",

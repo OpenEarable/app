@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:open_wearable/widgets/fota/fota_verification_banner.dart';
 import '../logger_screen/logger_screen.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 
@@ -13,7 +14,16 @@ class UpdateStepView extends StatelessWidget {
   Widget build(BuildContext context) {
     final provider = context.watch<FirmwareUpdateRequestProvider>();
     final request = provider.updateParameters;
-    return BlocBuilder<UpdateBloc, UpdateState>(
+
+    return BlocConsumer<UpdateBloc, UpdateState>(
+      listener: (context, state) {
+        if (state is UpdateFirmwareStateHistory &&
+            state.isComplete &&
+            state.history.isNotEmpty &&
+            state.history.last is UpdateCompleteSuccess) {
+          showFotaVerificationBanner(context);
+        }
+      },
       builder: (context, state) {
         switch (state) {
           case UpdateInitial():
@@ -29,6 +39,7 @@ class UpdateStepView extends StatelessWidget {
                 ),
               ],
             );
+
           case UpdateFirmwareStateHistory():
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -82,7 +93,6 @@ class UpdateStepView extends StatelessWidget {
                     child: PlatformText('Update Again'),
                   ),
 
-                // Verification info + countdown
                 if (state.isComplete &&
                     state.history.last is UpdateCompleteSuccess)
                   Column(
@@ -96,11 +106,12 @@ class UpdateStepView extends StatelessWidget {
                         textAlign: TextAlign.start,
                       ),
                       const SizedBox(height: 8),
-                      const _VerificationCountdown(),
+                      const _VerificationCountdown(), // you can remove this once the global banner handles the timer
                     ],
                   ),
               ],
             );
+
           default:
             return PlatformText('Unknown state');
         }
@@ -155,7 +166,7 @@ class UpdateStepView extends StatelessWidget {
 }
 
 /// Small stateful widget that starts a 3-minute countdown when built.
-/// It appears only once the firmware upload completed successfully.
+/// You can delete this once the global banner shows the timer instead.
 class _VerificationCountdown extends StatefulWidget {
   const _VerificationCountdown();
 

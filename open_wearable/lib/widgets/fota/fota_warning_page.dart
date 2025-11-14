@@ -135,13 +135,20 @@ class FotaWarningPage extends StatelessWidget {
                             _NumberedStep(
                               number: '4.',
                               text: TextSpan(
+                                text: "Keep OpenEarable disconnected from charger during the update.",
+                              ),
+                            ),
+                            SizedBox(height: 8),
+                            _NumberedStep(
+                              number: '5.',
+                              text: TextSpan(
                                 text:
                                     'If you have two devices, power off the one that’s not being updated.',
                               ),
                             ),
                             SizedBox(height: 8),
                             _NumberedStep(
-                              number: '5.',
+                              number: '6.',
                               text: TextSpan(
                                 children: [
                                   TextSpan(
