@@ -1,21 +1,28 @@
-import 'package:flutter/widgets.dart';
-import 'package:open_wearable/widgets/app_banner.dart';
+import 'package:flutter/material.dart';
+
+import '../widgets/app_banner.dart';
 
 class AppBannerController with ChangeNotifier {
-  List<AppBanner> activeBanners = [];
+  final List<AppBanner> activeBanners = [];
+  int _nextId = 0;
 
-  Future<void> showBanner(AppBanner banner, Duration? duration) async {
-    activeBanners.add(banner);
+  int showBanner(AppBanner Function(int id) builder, {Duration? duration}) {
+    final id = _nextId++;
+    final banner = builder(id);
+    activeBanners.insert(0, banner);
+
     if (duration != null) {
       Future.delayed(duration, () {
         hideBanner(banner);
       });
     }
+
     notifyListeners();
+    return id;
   }
 
   void hideBanner(AppBanner banner) {
-    activeBanners.remove(banner);
+    activeBanners.removeWhere((b) => b.key == banner.key);
     notifyListeners();
   }
 }
