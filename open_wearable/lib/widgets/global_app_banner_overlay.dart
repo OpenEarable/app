@@ -15,6 +15,7 @@ class GlobalAppBannerOverlay extends StatelessWidget {
     return Consumer<AppBannerController>(
       builder: (context, controller, _) {
         final banners = controller.activeBanners;
+        final hasBanners = banners.isNotEmpty;
 
         // Use existing Directionality if present, otherwise default to LTR
         final textDirection =
@@ -26,26 +27,32 @@ class GlobalAppBannerOverlay extends StatelessWidget {
             alignment: Alignment.topLeft, // non-directional
             children: [
               child,
-              if (banners.isNotEmpty)
+
+              if (hasBanners)
                 Positioned(
-                  // show below the status bar / notch
                   top: MediaQuery.of(context).padding.top,
                   left: 0,
                   right: 0,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 8,
-                    ),
-                    child: Row(
-                      children: [
-                        for (final banner in banners)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: banner, // AppBanner is already a complete view
-                          ),
-                      ],
+                  child: SafeArea(
+                    bottom: false,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      // rubber-band even when only one banner
+                      physics: const BouncingScrollPhysics(
+                        parent: AlwaysScrollableScrollPhysics(),
+                      ),
+
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          for (final banner in banners)
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 8),
+                              child: banner,
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
