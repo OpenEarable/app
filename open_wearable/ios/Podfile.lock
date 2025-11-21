@@ -45,9 +45,8 @@ PODS:
     - Flutter
     - iOSMcuManagerLibrary (= 1.6)
     - SwiftProtobuf
-  - path_provider_foundation (0.0.1):
+  - objective_c (0.0.1):
     - Flutter
-    - FlutterMacOS
   - permission_handler_apple (9.3.0):
     - Flutter
   - SDWebImage (5.21.0):
@@ -69,7 +68,7 @@ DEPENDENCIES:
   - Flutter (from `Flutter`)
   - flutter_archive (from `.symlinks/plugins/flutter_archive/ios`)
   - mcumgr_flutter (from `.symlinks/plugins/mcumgr_flutter/ios`)
-  - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
+  - objective_c (from `.symlinks/plugins/objective_c/ios`)
   - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
   - universal_ble (from `.symlinks/plugins/universal_ble/darwin`)
   - url_launcher_ios (from `.symlinks/plugins/url_launcher_ios/ios`)
@@ -96,8 +95,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/flutter_archive/ios"
   mcumgr_flutter:
     :path: ".symlinks/plugins/mcumgr_flutter/ios"
-  path_provider_foundation:
-    :path: ".symlinks/plugins/path_provider_foundation/darwin"
+  objective_c:
+    :path: ".symlinks/plugins/objective_c/ios"
   permission_handler_apple:
     :path: ".symlinks/plugins/permission_handler_apple/ios"
   universal_ble:
@@ -109,12 +108,12 @@ SPEC CHECKSUMS:
   DKImagePickerController: 946cec48c7873164274ecc4624d19e3da4c1ef3c
   DKPhotoGallery: b3834fecb755ee09a593d7c9e389d8b5d6deed60
   file_picker: a0560bc09d61de87f12d246fc47d2119e6ef37be
-  file_selector_ios: f92e583d43608aebc2e4a18daac30b8902845502
+  file_selector_ios: ec57ec07954363dd730b642e765e58f199bb621a
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   flutter_archive: ad8edfd7f7d1bb12058d05424ba93e27d9930efe
   iOSMcuManagerLibrary: 4102a4595be1c69e5286d7f1520a733c82c30b0a
   mcumgr_flutter: 8c4a598cb1b4d10a9adbc0f13288334297185506
-  path_provider_foundation: 080d55be775b7414fd5a5ef3ac137b97b097e564
+  objective_c: 89e720c30d716b036faf9c9684022048eee1eee2
   permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
   SDWebImage: f84b0feeb08d2d11e6a9b843cb06d75ebf5b8868
   SwiftCBOR: ce5354ec8b660da2d6fc754462881119dbe1f963
