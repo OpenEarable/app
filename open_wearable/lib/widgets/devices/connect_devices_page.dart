@@ -120,7 +120,10 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
     });
   }
 
-  Future<void> _connectToDevice(DiscoveredDevice device, BuildContext context) async {
+  Future<void> _connectToDevice(
+    DiscoveredDevice device,
+    BuildContext context,
+  ) async {
     setState(() {
       connectingDevices[device.id] = true;
     });
