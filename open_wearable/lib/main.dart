@@ -2,36 +2,28 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:logger/logger.dart';
-import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 import 'package:open_wearable/models/log_file_manager.dart';
 import 'package:open_wearable/models/wearable_connector.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
 import 'package:open_wearable/widgets/global_app_banner_overlay.dart';
 import 'package:open_wearable/widgets/home_page.dart';
 import 'package:provider/provider.dart';
-import 'package:open_earable_flutter/open_earable_flutter.dart' as oe;
 
 import 'models/bluetooth_auto_connector.dart';
+import 'models/logger.dart';
 import 'view_models/app_banner_controller.dart';
 import 'view_models/wearables_provider.dart';
 
 // 1) Global navigator key so we can open dialogs from anywhere
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
-class CustomLogFilter extends LogFilter {
-  @override
-  bool shouldLog(LogEvent event) {
-    return !(event.message.contains('componentData') ||
-        event.message.contains('SensorData') ||
-        event.message.contains('Battery'));
-  }
-}
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  LogFileManager logFileManager = await LogFileManager.create(filter: CustomLogFilter());
-  oe.logger = logFileManager.logger;
+  LogFileManager logFileManager =
+      await LogFileManager.create();
+  initOpenWearableLogger(logFileManager.libLogger);
+  initLogger(logFileManager.logger);
 
   runApp(
     MultiProvider(
@@ -76,7 +68,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     // Read provider without listening, allowed in initState with Provider
     final wearablesProvider = context.read<WearablesProvider>();
 
-    _unsupportedFirmwareSub = wearablesProvider.unsupportedFirmwareStream.listen((evt) {
+    _unsupportedFirmwareSub =
+        wearablesProvider.unsupportedFirmwareStream.listen((evt) {
       // No async/await here. No widget context usage either.
       final nav = rootNavigatorKey.currentState;
       if (nav == null || !mounted) return;
@@ -84,14 +77,16 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       // Push a dialog route via NavigatorState (no BuildContext from this widget)
       nav.push(
         DialogRoute<void>(
-          context: rootNavigatorKey.currentContext!, // from navigator, not this widget
+          context: rootNavigatorKey
+              .currentContext!, // from navigator, not this widget
           barrierDismissible: true,
           builder: (_) => PlatformAlertDialog(
             title: const Text('Firmware unsupported'),
             content: getUnsupportedAlertText(evt),
             actions: <Widget>[
               PlatformDialogAction(
-                cupertino: (_, __) => CupertinoDialogActionData(isDefaultAction: true),
+                cupertino: (_, __) =>
+                    CupertinoDialogActionData(isDefaultAction: true),
                 child: const Text('OK'),
                 // Close via navigator state; no widget context
                 onPressed: () => rootNavigatorKey.currentState?.pop(),
@@ -103,8 +98,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     });
 
     final WearableConnector connector = context.read<WearableConnector>();
-    
-    final SensorRecorderProvider sensorRecorderProvider = context.read<SensorRecorderProvider>();
+
+    final SensorRecorderProvider sensorRecorderProvider =
+        context.read<SensorRecorderProvider>();
     _autoConnector = BluetoothAutoConnector(
       navStateGetter: () => rootNavigatorKey.currentState,
       wearableManager: WearableManager(),
