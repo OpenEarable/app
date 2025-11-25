@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/models/log_file_manager.dart';
 import 'package:open_wearable/models/wearable_connector.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
 import 'package:open_wearable/widgets/global_app_banner_overlay.dart';
@@ -27,9 +28,10 @@ class CustomLogFilter extends LogFilter {
   }
 }
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  oe.logger = Logger(level: Level.trace, filter: CustomLogFilter());
+  LogFileManager logFileManager = await LogFileManager.create(filter: CustomLogFilter());
+  oe.logger = logFileManager.logger;
 
   runApp(
     MultiProvider(
@@ -45,6 +47,7 @@ void main() {
         ChangeNotifierProvider(
           create: (context) => AppBannerController(),
         ),
+        ChangeNotifierProvider.value(value: logFileManager),
       ],
       child: const MyApp(),
     ),
