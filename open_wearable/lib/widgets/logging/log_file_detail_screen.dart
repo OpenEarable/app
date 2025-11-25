@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
-class LogFileDetailScreen extends StatelessWidget {
+class LogFileDetailScreen extends StatefulWidget {
   const LogFileDetailScreen({
     super.key,
     required this.file,
@@ -11,15 +11,30 @@ class LogFileDetailScreen extends StatelessWidget {
   final File file;
 
   @override
+  State<LogFileDetailScreen> createState() => _LogFileDetailScreenState();
+}
+
+class _LogFileDetailScreenState extends State<LogFileDetailScreen> {
+  late final Future<String> _contentFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    // Read the file only once; FutureBuilder will reuse this future.
+    _contentFuture = widget.file.readAsString();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final fileName = file.path.split(Platform.pathSeparator).last;
+    final fileName =
+        widget.file.path.split(Platform.pathSeparator).last;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(fileName),
       ),
       body: FutureBuilder<String>(
-        future: file.readAsString(),
+        future: _contentFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
@@ -44,14 +59,30 @@ class LogFileDetailScreen extends StatelessWidget {
             );
           }
 
+          // Scrollbars + both directions scrolling, no line wrapping.
+          final verticalController = ScrollController();
+          final horizontalController = ScrollController();
+
           return Scrollbar(
+            controller: verticalController,
+            thumbVisibility: true,
             child: SingleChildScrollView(
+              controller: verticalController,
               padding: const EdgeInsets.all(12),
-              child: SelectableText(
-                content,
-                style: const TextStyle(
-                  fontFamily: 'monospace',
-                  fontSize: 12,
+              child: Scrollbar(
+                controller: horizontalController,
+                thumbVisibility: true,
+                notificationPredicate: (notif) =>
+                    notif.metrics.axis == Axis.horizontal,
+                child: SingleChildScrollView(
+                  controller: horizontalController,
+                  scrollDirection: Axis.horizontal,
+                  child: SelectableText(
+                    content,
+                    style: const TextStyle(
+                      fontSize: 12,
+                    ),
+                  ),
                 ),
               ),
             ),
