@@ -1,22 +1,39 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'package:path_provider/path_provider.dart';
 
+class _CustomLogFilter extends LogFilter {
+  @override
+  bool shouldLog(LogEvent event) {
+    return !(event.message.contains('componentData') ||
+        event.message.contains('SensorData') ||
+        event.message.contains('Battery') ||
+        event.message.contains('Mantissa'));
+  }
+}
+
 class LogFileManager with ChangeNotifier {
-  final Logger logger;
+  final Logger _logger;
+  final Logger _libLogger;
   final AdvancedFileOutput _fileOutput;
   final String logDirectoryPath;
 
+  Logger get logger => _logger;
+  Logger get libLogger => _libLogger;
+
   LogFileManager._({
-    required this.logger,
+    required Logger logger,
+    required Logger libLogger,
     required AdvancedFileOutput fileOutput,
     required this.logDirectoryPath,
-  }) : _fileOutput = fileOutput;
+  })  : _logger = logger,
+        _libLogger = libLogger,
+        _fileOutput = fileOutput;
 
   /// Async factory – call this once at startup.
-  static Future<LogFileManager> create({LogFilter? filter}) async {
+  static Future<LogFileManager> create() async {
     final cacheDir = await getApplicationDocumentsDirectory();
     final logDirPath = '${cacheDir.path}/logs';
     final logDir = Directory(logDirPath);
@@ -27,13 +44,51 @@ class LogFileManager with ChangeNotifier {
 
     final fileOutput = AdvancedFileOutput(
       path: logDirPath,
-      maxFileSizeKB: 1024,        // ~1 MB per file
-      maxRotatedFilesCount: 5,    // keep last 5 (tune as needed)
+      maxFileSizeKB: 1024, // ~1 MB per file
+      maxRotatedFilesCount: 5, // keep last 5 (tune as needed)
     );
+
+    LogFilter? filter;
+    LogFilter? libFilter;
+
+    LogPrinter printer = PrettyPrinter();
+
+    if (kDebugMode) {
+      libFilter = _CustomLogFilter();
+    } else {
+      filter = ProductionFilter();
+      libFilter = ProductionFilter();
+      printer = LogfmtPrinter();
+    }
 
     final logger = Logger(
       filter: filter,
-      printer: PrettyPrinter(),
+      printer: PrefixPrinter(
+        printer,
+        trace: '[APP] TRACE',
+        debug: '[APP] DEBUG',
+        info: '[APP] INFO',
+        warning: '[APP] WARN',
+        error: '[APP] ERR',
+        fatal: '[APP] FAT',
+      ),
+      output: MultiOutput([
+        ConsoleOutput(),
+        fileOutput,
+      ]),
+    );
+
+    final libLogger = Logger(
+      filter: libFilter,
+      printer: PrefixPrinter(
+        printer,
+        trace: '[LIB] TRACE',
+        debug: '[LIB] DEBUG',
+        info: '[LIB] INFO',
+        warning: '[LIB] WARN',
+        error: '[LIB] ERR',
+        fatal: '[LIB] FAT',
+      ),
       output: MultiOutput([
         ConsoleOutput(),
         fileOutput,
@@ -42,6 +97,7 @@ class LogFileManager with ChangeNotifier {
 
     return LogFileManager._(
       logger: logger,
+      libLogger: libLogger,
       fileOutput: fileOutput,
       logDirectoryPath: logDirPath,
     );
