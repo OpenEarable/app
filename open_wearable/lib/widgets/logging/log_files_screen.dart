@@ -3,11 +3,12 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../models/log_file_manager.dart';
+import '../../models/log_file_manager.dart';
+import '../../models/logger.dart';
+import 'log_file_detail_screen.dart';
 
 class LogFilesScreen extends StatelessWidget {
   const LogFilesScreen({super.key});
@@ -44,11 +45,12 @@ class LogFilesScreen extends StatelessWidget {
             padding: EdgeInsets.zero,
             icon: Icon(context.platformIcons.delete),
             onPressed: () async {
-              final manager =
-                  context.read<LogFileManager>();
+              final manager = context.read<LogFileManager>();
 
               final files = await manager.logFiles;
               if (files.isEmpty) return;
+
+              if (!context.mounted) return;
 
               final confirmed = await showPlatformDialog<bool>(
                 context: context,
@@ -122,71 +124,92 @@ class LogFilesScreen extends StatelessWidget {
                     final subtitle =
                         '${modified.toLocal().toIso8601String()} • $size';
 
-                    return PlatformWidget(
-                      material: (_, __) => ListTile(
-                        leading: const Icon(Icons.insert_drive_file),
-                        title: Text(file.path.split('/').last),
-                        subtitle: Text(subtitle),
-                        onTap: () => _shareFile(file),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.more_vert),
-                          onPressed: () => _showFileActionsSheet(
-                            context,
-                            file,
-                            manager,
-                            subtitle,
-                          ),
+                    return PlatformListTile(
+                      title: Text(file.path.split(Platform.pathSeparator).last),
+                      subtitle: Text(subtitle),
+                      leading: Icon(Icons.insert_drive_file),
+                      trailing: PlatformIconButton(
+                        padding: EdgeInsets.zero,
+                        icon: Icon(Icons.more_vert),
+                        onPressed: () => _showFileActionsSheet(
+                          context,
+                          file,
+                          manager,
+                          subtitle,
                         ),
                       ),
-                      cupertino: (_, __) => GestureDetector(
-                        onTap: () => _shareFile(file),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(CupertinoIcons.doc_plaintext),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      file.path.split('/').last,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      subtitle,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: CupertinoColors.systemGrey,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              PlatformIconButton(
-                                padding: EdgeInsets.zero,
-                                icon: Icon(context.platformIcons.ellipsis),
-                                onPressed: () => _showFileActionsSheet(
-                                  context,
-                                  file,
-                                  manager,
-                                  subtitle,
-                                ),
-                              ),
-                            ],
-                          ),
+                      onTap: () => Navigator.of(context).push(
+                        platformPageRoute(
+                          context: context,
+                          builder: (_) => LogFileDetailScreen(file: file),
                         ),
                       ),
                     );
+                    // PlatformWidget(
+                    //   material: (_, __) => ListTile(
+                    //     leading: const Icon(Icons.insert_drive_file),
+                    //     title: Text(file.path.split('/').last),
+                    //     subtitle: Text(subtitle),
+                    //     onTap: () => _shareFile(file),
+                    //     trailing: IconButton(
+                    //       icon: const Icon(Icons.more_vert),
+                    //       onPressed: () => _showFileActionsSheet(
+                    //         context,
+                    //         file,
+                    //         manager,
+                    //         subtitle,
+                    //       ),
+                    //     ),
+                    //   ),
+                    //   cupertino: (_, __) => GestureDetector(
+                    //     onTap: () => _shareFile(file),
+                    //     child: Container(
+                    //       padding: const EdgeInsets.symmetric(
+                    //         horizontal: 16,
+                    //         vertical: 12,
+                    //       ),
+                    //       child: Row(
+                    //         children: [
+                    //           const Icon(CupertinoIcons.doc_plaintext),
+                    //           const SizedBox(width: 12),
+                    //           Expanded(
+                    //             child: Column(
+                    //               crossAxisAlignment: CrossAxisAlignment.start,
+                    //               children: [
+                    //                 Text(
+                    //                   file.path.split('/').last,
+                    //                   style: const TextStyle(
+                    //                     fontSize: 16,
+                    //                     fontWeight: FontWeight.w500,
+                    //                   ),
+                    //                   overflow: TextOverflow.ellipsis,
+                    //                 ),
+                    //                 const SizedBox(height: 4),
+                    //                 Text(
+                    //                   subtitle,
+                    //                   style: const TextStyle(
+                    //                     fontSize: 12,
+                    //                     color: CupertinoColors.systemGrey,
+                    //                   ),
+                    //                 ),
+                    //               ],
+                    //             ),
+                    //           ),
+                    //           PlatformIconButton(
+                    //             padding: EdgeInsets.zero,
+                    //             icon: Icon(context.platformIcons.ellipsis),
+                    //             onPressed: () => _showFileActionsSheet(
+                    //               context,
+                    //               file,
+                    //               manager,
+                    //               subtitle,
+                    //             ),
+                    //           ),
+                    //         ],
+                    //       ),
+                    //     ),
+                    //   ),
+                    // );
                   },
                 );
               },
