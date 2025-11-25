@@ -7,6 +7,8 @@ import 'package:path_provider/path_provider.dart';
 class _CustomLogFilter extends LogFilter {
   @override
   bool shouldLog(LogEvent event) {
+    if (event.level < level!) return false;
+
     return !(event.message.contains('componentData') ||
         event.message.contains('SensorData') ||
         event.message.contains('Battery') ||
@@ -50,18 +52,21 @@ class LogFileManager with ChangeNotifier {
 
     LogFilter? filter;
     LogFilter? libFilter;
+    late final Level level;
 
     LogPrinter printer = PrettyPrinter();
 
     if (kDebugMode) {
       libFilter = _CustomLogFilter();
+      level = Level.trace;
     } else {
-      filter = ProductionFilter();
-      libFilter = ProductionFilter();
+      libFilter = _CustomLogFilter();
       printer = LogfmtPrinter();
+      level = Level.debug;
     }
 
     final logger = Logger(
+      level: level,
       filter: filter,
       printer: PrefixPrinter(
         printer,
