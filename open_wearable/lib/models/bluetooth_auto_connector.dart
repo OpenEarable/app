@@ -2,8 +2,9 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 
+import 'logger.dart';
 import 'wearable_connector.dart';
 
 class BluetoothAutoConnector {

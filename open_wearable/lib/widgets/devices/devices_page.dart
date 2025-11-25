@@ -9,7 +9,7 @@ import 'package:open_wearable/widgets/devices/connect_devices_page.dart';
 import 'package:open_wearable/widgets/devices/device_detail/device_detail_page.dart';
 import 'package:provider/provider.dart';
 
-import '../log_files_screen.dart';
+import '../logging/log_files_screen.dart';
 import 'device_detail/stereo_pos_label.dart';
 
 /// On this page the user can see all connected devices.

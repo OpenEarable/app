@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
+
+import '../models/logger.dart';
 
 abstract class UnsupportedFirmwareEvent {
   final Wearable wearable;
