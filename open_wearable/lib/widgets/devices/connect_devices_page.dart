@@ -2,15 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:logger/logger.dart';
-import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/fota/fota_warning_page.dart';
 import 'package:provider/provider.dart';
 
+import '../../models/logger.dart';
 import '../../models/wearable_connector.dart';
-
-Logger _logger = Logger();
 
 /// Page for connecting to devices
 ///
@@ -112,7 +110,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
     _scanSubscription = _wearableManager.scanStream.listen((incomingDevice) {
       if (incomingDevice.name.isNotEmpty &&
           !discoveredDevices.any((device) => device.id == incomingDevice.id)) {
-        _logger.d('Discovered device: ${incomingDevice.name}');
+        logger.d('Discovered device: ${incomingDevice.name}');
         setState(() {
           discoveredDevices.add(incomingDevice);
         });
@@ -133,7 +131,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
       });
       checkForNewerFirmware(wearable);
     } catch (e) {
-      _logger.e('Failed to connect to device: ${device.name}, error: $e');
+      logger.e('Failed to connect to device: ${device.name}, error: $e');
     } finally {
       setState(() {
         connectingDevices.remove(device.id);
@@ -143,7 +141,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
 
   void checkForNewerFirmware(Wearable wearable) async {
     // TODO: move this to wearablesProvider
-    _logger.d('Checking for newer firmware for ${wearable.name}');
+    logger.d('Checking for newer firmware for ${wearable.name}');
     if (wearable is DeviceFirmwareVersion) {
       final currentVersion =
           await (wearable as DeviceFirmwareVersion).readDeviceFirmwareVersion();

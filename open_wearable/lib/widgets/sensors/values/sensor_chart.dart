@@ -3,9 +3,11 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 import 'package:open_wearable/view_models/sensor_data_provider.dart';
 import 'package:provider/provider.dart';
+
+import '../../../models/logger.dart';
 
 class SensorChart extends StatefulWidget {
   final bool allowToggleAxes;

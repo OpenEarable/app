@@ -26,7 +26,6 @@ class AppBanner extends StatelessWidget {
             child: content,
           ),
         ),
-
         Positioned(
           top: 8,
           right: 8,

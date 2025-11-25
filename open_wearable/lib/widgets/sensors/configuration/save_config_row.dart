@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:logger/logger.dart';
 import 'package:provider/provider.dart';
 
 import '../../../view_models/sensor_configuration_provider.dart';
 import '../../../view_models/sensor_configuration_storage.dart';
 
-Logger _logger = Logger();
-
+import '../../../models/logger.dart';
 class SaveConfigRow extends StatefulWidget {
   const SaveConfigRow({super.key});
 
@@ -41,7 +39,7 @@ class _SaveConfigRowState extends State<SaveConfigRow> {
               Provider.of<SensorConfigurationProvider>(context, listen: false);
           Map<String, String> config = provider.toJson();
 
-          _logger.d("Saving configuration: $_configName with data: $config");
+          logger.d("Saving configuration: $_configName with data: $config");
 
           if (_configName.isNotEmpty) {
             await SensorConfigurationStorage.saveConfiguration(_configName.trim(), config);
