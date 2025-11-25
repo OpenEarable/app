@@ -9,6 +9,7 @@ import 'package:open_wearable/widgets/devices/connect_devices_page.dart';
 import 'package:open_wearable/widgets/devices/device_detail/device_detail_page.dart';
 import 'package:provider/provider.dart';
 
+import '../log_files_screen.dart';
 import 'device_detail/stereo_pos_label.dart';
 
 /// On this page the user can see all connected devices.
@@ -44,7 +45,18 @@ class _DevicesPageState extends State<DevicesPage> {
       appBar: PlatformAppBar(
         title: PlatformText("Devices"),
         trailingActions: [
-            PlatformIconButton(
+          PlatformIconButton(
+            icon: Icon(context.platformIcons.info),
+            onPressed: () {
+              Navigator.of(context).push(
+                platformPageRoute(
+                  context: context,
+                  builder: (context) => const LogFilesScreen(),
+                ),
+              );
+            },
+          ),
+          PlatformIconButton(
             icon: Icon(context.platformIcons.bluetooth),
             onPressed: () {
               Navigator.of(context).push(
