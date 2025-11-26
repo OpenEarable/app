@@ -2,35 +2,28 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:logger/logger.dart';
-import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
+import 'package:open_wearable/models/log_file_manager.dart';
 import 'package:open_wearable/models/wearable_connector.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
 import 'package:open_wearable/widgets/global_app_banner_overlay.dart';
 import 'package:open_wearable/widgets/home_page.dart';
 import 'package:provider/provider.dart';
-import 'package:open_earable_flutter/open_earable_flutter.dart' as oe;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'models/bluetooth_auto_connector.dart';
+import 'models/logger.dart';
 import 'view_models/app_banner_controller.dart';
 import 'view_models/wearables_provider.dart';
 
 // 1) Global navigator key so we can open dialogs from anywhere
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
-class CustomLogFilter extends LogFilter {
-  @override
-  bool shouldLog(LogEvent event) {
-    return !(event.message.contains('componentData') ||
-        event.message.contains('SensorData') ||
-        event.message.contains('Battery'));
-  }
-}
-
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  oe.logger = Logger(level: Level.trace, filter: CustomLogFilter());
+  LogFileManager logFileManager = await LogFileManager.create();
+  initOpenWearableLogger(logFileManager.libLogger);
+  initLogger(logFileManager.logger);
 
   runApp(
     MultiProvider(
@@ -46,6 +39,7 @@ void main() {
         ChangeNotifierProvider(
           create: (context) => AppBannerController(),
         ),
+        ChangeNotifierProvider.value(value: logFileManager),
       ],
       child: const MyApp(),
     ),

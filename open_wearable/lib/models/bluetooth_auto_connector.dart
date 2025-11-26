@@ -2,9 +2,10 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 import 'package:shared_preferences/shared_preferences.dart'; // New dependency for persistence
 
+import 'logger.dart';
 import 'wearable_connector.dart';
 
 const String _connectedDeviceNamesKey = "connectedDeviceNames";
@@ -122,7 +123,6 @@ class BluetoothAutoConnector {
     if (_scanSubscription != null) return;
 
     _scanSubscription = wearableManager.scanStream.listen((device) {
-      print("device.name: ${device.name}, targets: $_targetNames");
       if (_isConnecting) return;
 
       if (_targetNames.contains(device.name)) {

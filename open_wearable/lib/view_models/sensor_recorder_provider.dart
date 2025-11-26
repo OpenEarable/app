@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
+
+import '../models/logger.dart';
 
 class SensorRecorderProvider with ChangeNotifier {
   final Map<Wearable, Map<Sensor, Recorder>> _recorders = {};
