@@ -5,7 +5,7 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
-import 'package:open_wearable/widgets/fota/firmware_update.dart';
+import 'package:open_wearable/widgets/fota/fota_warning_page.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/wearable_connector.dart';
@@ -185,7 +185,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const FirmwareUpdateWidget(),
+                      builder: (context) => const FotaWarningPage(),
                     ),
                   );
                 },

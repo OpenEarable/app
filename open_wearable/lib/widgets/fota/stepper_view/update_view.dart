@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:open_wearable/widgets/fota/fota_verification_banner.dart';
 import '../logger_screen/logger_screen.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 
@@ -11,7 +14,16 @@ class UpdateStepView extends StatelessWidget {
   Widget build(BuildContext context) {
     final provider = context.watch<FirmwareUpdateRequestProvider>();
     final request = provider.updateParameters;
-    return BlocBuilder<UpdateBloc, UpdateState>(
+
+    return BlocConsumer<UpdateBloc, UpdateState>(
+      listener: (context, state) {
+        if (state is UpdateFirmwareStateHistory &&
+            state.isComplete &&
+            state.history.isNotEmpty &&
+            state.history.last is UpdateCompleteSuccess) {
+          showFotaVerificationBanner(context);
+        }
+      },
       builder: (context, state) {
         switch (state) {
           case UpdateInitial():
@@ -27,17 +39,20 @@ class UpdateStepView extends StatelessWidget {
                 ),
               ],
             );
+
           case UpdateFirmwareStateHistory():
             return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                for (var state in state.history)
+                for (var s in state.history)
                   Row(
                     children: [
                       _stateIcon(
-                        state,
+                        s,
                         Colors.green,
                       ),
-                      PlatformText(state.stage),
+                      const SizedBox(width: 8),
+                      PlatformText(s.stage),
                     ],
                   ),
                 if (state.currentState != null)
@@ -54,6 +69,7 @@ class UpdateStepView extends StatelessWidget {
                       _currentState(state),
                     ],
                   ),
+                const SizedBox(height: 12),
                 if (state.isComplete && state.updateManager?.logger != null)
                   ElevatedButton(
                     onPressed: () {
@@ -76,17 +92,26 @@ class UpdateStepView extends StatelessWidget {
                     },
                     child: PlatformText('Update Again'),
                   ),
+
                 if (state.isComplete &&
                     state.history.last is UpdateCompleteSuccess)
-                  PlatformText(
-                    'Firmware upload complete.\n\n'
-                    'The image has been successfully uploaded and is now being verified by the device. '
-                    'The device will automatically restart once verification is complete.\n\n'
-                    'This may take up to 3 minutes. Please keep the device powered on and nearby.',
-                    textAlign: TextAlign.start,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      PlatformText(
+                        'Firmware upload complete.\n\n'
+                        'The image has been successfully uploaded and is now being verified by the device. '
+                        'The device will automatically restart once verification is complete.\n\n'
+                        'This may take up to 3 minutes. Please keep the device powered on and nearby.',
+                        textAlign: TextAlign.start,
+                      ),
+                      const SizedBox(height: 8),
+                      const _VerificationCountdown(), // you can remove this once the global banner handles the timer
+                    ],
                   ),
               ],
             );
+
           default:
             return PlatformText('Unknown state');
         }
@@ -136,6 +161,65 @@ class UpdateStepView extends StatelessWidget {
         PlatformText('Firmware: ${firmware.name}'),
         PlatformText('Url: ${firmware.url}'),
       ],
+    );
+  }
+}
+
+/// Small stateful widget that starts a 3-minute countdown when built.
+/// You can delete this once the global banner shows the timer instead.
+class _VerificationCountdown extends StatefulWidget {
+  const _VerificationCountdown();
+
+  @override
+  State<_VerificationCountdown> createState() => _VerificationCountdownState();
+}
+
+class _VerificationCountdownState extends State<_VerificationCountdown> {
+  static const Duration _total = Duration(minutes: 3);
+  late Duration _remaining;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _remaining = _total;
+
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_remaining.inSeconds <= 1) {
+        setState(() {
+          _remaining = Duration.zero;
+        });
+        timer.cancel();
+      } else {
+        setState(() {
+          _remaining -= const Duration(seconds: 1);
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  String _format(Duration d) {
+    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PlatformText(
+      'Estimated remaining: ${_format(_remaining)}',
+      textAlign: TextAlign.start,
+      style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontSize: 16),
     );
   }
 }

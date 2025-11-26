@@ -114,7 +114,7 @@ class BluetoothAutoConnector {
 
     if (_targetNames.isNotEmpty) {
       _setupScanListener();
-      await wearableManager.startScan(excludeUnsupported: true);
+      await wearableManager.startScan(excludeUnsupported: false);
     }
   }
 

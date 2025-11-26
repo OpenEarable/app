@@ -32,6 +32,24 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
     _listRecordings();
   }
 
+  /// Helper to show cross-platform error dialogs instead of SnackBars
+  Future<void> _showErrorDialog(String message) async {
+    if (!mounted) return;
+    await showPlatformDialog(
+      context: context,
+      builder: (_) => PlatformAlertDialog(
+        title: PlatformText('Error'),
+        content: PlatformText(message),
+        actions: [
+          PlatformDialogAction(
+            child: PlatformText('OK'),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _openFolder(String path) async {
     try {
       if (Platform.isIOS) {
@@ -42,6 +60,7 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
       }
     } on PlatformException catch (e) {
       print("Failed to open folder: '${e.message}'.");
+      // Optional: Show error dialog here too if needed
     }
   }
 
@@ -105,6 +124,7 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
         _listRecordings();
       } catch (e) {
         _logger.e('Error deleting recording: $e');
+        _showErrorDialog('Failed to delete recording: $e');
       }
     }
   }
@@ -130,21 +150,14 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
       }
     } catch (e) {
       _logger.e('Error sharing file: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to share file: $e')),
-        );
-      }
+      await _showErrorDialog('Failed to share file: $e');
     }
   }
 
   Future<void> _shareFolder(Directory folder) async {
     try {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Creating zip file...')),
-        );
-      }
+      // Replaced SnackBar with Logger to avoid UI issues during async work
+      _logger.i('Creating zip file for ${folder.path}...');
 
       final tempDir = await getTemporaryDirectory();
       final zipPath = '${tempDir.path}/${folder.path.split("/").last}.zip';
@@ -172,11 +185,7 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
       }
     } catch (e) {
       _logger.e('Error sharing folder: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to share folder: $e')),
-        );
-      }
+      await _showErrorDialog('Failed to share folder: $e');
     }
   }
 
@@ -393,13 +402,8 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
                                       type: 'text/comma-separated-values',
                                     );
                                     if (result.type != ResultType.done) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                              'Could not open file: ${result.message}'),
-                                        ),
-                                      );
+                                      await _showErrorDialog(
+                                          'Could not open file: ${result.message}');
                                     }
                                   },
                                 );

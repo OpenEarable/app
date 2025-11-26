@@ -53,8 +53,11 @@ class SensorConfigurationView extends StatelessWidget {
                 child: SensorConfigurationDeviceRow(device: wearable),
               );
             }),
+            _buildThroughputWarningBanner(context),
             _buildSetConfigButton(
-              configProviders: wearablesProvider.wearables.map((wearable) => wearablesProvider.getSensorConfigurationProvider(wearable)).toList(),
+              configProviders: wearablesProvider.wearables.map(
+                (wearable) => wearablesProvider.getSensorConfigurationProvider(wearable),
+              ).toList(),
             ),
           ],
         ),
@@ -78,18 +81,49 @@ class SensorConfigurationView extends StatelessWidget {
     );
   }
 
+  Widget _buildThroughputWarningBanner(BuildContext context) {
+    return Card(
+      color: Theme.of(context).colorScheme.surfaceContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: RichText(
+          text: TextSpan(
+            style: Theme.of(context).textTheme.bodyLarge
+                    ?? TextStyle(color: Colors.black, fontSize: 16),
+            children: [
+              const TextSpan(
+                text: "Info: ",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const TextSpan(
+                text: "Using too many sensors or setting high sampling rates can exceed the system’s "
+                "available bandwidth, causing data drops. Limit the number of active sensors and their "
+                "sampling rates, and record high-rate data directly to the SD card.",
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildLargeScreenLayout(BuildContext context, WearablesProvider wearablesProvider) {
     final List<Wearable> devices = wearablesProvider.wearables;
     List<StaggeredGridTile> tiles = _generateTiles(devices, wearablesProvider.sensorConfigurationProviders);
     if (tiles.isNotEmpty) {
-      tiles.add(
+      tiles.addAll([
+        StaggeredGridTile.extent(
+          crossAxisCellCount: 1,
+          mainAxisExtent: 230.0,
+          child: _buildThroughputWarningBanner(context),
+        ),
         StaggeredGridTile.extent(
           crossAxisCellCount: 1,
           mainAxisExtent: 100.0,
           child: _buildSetConfigButton(
             configProviders: devices.map((device) => wearablesProvider.getSensorConfigurationProvider(device)).toList(),
           ),
-        ),
+        ),],
       );
     }
 
