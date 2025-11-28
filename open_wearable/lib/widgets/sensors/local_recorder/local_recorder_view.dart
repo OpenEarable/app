@@ -340,118 +340,115 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
             children: [
               Padding(
                 padding: const EdgeInsets.all(10),
-                child: Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(
-                          width: double.infinity,
-                          child: !isRecording
-                              ? ElevatedButton.icon(
-                                  icon: const Icon(Icons.play_arrow),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: canStartRecording
-                                        ? Colors.green.shade600
-                                        : Colors.grey.shade400,
-                                    foregroundColor: Colors.white,
-                                    minimumSize: const Size.fromHeight(48),
-                                  ),
-                                  label: const Text(
-                                    'Start Recording',
-                                    style: TextStyle(fontSize: 18),
-                                  ),
-                                  onPressed: !canStartRecording
-                                      ? null
-                                      : () async {
-                                          final dir = await _pickDirectory();
-                                          if (dir == null) return;
-
-                                          // Check if directory is empty
-                                          if (!await _isDirectoryEmpty(dir)) {
-                                            if (!context.mounted) return;
-                                            final proceed =
-                                                await _askOverwriteConfirmation(
-                                              context,
-                                              dir,
-                                            );
-                                            if (!proceed) return;
-                                          }
-
-                                          recorder.startRecording(dir);
-                                          await _listRecordings(); // Refresh list
-                                        },
-                                )
-                              : Column(
-                                  children: [
-                                    Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.center,
-                                      children: [
-                                        Expanded(
-                                          child: ElevatedButton.icon(
-                                            icon: const Icon(Icons.stop),
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: Colors.red,
-                                              foregroundColor: Colors.white,
-                                              minimumSize:
-                                                  const Size.fromHeight(48),
-                                            ),
-                                            label: const Text(
-                                              'Stop Recording',
-                                              style: TextStyle(fontSize: 18),
-                                            ),
-                                            onPressed: _isHandlingStopAction
-                                                ? null
-                                                : () => _handleStopRecording(
-                                                      recorder,
-                                                      turnOffSensors: false,
-                                                    ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        ConstrainedBox(
-                                          constraints: const BoxConstraints(
-                                            minWidth: 90,
-                                          ),
-                                          child: Text(
-                                            _formatDuration(_elapsedRecording),
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .titleLarge
-                                                ?.copyWith(
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 12),
-                                    ElevatedButton.icon(
-                                      icon:
-                                          const Icon(Icons.power_settings_new),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.red[800],
-                                        foregroundColor: Colors.white,
-                                        minimumSize: const Size.fromHeight(48),
-                                      ),
-                                      label: const Text(
-                                        'Stop & Turn Off Sensors',
-                                        style: TextStyle(fontSize: 18),
-                                      ),
-                                      onPressed: _isHandlingStopAction
-                                          ? null
-                                          : () => _handleStopRecording(
-                                                recorder,
-                                                turnOffSensors: true,
-                                              ),
-                                    ),
-                                  ],
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        child: !isRecording
+                            ? ElevatedButton.icon(
+                                icon: const Icon(Icons.play_arrow),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: canStartRecording
+                                      ? Colors.green.shade600
+                                      : Colors.grey.shade400,
+                                  foregroundColor: Colors.white,
+                                  minimumSize: const Size.fromHeight(48),
                                 ),
-                        ),
-                      ],
-                    ),
+                                label: const Text(
+                                  'Start Recording',
+                                  style: TextStyle(fontSize: 18),
+                                ),
+                                onPressed: !canStartRecording
+                                    ? null
+                                    : () async {
+                                        final dir = await _pickDirectory();
+                                        if (dir == null) return;
+
+                                        // Check if directory is empty
+                                        if (!await _isDirectoryEmpty(dir)) {
+                                          if (!context.mounted) return;
+                                          final proceed =
+                                              await _askOverwriteConfirmation(
+                                            context,
+                                            dir,
+                                          );
+                                          if (!proceed) return;
+                                        }
+
+                                        recorder.startRecording(dir);
+                                        await _listRecordings(); // Refresh list
+                                      },
+                              )
+                            : Column(
+                                children: [
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      Expanded(
+                                        child: ElevatedButton.icon(
+                                          icon: const Icon(Icons.stop),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.red,
+                                            foregroundColor: Colors.white,
+                                            minimumSize:
+                                                const Size.fromHeight(48),
+                                          ),
+                                          label: const Text(
+                                            'Stop Recording',
+                                            style: TextStyle(fontSize: 18),
+                                          ),
+                                          onPressed: _isHandlingStopAction
+                                              ? null
+                                              : () => _handleStopRecording(
+                                                    recorder,
+                                                    turnOffSensors: false,
+                                                  ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      ConstrainedBox(
+                                        constraints: const BoxConstraints(
+                                          minWidth: 90,
+                                        ),
+                                        child: Text(
+                                          _formatDuration(_elapsedRecording),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleLarge
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  ElevatedButton.icon(
+                                    icon: const Icon(Icons.power_settings_new),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.red[800],
+                                      foregroundColor: Colors.white,
+                                      minimumSize: const Size.fromHeight(48),
+                                    ),
+                                    label: const Text(
+                                      'Stop & Turn Off Sensors',
+                                      style: TextStyle(fontSize: 18),
+                                    ),
+                                    onPressed: _isHandlingStopAction
+                                        ? null
+                                        : () => _handleStopRecording(
+                                              recorder,
+                                              turnOffSensors: true,
+                                            ),
+                                  ),
+                                ],
+                              ),
+                      ),
+                    ],
                   ),
                 ),
               ),
