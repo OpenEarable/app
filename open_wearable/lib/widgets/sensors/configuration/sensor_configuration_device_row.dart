@@ -105,8 +105,9 @@ class _SensorConfigurationDeviceRowState
 
   void _buildNewTabContent(SensorConfigurationManager device) {
     final List<Widget> content = device.sensorConfigurations
-        .map((config) =>
-            SensorConfigurationValueRow(sensorConfiguration: config))
+        .map(
+          (config) => SensorConfigurationValueRow(sensorConfiguration: config),
+        )
         .cast<Widget>()
         .toList();
 
@@ -155,9 +156,10 @@ class _SensorConfigurationDeviceRowState
               await SensorConfigurationStorage.loadConfiguration(key);
           if (!mounted) return;
 
-          final result = await Provider.of<SensorConfigurationProvider>(context,
-                  listen: false)
-              .restoreFromJson(config);
+          final result = await Provider.of<SensorConfigurationProvider>(
+            context,
+            listen: false,
+          ).restoreFromJson(config);
 
           if (!result && mounted) {
             showPlatformDialog(

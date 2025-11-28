@@ -40,7 +40,8 @@ class SensorRecorderProvider with ChangeNotifier {
         if (recorder != null) {
           recorder.stop();
           logger.i(
-              'Stopped recording for ${wearable.name} - ${sensor.sensorName}');
+            'Stopped recording for ${wearable.name} - ${sensor.sensorName}',
+          );
         }
       }
     }

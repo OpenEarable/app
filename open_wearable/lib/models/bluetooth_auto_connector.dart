@@ -26,12 +26,13 @@ class BluetoothAutoConnector {
   // Names to look for during scanning
   List<String> _targetNames = [];
 
-  BluetoothAutoConnector(
-      {required this.navStateGetter,
-      required this.wearableManager,
-      required this.connector,
-      required this.prefsFuture,
-      required this.onWearableConnected});
+  BluetoothAutoConnector({
+    required this.navStateGetter,
+    required this.wearableManager,
+    required this.connector,
+    required this.prefsFuture,
+    required this.onWearableConnected,
+  });
 
   void start() async {
     stop();
@@ -133,7 +134,8 @@ class BluetoothAutoConnector {
         _scanSubscription = null;
 
         logger.i(
-            "Match found for ${device.name}. Connecting using rotating ID: ${device.id}");
+          "Match found for ${device.name}. Connecting using rotating ID: ${device.id}",
+        );
 
         wearableManager
             .connectToDevice(device)

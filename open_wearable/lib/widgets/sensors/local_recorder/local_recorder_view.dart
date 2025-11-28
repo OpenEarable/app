@@ -26,7 +26,7 @@ class LocalRecorderView extends StatefulWidget {
 class _LocalRecorderViewState extends State<LocalRecorderView> {
   static const MethodChannel platform = MethodChannel('edu.teco.open_folder');
   List<FileSystemEntity> _recordings = [];
-  Set<String> _expandedFolders = {}; // Track which folders are expanded
+  final Set<String> _expandedFolders = {}; // Track which folders are expanded
   Timer? _recordingTimer;
   Duration _elapsedRecording = Duration.zero;
   bool _lastRecordingState = false;
@@ -96,9 +96,11 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
 
     // Filter only directories that start with "OpenWearable_Recording"
     _recordings = entities
-        .where((entity) =>
-            entity is Directory &&
-            entity.path.contains('OpenWearable_Recording'))
+        .where(
+          (entity) =>
+              entity is Directory &&
+              entity.path.contains('OpenWearable_Recording'),
+        )
         .toList();
 
     // Sort by modification time (newest first)
@@ -463,7 +465,9 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
                           Text(
                             "Recordings",
                             style: TextStyle(
-                                fontSize: 20.0, fontWeight: FontWeight.bold),
+                              fontSize: 20.0,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           if (Platform.isIOS)
                             IconButton(
@@ -483,8 +487,11 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.warning,
-                                      size: 48, color: Colors.grey),
+                                  Icon(
+                                    Icons.warning,
+                                    size: 48,
+                                    color: Colors.grey,
+                                  ),
                                   SizedBox(height: 16),
                                   Text(
                                     "No recordings found",
@@ -548,7 +555,8 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
                                                     color: isCurrentRecording
                                                         ? Colors.grey
                                                             .withValues(
-                                                                alpha: 30)
+                                                            alpha: 30,
+                                                          )
                                                         : Colors.blue,
                                                   ),
                                                   onPressed: isCurrentRecording
@@ -563,7 +571,8 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
                                                     color: isCurrentRecording
                                                         ? Colors.grey
                                                             .withValues(
-                                                                alpha: 30)
+                                                            alpha: 30,
+                                                          )
                                                         : Colors.red,
                                                   ),
                                                   onPressed: isCurrentRecording
@@ -595,7 +604,9 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
 
                                         return ListTile(
                                           contentPadding: EdgeInsets.only(
-                                              left: 72, right: 16),
+                                            left: 72,
+                                            right: 16,
+                                          ),
                                           leading: Icon(
                                             fileName.endsWith('.csv')
                                                 ? Icons.table_chart
@@ -609,12 +620,16 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
                                           subtitle: Text(
                                             fileSize,
                                             style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey),
+                                              fontSize: 12,
+                                              color: Colors.grey,
+                                            ),
                                           ),
                                           trailing: IconButton(
-                                            icon: Icon(Icons.share,
-                                                color: Colors.blue, size: 20),
+                                            icon: Icon(
+                                              Icons.share,
+                                              color: Colors.blue,
+                                              size: 20,
+                                            ),
                                             onPressed: () => _shareFile(file),
                                           ),
                                           onTap: () async {
@@ -626,7 +641,8 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
                                             if (result.type !=
                                                 ResultType.done) {
                                               await _showErrorDialog(
-                                                  'Could not open file: ${result.message}');
+                                                'Could not open file: ${result.message}',
+                                              );
                                             }
                                           },
                                         );

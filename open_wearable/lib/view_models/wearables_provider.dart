@@ -79,7 +79,8 @@ class WearablesProvider with ChangeNotifier {
     if (wearable is DeviceFirmwareVersion) {
       Future.microtask(
         () => _maybeEmitUnsupportedFirmwareAsync(
-            wearable as DeviceFirmwareVersion),
+          wearable as DeviceFirmwareVersion,
+        ),
       );
     }
   }
@@ -157,10 +158,12 @@ class WearablesProvider with ChangeNotifier {
   }
 
   SensorConfigurationProvider getSensorConfigurationProvider(
-      Wearable wearable) {
+    Wearable wearable,
+  ) {
     if (!_sensorConfigurationProviders.containsKey(wearable)) {
       throw Exception(
-          'No SensorConfigurationProvider found for the given wearable: ${wearable.name}');
+        'No SensorConfigurationProvider found for the given wearable: ${wearable.name}',
+      );
     }
     return _sensorConfigurationProviders[wearable]!;
   }
