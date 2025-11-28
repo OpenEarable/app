@@ -46,17 +46,23 @@ PODS:
     - Flutter
     - iOSMcuManagerLibrary (= 1.10.1)
     - SwiftProtobuf
-  - objective_c (0.0.1):
+  - open_file_ios (0.0.1):
     - Flutter
+  - path_provider_foundation (0.0.1):
+    - Flutter
+    - FlutterMacOS
   - permission_handler_apple (9.3.0):
     - Flutter
-  - SDWebImage (5.21.0):
-    - SDWebImage/Core (= 5.21.0)
-  - SDWebImage/Core (5.21.0)
+  - SDWebImage (5.21.3):
+    - SDWebImage/Core (= 5.21.3)
+  - SDWebImage/Core (5.21.3)
   - share_plus (0.0.1):
     - Flutter
+  - shared_preferences_foundation (0.0.1):
+    - Flutter
+    - FlutterMacOS
   - SwiftCBOR (0.4.7)
-  - SwiftProtobuf (1.29.0)
+  - SwiftProtobuf (1.33.3)
   - SwiftyGif (5.4.5)
   - universal_ble (0.0.1):
     - Flutter
@@ -71,9 +77,11 @@ DEPENDENCIES:
   - Flutter (from `Flutter`)
   - flutter_archive (from `.symlinks/plugins/flutter_archive/ios`)
   - mcumgr_flutter (from `.symlinks/plugins/mcumgr_flutter/ios`)
-  - objective_c (from `.symlinks/plugins/objective_c/ios`)
+  - open_file_ios (from `.symlinks/plugins/open_file_ios/ios`)
+  - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
   - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
   - share_plus (from `.symlinks/plugins/share_plus/ios`)
+  - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
   - universal_ble (from `.symlinks/plugins/universal_ble/darwin`)
   - url_launcher_ios (from `.symlinks/plugins/url_launcher_ios/ios`)
 
@@ -99,12 +107,16 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/flutter_archive/ios"
   mcumgr_flutter:
     :path: ".symlinks/plugins/mcumgr_flutter/ios"
-  objective_c:
-    :path: ".symlinks/plugins/objective_c/ios"
+  open_file_ios:
+    :path: ".symlinks/plugins/open_file_ios/ios"
+  path_provider_foundation:
+    :path: ".symlinks/plugins/path_provider_foundation/darwin"
   permission_handler_apple:
     :path: ".symlinks/plugins/permission_handler_apple/ios"
   share_plus:
     :path: ".symlinks/plugins/share_plus/ios"
+  shared_preferences_foundation:
+    :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
   universal_ble:
     :path: ".symlinks/plugins/universal_ble/darwin"
   url_launcher_ios:
@@ -119,12 +131,14 @@ SPEC CHECKSUMS:
   flutter_archive: ad8edfd7f7d1bb12058d05424ba93e27d9930efe
   iOSMcuManagerLibrary: e9555825af11a61744fe369c12e1e66621061b58
   mcumgr_flutter: 969e99cc15e9fe658242669ce1075bf4612aef8a
-  objective_c: 89e720c30d716b036faf9c9684022048eee1eee2
+  open_file_ios: 5ff7526df64e4394b4fe207636b67a95e83078bb
+  path_provider_foundation: bb55f6dbba17d0dccd6737fe6f7f34fbd0376880
   permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
-  SDWebImage: f84b0feeb08d2d11e6a9b843cb06d75ebf5b8868
+  SDWebImage: 16309af6d214ba3f77a7c6f6fdda888cb313a50a
   share_plus: 50da8cb520a8f0f65671c6c6a99b3617ed10a58a
+  shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb
   SwiftCBOR: 465775bed0e8bac7bfb8160bcf7b95d7f75971e4
-  SwiftProtobuf: b7aa08087e2ab6d162862d143020091254095f69
+  SwiftProtobuf: e1b437c8e31a4c5577b643249a0bb62ed4f02153
   SwiftyGif: 706c60cf65fa2bc5ee0313beece843c8eb8194d4
   universal_ble: ff19787898040d721109c6324472e5dd4bc86adc
   url_launcher_ios: 7a95fa5b60cc718a708b8f2966718e93db0cef1b

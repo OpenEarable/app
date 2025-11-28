@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -11,39 +12,36 @@ class SensorRecorderProvider with ChangeNotifier {
   bool _isRecording = false;
   bool _hasSensorsConnected = false;
   String? _currentDirectory;
+  DateTime? _recordingStart;
 
   bool get isRecording => _isRecording;
   bool get hasSensorsConnected => _hasSensorsConnected;
   String? get currentDirectory => _currentDirectory;
+  DateTime? get recordingStart => _recordingStart;
 
   void startRecording(String dirname) async {
     _isRecording = true;
     _currentDirectory = dirname;
+    _recordingStart = DateTime.now();
 
     for (Wearable wearable in _recorders.keys) {
-      for (Sensor sensor in _recorders[wearable]!.keys) {
-        Recorder? recorder = _recorders[wearable]?[sensor];
-        if (recorder != null) {
-          File file = await recorder.start(
-            filepath: '$dirname/${wearable.name}_${sensor.sensorName}.csv',
-            inputStream: sensor.sensorStream,
-          );
-          logger.i('Started recording for ${wearable.name} - ${sensor.sensorName} to ${file.path}');
-        }
-      }
+      await _startRecorderForWearable(wearable, dirname);
     }
-    
+
     notifyListeners();
   }
 
   void stopRecording() {
     _isRecording = false;
+    _recordingStart = null;
     for (Wearable wearable in _recorders.keys) {
       for (Sensor sensor in _recorders[wearable]!.keys) {
         Recorder? recorder = _recorders[wearable]?[sensor];
         if (recorder != null) {
           recorder.stop();
-          logger.i('Stopped recording for ${wearable.name} - ${sensor.sensorName}');
+          logger.i(
+            'Stopped recording for ${wearable.name} - ${sensor.sensorName}',
+          );
         }
       }
     }
@@ -61,10 +59,15 @@ class SensorRecorderProvider with ChangeNotifier {
     return _recorders[wearable] ?? {};
   }
 
-  void addWearable(Wearable wearable) {
-    if (!_recorders.containsKey(wearable)) {
-      _recorders[wearable] = {};
+  Future<void> addWearable(Wearable wearable) async {
+    final Wearable? existing = _findWearableByDeviceId(wearable.deviceId);
+
+    if (existing != null) {
+      _disposeWearable(existing);
+      _recorders.remove(existing);
     }
+
+    _recorders[wearable] = {};
 
     wearable.addDisconnectListener(() {
       removeWearable(wearable);
@@ -79,20 +82,78 @@ class SensorRecorderProvider with ChangeNotifier {
       }
     }
 
+    if (_isRecording && _currentDirectory != null) {
+      unawaited(
+        _startRecorderForWearable(
+          wearable,
+          _currentDirectory!,
+          resumed: true,
+        ),
+      );
+    }
+
     _updateConnected();
   }
 
   void removeWearable(Wearable wearable) {
+    _disposeWearable(wearable);
     _recorders.remove(wearable);
     _updateConnected();
   }
 
   void _updateConnected() {
-    _hasSensorsConnected = !(
-      _recorders.isEmpty ||
-      _recorders.values.every((sensors) => sensors.isEmpty)
-    );
-
+    _hasSensorsConnected = !(_recorders.isEmpty ||
+        _recorders.values.every((sensors) => sensors.isEmpty));
+    logger.i('Has sensors connected: $_hasSensorsConnected');
     notifyListeners();
+  }
+
+  Wearable? _findWearableByDeviceId(String deviceId) {
+    for (final wearable in _recorders.keys) {
+      if (wearable.deviceId == deviceId) {
+        return wearable;
+      }
+    }
+    return null;
+  }
+
+  void _disposeWearable(Wearable wearable) {
+    final recorderMap = _recorders[wearable];
+    if (recorderMap == null) return;
+    for (final recorder in recorderMap.values) {
+      recorder.stop();
+    }
+  }
+
+  Future<void> _startRecorderForWearable(
+    Wearable wearable,
+    String dirname, {
+    bool resumed = false,
+  }) async {
+    for (Sensor sensor in _recorders[wearable]!.keys) {
+      Recorder? recorder = _recorders[wearable]?[sensor];
+      if (recorder == null) continue;
+
+      String base = '${wearable.name}_${sensor.sensorName}';
+      String name = base;
+      int counter = 1;
+
+      while (await File('$dirname/$name.csv').exists()) {
+        name = '${base}_$counter';
+        counter++;
+      }
+
+      final filepath = '$dirname/$name.csv';
+
+      File file = await recorder.start(
+        filepath: filepath,
+        inputStream: sensor.sensorStream,
+      );
+
+      logger.i(
+        '${resumed ? 'Resumed' : 'Started'} recording for '
+        '${wearable.name} - ${sensor.sensorName} to ${file.path}',
+      );
+    }
   }
 }

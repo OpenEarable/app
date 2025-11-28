@@ -42,14 +42,19 @@ class _SaveConfigRowState extends State<SaveConfigRow> {
           logger.d("Saving configuration: $_configName with data: $config");
 
           if (_configName.isNotEmpty) {
-            await SensorConfigurationStorage.saveConfiguration(_configName.trim(), config);
+            await SensorConfigurationStorage.saveConfiguration(
+              _configName.trim(),
+              config,
+            );
           } else {
             showPlatformDialog(
               context: context,
               builder: (context) {
                 return PlatformAlertDialog(
                   title: PlatformText("Configuration Name Required"),
-                  content: PlatformText("Please enter a name for the configuration."),
+                  content: PlatformText(
+                    "Please enter a name for the configuration.",
+                  ),
                   actions: [
                     PlatformDialogAction(
                       child: PlatformText("OK"),

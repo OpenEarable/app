@@ -33,6 +33,16 @@ migrate_working_dir/
 .pub/
 /build/
 
+# Generated plugin registrants
+**/GeneratedPluginRegistrant.swift
+**/generated_plugin_registrant.cc
+**/generated_plugin_registrant.h
+**/generated_plugins.cmake
+
+# Android local settings
+**/android/local.properties
+**/android/.gradle
+
 # Symbolication related
 app.*.symbols
 

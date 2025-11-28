@@ -21,7 +21,8 @@ class SensorConfigurationDeviceRow extends StatefulWidget {
       _SensorConfigurationDeviceRowState();
 }
 
-class _SensorConfigurationDeviceRowState extends State<SensorConfigurationDeviceRow>
+class _SensorConfigurationDeviceRowState
+    extends State<SensorConfigurationDeviceRow>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   List<Widget> _content = [];
@@ -59,7 +60,10 @@ class _SensorConfigurationDeviceRowState extends State<SensorConfigurationDevice
               children: [
                 PlatformText(
                   device.name,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyLarge
+                      ?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 if (device is StereoDevice)
                   StereoPosLabel(device: device as StereoDevice),
@@ -89,7 +93,8 @@ class _SensorConfigurationDeviceRowState extends State<SensorConfigurationDevice
       return;
     }
 
-    final SensorConfigurationManager sensorManager = device as SensorConfigurationManager;
+    final SensorConfigurationManager sensorManager =
+        device as SensorConfigurationManager;
 
     if (_tabController.index == 0) {
       _buildNewTabContent(sensorManager);
@@ -100,7 +105,9 @@ class _SensorConfigurationDeviceRowState extends State<SensorConfigurationDevice
 
   void _buildNewTabContent(SensorConfigurationManager device) {
     final List<Widget> content = device.sensorConfigurations
-        .map((config) => SensorConfigurationValueRow(sensorConfiguration: config))
+        .map(
+          (config) => SensorConfigurationValueRow(sensorConfiguration: config),
+        )
         .cast<Widget>()
         .toList();
 
@@ -145,11 +152,14 @@ class _SensorConfigurationDeviceRowState extends State<SensorConfigurationDevice
       return PlatformListTile(
         title: PlatformText(key),
         onTap: () async {
-          final config = await SensorConfigurationStorage.loadConfiguration(key);
+          final config =
+              await SensorConfigurationStorage.loadConfiguration(key);
           if (!mounted) return;
 
-          final result = await Provider.of<SensorConfigurationProvider>(context, listen: false)
-              .restoreFromJson(config);
+          final result = await Provider.of<SensorConfigurationProvider>(
+            context,
+            listen: false,
+          ).restoreFromJson(config);
 
           if (!result && mounted) {
             showPlatformDialog(
