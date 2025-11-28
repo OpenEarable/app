@@ -347,6 +347,15 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      PlatformText(
+                        'Local Recorder',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 6),
+                      PlatformText(
+                        "Only records sensor data streamed over Bluetooth",
+                      ),
+                      const SizedBox(height: 12),
                       SizedBox(
                         width: double.infinity,
                         child: !isRecording
