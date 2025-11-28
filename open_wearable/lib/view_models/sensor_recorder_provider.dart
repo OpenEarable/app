@@ -132,15 +132,28 @@ class SensorRecorderProvider with ChangeNotifier {
   }) async {
     for (Sensor sensor in _recorders[wearable]!.keys) {
       Recorder? recorder = _recorders[wearable]?[sensor];
-      if (recorder != null) {
-        File file = await recorder.start(
-          filepath: '$dirname/${wearable.name}_${sensor.sensorName}.csv',
-          inputStream: sensor.sensorStream,
-        );
-        logger.i(
-          '${resumed ? 'Resumed' : 'Started'} recording for ${wearable.name} - ${sensor.sensorName} to ${file.path}',
-        );
+      if (recorder == null) continue;
+
+      String base = '${wearable.name}_${sensor.sensorName}';
+      String name = base;
+      int counter = 1;
+
+      while (await File('$dirname/$name.csv').exists()) {
+        name = '${base}_$counter';
+        counter++;
       }
+
+      final filepath = '$dirname/$name.csv';
+
+      File file = await recorder.start(
+        filepath: filepath,
+        inputStream: sensor.sensorStream,
+      );
+
+      logger.i(
+        '${resumed ? 'Resumed' : 'Started'} recording for '
+        '${wearable.name} - ${sensor.sensorName} to ${file.path}',
+      );
     }
   }
 }
