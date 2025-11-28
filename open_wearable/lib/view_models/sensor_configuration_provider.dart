@@ -189,8 +189,9 @@ class SensorConfigurationProvider with ChangeNotifier {
       if (value != null) {
         addSensorConfiguration(sensorConfiguration, value);
         _updateSelectedOptions(sensorConfiguration);
-        notifyListeners();
+        sensorConfiguration.setConfiguration(value);
       }
+      notifyListeners();
     }
   }
 
