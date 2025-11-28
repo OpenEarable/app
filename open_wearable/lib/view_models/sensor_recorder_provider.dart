@@ -12,14 +12,17 @@ class SensorRecorderProvider with ChangeNotifier {
   bool _isRecording = false;
   bool _hasSensorsConnected = false;
   String? _currentDirectory;
+  DateTime? _recordingStart;
 
   bool get isRecording => _isRecording;
   bool get hasSensorsConnected => _hasSensorsConnected;
   String? get currentDirectory => _currentDirectory;
+  DateTime? get recordingStart => _recordingStart;
 
   void startRecording(String dirname) async {
     _isRecording = true;
     _currentDirectory = dirname;
+    _recordingStart = DateTime.now();
 
     for (Wearable wearable in _recorders.keys) {
       await _startRecorderForWearable(wearable, dirname);
@@ -30,6 +33,7 @@ class SensorRecorderProvider with ChangeNotifier {
 
   void stopRecording() {
     _isRecording = false;
+    _recordingStart = null;
     for (Wearable wearable in _recorders.keys) {
       for (Sensor sensor in _recorders[wearable]!.keys) {
         Recorder? recorder = _recorders[wearable]?[sensor];
