@@ -32,10 +32,11 @@ time flutter pub upgrade
 echo "🟩 Install CocoaPods via Homebrew"
 time HOMEBREW_NO_AUTO_UPDATE=1 brew install cocoapods
 
-echo "🟩 build iOS"
-time flutter build ios --release --no-codesign
-
 echo "🟩 Install CocoaPods dependencies..."
 time cd ios && pod install
+cd ../
+
+echo "🟩 build iOS"
+time flutter build ios --release --no-codesign
 
 exit 0
