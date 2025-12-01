@@ -15,11 +15,12 @@ class SensorConfigurationProvider with ChangeNotifier {
 
   StreamSubscription<Map<SensorConfiguration, SensorConfigurationValue>>?
       _sensorConfigurationSubscription;
-  
+
   SensorConfigurationProvider({
     required SensorConfigurationManager sensorConfigurationManager,
   }) : _sensorConfigurationManager = sensorConfigurationManager {
-    _sensorConfigurationSubscription = _sensorConfigurationManager.sensorConfigurationStream.listen((event) {
+    _sensorConfigurationSubscription =
+        _sensorConfigurationManager.sensorConfigurationStream.listen((event) {
       for (final e in event.entries) {
         final sensorConfiguration = e.key;
         final sensorConfigurationValue = e.value;
@@ -129,12 +130,14 @@ class SensorConfigurationProvider with ChangeNotifier {
       return;
     }
     ConfigurableSensorConfigurationValue? selectedValue =
-        _sensorConfigurations[sensorConfiguration] as ConfigurableSensorConfigurationValue?;
+        _sensorConfigurations[sensorConfiguration]
+            as ConfigurableSensorConfigurationValue?;
     if (selectedValue == null) {
       _sensorConfigurationOptions[sensorConfiguration]!.clear();
       return;
     }
-    _sensorConfigurationOptions[sensorConfiguration] = selectedValue.options.toSet();
+    _sensorConfigurationOptions[sensorConfiguration] =
+        selectedValue.options.toSet();
   }
 
   void removeSensorConfiguration(SensorConfiguration sensorConfiguration) {
@@ -186,19 +189,21 @@ class SensorConfigurationProvider with ChangeNotifier {
       if (value != null) {
         addSensorConfiguration(sensorConfiguration, value);
         _updateSelectedOptions(sensorConfiguration);
-        notifyListeners();
+        sensorConfiguration.setConfiguration(value);
       }
+      notifyListeners();
     }
   }
 
   Map<String, String> toJson() {
-    return _sensorConfigurations.map((config, value) =>
-        MapEntry(config.name, value.key),);
+    return _sensorConfigurations.map(
+      (config, value) => MapEntry(config.name, value.key),
+    );
   }
 
   Future<bool> restoreFromJson(Map<String, String> jsonMap) async {
-    Map<SensorConfiguration, SensorConfigurationValue>
-        restoredConfigurations = {};
+    Map<SensorConfiguration, SensorConfigurationValue> restoredConfigurations =
+        {};
     for (final config in _sensorConfigurations.keys) {
       final selectedKey = jsonMap[config.name];
       if (selectedKey == null) continue;

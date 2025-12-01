@@ -9,6 +9,7 @@ import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
 import 'package:open_wearable/widgets/global_app_banner_overlay.dart';
 import 'package:open_wearable/widgets/home_page.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'models/bluetooth_auto_connector.dart';
 import 'models/logger.dart';
@@ -20,8 +21,7 @@ final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  LogFileManager logFileManager =
-      await LogFileManager.create();
+  LogFileManager logFileManager = await LogFileManager.create();
   initOpenWearableLogger(logFileManager.libLogger);
   initLogger(logFileManager.logger);
 
@@ -58,11 +58,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   late final StreamSubscription _unsupportedFirmwareSub;
   late final StreamSubscription _wearableEventSub;
   late final BluetoothAutoConnector _autoConnector;
+  late final Future<SharedPreferences> _prefsFuture;
 
   @override
   void initState() {
     super.initState();
-
+    _prefsFuture = SharedPreferences.getInstance();
     WidgetsBinding.instance.addObserver(this);
 
     // Read provider without listening, allowed in initState with Provider
@@ -105,6 +106,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       navStateGetter: () => rootNavigatorKey.currentState,
       wearableManager: WearableManager(),
       connector: connector,
+      prefsFuture: _prefsFuture,
+      onWearableConnected: (wearable) {
+        wearablesProvider.addWearable(wearable);
+        sensorRecorderProvider.addWearable(wearable);
+      },
     );
 
     _wearableEventSub = connector.events.listen((event) {
