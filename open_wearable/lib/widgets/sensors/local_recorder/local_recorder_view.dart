@@ -353,7 +353,7 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
                       ),
                       const SizedBox(height: 6),
                       PlatformText(
-                        "Only records sensor data streamed over Bluetooth",
+                        "Only records sensor data streamed over Bluetooth.",
                       ),
                       const SizedBox(height: 12),
                       SizedBox(
