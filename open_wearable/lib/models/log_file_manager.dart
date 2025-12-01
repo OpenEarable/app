@@ -12,7 +12,10 @@ class _CustomLogFilter extends LogFilter {
     return !(event.message.contains('componentData') ||
         event.message.contains('SensorData') ||
         event.message.contains('Battery') ||
-        event.message.contains('Mantissa'));
+        event.message.contains('Mantissa') ||
+        (event.message.toLowerCase().contains('sensor data') && event.level == Level.trace) ||
+        (event.message.toLowerCase().contains('parsed') && event.level == Level.trace)
+    );
   }
 }
 
