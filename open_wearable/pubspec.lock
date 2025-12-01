@@ -250,10 +250,10 @@ packages:
     dependency: "direct main"
     description:
       name: flutter_archive
-      sha256: "5ca235f304c12bf468979235f400f79846d204169d715939e39197106f5fc970"
+      sha256: e433389fde0bdfc20af40784fdb6d91753794b40cf708a43f95244fcd5d6c298
       url: "https://pub.dev"
     source: hosted
-    version: "6.0.3"
+    version: "6.0.4"
   flutter_bloc:
     dependency: "direct main"
     description:
@@ -460,10 +460,10 @@ packages:
     dependency: "direct main"
     description:
       name: open_earable_flutter
-      sha256: "759d827645c90409f9977b8fd73bba1b65c4e230364961b558548d7d8505d68a"
+      sha256: "6a01f35136fdcae858b5163069650aaf8e690e91d10559368a5ccc88c5ee70a2"
       url: "https://pub.dev"
     source: hosted
-    version: "2.2.3"
+    version: "2.2.4"
   open_file:
     dependency: "direct main"
     description:
