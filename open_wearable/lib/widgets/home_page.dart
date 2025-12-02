@@ -56,15 +56,12 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth < 600) {
-          return _buildSmallScreenLayout(context);
-        } else {
-          return _buildLargeScreenLayout(context);
-        }
+        return _buildSmallScreenLayout(context);
       },
     );
   }
 
+  // ignore: unused_element
   Widget _buildLargeScreenLayout(BuildContext context) {
     return PlatformScaffold(
       appBar: PlatformAppBar(
