@@ -1,20 +1,29 @@
-import 'dart:io';
+import 'dart:io' show Directory, File; // still fine as long as we don't use it on web
 
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'package:path_provider/path_provider.dart';
 
 class _CustomLogFilter extends LogFilter {
+  _CustomLogFilter(this._minLevel);
+
+  final Level _minLevel;
+
   @override
   bool shouldLog(LogEvent event) {
-    if (event.level < level!) return false;
+    if (event.level.index < _minLevel.index) return false;
 
-    return !(event.message.contains('componentData') ||
-        event.message.contains('SensorData') ||
-        event.message.contains('Battery') ||
-        event.message.contains('Mantissa') ||
-        (event.message.toLowerCase().contains('sensor data') && event.level == Level.trace) ||
-        (event.message.toLowerCase().contains('parsed') && event.level == Level.trace)
+    final msg = event.message.toString();
+
+    return !(
+      msg.contains('componentData') ||
+      msg.contains('SensorData') ||
+      msg.contains('Battery') ||
+      msg.contains('Mantissa') ||
+      (msg.toLowerCase().contains('sensor data') &&
+          event.level == Level.trace) ||
+      (msg.toLowerCase().contains('parsed') &&
+          event.level == Level.trace)
     );
   }
 }
@@ -22,7 +31,9 @@ class _CustomLogFilter extends LogFilter {
 class LogFileManager with ChangeNotifier {
   final Logger _logger;
   final Logger _libLogger;
-  final AdvancedFileOutput _fileOutput;
+
+  // On web this will be null and never used.
+  final LogOutput? _fileOutput;
   final String logDirectoryPath;
 
   Logger get logger => _logger;
@@ -31,7 +42,7 @@ class LogFileManager with ChangeNotifier {
   LogFileManager._({
     required Logger logger,
     required Logger libLogger,
-    required AdvancedFileOutput fileOutput,
+    required LogOutput? fileOutput,
     required this.logDirectoryPath,
   })  : _logger = logger,
         _libLogger = libLogger,
@@ -39,38 +50,58 @@ class LogFileManager with ChangeNotifier {
 
   /// Async factory – call this once at startup.
   static Future<LogFileManager> create() async {
-    final cacheDir = await getApplicationDocumentsDirectory();
-    final logDirPath = '${cacheDir.path}/logs';
-    final logDir = Directory(logDirPath);
-
-    if (!await logDir.exists()) {
-      await logDir.create(recursive: true);
-    }
-
-    final fileOutput = AdvancedFileOutput(
-      path: logDirPath,
-      maxFileSizeKB: 1024, // ~1 MB per file
-      maxRotatedFilesCount: 5, // keep last 5 (tune as needed)
-    );
-
-    LogFilter? filter;
-    LogFilter? libFilter;
+    // ------------------------
+    // 1) Decide levels/printer
+    // ------------------------
     late final Level level;
-
-    LogPrinter printer = PrettyPrinter();
+    LogPrinter printer;
 
     if (kDebugMode) {
-      libFilter = _CustomLogFilter();
       level = Level.trace;
+      printer = PrettyPrinter();
     } else {
-      libFilter = _CustomLogFilter();
-      printer = LogfmtPrinter();
       level = Level.debug;
+      printer = LogfmtPrinter();
     }
 
+    final libFilter = _CustomLogFilter(level);
+    LogOutput? fileOutput;
+    String logDirPath = '';
+
+    // ------------------------
+    // 2) Configure outputs
+    // ------------------------
+    final List<LogOutput> outputs = [ConsoleOutput()];
+
+    if (!kIsWeb) {
+      // Only use file output on non-web platforms
+      final cacheDir = await getApplicationDocumentsDirectory();
+      logDirPath = '${cacheDir.path}/logs';
+      final logDir = Directory(logDirPath);
+
+      if (!await logDir.exists()) {
+        await logDir.create(recursive: true);
+      }
+
+      final advanced = AdvancedFileOutput(
+        path: logDirPath,
+        maxFileSizeKB: 1024, // ~1 MB per file
+        maxRotatedFilesCount: 5,
+      );
+
+      fileOutput = advanced;
+      outputs.add(advanced);
+    }
+
+    final sharedOutput = outputs.length == 1
+        ? outputs.first
+        : MultiOutput(outputs);
+
+    // ------------------------
+    // 3) Create loggers
+    // ------------------------
     final logger = Logger(
       level: level,
-      filter: filter,
       printer: PrefixPrinter(
         printer,
         trace: '[APP] TRACE',
@@ -80,13 +111,11 @@ class LogFileManager with ChangeNotifier {
         error: '[APP] ERR',
         fatal: '[APP] FAT',
       ),
-      output: MultiOutput([
-        ConsoleOutput(),
-        fileOutput,
-      ]),
+      output: sharedOutput,
     );
 
     final libLogger = Logger(
+      level: level,
       filter: libFilter,
       printer: PrefixPrinter(
         printer,
@@ -97,10 +126,7 @@ class LogFileManager with ChangeNotifier {
         error: '[LIB] ERR',
         fatal: '[LIB] FAT',
       ),
-      output: MultiOutput([
-        ConsoleOutput(),
-        fileOutput,
-      ]),
+      output: sharedOutput,
     );
 
     return LogFileManager._(
@@ -113,6 +139,11 @@ class LogFileManager with ChangeNotifier {
 
   /// Returns all `.log` files in the log directory (newest first).
   Future<List<File>> get logFiles async {
+    if (kIsWeb) {
+      // No file system on web → no log files.
+      return [];
+    }
+
     final logDir = Directory(logDirectoryPath);
     if (!await logDir.exists()) return [];
 
@@ -131,6 +162,8 @@ class LogFileManager with ChangeNotifier {
   }
 
   Future<void> deleteLogFile(File file) async {
+    if (kIsWeb) return;
+
     if (await file.exists()) {
       await file.delete();
       notifyListeners();
@@ -138,6 +171,8 @@ class LogFileManager with ChangeNotifier {
   }
 
   Future<void> clearAllLogs() async {
+    if (kIsWeb) return;
+
     final files = await logFiles;
     for (final file in files) {
       if (await file.exists()) {
@@ -149,7 +184,11 @@ class LogFileManager with ChangeNotifier {
 
   @override
   void dispose() {
-    _fileOutput.destroy(); // flush & close
+    // Only AdvancedFileOutput has destroy(); LogOutput in general doesn't.
+    final fo = _fileOutput;
+    if (fo is AdvancedFileOutput) {
+      fo.destroy();
+    }
     super.dispose();
   }
 }
