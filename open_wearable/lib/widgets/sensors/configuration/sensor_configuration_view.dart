@@ -21,15 +21,7 @@ class SensorConfigurationView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<WearablesProvider>(
       builder: (context, wearablesProvider, child) {
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            if (constraints.maxWidth < 600) {
-              return _buildSmallScreenLayout(context, wearablesProvider);
-            } else {
-              return _buildLargeScreenLayout(context, wearablesProvider);
-            }
-          },
-        );
+        return _buildSmallScreenLayout(context, wearablesProvider);
       },
     );
   }
@@ -109,6 +101,7 @@ class SensorConfigurationView extends StatelessWidget {
     );
   }
 
+  // ignore: unused_element
   Widget _buildLargeScreenLayout(BuildContext context, WearablesProvider wearablesProvider) {
     final List<Wearable> devices = wearablesProvider.wearables;
     List<StaggeredGridTile> tiles = _generateTiles(devices, wearablesProvider.sensorConfigurationProviders);
