@@ -6,6 +6,7 @@ import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 import 'package:open_wearable/models/log_file_manager.dart';
 import 'package:open_wearable/models/wearable_connector.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
+import 'package:open_wearable/widgets/app_banner.dart';
 import 'package:open_wearable/widgets/global_app_banner_overlay.dart';
 import 'package:open_wearable/widgets/home_page.dart';
 import 'package:provider/provider.dart';
@@ -59,6 +60,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   late final StreamSubscription _wearableEventSub;
   late final BluetoothAutoConnector _autoConnector;
   late final Future<SharedPreferences> _prefsFuture;
+  late final StreamSubscription _wearableProvEventSub;
 
   @override
   void initState() {
@@ -95,6 +97,16 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             ],
           ),
         ),
+      );
+    });
+
+    _wearableProvEventSub = wearablesProvider.wearableEventStream.listen((event) {
+      if (!mounted) return;
+      // show a banner using AppBannerController
+      final appBannerController = context.read<AppBannerController>();
+      appBannerController.showBanner(
+        (index) => AppBanner(content: Text('Time synchronized for ${event.wearable.name}')),
+        duration: const Duration(seconds: 3),
       );
     });
 
@@ -156,6 +168,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void dispose() {
     _unsupportedFirmwareSub.cancel();
     _wearableEventSub.cancel();
+    _wearableProvEventSub.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _autoConnector.stop();
     super.dispose();
