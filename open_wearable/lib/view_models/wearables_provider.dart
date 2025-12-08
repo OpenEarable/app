@@ -23,6 +23,27 @@ class FirmwareTooNewEvent extends UnsupportedFirmwareEvent {
   FirmwareTooNewEvent(super.wearable);
 }
 
+abstract class WearableEvent {
+  final Wearable wearable;
+  WearableEvent(this.wearable);
+}
+
+class WearableTimeSynchronizedEvent extends WearableEvent {
+  WearableTimeSynchronizedEvent(super.wearable);
+
+  @override
+  String toString() => 'WearableTimeSynchronizedEvent for ${wearable.name}';
+}
+
+class WearableErrorEvent extends WearableEvent {
+  final String errorMessage;
+  WearableErrorEvent(super.wearable, this.errorMessage);
+
+  @override
+  String toString() =>
+      'WearableErrorEvent for ${wearable.name}: $errorMessage';
+}
+
 class WearablesProvider with ChangeNotifier {
   final List<Wearable> _wearables = [];
   final Map<Wearable, SensorConfigurationProvider>
@@ -37,10 +58,30 @@ class WearablesProvider with ChangeNotifier {
   Stream<UnsupportedFirmwareEvent> get unsupportedFirmwareStream =>
       _unsupportedFirmwareEventsController.stream;
 
+  final _wearableEventController =
+      StreamController<WearableEvent>.broadcast();
+  Stream<WearableEvent> get wearableEventStream => _wearableEventController.stream;
+
   void addWearable(Wearable wearable) {
     // 1) Fast path: ignore duplicates and push into lists/maps synchronously
     if (_wearables.any((w) => w.deviceId == wearable.deviceId)) {
       return;
+    }
+
+    if (wearable is TimeSynchronizable) {
+      logger.d('Synchronizing time for wearable ${wearable.name}');
+      (wearable as TimeSynchronizable).synchronizeTime().then((_) {
+        logger.d('Time synchronized for wearable ${wearable.name}');
+        _wearableEventController.add(WearableTimeSynchronizedEvent(wearable));
+      }).catchError((e, st) {
+        logger.w('Failed to synchronize time for wearable ${wearable.name}: $e\n$st');
+        _wearableEventController.add(
+          WearableErrorEvent(
+            wearable,
+            'Failed to synchronize time: $e',
+          ),
+        );
+      });
     }
 
     _wearables.add(wearable);
