@@ -105,7 +105,32 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       // show a banner using AppBannerController
       final appBannerController = context.read<AppBannerController>();
       appBannerController.showBanner(
-        (index) => AppBanner(content: Text('Time synchronized for ${event.wearable.name}')),
+        (id) {
+          late final Color backgroundColor;
+          if (event is WearableErrorEvent) {
+            backgroundColor = Theme.of(context).colorScheme.error;
+          } else {
+            backgroundColor = Theme.of(context).colorScheme.primary;
+          }
+
+          late final Color textColor;
+          if (event is WearableErrorEvent) {
+            textColor = Theme.of(context).colorScheme.onError;
+          } else {
+            textColor = Theme.of(context).colorScheme.onPrimary;
+          }
+
+          return AppBanner(
+            content: Text(
+              event.description,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: textColor,
+              ),
+            ),
+            backgroundColor: backgroundColor,
+            key: ValueKey(id),
+          );
+        },
         duration: const Duration(seconds: 3),
       );
     });
