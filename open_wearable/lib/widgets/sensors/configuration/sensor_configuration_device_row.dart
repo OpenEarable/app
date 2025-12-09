@@ -86,7 +86,7 @@ class _SensorConfigurationDeviceRowState
         _content = [
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: PlatformText("This device does not support sensors"),
+            child: PlatformText("This device does not support configuring sensors."),
           ),
         ];
       });
