@@ -25,11 +25,16 @@ class FirmwareTooNewEvent extends UnsupportedFirmwareEvent {
 
 abstract class WearableEvent {
   final Wearable wearable;
-  WearableEvent(this.wearable);
+  final String description;
+
+  WearableEvent({required this.wearable, required this.description});
 }
 
 class WearableTimeSynchronizedEvent extends WearableEvent {
-  WearableTimeSynchronizedEvent(super.wearable);
+  WearableTimeSynchronizedEvent({
+    required super.wearable,
+    String? description,
+  }): super(description: description ?? 'Time synchronized for ${wearable.name}');
 
   @override
   String toString() => 'WearableTimeSynchronizedEvent for ${wearable.name}';
@@ -37,11 +42,15 @@ class WearableTimeSynchronizedEvent extends WearableEvent {
 
 class WearableErrorEvent extends WearableEvent {
   final String errorMessage;
-  WearableErrorEvent(super.wearable, this.errorMessage);
+  WearableErrorEvent({
+    required super.wearable,
+    required this.errorMessage,
+    String? description,
+  }): super(description: description ?? 'Error for ${wearable.name}: $errorMessage');
 
   @override
   String toString() =>
-      'WearableErrorEvent for ${wearable.name}: $errorMessage';
+      'WearableErrorEvent for ${wearable.name}: $errorMessage, description: $description';
 }
 
 class WearablesProvider with ChangeNotifier {
@@ -72,13 +81,14 @@ class WearablesProvider with ChangeNotifier {
       logger.d('Synchronizing time for wearable ${wearable.name}');
       (wearable as TimeSynchronizable).synchronizeTime().then((_) {
         logger.d('Time synchronized for wearable ${wearable.name}');
-        _wearableEventController.add(WearableTimeSynchronizedEvent(wearable));
+        _wearableEventController.add(WearableTimeSynchronizedEvent(wearable: wearable, description: 'Time synchronized for ${wearable.name}'));
       }).catchError((e, st) {
         logger.w('Failed to synchronize time for wearable ${wearable.name}: $e\n$st');
         _wearableEventController.add(
           WearableErrorEvent(
-            wearable,
-            'Failed to synchronize time: $e',
+            wearable: wearable,
+            errorMessage: 'Failed to synchronize time with ${wearable.name}: $e',
+            description: 'Failed to synchronize time for ${wearable.name}',
           ),
         );
       });
