@@ -42,16 +42,23 @@ class SensorConfigurationView extends StatelessWidget {
         : ListView(
           children: [
             ...wearablesProvider.wearables.map((wearable) {
-              return ChangeNotifierProvider<SensorConfigurationProvider>.value(
-                value: wearablesProvider.getSensorConfigurationProvider(wearable),
-                child: SensorConfigurationDeviceRow(device: wearable),
-              );
+              if (wearable is SensorConfigurationManager) {
+                return ChangeNotifierProvider<SensorConfigurationProvider>.value(
+                  value: wearablesProvider.getSensorConfigurationProvider(wearable),
+                  child: SensorConfigurationDeviceRow(device: wearable),
+                );
+              } else {
+                return SensorConfigurationDeviceRow(device: wearable);
+              }
             }),
             _buildThroughputWarningBanner(context),
             _buildSetConfigButton(
-              configProviders: wearablesProvider.wearables.map(
-                (wearable) => wearablesProvider.getSensorConfigurationProvider(wearable),
-              ).toList(),
+              configProviders: wearablesProvider.wearables
+                // ignore: prefer_iterable_wheretype
+                .where((wearable) => wearable is SensorConfigurationManager)
+                .map(
+                  (wearable) => wearablesProvider.getSensorConfigurationProvider(wearable),
+                ).toList(),
             ),
           ],
         ),
