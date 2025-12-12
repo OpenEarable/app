@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/apps/audio_response_measure/audio_response_measurement_view.dart';
 import 'package:open_wearable/apps/heart_tracker/widgets/heart_tracker_page.dart';
 import 'package:open_wearable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_wearable/apps/models/sensor_matching.dart';
@@ -156,6 +157,27 @@ final List<AppInfo> _apps = [
             child: PlatformText("No PPG Sensor Found"),
           ),
         );
+      },
+    ),
+  ),
+  AppInfo(
+    logoPath: "",
+    title: "Audio Response",
+    description: "Measure and store audio responses",
+    widget: SelectEarableView(
+      startApp: (wearable, _) {
+        if (wearable is AudioResponseManager) {
+          return AudioResponseMeasurementView(manager: wearable as AudioResponseManager);
+        } else {
+          return PlatformScaffold(
+            appBar: PlatformAppBar(
+              title: PlatformText("Audio Response Measurement"),
+            ),
+            body: Center(
+              child: PlatformText("Audio Response Measurement not supported on this device."),
+            ),
+          );
+        }
       },
     ),
   ),
