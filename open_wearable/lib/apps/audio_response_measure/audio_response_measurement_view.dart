@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:file_picker/file_picker.dart';
 
 // NOTE: We intentionally do NOT support writing files on web here.
 // If you want web downloads, we can add a proper conditional import helper.
@@ -60,6 +61,22 @@ class _AudioResponseMeasurementViewState extends State<AudioResponseMeasurementV
     final now = DateTime.now();
     final fileName = 'audio_response_${_timestampForFilename(now)}.json';
 
+    // Android: let user pick a target directory.
+    if (Platform.isAndroid) {
+      final dirPath = await FilePicker.platform.getDirectoryPath();
+      if (dirPath == null || dirPath.isEmpty) {
+        // User canceled.
+        return null;
+      }
+      final String path = p.join(dirPath, fileName);
+      final encoder = const JsonEncoder.withIndent('  ');
+      final jsonStr = encoder.convert(result);
+      final file = File(path);
+      await file.writeAsString(jsonStr, flush: true);
+      return path;
+    }
+
+    // iOS: save to Downloads if possible (fallback to app docs).
     Directory? downloads;
     try {
       downloads = await getDownloadsDirectory();
@@ -67,7 +84,6 @@ class _AudioResponseMeasurementViewState extends State<AudioResponseMeasurementV
       downloads = null;
     }
 
-    // Fallback when downloads directory isn't available (e.g., Android/iOS).
     final Directory dir = downloads ?? await getApplicationDocumentsDirectory();
     final String path = p.join(dir.path, fileName);
 
@@ -89,19 +105,19 @@ class _AudioResponseMeasurementViewState extends State<AudioResponseMeasurementV
 
     try {
       final res = await widget.manager.measureAudioResponse(widget.parameters);
-      final savedPath = await _saveResultToDownloadsAsJson(res);
+      // final savedPath = await _saveResultToDownloadsAsJson(res);
       if (!mounted) return;
       setState(() {
         _result = res;
         _isMeasuring = false;
       });
       if (!context.mounted) return;
-      final msg = savedPath == null
-          ? 'Measured. (Saving is not supported on web in this view)'
-          : 'Measured and saved to: $savedPath';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg)),
-      );
+      // final msg = savedPath == null
+      //     ? 'Measured. (Not saved — either not supported or you canceled folder selection.)'
+      //     : 'Measured and saved to: $savedPath';
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(content: Text(msg)),
+      // );
     } catch (e, st) {
       if (!mounted) return;
       setState(() {
@@ -146,7 +162,7 @@ class _AudioResponseMeasurementViewState extends State<AudioResponseMeasurementV
                       : () async {
                           final path = await _saveResultToDownloadsAsJson(_result!);
                           final msg = path == null
-                              ? 'Saving is not supported on web in this view'
+                              ? 'Not saved — either not supported or you canceled folder selection.'
                               : 'Saved to: $path';
                           if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -239,7 +255,7 @@ class _AudioResponseMeasurementViewState extends State<AudioResponseMeasurementV
     final int version = (result['version'] as int?) ?? -1;
     final int quality = (result['quality'] as int?) ?? -1;
 
-    final int meanMagnitude = (result['mean_magnitude'] as int?) ?? -1;
+    final double meanMagnitude = (result['mean_magnitude'] as double?) ?? -1;
     final int numPeaks = (result['num_peaks'] as int?) ?? -1;
 
     final List<dynamic> pointsDyn = (result['points'] as List?) ?? const [];
@@ -268,7 +284,6 @@ class _AudioResponseMeasurementViewState extends State<AudioResponseMeasurementV
                 _kv(theme, 'Version', '$version'),
                 _kv(theme, 'Quality', '$quality'),
                 _kv(theme, 'Mean Magnitude', '$meanMagnitude'),
-                _kv(theme, 'Num Peaks', '$numPeaks'),
                 _kv(theme, 'Points', '${points.length}'),
               ],
             ),
