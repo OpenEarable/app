@@ -14,7 +14,7 @@ import 'package:flutter_archive/flutter_archive.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 
-Logger _logger = Logger();
+final Logger _uiLogger = Logger();
 
 class LocalRecorderView extends StatefulWidget {
   const LocalRecorderView({super.key});
@@ -26,18 +26,23 @@ class LocalRecorderView extends StatefulWidget {
 class _LocalRecorderViewState extends State<LocalRecorderView> {
   static const MethodChannel platform = MethodChannel('edu.teco.open_folder');
   List<FileSystemEntity> _recordings = [];
-  final Set<String> _expandedFolders = {}; // Track which folders are expanded
+  final Set<String> _expandedFolders = {};
   Timer? _recordingTimer;
   Duration _elapsedRecording = Duration.zero;
   bool _lastRecordingState = false;
   bool _isHandlingStopAction = false;
   DateTime? _activeRecordingStart;
   SensorRecorderProvider? _recorder;
+  late final _LocalRecorderController _controller;
 
   @override
   void initState() {
     super.initState();
-    _listRecordings();
+    _controller = _LocalRecorderController(
+      platformChannel: platform,
+      logger: _uiLogger,
+    );
+    _refreshRecordings();
   }
 
   /// Helper to show cross-platform error dialogs instead of SnackBars
@@ -58,72 +63,20 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
     );
   }
 
-  Future<void> _openFolder(String path) async {
+  Future<void> _refreshRecordings() async {
     try {
-      if (Platform.isIOS) {
-        await platform
-            .invokeMethod('openFolder', {'path': "shareddocuments://$path"});
-      } else if (Platform.isAndroid) {
-        await platform.invokeMethod('openFolder', {'path': path});
-      }
-    } on PlatformException catch (e) {
-      print("Failed to open folder: '${e.message}'.");
-      // Optional: Show error dialog here too if needed
-    }
-  }
-
-  Future<void> _listRecordings() async {
-    Directory recordingsDir;
-
-    if (Platform.isAndroid) {
-      Directory? dir = await getExternalStorageDirectory();
-      if (dir == null) return;
-      recordingsDir = dir;
-    } else if (Platform.isIOS) {
-      recordingsDir = await getIOSDirectory();
-    } else {
-      return;
-    }
-
-    if (!await recordingsDir.exists()) {
+      final recordings = await _controller.listRecordings();
+      if (!mounted) return;
       setState(() {
-        _recordings = [];
+        _recordings = recordings;
       });
-      return;
-    }
-
-    List<FileSystemEntity> entities = recordingsDir.listSync();
-
-    // Filter only directories that start with "OpenWearable_Recording"
-    _recordings = entities
-        .where(
-          (entity) =>
-              entity is Directory &&
-              entity.path.contains('OpenWearable_Recording'),
-        )
-        .toList();
-
-    // Sort by modification time (newest first)
-    _recordings.sort((a, b) {
-      return b.statSync().changed.compareTo(a.statSync().changed);
-    });
-
-    setState(() {});
-  }
-
-  List<File> _getFilesInFolder(Directory folder) {
-    try {
-      return folder.listSync(recursive: false).whereType<File>().toList()
-        ..sort(
-          (a, b) => a.path.split('/').last.compareTo(b.path.split('/').last),
-        );
     } catch (e) {
-      _logger.e('Error listing files in folder: $e');
-      return [];
+      _uiLogger.e('Error listing recordings: $e');
+      await _showErrorDialog('Failed to list recordings: $e');
     }
   }
 
-  Future<void> _confirmAndDeleteRecording(FileSystemEntity entity) async {
+  Future<void> _confirmAndDelete(FileSystemEntity entity) async {
     if (!mounted) return;
     final name = entity.path.split('/').last;
     final shouldDelete = await showPlatformDialog<bool>(
@@ -152,18 +105,12 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
 
     if (!shouldDelete) return;
 
-    if (entity.existsSync()) {
-      try {
-        if (entity is Directory) {
-          entity.deleteSync(recursive: true);
-        } else {
-          entity.deleteSync();
-        }
-        _listRecordings();
-      } catch (e) {
-        _logger.e('Error deleting recording: $e');
-        _showErrorDialog('Failed to delete recording: $e');
-      }
+    try {
+      await _controller.deleteEntity(entity);
+      await _refreshRecordings();
+    } catch (e) {
+      _uiLogger.e('Error deleting recording: $e');
+      await _showErrorDialog('Failed to delete recording: $e');
     }
   }
 
@@ -184,9 +131,9 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
             .map((provider) => provider.turnOffAllSensors());
         await Future.wait(futures);
       }
-      await _listRecordings();
+      await _refreshRecordings();
     } catch (e) {
-      _logger.e('Error stopping recording: $e');
+      _uiLogger.e('Error stopping recording: $e');
       await _showErrorDialog('Failed to stop recording: $e');
     } finally {
       if (mounted) {
@@ -276,7 +223,449 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
-  Future<void> _shareFile(File file) async {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<SensorRecorderProvider>(
+      builder: (context, recorder, _) {
+        final isRecording = recorder.isRecording;
+        final canStartRecording = recorder.hasSensorsConnected && !isRecording;
+
+        return SafeArea(
+          top: false,
+          child: Column(
+            children: [
+              _RecorderHeaderCard(
+                isRecording: isRecording,
+                elapsed: _elapsedRecording,
+                canStartRecording: canStartRecording,
+                isHandlingStopAction: _isHandlingStopAction,
+                onStart: () async {
+                  final dir = await _pickDirectory();
+                  if (dir == null) return;
+
+                  if (!await _isDirectoryEmpty(dir)) {
+                    if (!context.mounted) return;
+                    final proceed = await _askOverwriteConfirmation(context, dir);
+                    if (!proceed) return;
+                  }
+
+                  recorder.startRecording(dir);
+                  await _refreshRecordings();
+                },
+                onStop: () => _handleStopRecording(recorder, turnOffSensors: false),
+                onStopAndTurnOff: () => _handleStopRecording(recorder, turnOffSensors: true),
+                formatDuration: _formatDuration,
+              ),
+              Expanded(
+                child: _RecordingsSection(
+                  recordings: _recordings,
+                  isRecording: isRecording,
+                  expandedFolders: _expandedFolders,
+                  onToggleFolder: (folderPath, isExpanded, isCurrentRecording) {
+                    setState(() {
+                      if (isExpanded) {
+                        _expandedFolders.remove(folderPath);
+                      } else if (!isCurrentRecording) {
+                        _expandedFolders.add(folderPath);
+                      }
+                    });
+                  },
+                  onShareFolder: (folder) => _controller.shareFolder(folder, onError: _showErrorDialog),
+                  onDeleteFolder: (folder) => _confirmAndDelete(folder),
+                  onShareFile: (file) => _controller.shareFile(file, onError: _showErrorDialog),
+                  onOpenFile: (file) async {
+                    final result = await OpenFile.open(
+                      file.path,
+                      type: 'text/comma-separated-values',
+                    );
+                    if (result.type != ResultType.done) {
+                      await _showErrorDialog('Could not open file: ${result.message}');
+                    }
+                  },
+                  onOpenRecordingsFolderIOS: Platform.isIOS
+                      ? () async {
+                          final recordDir = await getIOSDirectory();
+                          await _controller.openFolder(recordDir.path);
+                        }
+                      : null,
+                  getFilesInFolder: _controller.getFilesInFolder,
+                  formatFileSize: _formatFileSize,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _RecorderHeaderCard extends StatelessWidget {
+  const _RecorderHeaderCard({
+    required this.isRecording,
+    required this.elapsed,
+    required this.canStartRecording,
+    required this.isHandlingStopAction,
+    required this.onStart,
+    required this.onStop,
+    required this.onStopAndTurnOff,
+    required this.formatDuration,
+  });
+
+  final bool isRecording;
+  final Duration elapsed;
+  final bool canStartRecording;
+  final bool isHandlingStopAction;
+  final Future<void> Function() onStart;
+  final VoidCallback onStop;
+  final VoidCallback onStopAndTurnOff;
+  final String Function(Duration) formatDuration;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(10),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            PlatformText(
+              'Local Recorder',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 6),
+            PlatformText('Only records sensor data streamed over Bluetooth.'),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: !isRecording
+                  ? ElevatedButton.icon(
+                      icon: const Icon(Icons.play_arrow),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: canStartRecording
+                            ? Colors.green.shade600
+                            : Colors.grey.shade400,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size.fromHeight(48),
+                      ),
+                      label: const Text(
+                        'Start Recording',
+                        style: TextStyle(fontSize: 18),
+                      ),
+                      onPressed: !canStartRecording ? null : onStart,
+                    )
+                  : Column(
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                icon: const Icon(Icons.stop),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  foregroundColor: Colors.white,
+                                  minimumSize: const Size.fromHeight(48),
+                                ),
+                                label: const Text(
+                                  'Stop Recording',
+                                  style: TextStyle(fontSize: 18),
+                                ),
+                                onPressed: isHandlingStopAction ? null : onStop,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(minWidth: 90),
+                              child: Text(
+                                formatDuration(elapsed),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleLarge
+                                    ?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.power_settings_new),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.redAccent,
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size.fromHeight(48),
+                          ),
+                          label: const Text(
+                            'Stop & Turn Off Sensors',
+                            style: TextStyle(fontSize: 18),
+                          ),
+                          onPressed: isHandlingStopAction ? null : onStopAndTurnOff,
+                        ),
+                      ],
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RecordingsSection extends StatelessWidget {
+  const _RecordingsSection({
+    required this.recordings,
+    required this.isRecording,
+    required this.expandedFolders,
+    required this.onToggleFolder,
+    required this.onShareFolder,
+    required this.onDeleteFolder,
+    required this.onShareFile,
+    required this.onOpenFile,
+    required this.onOpenRecordingsFolderIOS,
+    required this.getFilesInFolder,
+    required this.formatFileSize,
+  });
+
+  final List<FileSystemEntity> recordings;
+  final bool isRecording;
+  final Set<String> expandedFolders;
+  final void Function(String folderPath, bool isExpanded, bool isCurrentRecording) onToggleFolder;
+  final Future<void> Function(Directory folder) onShareFolder;
+  final Future<void> Function(Directory folder) onDeleteFolder;
+  final Future<void> Function(File file) onShareFile;
+  final Future<void> Function(File file) onOpenFile;
+  final Future<void> Function()? onOpenRecordingsFolderIOS;
+  final List<File> Function(Directory folder) getFilesInFolder;
+  final String Function(File file) formatFileSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Recordings',
+                style: TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold),
+              ),
+              if (onOpenRecordingsFolderIOS != null)
+                IconButton(
+                  icon: const Icon(Icons.folder_open),
+                  onPressed: onOpenRecordingsFolderIOS,
+                ),
+            ],
+          ),
+        ),
+        const Divider(thickness: 2),
+        Expanded(
+          child: recordings.isEmpty
+              ? const _EmptyRecordingsState()
+              : ListView.builder(
+                  padding: EdgeInsets.zero,
+                  itemCount: recordings.length,
+                  itemBuilder: (context, index) {
+                    final folder = recordings[index] as Directory;
+                    final folderName = folder.path.split('/').last;
+                    final isCurrentRecording = isRecording && index == 0;
+                    final isExpanded = expandedFolders.contains(folder.path);
+                    final files = isExpanded ? getFilesInFolder(folder) : <File>[];
+
+                    return _RecordingFolderTile(
+                      folder: folder,
+                      folderName: folderName,
+                      isExpanded: isExpanded,
+                      isCurrentRecording: isCurrentRecording,
+                      files: files,
+                      onToggle: () => onToggleFolder(folder.path, isExpanded, isCurrentRecording),
+                      onShareFolder: isCurrentRecording ? null : () => onShareFolder(folder),
+                      onDeleteFolder: isCurrentRecording ? null : () => onDeleteFolder(folder),
+                      formatFileSize: formatFileSize,
+                      onShareFile: onShareFile,
+                      onOpenFile: onOpenFile,
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+class _EmptyRecordingsState extends StatelessWidget {
+  const _EmptyRecordingsState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: const [
+          Icon(Icons.warning, size: 48, color: Colors.grey),
+          SizedBox(height: 16),
+          Text(
+            'No recordings found',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecordingFolderTile extends StatelessWidget {
+  const _RecordingFolderTile({
+    required this.folder,
+    required this.folderName,
+    required this.isExpanded,
+    required this.isCurrentRecording,
+    required this.files,
+    required this.onToggle,
+    required this.onShareFolder,
+    required this.onDeleteFolder,
+    required this.formatFileSize,
+    required this.onShareFile,
+    required this.onOpenFile,
+  });
+
+  final Directory folder;
+  final String folderName;
+  final bool isExpanded;
+  final bool isCurrentRecording;
+  final List<File> files;
+  final VoidCallback onToggle;
+  final VoidCallback? onShareFolder;
+  final VoidCallback? onDeleteFolder;
+  final String Function(File) formatFileSize;
+  final Future<void> Function(File) onShareFile;
+  final Future<void> Function(File) onOpenFile;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        ListTile(
+          leading: Icon(
+            isExpanded ? Icons.folder_open : Icons.folder,
+            color: Colors.grey,
+          ),
+          title: Text(
+            folderName,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 14),
+          ),
+          trailing: isCurrentRecording
+              ? const Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        Icons.share,
+                        color: onShareFolder == null
+                            ? Colors.grey.withValues(alpha: 30)
+                            : Colors.blue,
+                      ),
+                      onPressed: onShareFolder,
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        Icons.delete,
+                        color: onDeleteFolder == null
+                            ? Colors.grey.withValues(alpha: 30)
+                            : Colors.red,
+                      ),
+                      onPressed: onDeleteFolder,
+                    ),
+                  ],
+                ),
+          onTap: onToggle,
+        ),
+        if (isExpanded)
+          ...files.map((file) {
+            final fileName = file.path.split('/').last;
+            final fileSize = formatFileSize(file);
+            return ListTile(
+              contentPadding: const EdgeInsets.only(left: 72, right: 16),
+              leading: Icon(
+                fileName.endsWith('.csv')
+                    ? Icons.table_chart
+                    : Icons.insert_drive_file,
+                size: 20,
+              ),
+              title: Text(fileName, style: const TextStyle(fontSize: 14)),
+              subtitle: Text(
+                fileSize,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              trailing: IconButton(
+                icon: const Icon(Icons.share, color: Colors.blue, size: 20),
+                onPressed: () => onShareFile(file),
+              ),
+              onTap: () => onOpenFile(file),
+            );
+          }),
+      ],
+    );
+  }
+}
+
+class _LocalRecorderController {
+  _LocalRecorderController({
+    required this.platformChannel,
+    required this.logger,
+  });
+
+  final MethodChannel platformChannel;
+  final Logger logger;
+
+  Future<List<FileSystemEntity>> listRecordings() async {
+    final recordingsDir = await _getRecordingsRootDirectory();
+    if (recordingsDir == null) return [];
+
+    if (!await recordingsDir.exists()) return [];
+
+    final entities = recordingsDir.listSync();
+
+    final recordings = entities
+        .where((entity) => entity is Directory && entity.path.contains('OpenWearable_Recording'))
+        .toList();
+
+    recordings.sort((a, b) => b.statSync().changed.compareTo(a.statSync().changed));
+    return recordings;
+  }
+
+  List<File> getFilesInFolder(Directory folder) {
+    try {
+      return folder.listSync(recursive: false).whereType<File>().toList()
+        ..sort((a, b) => a.path.split('/').last.compareTo(b.path.split('/').last));
+    } catch (e) {
+      logger.e('Error listing files in folder: $e');
+      return [];
+    }
+  }
+
+  Future<void> deleteEntity(FileSystemEntity entity) async {
+    if (!entity.existsSync()) return;
+    if (entity is Directory) {
+      await entity.delete(recursive: true);
+    } else {
+      await entity.delete();
+    }
+  }
+
+  Future<void> shareFile(File file, {required Future<void> Function(String) onError}) async {
     try {
       final result = await SharePlus.instance.share(
         ShareParams(
@@ -286,21 +675,20 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
       );
 
       if (result.status == ShareResultStatus.success) {
-        _logger.i('File shared successfully');
+        logger.i('File shared successfully');
       }
     } catch (e) {
-      _logger.e('Error sharing file: $e');
-      await _showErrorDialog('Failed to share file: $e');
+      logger.e('Error sharing file: $e');
+      await onError('Failed to share file: $e');
     }
   }
 
-  Future<void> _shareFolder(Directory folder) async {
+  Future<void> shareFolder(Directory folder, {required Future<void> Function(String) onError}) async {
     try {
-      // Replaced SnackBar with Logger to avoid UI issues during async work
-      _logger.i('Creating zip file for ${folder.path}...');
+      logger.i('Creating zip file for ${folder.path}...');
 
       final tempDir = await getTemporaryDirectory();
-      final zipPath = '${tempDir.path}/${folder.path.split("/").last}.zip';
+      final zipPath = '${tempDir.path}/${folder.path.split('/').last}.zip';
       final zipFile = File(zipPath);
 
       await ZipFile.createFromDirectory(
@@ -317,358 +705,38 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
       );
 
       if (result.status == ShareResultStatus.success) {
-        _logger.i('Folder shared successfully');
+        logger.i('Folder shared successfully');
       }
 
       if (await zipFile.exists()) {
         await zipFile.delete();
       }
     } catch (e) {
-      _logger.e('Error sharing folder: $e');
-      await _showErrorDialog('Failed to share folder: $e');
+      logger.e('Error sharing folder: $e');
+      await onError('Failed to share folder: $e');
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<SensorRecorderProvider>(
-      builder: (context, recorder, _) {
-        final isRecording = recorder.isRecording;
-        final canStartRecording = recorder.hasSensorsConnected && !isRecording;
+  Future<void> openFolder(String path) async {
+    try {
+      if (Platform.isIOS) {
+        await platformChannel.invokeMethod('openFolder', {'path': 'shareddocuments://$path'});
+      } else if (Platform.isAndroid) {
+        await platformChannel.invokeMethod('openFolder', {'path': path});
+      }
+    } on PlatformException catch (e) {
+      logger.e("Failed to open folder: '${e.message}'.");
+    }
+  }
 
-        return SafeArea(
-          top: false,
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(10),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      PlatformText(
-                        'Local Recorder',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 6),
-                      PlatformText(
-                        "Only records sensor data streamed over Bluetooth.",
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: !isRecording
-                            ? ElevatedButton.icon(
-                                icon: const Icon(Icons.play_arrow),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: canStartRecording
-                                      ? Colors.green.shade600
-                                      : Colors.grey.shade400,
-                                  foregroundColor: Colors.white,
-                                  minimumSize: const Size.fromHeight(48),
-                                ),
-                                label: const Text(
-                                  'Start Recording',
-                                  style: TextStyle(fontSize: 18),
-                                ),
-                                onPressed: !canStartRecording
-                                    ? null
-                                    : () async {
-                                        final dir = await _pickDirectory();
-                                        if (dir == null) return;
-
-                                        // Check if directory is empty
-                                        if (!await _isDirectoryEmpty(dir)) {
-                                          if (!context.mounted) return;
-                                          final proceed =
-                                              await _askOverwriteConfirmation(
-                                            context,
-                                            dir,
-                                          );
-                                          if (!proceed) return;
-                                        }
-
-                                        recorder.startRecording(dir);
-                                        await _listRecordings(); // Refresh list
-                                      },
-                              )
-                            : Column(
-                                children: [
-                                  Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.center,
-                                    children: [
-                                      Expanded(
-                                        child: ElevatedButton.icon(
-                                          icon: const Icon(Icons.stop),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.red,
-                                            foregroundColor: Colors.white,
-                                            minimumSize:
-                                                const Size.fromHeight(48),
-                                          ),
-                                          label: const Text(
-                                            'Stop Recording',
-                                            style: TextStyle(fontSize: 18),
-                                          ),
-                                          onPressed: _isHandlingStopAction
-                                              ? null
-                                              : () => _handleStopRecording(
-                                                    recorder,
-                                                    turnOffSensors: false,
-                                                  ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      ConstrainedBox(
-                                        constraints: const BoxConstraints(
-                                          minWidth: 90,
-                                        ),
-                                        child: Text(
-                                          _formatDuration(_elapsedRecording),
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .titleLarge
-                                              ?.copyWith(
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  ElevatedButton.icon(
-                                    icon: const Icon(Icons.power_settings_new),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.red[800],
-                                      foregroundColor: Colors.white,
-                                      minimumSize: const Size.fromHeight(48),
-                                    ),
-                                    label: const Text(
-                                      'Stop & Turn Off Sensors',
-                                      style: TextStyle(fontSize: 18),
-                                    ),
-                                    onPressed: _isHandlingStopAction
-                                        ? null
-                                        : () => _handleStopRecording(
-                                              recorder,
-                                              turnOffSensors: true,
-                                            ),
-                                  ),
-                                ],
-                              ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Expanded(
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "Recordings",
-                            style: TextStyle(
-                              fontSize: 20.0,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          if (Platform.isIOS)
-                            IconButton(
-                              icon: Icon(Icons.folder_open),
-                              onPressed: () async {
-                                Directory recordDir = await getIOSDirectory();
-                                _openFolder(recordDir.path);
-                              },
-                            ),
-                        ],
-                      ),
-                    ),
-                    Divider(thickness: 2),
-                    Expanded(
-                      child: _recordings.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.warning,
-                                    size: 48,
-                                    color: Colors.grey,
-                                  ),
-                                  SizedBox(height: 16),
-                                  Text(
-                                    "No recordings found",
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : ListView.builder(
-                              padding: EdgeInsets.zero,
-                              itemCount: _recordings.length,
-                              itemBuilder: (context, index) {
-                                Directory folder =
-                                    _recordings[index] as Directory;
-                                String folderName = folder.path.split("/").last;
-                                bool isCurrentRecording =
-                                    isRecording && index == 0;
-                                bool isExpanded =
-                                    _expandedFolders.contains(folder.path);
-                                List<File> files =
-                                    isExpanded ? _getFilesInFolder(folder) : [];
-
-                                return Column(
-                                  children: [
-                                    ListTile(
-                                      leading: Icon(
-                                        isExpanded
-                                            ? Icons.folder_open
-                                            : Icons.folder,
-                                        color: Colors.grey,
-                                      ),
-                                      title: Text(
-                                        folderName,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(fontSize: 14),
-                                      ),
-                                      trailing: isCurrentRecording
-                                          ? Padding(
-                                              padding: EdgeInsets.all(
-                                                16.0,
-                                              ),
-                                              child: SizedBox(
-                                                width: 16,
-                                                height: 16,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                ),
-                                              ),
-                                            )
-                                          : Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                IconButton(
-                                                  icon: Icon(
-                                                    Icons.share,
-                                                    color: isCurrentRecording
-                                                        ? Colors.grey
-                                                            .withValues(
-                                                            alpha: 30,
-                                                          )
-                                                        : Colors.blue,
-                                                  ),
-                                                  onPressed: isCurrentRecording
-                                                      ? null
-                                                      : () => _shareFolder(
-                                                            folder,
-                                                          ),
-                                                ),
-                                                IconButton(
-                                                  icon: Icon(
-                                                    Icons.delete,
-                                                    color: isCurrentRecording
-                                                        ? Colors.grey
-                                                            .withValues(
-                                                            alpha: 30,
-                                                          )
-                                                        : Colors.red,
-                                                  ),
-                                                  onPressed: isCurrentRecording
-                                                      ? null
-                                                      : () =>
-                                                          _confirmAndDeleteRecording(
-                                                            folder,
-                                                          ),
-                                                ),
-                                              ],
-                                            ),
-                                      onTap: () {
-                                        setState(() {
-                                          if (isExpanded) {
-                                            _expandedFolders
-                                                .remove(folder.path);
-                                          } else if (!isCurrentRecording) {
-                                            _expandedFolders.add(folder.path);
-                                          }
-                                        });
-                                      },
-                                    ),
-                                    // Show files when expanded
-                                    if (isExpanded)
-                                      ...files.map((file) {
-                                        String fileName =
-                                            file.path.split("/").last;
-                                        String fileSize = _formatFileSize(file);
-
-                                        return ListTile(
-                                          contentPadding: EdgeInsets.only(
-                                            left: 72,
-                                            right: 16,
-                                          ),
-                                          leading: Icon(
-                                            fileName.endsWith('.csv')
-                                                ? Icons.table_chart
-                                                : Icons.insert_drive_file,
-                                            size: 20,
-                                          ),
-                                          title: Text(
-                                            fileName,
-                                            style: TextStyle(fontSize: 14),
-                                          ),
-                                          subtitle: Text(
-                                            fileSize,
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey,
-                                            ),
-                                          ),
-                                          trailing: IconButton(
-                                            icon: Icon(
-                                              Icons.share,
-                                              color: Colors.blue,
-                                              size: 20,
-                                            ),
-                                            onPressed: () => _shareFile(file),
-                                          ),
-                                          onTap: () async {
-                                            final result = await OpenFile.open(
-                                              file.path,
-                                              type:
-                                                  'text/comma-separated-values',
-                                            );
-                                            if (result.type !=
-                                                ResultType.done) {
-                                              await _showErrorDialog(
-                                                'Could not open file: ${result.message}',
-                                              );
-                                            }
-                                          },
-                                        );
-                                      }),
-                                  ],
-                                );
-                              },
-                            ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
+  Future<Directory?> _getRecordingsRootDirectory() async {
+    if (Platform.isAndroid) {
+      return await getExternalStorageDirectory();
+    }
+    if (Platform.isIOS) {
+      return await getIOSDirectory();
+    }
+    return null;
   }
 }
 
