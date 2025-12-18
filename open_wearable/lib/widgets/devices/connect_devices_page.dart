@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:provider/provider.dart';
@@ -128,7 +127,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
 
     try {
       WearableConnector connector = context.read<WearableConnector>();
-      Wearable wearable = await connector.connect(device);
+      await connector.connect(device);
       setState(() {
         discoveredDevices.remove(device);
       });
