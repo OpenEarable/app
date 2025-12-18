@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 import 'package:open_wearable/models/log_file_manager.dart';
 import 'package:open_wearable/models/wearable_connector.dart';
@@ -99,7 +100,50 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
     _wearableProvEventSub = wearablesProvider.wearableEventStream.listen((event) {
       if (!mounted) return;
-      // show a banner using AppBannerController
+
+      // Handle firmware update available events with a dialog
+      if (event is NewFirmwareAvailableEvent) {
+        final nav = rootNavigatorKey.currentState;
+        if (nav == null || !mounted) return;
+
+        nav.push(
+          DialogRoute<void>(
+            context: rootNavigatorKey.currentContext!,
+            barrierDismissible: true,
+            builder: (dialogContext) => PlatformAlertDialog(
+              title: const Text('Firmware Update Available'),
+              content: Text(
+                'A newer firmware version (${event.latestVersion}) is available. You are using version ${event.currentVersion}.',
+              ),
+              actions: [
+                PlatformDialogAction(
+                  cupertino: (_, __) => CupertinoDialogActionData(),
+                  child: const Text('Later'),
+                  onPressed: () => rootNavigatorKey.currentState?.pop(),
+                ),
+                PlatformDialogAction(
+                  cupertino: (_, __) =>
+                      CupertinoDialogActionData(isDefaultAction: true),
+                  child: const Text('Update Now'),
+                  onPressed: () {
+                    // Set the selected peripheral for firmware update
+                    final updateProvider = Provider.of<FirmwareUpdateRequestProvider>(
+                      rootNavigatorKey.currentContext!,
+                      listen: false,
+                    );
+                    updateProvider.setSelectedPeripheral(event.wearable);
+                    rootNavigatorKey.currentState?.pop();
+                    rootNavigatorKey.currentContext?.push('/fota');
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+        return;
+      }
+
+      // Show a banner for other events using AppBannerController
       final appBannerController = context.read<AppBannerController>();
       appBannerController.showBanner(
         (id) {

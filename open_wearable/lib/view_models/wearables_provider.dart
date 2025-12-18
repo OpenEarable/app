@@ -6,6 +6,25 @@ import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 
 import '../models/logger.dart';
 
+/// Event for when a newer firmware version is available
+class NewFirmwareAvailableEvent extends WearableEvent {
+  final String currentVersion;
+  final String latestVersion;
+
+  NewFirmwareAvailableEvent({
+    required super.wearable,
+    required this.currentVersion,
+    required this.latestVersion,
+  }) : super(
+          description:
+              'Firmware update available for ${wearable.name}: $currentVersion -> $latestVersion',
+        );
+
+  @override
+  String toString() =>
+      'NewFirmwareAvailableEvent for ${wearable.name}: $currentVersion -> $latestVersion';
+}
+
 abstract class UnsupportedFirmwareEvent {
   final Wearable wearable;
   UnsupportedFirmwareEvent(this.wearable);
@@ -134,6 +153,13 @@ class WearablesProvider with ChangeNotifier {
         ),
       );
     }
+
+    // Check for newer firmware (if applicable)
+    if (wearable is DeviceFirmwareVersion) {
+      Future.microtask(
+        () => _checkForNewerFirmwareAsync(wearable as DeviceFirmwareVersion),
+      );
+    }
   }
 
   // --- Helpers ---------------------------------------------------------------
@@ -199,6 +225,49 @@ class WearablesProvider with ChangeNotifier {
       }
     } catch (e, st) {
       logger.w('Firmware check failed for ${(dev as Wearable).name}: $e\n$st');
+    }
+  }
+
+  /// Checks if a newer firmware version is available and emits event if so.
+  /// Non-blocking for the caller.
+  Future<void> _checkForNewerFirmwareAsync(DeviceFirmwareVersion dev) async {
+    try {
+      logger.d('Checking for newer firmware for ${(dev as Wearable).name}');
+
+      final currentVersion = await dev.readDeviceFirmwareVersion();
+      if (currentVersion == null || currentVersion.isEmpty) {
+        logger.d('Could not read firmware version for ${(dev as Wearable).name}');
+        return;
+      }
+
+      final firmwareImageRepository = FirmwareImageRepository();
+      final latestVersion = await firmwareImageRepository
+          .getLatestFirmwareVersion()
+          .then((version) => version.toString());
+
+      if (firmwareImageRepository.isNewerVersion(
+        latestVersion,
+        currentVersion,
+      )) {
+        logger.i(
+          'Newer firmware available for ${(dev as Wearable).name}: $currentVersion -> $latestVersion',
+        );
+        _wearableEventController.add(
+          NewFirmwareAvailableEvent(
+            wearable: dev as Wearable,
+            currentVersion: currentVersion,
+            latestVersion: latestVersion,
+          ),
+        );
+      } else {
+        logger.d(
+          'Firmware is up to date for ${(dev as Wearable).name}: $currentVersion',
+        );
+      }
+    } catch (e, st) {
+      logger.w(
+        'Firmware version check failed for ${(dev as Wearable).name}: $e\n$st',
+      );
     }
   }
 
