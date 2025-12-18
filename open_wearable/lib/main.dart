@@ -16,6 +16,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'models/bluetooth_auto_connector.dart';
 import 'models/logger.dart';
 import 'view_models/app_banner_controller.dart';
+import 'view_models/label_set_provider.dart';
 import 'view_models/wearables_provider.dart';
 
 void main() async {
@@ -39,6 +40,9 @@ void main() async {
           create: (context) => AppBannerController(),
         ),
         ChangeNotifierProvider.value(value: logFileManager),
+        ChangeNotifierProvider(
+          create: (context) => LabelSetProvider(),
+        ),
       ],
       child: const MyApp(),
     ),
