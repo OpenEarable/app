@@ -8,7 +8,6 @@ import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/widgets/devices/battery_state.dart';
 import 'package:open_wearable/widgets/devices/device_detail/audio_mode_widget.dart';
-import 'package:open_wearable/widgets/fota/fota_warning_page.dart';
 import 'package:provider/provider.dart';
 
 import 'rgb_control.dart';
@@ -242,7 +241,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                     ).setSelectedPeripheral(widget.device);
                     // Show the firmware update dialog
                     // Navigate to your firmware update screen
-                    context.push('/fota-warning');
+                    context.push('/fota');
                   },
                 ),
               ),

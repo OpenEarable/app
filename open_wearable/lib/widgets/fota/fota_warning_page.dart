@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:open_wearable/widgets/fota/firmware_update.dart';
 
 class FotaWarningPage extends StatelessWidget {
   const FotaWarningPage({super.key});
@@ -180,7 +179,7 @@ class FotaWarningPage extends StatelessWidget {
                       width: double.infinity,
                       child: PlatformElevatedButton(
                         onPressed: () {
-                          context.push('/firmware-update');
+                          context.push('/fota/update');
                         },
                         child: const Text('Acknowledge and Proceed'),
                       ),

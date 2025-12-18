@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
@@ -8,7 +7,6 @@ import 'package:open_wearable/widgets/sensors/values/sensor_values_page.dart';
 import 'package:provider/provider.dart';
 
 import '../../view_models/sensor_recorder_provider.dart';
-import '../devices/connect_devices_page.dart';
 
 
 class SensorPage extends StatelessWidget {
