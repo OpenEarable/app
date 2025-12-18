@@ -3,7 +3,10 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/widget_previews.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:open_wearable/view_models/label_set_provider.dart';
+import 'package:open_wearable/widgets/sensors/local_recorder/labels/label_set_selector.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -261,6 +264,10 @@ class _RecorderHeaderCardState extends State<RecorderHeaderCard> {
                 PlatformText(
                     'Only records sensor data streamed over Bluetooth.',),
                 const SizedBox(height: 12),
+                LabelSetSelector(
+                  selected: null,
+                  onChanged: (_) {},
+                ),
                 SizedBox(
                   width: double.infinity,
                   child: !isRecording
@@ -349,4 +356,20 @@ class _RecorderHeaderCardState extends State<RecorderHeaderCard> {
       },
     );
   }
+}
+
+@Preview(name: "RecorderHeaderCard")
+Widget recorderHeaderCardPreview() {
+  return MultiProvider(providers: [
+    ChangeNotifierProvider<SensorRecorderProvider>(
+      create: (_) => SensorRecorderProvider(),
+    ),
+    ChangeNotifierProvider<LabelSetProvider>(
+      create: (_) => LabelSetProvider(),
+    ),
+  ], child: Scaffold(
+    body: Center(
+      child: RecorderHeaderCard(),
+    ),
+  ),);
 }
