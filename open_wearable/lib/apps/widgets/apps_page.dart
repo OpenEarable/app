@@ -16,14 +16,12 @@ class AppInfo {
   final String title;
   final String description;
   final Widget widget;
-  final String? route;
 
   AppInfo({
     required this.logoPath,
     required this.title,
     required this.description,
     required this.widget,
-    this.route,
   });
 }
 
@@ -32,7 +30,6 @@ List<AppInfo> _apps = [
     logoPath: "lib/apps/posture_tracker/assets/logo.png",
     title: "Posture Tracker",
     description: "Get feedback on bad posture",
-    route: '/select-earable-posture',
     widget: SelectEarableView(startApp: (wearable, sensorConfigProvider) {
       return PostureTrackerView(
         EarableAttitudeTracker(
@@ -47,7 +44,6 @@ List<AppInfo> _apps = [
     logoPath: "lib/apps/heart_tracker/assets/logo.png",
     title: "Heart Tracker",
     description: "Track your heart rate and other vitals",
-    route: '/select-earable-heart',
     widget: SelectEarableView(
       startApp: (wearable, _) {
         if (wearable is SensorManager) {
