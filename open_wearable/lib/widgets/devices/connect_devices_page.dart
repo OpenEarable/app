@@ -132,62 +132,12 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
       setState(() {
         discoveredDevices.remove(device);
       });
-      checkForNewerFirmware(wearable);
     } catch (e) {
       logger.e('Failed to connect to device: ${device.name}, error: $e');
     } finally {
       setState(() {
         connectingDevices.remove(device.id);
       });
-    }
-  }
-
-  void checkForNewerFirmware(Wearable wearable) async {
-    // TODO: move this to wearablesProvider
-    logger.d('Checking for newer firmware for ${wearable.name}');
-    if (wearable is DeviceFirmwareVersion) {
-      final currentVersion =
-          await (wearable as DeviceFirmwareVersion).readDeviceFirmwareVersion();
-      if (currentVersion == null || currentVersion.isEmpty) {
-        return;
-      }
-      final firmwareImageRepository = FirmwareImageRepository();
-      var latestVersion = await firmwareImageRepository
-          .getLatestFirmwareVersion()
-          .then((version) => version.toString());
-      if (firmwareImageRepository.isNewerVersion(
-        latestVersion,
-        currentVersion,
-      )) {
-        print("Checking");
-        if (!mounted) return;
-        showDialog(
-          context: context,
-          builder: (context) => PlatformAlertDialog(
-            title: PlatformText('Firmware Update Available'),
-            content: PlatformText(
-              'A newer firmware version ($latestVersion) is available. You are using version $currentVersion.',
-            ),
-            actions: [
-              PlatformTextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: PlatformText('Later'),
-              ),
-              PlatformTextButton(
-                onPressed: () {
-                  Provider.of<FirmwareUpdateRequestProvider>(
-                    context,
-                    listen: false,
-                  ).setSelectedPeripheral(wearable);
-                  Navigator.of(context).pop();
-                  context.push('/fota');
-                },
-                child: PlatformText('Update Now'),
-              ),
-            ],
-          ),
-        );
-      }
     }
   }
 
