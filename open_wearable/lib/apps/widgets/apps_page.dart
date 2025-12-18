@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/apps/heart_tracker/widgets/heart_tracker_page.dart';
 import 'package:open_wearable/apps/posture_tracker/model/earable_attitude_tracker.dart';
@@ -78,21 +79,7 @@ class AppsPage extends StatelessWidget {
             PlatformIconButton(
             icon: Icon(context.platformIcons.bluetooth),
             onPressed: () {
-              if (Theme.of(context).platform == TargetPlatform.iOS) {
-                showCupertinoModalPopup(
-                  context: context,
-                  builder: (context) => ConnectDevicesPage(),
-                );
-              } else {
-                Navigator.of(context).push(
-                  platformPageRoute(
-                    context: context,
-                    builder: (context) => const Material(
-                      child: ConnectDevicesPage(),
-                    ),
-                  ),
-                );
-              }
+              context.push('/connect-devices');
             },
           ),
         ],
