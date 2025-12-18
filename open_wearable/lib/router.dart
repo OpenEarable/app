@@ -18,6 +18,13 @@ final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 /// Constant for PPG sensor name to avoid repeated string operations
 const String _ppgSensorName = 'photoplethysmography';
 
+/// Widget shown when PPG sensor is not available
+const Widget _noPpgSensorWidget = Scaffold(
+  body: Center(
+    child: Text("No PPG Sensor Found"),
+  ),
+);
+
 /// Router configuration for the app
 final GoRouter router = GoRouter(
   navigatorKey: rootNavigatorKey,
@@ -95,18 +102,10 @@ final GoRouter router = GoRouter(
               return HeartTrackerPage(ppgSensor: ppgSensor);
             } catch (e) {
               // Handle case where no PPG sensor is found
-              return const Scaffold(
-                body: Center(
-                  child: Text("No PPG Sensor Found"),
-                ),
-              );
+              return _noPpgSensorWidget;
             }
           }
-          return const Scaffold(
-            body: Center(
-              child: Text("No PPG Sensor Found"),
-            ),
-          );
+          return _noPpgSensorWidget;
         },
       ),
     ),
