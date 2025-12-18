@@ -15,6 +15,9 @@ import 'package:open_wearable/widgets/logging/log_files_screen.dart';
 /// Global navigator key for go_router
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
+/// Constant for PPG sensor name to avoid repeated string operations
+const String _ppgSensorName = 'photoplethysmography';
+
 /// Router configuration for the app
 final GoRouter router = GoRouter(
   navigatorKey: rootNavigatorKey,
@@ -62,6 +65,13 @@ final GoRouter router = GoRouter(
       name: 'select-earable-posture',
       builder: (context, state) => SelectEarableView(
         startApp: (wearable, sensorConfigProvider) {
+          if (wearable is! SensorManager) {
+            return const Scaffold(
+              body: Center(
+                child: Text("Selected device does not support sensors"),
+              ),
+            );
+          }
           return PostureTrackerView(
             EarableAttitudeTracker(
               wearable as SensorManager,
@@ -80,7 +90,7 @@ final GoRouter router = GoRouter(
           if (wearable is SensorManager) {
             try {
               Sensor ppgSensor = (wearable as SensorManager).sensors.firstWhere(
-                (s) => s.sensorName.toLowerCase() == "photoplethysmography".toLowerCase(),
+                (s) => s.sensorName.toLowerCase() == _ppgSensorName,
               );
               return HeartTrackerPage(ppgSensor: ppgSensor);
             } catch (e) {
