@@ -34,6 +34,10 @@ final GoRouter router = GoRouter(
       path: '/device-detail',
       name: 'device-detail',
       builder: (context, state) {
+        if (state.extra == null || state.extra is! Wearable) {
+          // Fallback to home if device is not provided
+          return const HomePage();
+        }
         final device = state.extra as Wearable;
         return DeviceDetailPage(device: device);
       },
@@ -74,10 +78,19 @@ final GoRouter router = GoRouter(
       builder: (context, state) => SelectEarableView(
         startApp: (wearable, _) {
           if (wearable is SensorManager) {
-            Sensor ppgSensor = (wearable as SensorManager).sensors.firstWhere(
-              (s) => s.sensorName.toLowerCase() == "photoplethysmography".toLowerCase(),
-            );
-            return HeartTrackerPage(ppgSensor: ppgSensor);
+            try {
+              Sensor ppgSensor = (wearable as SensorManager).sensors.firstWhere(
+                (s) => s.sensorName.toLowerCase() == "photoplethysmography".toLowerCase(),
+              );
+              return HeartTrackerPage(ppgSensor: ppgSensor);
+            } catch (e) {
+              // Handle case where no PPG sensor is found
+              return const Scaffold(
+                body: Center(
+                  child: Text("No PPG Sensor Found"),
+                ),
+              );
+            }
           }
           return const Scaffold(
             body: Center(
