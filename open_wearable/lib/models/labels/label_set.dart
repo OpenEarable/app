@@ -5,10 +5,10 @@ class LabelSet {
   final String name;
   final List<Label> labels;
 
-  LabelSet({
+  const LabelSet({
     required this.name,
-    required List<Label> labels,
-  }) : labels = List.unmodifiable(labels);
+    required this.labels,
+  });
 
   /// Create a modified copy (e.g., renamed set, updated labels list).
   LabelSet copyWith({
