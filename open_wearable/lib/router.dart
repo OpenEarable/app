@@ -7,6 +7,10 @@ import 'package:open_wearable/widgets/fota/firmware_update.dart';
 import 'package:open_wearable/widgets/fota/fota_warning_page.dart';
 import 'package:open_wearable/widgets/home_page.dart';
 import 'package:open_wearable/widgets/logging/log_files_screen.dart';
+import 'dart:io' show Platform;
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 
 /// Global navigator key for go_router
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -19,7 +23,10 @@ final GoRouter router = GoRouter(
     GoRoute(
       path: '/',
       name: 'home',
-      builder: (context, state) => const HomePage(),
+      builder: (context, state) => const HeroMode(
+        enabled: false,
+        child: HomePage(),
+      ),
     ),
     GoRoute(
       path: '/connect-devices',
@@ -46,6 +53,40 @@ final GoRouter router = GoRouter(
     GoRoute(
       path: '/fota',
       name: 'fota',
+      redirect: (context, state) {
+        final bool isAndroid = !kIsWeb && Platform.isAndroid;
+
+        if (!isAndroid) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            final ctx = rootNavigatorKey.currentContext;
+            if (ctx == null) return;
+
+            showPlatformDialog(
+              context: ctx,
+              builder: (_) => PlatformAlertDialog(
+                title: PlatformText('Firmware Update'),
+                content: PlatformText(
+                  'Firmware update is not supported on this platform. '
+                  'Please use an Android device or J-Link to update the firmware.',
+                ),
+                actions: <Widget>[
+                  PlatformDialogAction(
+                    cupertino: (_, __) => CupertinoDialogActionData(
+                      isDefaultAction: true,
+                    ),
+                    child: PlatformText('OK'),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                  ),
+                ],
+              ),
+            );
+          });
+
+          return state.topRoute?.name;
+        }
+
+        return null;
+      },
       builder: (context, state) => const FotaWarningPage(),
     ),
     GoRoute(
