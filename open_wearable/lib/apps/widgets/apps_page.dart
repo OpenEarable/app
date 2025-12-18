@@ -9,7 +9,6 @@ import 'package:open_wearable/apps/posture_tracker/view/posture_tracker_view.dar
 import 'package:open_wearable/apps/widgets/select_earable_view.dart';
 import 'package:open_wearable/apps/widgets/app_tile.dart';
 
-import '../../widgets/devices/connect_devices_page.dart';
 
 class AppInfo {
   final String logoPath;

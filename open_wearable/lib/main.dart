@@ -212,7 +212,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           ),
         ),
         builder: (context) => GlobalAppBannerOverlay(
-          child: MaterialApp.router(
+          child: PlatformApp.router(
             routerConfig: router,
             localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
               DefaultMaterialLocalizations.delegate,

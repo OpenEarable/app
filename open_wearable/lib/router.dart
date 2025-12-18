@@ -44,13 +44,13 @@ final GoRouter router = GoRouter(
       builder: (context, state) => const LogFilesScreen(),
     ),
     GoRoute(
-      path: '/fota-warning',
-      name: 'fota-warning',
+      path: '/fota',
+      name: 'fota',
       builder: (context, state) => const FotaWarningPage(),
     ),
     GoRoute(
-      path: '/firmware-update',
-      name: 'firmware-update',
+      path: '/fota/update',
+      name: 'fota/update',
       builder: (context, state) => const FirmwareUpdateWidget(),
     ),
   ],
