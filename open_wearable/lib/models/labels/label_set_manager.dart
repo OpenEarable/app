@@ -1,9 +1,10 @@
 import 'package:flutter/foundation.dart';
 
 import 'label_set.dart';
-import 'label_set_storage.dart';
 
-import 'web_label_set_storage.dart';
+import 'label_set_storage.dart';
+import 'file_label_set_storage.dart'
+  if (dart.library.html) 'web_label_set_storage.dart';
 
 class LabelSetManager extends ChangeNotifier {
   LabelSetManager({LabelSetStorage? storage})
