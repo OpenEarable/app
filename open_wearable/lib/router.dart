@@ -65,18 +65,18 @@ final GoRouter router = GoRouter(
       name: 'select-earable-posture',
       builder: (context, state) => SelectEarableView(
         startApp: (wearable, sensorConfigProvider) {
-          if (wearable is! SensorManager) {
-            return const Scaffold(
-              body: Center(
-                child: Text("Selected device does not support sensors"),
+          if (wearable is SensorManager) {
+            return PostureTrackerView(
+              EarableAttitudeTracker(
+                wearable,
+                sensorConfigProvider,
+                wearable.name.endsWith("L"),
               ),
             );
           }
-          return PostureTrackerView(
-            EarableAttitudeTracker(
-              wearable as SensorManager,
-              sensorConfigProvider,
-              wearable.name.endsWith("L"),
+          return const Scaffold(
+            body: Center(
+              child: Text("Selected device does not support sensors"),
             ),
           );
         },
@@ -89,7 +89,7 @@ final GoRouter router = GoRouter(
         startApp: (wearable, _) {
           if (wearable is SensorManager) {
             try {
-              Sensor ppgSensor = (wearable as SensorManager).sensors.firstWhere(
+              Sensor ppgSensor = wearable.sensors.firstWhere(
                 (s) => s.sensorName.toLowerCase() == _ppgSensorName,
               );
               return HeartTrackerPage(ppgSensor: ppgSensor);
