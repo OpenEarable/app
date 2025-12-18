@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
-import 'package:open_wearable/apps/heart_tracker/widgets/heart_tracker_page.dart';
-import 'package:open_wearable/apps/posture_tracker/model/earable_attitude_tracker.dart';
-import 'package:open_wearable/apps/posture_tracker/view/posture_tracker_view.dart';
-import 'package:open_wearable/apps/widgets/select_earable_view.dart';
 import 'package:open_wearable/widgets/devices/connect_devices_page.dart';
 import 'package:open_wearable/widgets/devices/device_detail/device_detail_page.dart';
 import 'package:open_wearable/widgets/fota/firmware_update.dart';
@@ -14,16 +10,6 @@ import 'package:open_wearable/widgets/logging/log_files_screen.dart';
 
 /// Global navigator key for go_router
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
-
-/// Constant for PPG sensor name to avoid repeated string operations
-const String _ppgSensorName = 'photoplethysmography';
-
-/// Widget shown when PPG sensor is not available
-const Widget _noPpgSensorWidget = Scaffold(
-  body: Center(
-    child: Text("No PPG Sensor Found"),
-  ),
-);
 
 /// Router configuration for the app
 final GoRouter router = GoRouter(
@@ -66,48 +52,6 @@ final GoRouter router = GoRouter(
       path: '/firmware-update',
       name: 'firmware-update',
       builder: (context, state) => const FirmwareUpdateWidget(),
-    ),
-    GoRoute(
-      path: '/select-earable-posture',
-      name: 'select-earable-posture',
-      builder: (context, state) => SelectEarableView(
-        startApp: (wearable, sensorConfigProvider) {
-          if (wearable is SensorManager) {
-            return PostureTrackerView(
-              EarableAttitudeTracker(
-                wearable,
-                sensorConfigProvider,
-                wearable.name.endsWith("L"),
-              ),
-            );
-          }
-          return const Scaffold(
-            body: Center(
-              child: Text("Selected device does not support sensors"),
-            ),
-          );
-        },
-      ),
-    ),
-    GoRoute(
-      path: '/select-earable-heart',
-      name: 'select-earable-heart',
-      builder: (context, state) => SelectEarableView(
-        startApp: (wearable, _) {
-          if (wearable is SensorManager) {
-            try {
-              Sensor ppgSensor = wearable.sensors.firstWhere(
-                (s) => s.sensorName.toLowerCase() == _ppgSensorName,
-              );
-              return HeartTrackerPage(ppgSensor: ppgSensor);
-            } catch (e) {
-              // Handle case where no PPG sensor is found
-              return _noPpgSensorWidget;
-            }
-          }
-          return _noPpgSensorWidget;
-        },
-      ),
     ),
   ],
 );

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:go_router/go_router.dart';
 import 'package:open_wearable/apps/widgets/apps_page.dart';
 
 class AppTile extends StatelessWidget {
@@ -25,15 +24,10 @@ class AppTile extends StatelessWidget {
           ),
         ),
         onTap: () {
-          if (app.route != null) {
-            context.push(app.route!);
-          } else {
-            // Fallback to direct navigation if no route is defined
-            Navigator.push(
-              context,
-              platformPageRoute(context: context, builder: (context) => app.widget),
-            );
-          }
+          Navigator.push(
+            context,
+            platformPageRoute(context: context, builder: (context) => app.widget),
+          );
         },
       );
   }
