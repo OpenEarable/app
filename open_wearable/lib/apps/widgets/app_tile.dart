@@ -25,10 +25,14 @@ class AppTile extends StatelessWidget {
           ),
         ),
         onTap: () {
-          if (app.title == "Posture Tracker") {
-            context.push('/select-earable-posture');
-          } else if (app.title == "Heart Tracker") {
-            context.push('/select-earable-heart');
+          if (app.route != null) {
+            context.push(app.route!);
+          } else {
+            // Fallback to direct navigation if no route is defined
+            Navigator.push(
+              context,
+              platformPageRoute(context: context, builder: (context) => app.widget),
+            );
           }
         },
       );
