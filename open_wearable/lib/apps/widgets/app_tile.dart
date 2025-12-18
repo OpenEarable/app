@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:go_router/go_router.dart';
 import 'package:open_wearable/apps/widgets/apps_page.dart';
 
 class AppTile extends StatelessWidget {
@@ -24,10 +25,11 @@ class AppTile extends StatelessWidget {
           ),
         ),
         onTap: () {
-          Navigator.push(
-            context,
-            platformPageRoute(context: context, builder: (context) => app.widget),
-          );
+          if (app.title == "Posture Tracker") {
+            context.push('/select-earable-posture');
+          } else if (app.title == "Heart Tracker") {
+            context.push('/select-earable-heart');
+          }
         },
       );
   }

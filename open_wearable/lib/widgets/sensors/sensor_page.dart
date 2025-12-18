@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:go_router/go_router.dart';
 import 'package:open_wearable/widgets/sensors/configuration/sensor_configuration_view.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_view.dart';
 import 'package:open_wearable/widgets/sensors/values/sensor_values_page.dart';
@@ -27,21 +28,7 @@ class SensorPage extends StatelessWidget {
                   PlatformIconButton(
                     icon: Icon(context.platformIcons.bluetooth),
                     onPressed: () {
-                      if (Theme.of(context).platform == TargetPlatform.iOS) {
-                        showCupertinoModalPopup(
-                          context: context,
-                          builder: (context) => ConnectDevicesPage(),
-                        );
-                      } else {
-                        Navigator.of(context).push(
-                          platformPageRoute(
-                            context: context,
-                            builder: (context) => const Material(
-                              child: ConnectDevicesPage(),
-                            ),
-                          ),
-                        );
-                      }
+                      context.push('/connect-devices');
                     },
                   ),
                 ],

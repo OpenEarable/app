@@ -5,10 +5,10 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 import 'package:open_wearable/models/log_file_manager.dart';
 import 'package:open_wearable/models/wearable_connector.dart';
+import 'package:open_wearable/router.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
 import 'package:open_wearable/widgets/app_banner.dart';
 import 'package:open_wearable/widgets/global_app_banner_overlay.dart';
-import 'package:open_wearable/widgets/home_page.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -16,9 +16,6 @@ import 'models/bluetooth_auto_connector.dart';
 import 'models/logger.dart';
 import 'view_models/app_banner_controller.dart';
 import 'view_models/wearables_provider.dart';
-
-// 1) Global navigator key so we can open dialogs from anywhere
-final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -215,18 +212,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           ),
         ),
         builder: (context) => GlobalAppBannerOverlay(
-          child: PlatformApp(
-            navigatorKey: rootNavigatorKey,
+          child: MaterialApp.router(
+            routerConfig: router,
             localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
               DefaultMaterialLocalizations.delegate,
               DefaultWidgetsLocalizations.delegate,
               DefaultCupertinoLocalizations.delegate,
             ],
             title: 'Open Wearable',
-            home: const HeroMode(
-              enabled: false, //TODO: Remove this when Hero animations are fixed
-              child: HomePage(),
-            ),
           ),
         ),
       ),

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/fota/fota_warning_page.dart';
@@ -180,12 +181,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                     listen: false,
                   ).setSelectedPeripheral(wearable);
                   Navigator.of(context).pop();
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const FotaWarningPage(),
-                    ),
-                  );
+                  context.push('/fota-warning');
                 },
                 child: PlatformText('Update Now'),
               ),

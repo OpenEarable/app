@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/devices/battery_state.dart';
@@ -48,23 +49,13 @@ class _DevicesPageState extends State<DevicesPage> {
           PlatformIconButton(
             icon: Icon(context.platformIcons.info),
             onPressed: () {
-              Navigator.of(context).push(
-                platformPageRoute(
-                  context: context,
-                  builder: (context) => const LogFilesScreen(),
-                ),
-              );
+              context.push('/log-files');
             },
           ),
           PlatformIconButton(
             icon: Icon(context.platformIcons.bluetooth),
             onPressed: () {
-              Navigator.of(context).push(
-                platformPageRoute(
-                  context: context,
-                  builder: (context) => const ConnectDevicesPage(),
-                ),
-              );
+              context.push('/connect-devices');
             },
           ),
         ],
@@ -202,12 +193,7 @@ class DeviceRow extends StatelessWidget {
           );
           return;
         }
-        Navigator.of(context).push(
-          platformPageRoute(
-            context: context,
-            builder: (context) => DeviceDetailPage(device: _device),
-          ),
-        );
+        context.push('/device-detail', extra: _device);
       },
       child: Card(
         child: Padding(
