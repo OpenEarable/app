@@ -213,29 +213,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                 trailing: PlatformIconButton(
                   icon: Icon(Icons.upload),
                   onPressed: () {
-                    // show an alert on ios and web that firmware update is not supported
-                    if (Platform.isIOS || Platform.isMacOS || kIsWeb) {
-                      showPlatformDialog(
-                        context: context,
-                        builder: (_) => PlatformAlertDialog(
-                          title: PlatformText('Firmware Update'),
-                          content: PlatformText(
-                            'Firmware update is not supported on this platform. '
-                            'Please use an Android device or J-Link to update the firmware.'
-                          ),
-                          actions: <Widget>[
-                            PlatformDialogAction(
-                              cupertino: (_, __) => CupertinoDialogActionData(isDefaultAction: true),
-                              child: PlatformText('OK'),
-                              onPressed: () => Navigator.of(context).pop(),
-                            ),
-                          ],
-                        ),
-                      );
-                      return;
-                    }
-
-                    Provider.of<FirmwareUpdateRequestProvider>(
+                      Provider.of<FirmwareUpdateRequestProvider>(
                       context,
                       listen: false,
                     ).setSelectedPeripheral(widget.device);
