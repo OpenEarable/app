@@ -1,11 +1,68 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:provider/provider.dart';
 
-class FotaWarningPage extends StatelessWidget {
+class FotaWarningPage extends StatefulWidget {
   const FotaWarningPage({super.key});
+
+  @override
+  State<FotaWarningPage> createState() => _FotaWarningPageState();
+}
+
+class _FotaWarningPageState extends State<FotaWarningPage> {
+  int? _currentBatteryLevel;
+  bool _checkingBattery = true;
+  
+  @override
+  void initState() {
+    super.initState();
+    _checkBatteryLevel();
+  }
+
+  Future<void> _checkBatteryLevel() async {
+    try {
+      final updateProvider = Provider.of<FirmwareUpdateRequestProvider>(
+        context,
+        listen: false,
+      );
+      final device = updateProvider.updateParameters.peripheral;
+      
+      if (device != null && device is BatteryLevelStatus) {
+        // Get the current battery level from the stream
+        final batteryLevel = await (device as BatteryLevelStatus)
+            .batteryPercentageStream
+            .first
+            .timeout(
+              const Duration(seconds: 5),
+              onTimeout: () => null,
+            );
+        
+        if (mounted) {
+          setState(() {
+            _currentBatteryLevel = batteryLevel;
+            _checkingBattery = false;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _checkingBattery = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _checkingBattery = false;
+        });
+      }
+    }
+  }
 
   Future<void> _openGitHubLink() async {
     final uri = Uri.parse(
@@ -15,6 +72,33 @@ class FotaWarningPage extends StatelessWidget {
       await launchUrl(uri, mode: LaunchMode.platformDefault);
     } else {
       throw 'Could not launch $uri';
+    }
+  }
+
+  void _handleProceed() {
+    if (_currentBatteryLevel != null && _currentBatteryLevel! < 50) {
+      // Show error dialog
+      showPlatformDialog(
+        context: context,
+        builder: (_) => PlatformAlertDialog(
+          title: const Text('Battery Level Too Low'),
+          content: Text(
+            'Your OpenEarable battery level is ${_currentBatteryLevel}%, which is below the required 50% minimum for firmware updates.\n\n'
+            'Please charge your OpenEarable to at least 50% before attempting a firmware update to prevent issues during the update process.',
+          ),
+          actions: <Widget>[
+            PlatformDialogAction(
+              cupertino: (_, __) => CupertinoDialogActionData(
+                isDefaultAction: true,
+              ),
+              child: const Text('OK'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
+        ),
+      );
+    } else {
+      context.push('/fota/update');
     }
   }
 
@@ -128,7 +212,7 @@ class FotaWarningPage extends StatelessWidget {
                               number: '3.',
                               text: TextSpan(
                                 text:
-                                    'Charge your OpenEarable fully before starting.',
+                                    'Ensure your OpenEarable has at least 50% battery charge before starting. Fully charging is recommended.',
                               ),
                             ),
                             SizedBox(height: 8),
@@ -174,15 +258,49 @@ class FotaWarningPage extends StatelessWidget {
 
                     const SizedBox(height: 24),
 
+                    // Battery level warning if below 50%
+                    if (_currentBatteryLevel != null && _currentBatteryLevel! < 50)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.error.withOpacity(0.1),
+                          border: Border.all(
+                            color: theme.colorScheme.error,
+                            width: 2,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.battery_alert,
+                              color: theme.colorScheme.error,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Battery level is ${_currentBatteryLevel}%. Please charge to at least 50% before updating.',
+                                style: baseTextStyle?.copyWith(
+                                  color: theme.colorScheme.error,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
                     // Proceed button
                     SizedBox(
                       width: double.infinity,
-                      child: PlatformElevatedButton(
-                        onPressed: () {
-                          context.push('/fota/update');
-                        },
-                        child: const Text('Acknowledge and Proceed'),
-                      ),
+                      child: _checkingBattery
+                          ? const Center(child: CircularProgressIndicator())
+                          : PlatformElevatedButton(
+                              onPressed: _handleProceed,
+                              child: const Text('Acknowledge and Proceed'),
+                            ),
                     ),
                   ],
                 ),
