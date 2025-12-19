@@ -223,23 +223,23 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
-                            _NumberedStep(
+                          children: [
+                            const _NumberedStep(
                               number: '1.',
                               text: TextSpan(
                                 text:
                                     'Power cycle your OpenEarable once before you update.',
                               ),
                             ),
-                            SizedBox(height: 8),
-                            _NumberedStep(
+                            const SizedBox(height: 8),
+                            const _NumberedStep(
                               number: '2.',
                               text: TextSpan(
                                 text:
                                     'Keep the app open in the foreground and make sure your phone doesn’t enter power-saving mode.',
                               ),
                             ),
-                            SizedBox(height: 8),
+                            const SizedBox(height: 8),
                             _NumberedStep(
                               number: '3.',
                               text: TextSpan(
@@ -247,23 +247,23 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
                                     'Ensure your OpenEarable has at least $_minimumBatteryThreshold% battery charge before starting. Fully charging is recommended.',
                               ),
                             ),
-                            SizedBox(height: 8),
-                            _NumberedStep(
+                            const SizedBox(height: 8),
+                            const _NumberedStep(
                               number: '4.',
                               text: TextSpan(
                                 text: "Keep OpenEarable disconnected from charger during the update.",
                               ),
                             ),
-                            SizedBox(height: 8),
-                            _NumberedStep(
+                            const SizedBox(height: 8),
+                            const _NumberedStep(
                               number: '5.',
                               text: TextSpan(
                                 text:
                                     'If you have two devices, power off the one that’s not being updated.',
                               ),
                             ),
-                            SizedBox(height: 8),
-                            _NumberedStep(
+                            const SizedBox(height: 8),
+                            const _NumberedStep(
                               number: '6.',
                               text: TextSpan(
                                 children: [
