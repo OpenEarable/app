@@ -5,7 +5,9 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/widget_previews.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:open_wearable/view_models/label_provider.dart';
 import 'package:open_wearable/view_models/label_set_provider.dart';
+import 'package:open_wearable/widgets/sensors/local_recorder/labels/active_label_bar.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/labels/label_set_selector.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
@@ -175,7 +177,7 @@ class _RecorderHeaderCardState extends State<RecorderHeaderCard> {
         false;
   }
 
-  Future<void> _handleStart(SensorRecorderProvider recorder) async {
+  Future<void> _handleStart(SensorRecorderProvider recorder, LabelProvider labelProvider) async {
     final dir = await _createRecordingDirectory();
     logger.d("Created recording directory at $dir");
     if (dir == null) return;
@@ -248,6 +250,7 @@ class _RecorderHeaderCardState extends State<RecorderHeaderCard> {
 
         final isRecording = recorder.isRecording;
         final canStartRecording = recorder.hasSensorsConnected && !isRecording;
+        final labelProvider = context.read<LabelProvider>();
 
         return Padding(
           padding: const EdgeInsets.all(10),
@@ -264,10 +267,8 @@ class _RecorderHeaderCardState extends State<RecorderHeaderCard> {
                 PlatformText(
                     'Only records sensor data streamed over Bluetooth.',),
                 const SizedBox(height: 12),
-                LabelSetSelector(
-                  selected: null,
-                  onChanged: (_) {},
-                ),
+                if (!isRecording)
+                  const LabelSetSelector(),
                 SizedBox(
                   width: double.infinity,
                   child: !isRecording
@@ -286,7 +287,7 @@ class _RecorderHeaderCardState extends State<RecorderHeaderCard> {
                           ),
                           onPressed: !canStartRecording
                               ? null
-                              : () => _handleStart(recorder),
+                              : () => _handleStart(recorder, labelProvider),
                         )
                       : Column(
                           children: [
@@ -348,6 +349,15 @@ class _RecorderHeaderCardState extends State<RecorderHeaderCard> {
                             ),
                           ],
                         ),
+                ),
+                Consumer<LabelSetProvider>(
+                  builder: (context, labelSetProvider, _) {
+                    final labelSet = labelSetProvider.selectedLabelSet;
+                    if (labelSet == null) {
+                      return SizedBox.shrink();
+                    }
+                    return ActiveLabelBar(labelSet: labelSet,);
+                  },
                 ),
               ],
             ),

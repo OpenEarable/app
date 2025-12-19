@@ -6,19 +6,11 @@ import 'package:open_wearable/widgets/sensors/local_recorder/labels/labelset_dro
 import 'package:open_wearable/widgets/sensors/local_recorder/labels/labelset_editor_page.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../models/labels/label_set.dart';
 import '../../../../view_models/label_set_provider.dart';
 
 
 class LabelSetSelector extends StatelessWidget {
-  const LabelSetSelector({
-    super.key, 
-    required this.selected,
-    required this.onChanged,
-  });
-
-  final LabelSet? selected;
-  final ValueChanged<LabelSet?> onChanged;
+  const LabelSetSelector({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -64,10 +56,7 @@ Widget labelSetSelectorPreview() {
     child: Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: LabelSetSelector(
-          selected: null,
-          onChanged: (_) {},
-        ),
+        child: LabelSetSelector(),
       ),
     ),
   );
