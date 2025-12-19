@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
+import 'package:open_wearable/models/labels/label_sensor.dart';
+import 'package:open_wearable/models/labels/label_set.dart';
 import 'package:open_wearable/models/log_file_manager.dart';
 import 'package:open_wearable/models/wearable_connector.dart';
 import 'package:open_wearable/router.dart';
@@ -33,9 +35,6 @@ void main() async {
         ChangeNotifierProvider(
           create: (context) => FirmwareUpdateRequestProvider(),
         ),
-        ChangeNotifierProvider(
-          create: (context) => SensorRecorderProvider(),
-        ),
         Provider.value(value: WearableConnector()),
         ChangeNotifierProvider(
           create: (context) => AppBannerController(),
@@ -49,6 +48,17 @@ void main() async {
           update: (context, labelSetProvider, labelProvider) {
             labelProvider?.setLabelSet(labelSetProvider.selectedLabelSet);
             return labelProvider!;
+          },
+        ),
+        ChangeNotifierProxyProvider<LabelSetProvider, SensorRecorderProvider>(
+          create: (context) => SensorRecorderProvider(),
+          update: (context, labelSetProvider, sensorRecorderProvider) {
+            final LabelSet? labelSet = labelSetProvider.selectedLabelSet;
+            logger.t("Updating SensorRecorderProvider with label set: $labelSet");
+            if (labelSet == null) return sensorRecorderProvider!; //TODO: remove label wearable
+            final labelProvider = context.read<LabelProvider>();
+            sensorRecorderProvider!.addWearable(LabelWearable(labelSet: labelSet, labelStream: labelProvider.activeLabelStream));
+            return sensorRecorderProvider;
           },
         ),
       ],
