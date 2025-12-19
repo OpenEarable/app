@@ -109,29 +109,77 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
         ),
       );
     } else if (_currentBatteryLevel! < _minimumBatteryThreshold) {
-      // Show error dialog
-      showPlatformDialog(
-        context: context,
-        builder: (_) => PlatformAlertDialog(
-          title: const Text('Battery Level Too Low'),
-          content: Text(
-            'Your OpenEarable battery level is $_currentBatteryLevel%, which is below the required $_minimumBatteryThreshold% minimum for firmware updates.\n\n'
-            'Please charge your OpenEarable to at least $_minimumBatteryThreshold% before attempting a firmware update to prevent issues during the update process.',
-          ),
-          actions: <Widget>[
-            PlatformDialogAction(
-              cupertino: (_, __) => CupertinoDialogActionData(
-                isDefaultAction: true,
-              ),
-              child: const Text('OK'),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ],
-        ),
-      );
+      // Show first warning dialog with option to force update
+      _showLowBatteryWarning();
     } else {
       context.push('/fota/update');
     }
+  }
+
+  void _showLowBatteryWarning() {
+    showPlatformDialog(
+      context: context,
+      builder: (_) => PlatformAlertDialog(
+        title: const Text('Battery Level Too Low'),
+        content: Text(
+          'Your OpenEarable battery level is $_currentBatteryLevel%, which is below the required $_minimumBatteryThreshold% minimum for firmware updates.\n\n'
+          'Updating with low battery can cause the update to fail and may result in a bricked device.\n\n'
+          'It is strongly recommended to charge your device before proceeding.',
+        ),
+        actions: <Widget>[
+          PlatformDialogAction(
+            cupertino: (_, __) => CupertinoDialogActionData(
+              isDefaultAction: true,
+            ),
+            child: const Text('Cancel'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          PlatformDialogAction(
+            cupertino: (_, __) => CupertinoDialogActionData(
+              isDestructiveAction: true,
+            ),
+            child: const Text('Force Update Anyway'),
+            onPressed: () {
+              Navigator.of(context).pop();
+              _showFinalBrickingWarning();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFinalBrickingWarning() {
+    showPlatformDialog(
+      context: context,
+      builder: (_) => PlatformAlertDialog(
+        title: const Text('⚠️ Critical Warning'),
+        content: Text(
+          'FINAL WARNING: Proceeding with a firmware update at $_currentBatteryLevel% battery may permanently brick your OpenEarable device.\n\n'
+          'You will not be able to recover the device if the update fails due to low battery.\n\n'
+          'Are you absolutely sure you want to continue?',
+        ),
+        actions: <Widget>[
+          PlatformDialogAction(
+            cupertino: (_, __) => CupertinoDialogActionData(
+              isDefaultAction: true,
+            ),
+            child: const Text('Cancel'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          PlatformDialogAction(
+            cupertino: (_, __) => CupertinoDialogActionData(
+              isDestructiveAction: true,
+            ),
+            child: const Text('I Understand, Proceed'),
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.push('/fota/update');
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   @override
