@@ -17,11 +17,11 @@ class LabelProvider with ChangeNotifier {
   int? _activeLabelSetAtUnixMs;
   int? get activeLabelSetAtUnixMs => _activeLabelSetAtUnixMs;
 
-  final StreamController<(int, Label?)> _activeLabelController =
-      StreamController<(int, Label?)>.broadcast();
+  final StreamController<(int, List<Label>)> _activeLabelController =
+      StreamController<(int, List<Label>)>.broadcast();
 
   /// Emits a tuple of (unixTimeMs, activeLabel) whenever [setActiveLabel] is called.
-  Stream<(int, Label?)> get activeLabelStream => _activeLabelController.stream;
+  Stream<(int, List<Label>)> get activeLabelStream => _activeLabelController.stream;
 
   /// Sets the active label and records the unix time (ms) the label was set.
   ///
@@ -37,7 +37,7 @@ class LabelProvider with ChangeNotifier {
 
     // Emit first so stream consumers can react immediately, then notify UI.
     if (!_activeLabelController.isClosed) {
-      _activeLabelController.add((ts, label));
+      _activeLabelController.add((ts, [if (label != null) label]));
     }
 
     notifyListeners();
