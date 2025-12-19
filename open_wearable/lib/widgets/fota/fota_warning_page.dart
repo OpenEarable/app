@@ -34,7 +34,7 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
       
       if (device != null && device is BatteryLevelStatus) {
         // Get the current battery level from the stream
-        final batteryLevel = await (device as BatteryLevelStatus)
+        final batteryLevel = await device
             .batteryPercentageStream
             .first
             .timeout(
@@ -76,7 +76,37 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
   }
 
   void _handleProceed() {
-    if (_currentBatteryLevel != null && _currentBatteryLevel! < 50) {
+    if (_currentBatteryLevel == null) {
+      // Battery level could not be determined
+      showPlatformDialog(
+        context: context,
+        builder: (_) => PlatformAlertDialog(
+          title: const Text('Battery Level Unknown'),
+          content: const Text(
+            'Unable to determine the OpenEarable battery level. '
+            'For safety, please ensure your OpenEarable is charged to at least 50% before proceeding with the firmware update.\n\n'
+            'Do you want to proceed anyway?',
+          ),
+          actions: <Widget>[
+            PlatformDialogAction(
+              cupertino: (_, __) => CupertinoDialogActionData(),
+              child: const Text('Cancel'),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            PlatformDialogAction(
+              cupertino: (_, __) => CupertinoDialogActionData(
+                isDestructiveAction: true,
+              ),
+              child: const Text('Proceed Anyway'),
+              onPressed: () {
+                Navigator.of(context).pop();
+                context.push('/fota/update');
+              },
+            ),
+          ],
+        ),
+      );
+    } else if (_currentBatteryLevel! < 50) {
       // Show error dialog
       showPlatformDialog(
         context: context,
@@ -284,6 +314,40 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
                                 'Battery level is ${_currentBatteryLevel}%. Please charge to at least 50% before updating.',
                                 style: baseTextStyle?.copyWith(
                                   color: theme.colorScheme.error,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    
+                    // Battery level warning if unknown
+                    if (!_checkingBattery && _currentBatteryLevel == null)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.1),
+                          border: Border.all(
+                            color: Colors.orange,
+                            width: 2,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.battery_unknown,
+                              color: Colors.orange,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Unable to determine battery level. Please ensure your device is charged to at least 50%.',
+                                style: baseTextStyle?.copyWith(
+                                  color: Colors.orange.shade900,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
