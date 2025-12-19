@@ -15,6 +15,8 @@ class FotaWarningPage extends StatefulWidget {
 }
 
 class _FotaWarningPageState extends State<FotaWarningPage> {
+  static const int _minimumBatteryThreshold = 50;
+  
   int? _currentBatteryLevel;
   bool _checkingBattery = true;
   
@@ -82,9 +84,9 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
         context: context,
         builder: (_) => PlatformAlertDialog(
           title: const Text('Battery Level Unknown'),
-          content: const Text(
+          content: Text(
             'Unable to determine the OpenEarable battery level. '
-            'For safety, please ensure your OpenEarable is charged to at least 50% before proceeding with the firmware update.\n\n'
+            'For safety, please ensure your OpenEarable is charged to at least $_minimumBatteryThreshold% before proceeding with the firmware update.\n\n'
             'Do you want to proceed anyway?',
           ),
           actions: <Widget>[
@@ -106,15 +108,15 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
           ],
         ),
       );
-    } else if (_currentBatteryLevel! < 50) {
+    } else if (_currentBatteryLevel! < _minimumBatteryThreshold) {
       // Show error dialog
       showPlatformDialog(
         context: context,
         builder: (_) => PlatformAlertDialog(
           title: const Text('Battery Level Too Low'),
           content: Text(
-            'Your OpenEarable battery level is ${_currentBatteryLevel}%, which is below the required 50% minimum for firmware updates.\n\n'
-            'Please charge your OpenEarable to at least 50% before attempting a firmware update to prevent issues during the update process.',
+            'Your OpenEarable battery level is $_currentBatteryLevel%, which is below the required $_minimumBatteryThreshold% minimum for firmware updates.\n\n'
+            'Please charge your OpenEarable to at least $_minimumBatteryThreshold% before attempting a firmware update to prevent issues during the update process.',
           ),
           actions: <Widget>[
             PlatformDialogAction(
@@ -242,7 +244,7 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
                               number: '3.',
                               text: TextSpan(
                                 text:
-                                    'Ensure your OpenEarable has at least 50% battery charge before starting. Fully charging is recommended.',
+                                    'Ensure your OpenEarable has at least $_minimumBatteryThreshold% battery charge before starting. Fully charging is recommended.',
                               ),
                             ),
                             SizedBox(height: 8),
@@ -289,7 +291,7 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
                     const SizedBox(height: 24),
 
                     // Battery level warning if below 50%
-                    if (_currentBatteryLevel != null && _currentBatteryLevel! < 50)
+                    if (_currentBatteryLevel != null && _currentBatteryLevel! < _minimumBatteryThreshold)
                       Container(
                         margin: const EdgeInsets.only(bottom: 16),
                         padding: const EdgeInsets.all(12),
@@ -311,7 +313,7 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                'Battery level is ${_currentBatteryLevel}%. Please charge to at least 50% before updating.',
+                                'Battery level is $_currentBatteryLevel%. Please charge to at least $_minimumBatteryThreshold% before updating.',
                                 style: baseTextStyle?.copyWith(
                                   color: theme.colorScheme.error,
                                   fontWeight: FontWeight.w600,
@@ -345,7 +347,7 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                'Unable to determine battery level. Please ensure your device is charged to at least 50%.',
+                                'Unable to determine battery level. Please ensure your device is charged to at least $_minimumBatteryThreshold%.',
                                 style: baseTextStyle?.copyWith(
                                   color: Colors.orange.shade900,
                                   fontWeight: FontWeight.w600,
