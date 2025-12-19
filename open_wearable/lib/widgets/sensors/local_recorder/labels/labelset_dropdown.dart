@@ -7,14 +7,7 @@ import '../../../../models/labels/label_set.dart';
 import '../../../../view_models/label_set_provider.dart';
 
 class LabelSetDropdown extends StatelessWidget {
-  final LabelSet? selected;
-  final ValueChanged<LabelSet?> onChanged;
-
-  const LabelSetDropdown({
-    super.key,
-    required this.selected,
-    required this.onChanged,
-  });
+  const LabelSetDropdown({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +16,7 @@ class LabelSetDropdown extends StatelessWidget {
         final sets = provider.labelSets;
 
         return DropdownButtonFormField<LabelSet?>(
-          initialValue: selected,
+          initialValue: provider.selectedLabelSet,
           decoration: const InputDecoration(
             labelText: 'Label set',
             border: OutlineInputBorder(),
@@ -39,33 +32,15 @@ class LabelSetDropdown extends StatelessWidget {
                 child: Text(set.name),
               ),
             ),
-            const DropdownMenuItem(
-              value: _createLabelSetSentinel,
-              child: Text('➕ Create new label set…'),
-            ),
           ],
           onChanged: (value) async {
-            if (value == _createLabelSetSentinel) {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const Text("Edit"),//LabelSetEditorPage(),
-                ),
-              );
-              return;
-            }
-            onChanged(value);
+            provider.selectLabelSet(value);
           },
         );
       },
     );
   }
 }
-
-
-const LabelSet _createLabelSetSentinel =
-    LabelSet(name: '__create__', labels: []);
-
 
 @Preview(name: 'LabelSetDropdown')
 Widget labelSetDropdownPreview() {
@@ -93,10 +68,7 @@ Widget labelSetDropdownPreview() {
       home: Scaffold(
         body: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: LabelSetDropdown(
-            selected: labelSet1,
-            onChanged: (set) {},
-          ),
+          child: LabelSetDropdown(),
         ),
       ),
     ),

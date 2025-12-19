@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widget_previews.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/labels/label_sets_page.dart';
+import 'package:open_wearable/widgets/sensors/local_recorder/labels/labelset_dropdown.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/labels/labelset_editor_page.dart';
 import 'package:provider/provider.dart';
 
@@ -21,35 +22,13 @@ class LabelSetSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final labelProvider = context.watch<LabelSetProvider>();
-    final sets = labelProvider.labelSets;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
             Expanded(
-              child: DropdownButtonFormField<LabelSet?>(
-                initialValue: selected,
-                decoration: const InputDecoration(
-                  labelText: 'Label set',
-                  border: OutlineInputBorder(),
-                ),
-                items: [
-                  const DropdownMenuItem<LabelSet?>(
-                    value: null,
-                    child: Text('None'),
-                  ),
-                  ...sets.map(
-                    (set) => DropdownMenuItem<LabelSet?>(
-                      value: set,
-                      child: Text(set.name),
-                    ),
-                  ),
-                ],
-                onChanged: onChanged,
-              ),
+              child: LabelSetDropdown(),
             ),
             const SizedBox(width: 8),
             IconButton(
