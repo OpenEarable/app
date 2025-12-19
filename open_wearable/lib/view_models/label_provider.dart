@@ -6,7 +6,7 @@ import '../models/labels/label.dart';
 import '../models/labels/label_set.dart';
 
 class LabelProvider with ChangeNotifier {
-  final LabelSet labelSet;
+  LabelSet? labelSet;
 
   LabelProvider(this.labelSet);
 
@@ -40,6 +40,17 @@ class LabelProvider with ChangeNotifier {
       _activeLabelController.add((ts, label));
     }
 
+    notifyListeners();
+  }
+
+  void setLabelSet(LabelSet? newLabelSet) {
+    labelSet = newLabelSet;
+    if (_activeLabel != null &&
+        (labelSet == null || !labelSet!.labels.contains(_activeLabel))) {
+      // Clear active label if it's not in the new label set.
+      _activeLabel = null;
+      _activeLabelSetAtUnixMs = null;
+    }
     notifyListeners();
   }
 

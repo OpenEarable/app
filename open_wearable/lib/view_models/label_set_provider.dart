@@ -15,6 +15,9 @@ class LabelSetProvider extends ChangeNotifier {
   bool _loaded = false;
   bool get isLoaded => _loaded;
 
+  LabelSet? _selectedLabelSet;
+  LabelSet? get selectedLabelSet => _selectedLabelSet;
+
   List<LabelSet> get labelSets => _manager.labelSets;
 
   Future<void> _init() async {
@@ -45,6 +48,11 @@ class LabelSetProvider extends ChangeNotifier {
 
   Future<void> clear() async {
     await _manager.clear();
+    notifyListeners();
+  }
+
+  void selectLabelSet(LabelSet? set) {
+    _selectedLabelSet = set;
     notifyListeners();
   }
 }
