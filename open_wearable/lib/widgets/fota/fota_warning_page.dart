@@ -153,7 +153,7 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
     showPlatformDialog(
       context: context,
       builder: (_) => PlatformAlertDialog(
-        title: const Text('⚠️ Critical Warning'),
+        title: const Text('Critical Warning'),
         content: Text(
           'FINAL WARNING: Proceeding with a firmware update at $_currentBatteryLevel% battery may permanently brick your OpenEarable device.\n\n'
           'You will not be able to recover the device if the update fails due to low battery.\n\n'
