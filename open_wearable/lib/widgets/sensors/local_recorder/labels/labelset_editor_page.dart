@@ -276,7 +276,7 @@ class _ColorPickerRowState extends State<_ColorPickerRow> {
       spacing: 8,
       runSpacing: 8,
       children: _colors.map((c) {
-        final isSelected = c.value == _selected.value;
+        final isSelected = c.toARGB32() == _selected.toARGB32();
         return InkWell(
           onTap: () {
             setState(() => _selected = c);

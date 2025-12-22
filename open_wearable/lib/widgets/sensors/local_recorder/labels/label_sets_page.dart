@@ -88,6 +88,7 @@ class LabelSetsPage extends StatelessWidget {
                               false;
 
                           if (!ok) return;
+                          if (!context.mounted) return;
                           await context.read<LabelSetProvider>().deleteSet(set);
                         },
                       ),
