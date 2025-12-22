@@ -31,7 +31,7 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
         context,
         listen: false,
       );
-      final device = updateProvider.updateParameters.peripheral;
+      final device = updateProvider.selectedWearable;
       
       if (device != null && device is BatteryLevelStatus) {
         // Get the current battery level from the stream
