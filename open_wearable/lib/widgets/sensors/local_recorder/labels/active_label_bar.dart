@@ -54,8 +54,8 @@ class ActiveLabelBar extends StatelessWidget {
                   child: ChoiceChip(
                     label: Text(label.name),
                     selected: isActive,
-                    selectedColor: label.color.withValues(alpha: 0.30),
-                    onSelected: (_) => labelProvider.setActiveLabel(label),
+                    selectedColor: label.color.withAlpha(77),
+                    onSelected: (_) => labelProvider.setActiveLabel(isActive ? null : label),
                   ),
                 );
               }).toList(),
