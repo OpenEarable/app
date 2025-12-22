@@ -1,6 +1,5 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -36,12 +35,12 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
       
       if (device != null && device is BatteryLevelStatus) {
         // Get the current battery level from the stream
-        final batteryLevel = await device
+        final batteryLevel = await (device as BatteryLevelStatus)
             .batteryPercentageStream
             .first
             .timeout(
               const Duration(seconds: 5),
-              onTimeout: () => null,
+              onTimeout: () => 0,
             );
         
         if (mounted) {
@@ -344,7 +343,7 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
                         margin: const EdgeInsets.only(bottom: 16),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.error.withOpacity(0.1),
+                          color: theme.colorScheme.error.withValues(alpha: 0.1),
                           border: Border.all(
                             color: theme.colorScheme.error,
                             width: 2,
@@ -378,7 +377,7 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
                         margin: const EdgeInsets.only(bottom: 16),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.1),
+                          color: Colors.orange.withValues(alpha: 0.1),
                           border: Border.all(
                             color: Colors.orange,
                             width: 2,
