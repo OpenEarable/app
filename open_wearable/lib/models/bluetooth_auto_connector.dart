@@ -142,7 +142,8 @@ class BluetoothAutoConnector {
             .then(onWearableConnected)
             .catchError((e) {
           logger.e(
-              "Failed to connect to ${device.id}: ${wearableManager.deviceErrorMessage(e, device.name)}");
+            "Failed to connect to ${device.id}: ${wearableManager.deviceErrorMessage(e, device.name)}",
+          );
         }).whenComplete(() {
           _isConnecting = false;
         });
