@@ -132,19 +132,8 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
         discoveredDevices.remove(device);
       });
     } catch (e) {
-      final _wearableEventController =
-          StreamController<WearableEvent>.broadcast();
-      final wearableEventController =
-          context.read<WearablesProvider>().wearableEventController;
       String message = _wearableManager.deviceErrorMessage(e, device.name);
       logger.e('Failed to connect to device: ${device.name}, error: $message');
-      _wearableEventController.add(
-        WearableErrorEvent(
-          wearable: wearable,
-          errorMessage: 'Failed to synchronize time with ${wearable.name}: $e',
-          description: 'Failed to synchronize time for ${wearable.name}',
-        ),
-      );
       if (context.mounted) {
         showPlatformDialog(
           context: context,
