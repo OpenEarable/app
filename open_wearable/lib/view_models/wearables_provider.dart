@@ -53,7 +53,9 @@ class WearableTimeSynchronizedEvent extends WearableEvent {
   WearableTimeSynchronizedEvent({
     required super.wearable,
     String? description,
-  }) : super(description: description ?? 'Time synchronized for ${wearable.name}');
+  }) : super(
+            description:
+                description ?? 'Time synchronized for ${wearable.name}');
 
   @override
   String toString() => 'WearableTimeSynchronizedEvent for ${wearable.name}';
@@ -65,7 +67,9 @@ class WearableErrorEvent extends WearableEvent {
     required super.wearable,
     required this.errorMessage,
     String? description,
-  }) : super(description: description ?? 'Error for ${wearable.name}: $errorMessage');
+  }) : super(
+            description:
+                description ?? 'Error for ${wearable.name}: $errorMessage');
 
   @override
   String toString() =>
@@ -89,9 +93,9 @@ class WearablesProvider with ChangeNotifier {
   Stream<UnsupportedFirmwareEvent> get unsupportedFirmwareStream =>
       _unsupportedFirmwareEventsController.stream;
 
-  final _wearableEventController =
-      StreamController<WearableEvent>.broadcast();
-  Stream<WearableEvent> get wearableEventStream => _wearableEventController.stream;
+  final _wearableEventController = StreamController<WearableEvent>.broadcast();
+  Stream<WearableEvent> get wearableEventStream =>
+      _wearableEventController.stream;
 
   final Map<Wearable, StreamSubscription> _capabilitySubscriptions = {};
 
@@ -285,7 +289,8 @@ class WearablesProvider with ChangeNotifier {
 
       final currentVersion = await dev.readDeviceFirmwareVersion();
       if (currentVersion == null || currentVersion.isEmpty) {
-        logger.d('Could not read firmware version for ${(dev as Wearable).name}');
+        logger
+            .d('Could not read firmware version for ${(dev as Wearable).name}');
         return;
       }
 
