@@ -55,8 +55,9 @@ final GoRouter router = GoRouter(
       name: 'fota',
       redirect: (context, state) {
         final bool isAndroid = !kIsWeb && Platform.isAndroid;
+        final bool isIOS = !kIsWeb && Platform.isIOS;
 
-        if (!isAndroid) {
+        if (!isAndroid && !isIOS) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             final ctx = rootNavigatorKey.currentContext;
             if (ctx == null) return;

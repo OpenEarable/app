@@ -53,7 +53,9 @@ class WearableTimeSynchronizedEvent extends WearableEvent {
   WearableTimeSynchronizedEvent({
     required super.wearable,
     String? description,
-  }): super(description: description ?? 'Time synchronized for ${wearable.name}');
+  }) : super(
+            description:
+                description ?? 'Time synchronized for ${wearable.name}');
 
   @override
   String toString() => 'WearableTimeSynchronizedEvent for ${wearable.name}';
@@ -65,7 +67,9 @@ class WearableErrorEvent extends WearableEvent {
     required super.wearable,
     required this.errorMessage,
     String? description,
-  }): super(description: description ?? 'Error for ${wearable.name}: $errorMessage');
+  }) : super(
+            description:
+                description ?? 'Error for ${wearable.name}: $errorMessage');
 
   @override
   String toString() =>
@@ -86,9 +90,9 @@ class WearablesProvider with ChangeNotifier {
   Stream<UnsupportedFirmwareEvent> get unsupportedFirmwareStream =>
       _unsupportedFirmwareEventsController.stream;
 
-  final _wearableEventController =
-      StreamController<WearableEvent>.broadcast();
-  Stream<WearableEvent> get wearableEventStream => _wearableEventController.stream;
+  final _wearableEventController = StreamController<WearableEvent>.broadcast();
+  Stream<WearableEvent> get wearableEventStream =>
+      _wearableEventController.stream;
 
   void addWearable(Wearable wearable) {
     // 1) Fast path: ignore duplicates and push into lists/maps synchronously
@@ -100,13 +104,17 @@ class WearablesProvider with ChangeNotifier {
       logger.d('Synchronizing time for wearable ${wearable.name}');
       (wearable as TimeSynchronizable).synchronizeTime().then((_) {
         logger.d('Time synchronized for wearable ${wearable.name}');
-        _wearableEventController.add(WearableTimeSynchronizedEvent(wearable: wearable, description: 'Time synchronized for ${wearable.name}'));
+        _wearableEventController.add(WearableTimeSynchronizedEvent(
+            wearable: wearable,
+            description: 'Time synchronized for ${wearable.name}'));
       }).catchError((e, st) {
-        logger.w('Failed to synchronize time for wearable ${wearable.name}: $e\n$st');
+        logger.w(
+            'Failed to synchronize time for wearable ${wearable.name}: $e\n$st');
         _wearableEventController.add(
           WearableErrorEvent(
             wearable: wearable,
-            errorMessage: 'Failed to synchronize time with ${wearable.name}: $e',
+            errorMessage:
+                'Failed to synchronize time with ${wearable.name}: $e',
             description: 'Failed to synchronize time for ${wearable.name}',
           ),
         );
@@ -236,7 +244,8 @@ class WearablesProvider with ChangeNotifier {
 
       final currentVersion = await dev.readDeviceFirmwareVersion();
       if (currentVersion == null || currentVersion.isEmpty) {
-        logger.d('Could not read firmware version for ${(dev as Wearable).name}');
+        logger
+            .d('Could not read firmware version for ${(dev as Wearable).name}');
         return;
       }
 
