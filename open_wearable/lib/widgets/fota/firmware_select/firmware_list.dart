@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:provider/provider.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
-import 'beta_firmware_list.dart';
+import 'firmware_repository.dart';
 
 class FirmwareList extends StatefulWidget {
   const FirmwareList({super.key});
@@ -17,10 +17,11 @@ class FirmwareList extends StatefulWidget {
 }
 
 class _FirmwareListState extends State<FirmwareList> {
-  late Future<List<RemoteFirmware>> _firmwareFuture;
-  final repository = FirmwareImageRepository();
+  late Future<List<FirmwareEntry>> _firmwareFuture;
+  final _repository = UnifiedFirmwareRepository();
   String? firmwareVersion;
   bool _expanded = false;
+  bool _showBeta = false;
 
   @override
   void initState() {
@@ -30,7 +31,7 @@ class _FirmwareListState extends State<FirmwareList> {
   }
 
   void _loadFirmwares() {
-    _firmwareFuture = repository.getFirmwareImages();
+    _firmwareFuture = _repository.getAllFirmwares(includeBeta: _showBeta);
   }
 
   void _loadFirmwareVersion() async {
@@ -46,27 +47,35 @@ class _FirmwareListState extends State<FirmwareList> {
     }
   }
 
+  void _toggleBeta() {
+    setState(() {
+      _showBeta = !_showBeta;
+      _loadFirmwares();
+    });
+    print(_showBeta ? 'Beta firmware enabled' : 'Beta firmware disabled');
+  }
+
   @override
   Widget build(BuildContext context) {
     return PlatformScaffold(
       appBar: PlatformAppBar(
-        title: PlatformText('Select Firmware'),
+        title: GestureDetector(
+          onLongPress: _toggleBeta,
+          child: PlatformText('Select Firmware'),
+        ),
         trailingActions: [
           IconButton(
-            onPressed: () => onFirmwareSelect(context),
+            onPressed: () => _onCustomFirmwareSelect(context),
             icon: Icon(Icons.add),
             padding: EdgeInsets.zero,
           ),
         ],
       ),
-      body: Material(
-        type: MaterialType.transparency,
-        child: _body(),
-      ),
+      body: _body(), // Remove Material wrapper
     );
   }
 
-  void onFirmwareSelect(BuildContext context) async {
+  void _onCustomFirmwareSelect(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => PlatformAlertDialog(
@@ -93,18 +102,14 @@ class _FirmwareListState extends State<FirmwareList> {
       ),
     );
 
-    if (confirmed != true) {
-      return;
-    }
+    if (confirmed != true) return;
 
-    // Navigator.pop(context, 'Firmware');
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['zip', 'bin'],
     );
-    if (result == null) {
-      return;
-    }
+    if (result == null) return;
+
     final ext = result.files.first.extension;
     final fwType =
         ext == 'zip' ? FirmwareType.multiImage : FirmwareType.singleImage;
@@ -123,191 +128,261 @@ class _FirmwareListState extends State<FirmwareList> {
     Navigator.pop(context);
   }
 
-  Container _body() {
-    // ignore: avoid_unnecessary_containers
-    return Container(
-      alignment: Alignment.center,
-      child: FutureBuilder<List<RemoteFirmware>>(
-        future: _firmwareFuture,
-        builder: (context, snapshot) {
-          if (snapshot.hasData) {
-            List<RemoteFirmware> apps = snapshot.data!;
-            return _listBuilder(apps);
-          } else if (snapshot.hasError) {
-            return Expanded(
-              child: Column(
-                children: [
-                  PlatformText(
-                      "Could not fetch firmware update, plase try again"),
-                  const SizedBox(height: 16),
-                  PlatformElevatedButton(
-                    onPressed: () {
-                      setState(_loadFirmwares);
-                    },
-                    child: PlatformText('Reload'),
-                  ),
-                ],
-              ),
-            );
+  Widget _body() {
+    return FutureBuilder<List<FirmwareEntry>>(
+      future: _firmwareFuture,
+      builder: (context, snapshot) {
+        if (snapshot.hasData) {
+          final entries = snapshot.data!;
+          if (entries.isEmpty) {
+            return Center(child: PlatformText('No firmware available'));
           }
-          return const CircularProgressIndicator();
-        },
+          return _listBuilder(entries);
+        } else if (snapshot.hasError) {
+          return _errorWidget();
+        }
+        return const Center(child: CircularProgressIndicator());
+      },
+    );
+  }
+
+  Widget _errorWidget() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          PlatformText("Could not fetch firmware, please try again"),
+          const SizedBox(height: 16),
+          PlatformElevatedButton(
+            onPressed: _loadFirmwares,
+            child: PlatformText('Reload'),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _listBuilder(List<RemoteFirmware> apps) {
-    final visibleApps = _expanded ? apps : [apps.first];
+  Widget _listBuilder(List<FirmwareEntry> entries) {
+    final stableEntries = entries.where((e) => e.isStable).toList();
+    final betaEntries = entries.where((e) => e.isBeta).toList();
+    final latestStable = stableEntries.isNotEmpty ? stableEntries.first : null;
 
-    return Column(
-      children: [
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: visibleApps.length,
-          itemBuilder: (context, index) {
-            final firmware = visibleApps[index];
-            final isLatest = firmware == apps.first;
-            final remarks = <String>[];
-            bool isInstalled = false;
+    final visibleEntries = _expanded ? entries : [entries.first];
 
-            if (firmwareVersion != null &&
-                firmware.version
-                    .contains(firmwareVersion!.replaceAll('\x00', ''))) {
-              remarks.add('Current');
-              isInstalled = true;
-            }
-
-            if (isLatest) {
-              remarks.add('Latest');
-            }
-
-            return ListTile(
-              title: PlatformText(
-                firmware.name,
-                style: TextStyle(
-                  color: isLatest ? Colors.black : Colors.grey,
-                ),
-              ),
-              subtitle: PlatformText(
-                remarks.join(', '),
-                style: TextStyle(
-                  color: isLatest ? Colors.black : Colors.grey,
-                ),
-              ),
-              onTap: () {
-                if (isInstalled) {
-                  showDialog(
-                    context: context,
-                    builder: (context) => PlatformAlertDialog(
-                      title: PlatformText('Already Installed'),
-                      content: PlatformText(
-                        'This firmware version is already installed on the device.',
-                      ),
-                      actions: [
-                        PlatformTextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: PlatformText('Cancel'),
-                        ),
-                        PlatformTextButton(
-                          onPressed: () {
-                            final selectedFW = apps[index];
-                            context
-                                .read<FirmwareUpdateRequestProvider>()
-                                .setFirmware(selectedFW);
-                            Navigator.of(context).pop();
-                            Navigator.pop(context, 'Firmware $index');
-                          },
-                          child: PlatformText('Install Anyway'),
-                        ),
-                      ],
-                    ),
-                  );
-                } else if (!isLatest) {
-                  showDialog(
-                    context: context,
-                    builder: (context) => PlatformAlertDialog(
-                      title: PlatformText('Warning'),
-                      content: PlatformText(
-                        'You are selecting an old firmware version. We recommend installing the newest version.',
-                      ),
-                      actions: [
-                        PlatformTextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: PlatformText('Cancel'),
-                        ),
-                        PlatformTextButton(
-                          onPressed: () {
-                            final selectedFW = apps[index];
-                            context
-                                .read<FirmwareUpdateRequestProvider>()
-                                .setFirmware(selectedFW);
-                            Navigator.of(context).pop();
-                            Navigator.pop(context, 'Firmware $index');
-                          },
-                          child: PlatformText('Proceed'),
-                        ),
-                      ],
-                    ),
-                  );
-                } else {
-                  context
-                      .read<FirmwareUpdateRequestProvider>()
-                      .setFirmware(firmware);
-                  Navigator.pop(context, 'Firmware $index');
-                }
-              },
-            );
-          },
-        ),
-        if (apps.length > 1)
-          PlatformTextButton(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                PlatformText(
-                  _expanded ? 'Hide older versions' : 'Show older versions',
-                  style: TextStyle(color: Colors.black),
-                ),
-                SizedBox(width: 8),
-                Icon(
-                  _expanded
-                      ? Icons.keyboard_arrow_up
-                      : Icons.keyboard_arrow_down,
-                ),
-              ],
+    return SafeArea(
+      child: SingleChildScrollView(
+        child: Column(
+          children: [
+            if (_showBeta && betaEntries.isNotEmpty) _betaWarningBanner(),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: visibleEntries.length,
+              itemBuilder: (context, index) =>
+                  _firmwareListItem(visibleEntries[index], latestStable, index),
             ),
-            onPressed: () {
-              setState(() {
-                _expanded = !_expanded;
-              });
-            },
-          ),
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: PlatformElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => BetaFirmwareList(),
-                ),
-              );
-            },
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.bug_report, color: Colors.white),
-                const SizedBox(width: 8),
-                PlatformText(
-                  'Beta Firmware (PR Builds)',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ],
-            ),
-          ),
+            if (entries.length > 1) _expandButton(),
+            const SizedBox(height: 16), // Simple bottom padding
+          ],
         ),
-      ],
+      ),
     );
+  }
+
+  Widget _betaWarningBanner() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      color: Colors.orange.withOpacity(0.2),
+      child: Row(
+        children: [
+          Icon(Icons.warning, color: Colors.orange, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: PlatformText(
+              'Beta firmware is experimental and may be unstable. Use at your own risk.',
+              style: TextStyle(
+                color: Colors.orange.shade900,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _firmwareListItem(
+      FirmwareEntry entry, FirmwareEntry? latestStable, int index) {
+    final firmware = entry.firmware;
+    final isBeta = entry.isBeta;
+    final isLatestStable = entry == latestStable;
+    final remarks = <String>[];
+    bool isInstalled = false;
+
+    if (firmwareVersion != null &&
+        firmware.version.contains(firmwareVersion!.replaceAll('\x00', ''))) {
+      remarks.add('Current');
+      isInstalled = true;
+    }
+
+    if (isLatestStable) {
+      remarks.add('Latest');
+    }
+
+    if (isBeta) {
+      remarks.add('Beta');
+    }
+
+    return ListTile(
+      leading: isBeta ? Icon(Icons.bug_report, color: Colors.orange) : null,
+      title: PlatformText(
+        firmware.name,
+        style: TextStyle(
+          color: isLatestStable ? Colors.black : Colors.grey,
+        ),
+      ),
+      subtitle: PlatformText(
+        remarks.join(', '),
+        style: TextStyle(
+          color: isLatestStable ? Colors.black : Colors.grey,
+        ),
+      ),
+      onTap: () => _onFirmwareTap(
+        firmware,
+        index,
+        isInstalled,
+        isLatestStable,
+        isBeta,
+      ),
+    );
+  }
+
+  Widget _expandButton() {
+    return PlatformTextButton(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          PlatformText(
+            _expanded ? 'Hide older versions' : 'Show older versions',
+            style: TextStyle(color: Colors.black),
+          ),
+          SizedBox(width: 8),
+          Icon(
+            _expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+          ),
+        ],
+      ),
+      onPressed: () {
+        setState(() {
+          _expanded = !_expanded;
+        });
+      },
+    );
+  }
+
+  void _onFirmwareTap(
+    RemoteFirmware firmware,
+    int index,
+    bool isInstalled,
+    bool isLatest,
+    bool isBeta,
+  ) {
+    if (isInstalled) {
+      _showInstalledDialog(firmware, index);
+    } else if (isBeta) {
+      _showBetaWarningDialog(firmware, index);
+    } else if (!isLatest) {
+      _showOldVersionWarningDialog(firmware, index);
+    } else {
+      _installFirmware(firmware, index);
+    }
+  }
+
+  void _showInstalledDialog(RemoteFirmware firmware, int index) {
+    showDialog(
+      context: context,
+      builder: (context) => PlatformAlertDialog(
+        title: PlatformText('Already Installed'),
+        content: PlatformText(
+          'This firmware version is already installed on the device.',
+        ),
+        actions: [
+          PlatformTextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: PlatformText('Cancel'),
+          ),
+          PlatformTextButton(
+            onPressed: () {
+              _installFirmware(firmware, index);
+              Navigator.of(context).pop();
+            },
+            child: PlatformText('Install Anyway'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showBetaWarningDialog(RemoteFirmware firmware, int index) {
+    showDialog(
+      context: context,
+      builder: (context) => PlatformAlertDialog(
+        title: PlatformText('Beta Firmware Warning'),
+        content: PlatformText(
+          'You are about to install beta firmware from a pull request. '
+          'This firmware may be unstable or incomplete. '
+          'Proceed at your own risk.',
+        ),
+        actions: [
+          PlatformTextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: PlatformText('Cancel'),
+          ),
+          PlatformTextButton(
+            onPressed: () {
+              _installFirmware(firmware, index);
+              Navigator.of(context).pop();
+            },
+            child: PlatformText(
+              'Install',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showOldVersionWarningDialog(RemoteFirmware firmware, int index) {
+    showDialog(
+      context: context,
+      builder: (context) => PlatformAlertDialog(
+        title: PlatformText('Warning'),
+        content: PlatformText(
+          'You are selecting an old firmware version. We recommend installing the newest version.',
+        ),
+        actions: [
+          PlatformTextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: PlatformText('Cancel'),
+          ),
+          PlatformTextButton(
+            onPressed: () {
+              _installFirmware(firmware, index);
+              Navigator.of(context).pop();
+            },
+            child: PlatformText('Proceed'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _installFirmware(RemoteFirmware firmware, int index) {
+    context.read<FirmwareUpdateRequestProvider>().setFirmware(firmware);
+    Navigator.pop(context, 'Firmware $index');
   }
 }
