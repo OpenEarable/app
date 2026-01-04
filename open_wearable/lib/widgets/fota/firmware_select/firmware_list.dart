@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:provider/provider.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'beta_firmware_list.dart';
 
 class FirmwareList extends StatefulWidget {
   const FirmwareList({super.key});
@@ -136,7 +137,8 @@ class _FirmwareListState extends State<FirmwareList> {
             return Expanded(
               child: Column(
                 children: [
-                  PlatformText("Could not fetch firmware update, plase try again"),
+                  PlatformText(
+                      "Could not fetch firmware update, plase try again"),
                   const SizedBox(height: 16),
                   PlatformElevatedButton(
                     onPressed: () {
@@ -281,6 +283,30 @@ class _FirmwareListState extends State<FirmwareList> {
               });
             },
           ),
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: PlatformElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => BetaFirmwareList(),
+                ),
+              );
+            },
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.bug_report, color: Colors.white),
+                const SizedBox(width: 8),
+                PlatformText(
+                  'Beta Firmware (PR Builds)',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
