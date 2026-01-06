@@ -1,18 +1,19 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
+import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_dialogs.dart';
+import 'package:open_wearable/widgets/sensors/local_recorder/recording_controls.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:open_file/open_file.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_archive/flutter_archive.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
-import 'package:open_wearable/view_models/wearables_provider.dart';
+import 'local_recorder_files.dart';
 
 Logger _logger = Logger();
 
@@ -27,35 +28,11 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
   static const MethodChannel platform = MethodChannel('edu.teco.open_folder');
   List<FileSystemEntity> _recordings = [];
   final Set<String> _expandedFolders = {}; // Track which folders are expanded
-  Timer? _recordingTimer;
-  Duration _elapsedRecording = Duration.zero;
-  bool _lastRecordingState = false;
-  bool _isHandlingStopAction = false;
-  DateTime? _activeRecordingStart;
-  SensorRecorderProvider? _recorder;
 
   @override
   void initState() {
     super.initState();
     _listRecordings();
-  }
-
-  /// Helper to show cross-platform error dialogs instead of SnackBars
-  Future<void> _showErrorDialog(String message) async {
-    if (!mounted) return;
-    await showPlatformDialog(
-      context: context,
-      builder: (_) => PlatformAlertDialog(
-        title: PlatformText('Error'),
-        content: PlatformText(message),
-        actions: [
-          PlatformDialogAction(
-            child: PlatformText('OK'),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _openFolder(String path) async {
@@ -80,7 +57,7 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
       if (dir == null) return;
       recordingsDir = dir;
     } else if (Platform.isIOS) {
-      recordingsDir = await getIOSDirectory();
+      recordingsDir = await Files.getIOSDirectory();
     } else {
       return;
     }
@@ -162,110 +139,12 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
         _listRecordings();
       } catch (e) {
         _logger.e('Error deleting recording: $e');
-        _showErrorDialog('Failed to delete recording: $e');
+        if (!mounted) return;
+        LocalRecorderDialogs.showErrorDialog(
+          context,
+          'Failed to delete recording: $e',
+        );
       }
-    }
-  }
-
-  Future<void> _handleStopRecording(
-    SensorRecorderProvider recorder, {
-    required bool turnOffSensors,
-  }) async {
-    if (_isHandlingStopAction) return;
-    setState(() {
-      _isHandlingStopAction = true;
-    });
-
-    try {
-      recorder.stopRecording();
-      if (turnOffSensors) {
-        final wearablesProvider = context.read<WearablesProvider>();
-        final futures = wearablesProvider.sensorConfigurationProviders.values
-            .map((provider) => provider.turnOffAllSensors());
-        await Future.wait(futures);
-      }
-      await _listRecordings();
-    } catch (e) {
-      _logger.e('Error stopping recording: $e');
-      await _showErrorDialog('Failed to stop recording: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isHandlingStopAction = false;
-        });
-      }
-    }
-  }
-
-  void _startRecordingTimer(DateTime? start) {
-    final reference = start ?? DateTime.now();
-    _activeRecordingStart = reference;
-    _recordingTimer?.cancel();
-    setState(() {
-      _elapsedRecording = DateTime.now().difference(reference);
-    });
-    _recordingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      setState(() {
-        final base = _activeRecordingStart ?? reference;
-        _elapsedRecording = DateTime.now().difference(base);
-      });
-    });
-  }
-
-  void _stopRecordingTimer() {
-    _recordingTimer?.cancel();
-    _recordingTimer = null;
-    _activeRecordingStart = null;
-    if (!mounted) return;
-    setState(() {
-      _elapsedRecording = Duration.zero;
-    });
-  }
-
-  String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    final hours = twoDigits(duration.inHours);
-    final minutes = twoDigits(duration.inMinutes.remainder(60));
-    final seconds = twoDigits(duration.inSeconds.remainder(60));
-    return '$hours:$minutes:$seconds';
-  }
-
-  @override
-  void dispose() {
-    _recordingTimer?.cancel();
-    _recorder?.removeListener(_handleRecorderUpdate);
-    super.dispose();
-  }
-
-  void _handleRecorderUpdate() {
-    final recorder = _recorder;
-    if (recorder == null) return;
-    final isRecording = recorder.isRecording;
-    final start = recorder.recordingStart;
-    if (isRecording && !_lastRecordingState) {
-      _startRecordingTimer(start);
-    } else if (!isRecording && _lastRecordingState) {
-      _stopRecordingTimer();
-    } else if (isRecording &&
-        _lastRecordingState &&
-        start != null &&
-        _activeRecordingStart != null &&
-        start != _activeRecordingStart) {
-      _startRecordingTimer(start);
-    }
-    _lastRecordingState = isRecording;
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final nextRecorder = context.watch<SensorRecorderProvider>();
-    if (!identical(_recorder, nextRecorder)) {
-      _recorder?.removeListener(_handleRecorderUpdate);
-      _recorder = nextRecorder;
-      _recorder?.addListener(_handleRecorderUpdate);
-      _handleRecorderUpdate();
     }
   }
 
@@ -290,7 +169,11 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
       }
     } catch (e) {
       _logger.e('Error sharing file: $e');
-      await _showErrorDialog('Failed to share file: $e');
+      if (!mounted) return;
+      await LocalRecorderDialogs.showErrorDialog(
+        context,
+        'Failed to share file: $e',
+      );
     }
   }
 
@@ -325,7 +208,11 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
       }
     } catch (e) {
       _logger.e('Error sharing folder: $e');
-      await _showErrorDialog('Failed to share folder: $e');
+      if (!mounted) return;
+      await LocalRecorderDialogs.showErrorDialog(
+        context,
+        'Failed to share folder: $e',
+      );
     }
   }
 
@@ -356,108 +243,11 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
                         "Only records sensor data streamed over Bluetooth.",
                       ),
                       const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: !isRecording
-                            ? ElevatedButton.icon(
-                                icon: const Icon(Icons.play_arrow),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: canStartRecording
-                                      ? Colors.green.shade600
-                                      : Colors.grey.shade400,
-                                  foregroundColor: Colors.white,
-                                  minimumSize: const Size.fromHeight(48),
-                                ),
-                                label: const Text(
-                                  'Start Recording',
-                                  style: TextStyle(fontSize: 18),
-                                ),
-                                onPressed: !canStartRecording
-                                    ? null
-                                    : () async {
-                                        final dir = await _pickDirectory();
-                                        if (dir == null) return;
-
-                                        // Check if directory is empty
-                                        if (!await _isDirectoryEmpty(dir)) {
-                                          if (!context.mounted) return;
-                                          final proceed =
-                                              await _askOverwriteConfirmation(
-                                            context,
-                                            dir,
-                                          );
-                                          if (!proceed) return;
-                                        }
-
-                                        recorder.startRecording(dir);
-                                        await _listRecordings(); // Refresh list
-                                      },
-                              )
-                            : Column(
-                                children: [
-                                  Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.center,
-                                    children: [
-                                      Expanded(
-                                        child: ElevatedButton.icon(
-                                          icon: const Icon(Icons.stop),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: Colors.red,
-                                            foregroundColor: Colors.white,
-                                            minimumSize:
-                                                const Size.fromHeight(48),
-                                          ),
-                                          label: const Text(
-                                            'Stop Recording',
-                                            style: TextStyle(fontSize: 18),
-                                          ),
-                                          onPressed: _isHandlingStopAction
-                                              ? null
-                                              : () => _handleStopRecording(
-                                                    recorder,
-                                                    turnOffSensors: false,
-                                                  ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      ConstrainedBox(
-                                        constraints: const BoxConstraints(
-                                          minWidth: 90,
-                                        ),
-                                        child: Text(
-                                          _formatDuration(_elapsedRecording),
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .titleLarge
-                                              ?.copyWith(
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  ElevatedButton.icon(
-                                    icon: const Icon(Icons.power_settings_new),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.red[800],
-                                      foregroundColor: Colors.white,
-                                      minimumSize: const Size.fromHeight(48),
-                                    ),
-                                    label: const Text(
-                                      'Stop & Turn Off Sensors',
-                                      style: TextStyle(fontSize: 18),
-                                    ),
-                                    onPressed: _isHandlingStopAction
-                                        ? null
-                                        : () => _handleStopRecording(
-                                              recorder,
-                                              turnOffSensors: true,
-                                            ),
-                                  ),
-                                ],
-                              ),
+                      RecordingControls(
+                        canStartRecording: canStartRecording,
+                        isRecording: isRecording,
+                        recorder: recorder,
+                        updateRecordingsList: _listRecordings,
                       ),
                     ],
                   ),
@@ -482,7 +272,8 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
                             IconButton(
                               icon: Icon(Icons.folder_open),
                               onPressed: () async {
-                                Directory recordDir = await getIOSDirectory();
+                                Directory recordDir =
+                                    await Files.getIOSDirectory();
                                 _openFolder(recordDir.path);
                               },
                             ),
@@ -647,9 +438,12 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
                                               type:
                                                   'text/comma-separated-values',
                                             );
+                                            if (!mounted) return;
                                             if (result.type !=
                                                 ResultType.done) {
-                                              await _showErrorDialog(
+                                              await LocalRecorderDialogs
+                                                  .showErrorDialog(
+                                                this.context,
                                                 'Could not open file: ${result.message}',
                                               );
                                             }
@@ -670,82 +464,4 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
       },
     );
   }
-}
-
-/* ──────────────────────────────────────────────────────────── */
-/*  Helpers                                                    */
-/* ──────────────────────────────────────────────────────────── */
-
-Future<String?> _pickDirectory() async {
-  if (!Platform.isIOS && !kIsWeb) {
-    final recordingName =
-        'OpenWearable_Recording_${DateTime.now().toIso8601String()}';
-    Directory? appDir = await getExternalStorageDirectory();
-    if (appDir == null) return null;
-
-    String dirPath = '${appDir.path}/$recordingName';
-    Directory dir = Directory(dirPath);
-    if (!await dir.exists()) {
-      await dir.create(recursive: true);
-    }
-    return dirPath;
-  }
-
-  if (Platform.isIOS) {
-    final recordingName =
-        'OpenWearable_Recording_${DateTime.now().toIso8601String()}';
-    String dirPath = '${(await getIOSDirectory()).path}/$recordingName';
-    Directory dir = Directory(dirPath);
-    if (!await dir.exists()) {
-      await dir.create(recursive: true);
-    }
-    return dirPath;
-  }
-
-  return null;
-}
-
-Future<Directory> getIOSDirectory() async {
-  Directory appDocDir = await getApplicationDocumentsDirectory();
-  final dirPath = '${appDocDir.path}/Recordings';
-  final dir = Directory(dirPath);
-
-  if (!await dir.exists()) {
-    await dir.create(recursive: true);
-  }
-
-  return dir;
-}
-
-Future<bool> _isDirectoryEmpty(String path) async {
-  final dir = Directory(path);
-  if (!await dir.exists()) return true;
-  return await dir.list(followLinks: false).isEmpty;
-}
-
-Future<bool> _askOverwriteConfirmation(
-  BuildContext context,
-  String dirPath,
-) async {
-  return await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: PlatformText('Directory not empty'),
-          content: PlatformText(
-              '"$dirPath" already contains files or folders.\n\n'
-              'New sensor files will be added; existing files with the same '
-              'names will be overwritten. Continue anyway?'),
-          actions: [
-            PlatformTextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: PlatformText('Cancel'),
-            ),
-            PlatformTextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: PlatformText('Continue'),
-            ),
-          ],
-        ),
-      ) ??
-      false;
 }
