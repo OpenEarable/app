@@ -5,8 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
-import 'package:open_file/open_file.dart';
+import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_dialogs.dart';
 import 'package:provider/provider.dart';
+import 'package:open_file/open_file.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_empty_state_card.dart';
@@ -234,7 +235,11 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
       await localRecorderShareFile(file);
     } catch (e) {
       _logger.e('Error sharing file: $e');
-      await _showErrorDialog('Failed to share file: $e');
+      if (!mounted) return;
+      await LocalRecorderDialogs.showErrorDialog(
+        context,
+        'Failed to share file: $e',
+      );
     }
   }
 
@@ -243,7 +248,11 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
       await localRecorderShareFolder(folder);
     } catch (e) {
       _logger.e('Error sharing folder: $e');
-      await _showErrorDialog('Failed to share folder: $e');
+      if (!mounted) return;
+      await LocalRecorderDialogs.showErrorDialog(
+        context,
+        'Failed to share folder: $e',
+      );
     }
   }
 
