@@ -4,6 +4,8 @@ import 'package:open_wearable/apps/widgets/apps_page.dart';
 import 'package:open_wearable/widgets/devices/devices_page.dart';
 import 'package:open_wearable/widgets/sensors/configuration/sensor_configuration_view.dart';
 import 'package:open_wearable/widgets/sensors/values/sensor_values_page.dart';
+import 'package:open_wearable/widgets/welcome_wizard/startup_wizard.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'sensors/sensor_page.dart';
 
@@ -50,6 +52,7 @@ class _HomePageState extends State<HomePage> {
       SensorPage(),
       const AppsPage(),
     ];
+    _showStartupWizardOnFirstBoot();
   }
 
   @override
@@ -110,5 +113,27 @@ class _HomePageState extends State<HomePage> {
       ),
       items: items(context),
     );
+  }
+
+  void _showStartupWizardOnFirstBoot() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // uncomment this line on release so infobox will only be shown once
+    //final shown = prefs.getBool('info_box_shown') ?? false;
+    final shown = false;
+
+    if (!shown) {
+      // Delay to ensure context is ready
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => const StartupWizard(),
+        ).then((_) async {
+          // Mark as shown
+          await prefs.setBool('info_box_shown', true);
+        });
+      });
+    }
   }
 }
