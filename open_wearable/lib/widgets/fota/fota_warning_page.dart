@@ -155,7 +155,7 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
         title: const Text('Critical Warning'),
         content: Text(
           'FINAL WARNING: Proceeding with a firmware update at $_currentBatteryLevel% battery may permanently brick your OpenEarable device.\n\n'
-          'You will not be able to recover the device if the update fails due to low battery.\n\n'
+          'You will not be able to recover the device without a J-Link debugger if the update fails due to low battery.\n\n'
           'Are you absolutely sure you want to continue?',
         ),
         actions: <Widget>[
