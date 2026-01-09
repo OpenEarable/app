@@ -65,8 +65,8 @@ class _SensorConfigurationDeviceRowState
                       .bodyLarge
                       ?.copyWith(fontWeight: FontWeight.bold),
                 ),
-                if (device is StereoDevice)
-                  StereoPosLabel(device: device as StereoDevice),
+                if (device.hasCapability<StereoDevice>())
+                  StereoPosLabel(device: device.requireCapability<StereoDevice>()),
               ],
             ),
             trailing: _buildTabBar(context),
@@ -80,7 +80,7 @@ class _SensorConfigurationDeviceRowState
   Future<void> _updateContent() async {
     final Wearable device = widget.device;
 
-    if (device is! SensorConfigurationManager) {
+    if (!device.hasCapability<SensorConfigurationManager>()) {
       if (!mounted) return;
       setState(() {
         _content = [
@@ -94,7 +94,7 @@ class _SensorConfigurationDeviceRowState
     }
 
     final SensorConfigurationManager sensorManager =
-        device as SensorConfigurationManager;
+        device.requireCapability<SensorConfigurationManager>();
 
     if (_tabController.index == 0) {
       _buildNewTabContent(sensorManager);
@@ -116,10 +116,10 @@ class _SensorConfigurationDeviceRowState
       const SaveConfigRow(),
     ]);
 
-    if (device is EdgeRecorderManager) {
+    if (device.hasCapability<EdgeRecorderManager>()) {
       content.addAll([
         const Divider(),
-        EdgeRecorderPrefixRow(manager: device as EdgeRecorderManager),
+        EdgeRecorderPrefixRow(manager: device.requireCapability<EdgeRecorderManager>()),
       ]);
     }
 
@@ -197,7 +197,7 @@ class _SensorConfigurationDeviceRowState
   }
 
   Widget? _buildTabBar(BuildContext context) {
-    if (widget.device is! SensorConfigurationManager) return null;
+    if (!widget.device.hasCapability<SensorConfigurationManager>()) return null;
 
     return SizedBox(
       width: MediaQuery.of(context).size.width * 0.4,

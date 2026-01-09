@@ -194,18 +194,18 @@ class WearablesProvider with ChangeNotifier {
 
     // 2) Slow/async work: run in microtasks so it doesn't block the add
     // Stereo pairing (if applicable)
-    if (wearable is StereoDevice) {
-      _scheduleMicrotask(() => _maybeAutoPairStereoAsync(wearable as StereoDevice));
+    if (wearable.hasCapability<StereoDevice>()) {
+      _scheduleMicrotask(() => _maybeAutoPairStereoAsync(wearable.requireCapability<StereoDevice>()));
     }
 
     // Firmware support check (if applicable)
-    if (wearable is DeviceFirmwareVersion) {
-      _scheduleMicrotask(() => _maybeEmitUnsupportedFirmwareAsync(wearable as DeviceFirmwareVersion));
+    if (wearable.hasCapability<DeviceFirmwareVersion>()) {
+      _scheduleMicrotask(() => _maybeEmitUnsupportedFirmwareAsync(wearable.requireCapability<DeviceFirmwareVersion>()));
     }
 
     // Check for newer firmware (if applicable)
-    if (wearable is DeviceFirmwareVersion) {
-      _scheduleMicrotask(() => _checkForNewerFirmwareAsync(wearable as DeviceFirmwareVersion));
+    if (wearable.hasCapability<DeviceFirmwareVersion>()) {
+      _scheduleMicrotask(() => _checkForNewerFirmwareAsync(wearable.requireCapability<DeviceFirmwareVersion>()));
     }
   }
 
@@ -214,7 +214,7 @@ class WearablesProvider with ChangeNotifier {
   void _ensureSensorConfigProvider(Wearable wearable) {
     if (!_sensorConfigurationProviders.containsKey(wearable)) {
       _sensorConfigurationProviders[wearable] = SensorConfigurationProvider(
-        sensorConfigurationManager: wearable as SensorConfigurationManager,
+        sensorConfigurationManager: wearable.requireCapability<SensorConfigurationManager>(),
       );
     }
   }
