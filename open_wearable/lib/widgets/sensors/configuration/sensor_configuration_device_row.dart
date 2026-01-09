@@ -97,14 +97,16 @@ class _SensorConfigurationDeviceRowState
         device.requireCapability<SensorConfigurationManager>();
 
     if (_tabController.index == 0) {
-      _buildNewTabContent(sensorManager);
+      _buildNewTabContent(device);
     } else {
       await _buildLoadTabContent(sensorManager);
     }
   }
 
-  void _buildNewTabContent(SensorConfigurationManager device) {
-    final List<Widget> content = device.sensorConfigurations
+  void _buildNewTabContent(Wearable device) {
+    SensorConfigurationManager sensorManager =
+        device.requireCapability<SensorConfigurationManager>();
+    final List<Widget> content = sensorManager.sensorConfigurations
         .map(
           (config) => SensorConfigurationValueRow(sensorConfiguration: config),
         )
