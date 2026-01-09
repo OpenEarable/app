@@ -36,8 +36,8 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
   }
 
   Future<void> _initSelectedMicrophone() async {
-    if (widget.device is MicrophoneManager) {
-      final mic = await (widget.device as MicrophoneManager).getMicrophone();
+    if (widget.device.hasCapability<MicrophoneManager>()) {
+      final mic = await widget.device.requireCapability<MicrophoneManager>().getMicrophone();
       setState(() {
         selectedMicrophone = mic;
       });
@@ -67,10 +67,10 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     BatteryStateView(device: widget.device),
-                    if (widget.device is StereoDevice)
+                    if (widget.device.hasCapability<StereoDevice>())
                       Padding(
                         padding: const EdgeInsets.only(left: 8.0),
-                        child: StereoPosLabel(device: widget.device as StereoDevice),
+                        child: StereoPosLabel(device: widget.device.requireCapability<StereoDevice>()),
                       ),
                   ],
                 ),
@@ -79,7 +79,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    if (widget.device is SystemDevice && (widget.device as SystemDevice).isConnectedViaSystem)
+                    if (widget.device.hasCapability<SystemDevice>() && widget.device.requireCapability<SystemDevice>().isConnectedViaSystem)
                       PlatformElevatedButton(
                         child: PlatformText("Forget Device"),
                         onPressed: () {
@@ -112,12 +112,12 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
               ],
             ),
             // MARK: Audio Mode
-            if (widget.device is AudioModeManager)
-              AudioModeWidget(device: widget.device as AudioModeManager),
+            if (widget.device.hasCapability<AudioModeManager>())
+              AudioModeWidget(device: widget.device.requireCapability<AudioModeManager>()),
             // MARK: Microphone Control
-            if (widget.device is MicrophoneManager)
+            if (widget.device.hasCapability<MicrophoneManager>())
               MicrophoneSelectionWidget(
-                device: widget.device as MicrophoneManager,
+                device: widget.device.requireCapability<MicrophoneManager>(),
               ),
             // MARK: Device info
             PlatformText("Device Info", style: Theme.of(context).textTheme.titleSmall),
@@ -129,14 +129,14 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
               subtitle: PlatformText(widget.device.deviceId),
             ),
             // MARK: Device Identifier
-            if (widget.device is DeviceIdentifier)
+            if (widget.device.hasCapability<DeviceIdentifier>())
               PlatformListTile(
                 title: PlatformText(
                   "Device Identifier",
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
                 subtitle: FutureBuilder(
-                  future: (widget.device as DeviceIdentifier)
+                  future: widget.device.requireCapability<DeviceIdentifier>()
                       .readDeviceIdentifier(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.done) {
@@ -155,7 +155,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                 ),
               ),
             // MARK: Device Firmware Version
-            if (widget.device is DeviceFirmwareVersion)
+            if (widget.device.hasCapability<DeviceFirmwareVersion>())
               PlatformListTile(
                 title: PlatformText(
                   "Firmware Version",
@@ -163,7 +163,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                 ),
                 subtitle: Row(children: [
                   FutureBuilder(
-                    future: (widget.device as DeviceFirmwareVersion)
+                    future: widget.device.requireCapability<DeviceFirmwareVersion>()
                         .readDeviceFirmwareVersion(),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.done) {
@@ -181,7 +181,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                     },
                   ),
                   FutureBuilder(
-                    future: (widget.device as DeviceFirmwareVersion)
+                    future: widget.device.requireCapability<DeviceFirmwareVersion>()
                         .checkFirmwareSupport(),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.done) {
@@ -222,14 +222,14 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                 ),
               ),
             // MARK: Device Hardware Version
-            if (widget.device is DeviceHardwareVersion)
+            if (widget.device.hasCapability<DeviceHardwareVersion>())
               PlatformListTile(
                 title: PlatformText(
                   "Hardware Version",
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
                 subtitle: FutureBuilder(
-                  future: (widget.device as DeviceHardwareVersion)
+                  future: widget.device.requireCapability<DeviceHardwareVersion>()
                       .readDeviceHardwareVersion(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.done) {
@@ -249,17 +249,17 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
               ),
 
             // MARK: Status LED control
-            if (widget.device is StatusLed) ...[
+            if (widget.device.hasCapability<StatusLed>()) ...[
               PlatformText(
                 "Control Status LED",
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               StatusLEDControlWidget(
-                statusLED: widget.device as StatusLed,
-                rgbLed: widget.device as RgbLed,
+                statusLED: widget.device.requireCapability<StatusLed>(),
+                rgbLed: widget.device.requireCapability<RgbLed>(),
               ),
-            ] else if (widget.device is RgbLed &&
-                widget.device is! StatusLed) ...[
+            ] else if (widget.device.hasCapability<RgbLed>() &&
+                !widget.device.hasCapability<StatusLed>()) ...[
               PlatformText(
                 "Control RGB LED",
                 style: Theme.of(context).textTheme.titleSmall,
@@ -269,18 +269,18 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                   "LED Color",
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
-                trailing: RgbControlView(rgbLed: widget.device as RgbLed),
+                trailing: RgbControlView(rgbLed: widget.device.requireCapability<RgbLed>()),
               ),
             ],
 
             // MARK: Device Battery State
-            if (widget.device is BatteryEnergyStatusService) ...[
+            if (widget.device.hasCapability<BatteryEnergyStatusService>()) ...[
               PlatformText(
                 "Battery Energy Status",
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               StreamBuilder<BatteryEnergyStatus>(
-                stream: (widget.device as BatteryEnergyStatusService)
+                stream: widget.device.requireCapability<BatteryEnergyStatusService>()
                     .energyStatusStream,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -326,13 +326,13 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
             ],
 
             // MARK: Battery Health
-            if (widget.device is BatteryHealthStatusService) ...[
+            if (widget.device.hasCapability<BatteryHealthStatusService>()) ...[
               PlatformText(
                 "Battery Health Status",
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               StreamBuilder<BatteryHealthStatus>(
-                stream: (widget.device as BatteryHealthStatusService)
+                stream: widget.device.requireCapability<BatteryHealthStatusService>()
                     .healthStatusStream,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
