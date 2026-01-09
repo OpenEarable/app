@@ -19,50 +19,23 @@ class ActiveLabelBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final labelProvider = context.watch<LabelProvider>();
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Active label',
-                  style: Theme.of(context).textTheme.labelLarge,
-                ),
-              ),
-              Text(
-                labelSet.name,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: labelSet.labels.map((label) {
-                final bool isActive = label == labelProvider.activeLabel;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text(label.name),
-                    selected: isActive,
-                    selectedColor: label.color.withAlpha(77),
-                    onSelected: (_) => labelProvider.setActiveLabel(isActive ? null : label),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ],
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: labelSet.labels.map((label) {
+            final bool isActive = label == labelProvider.activeLabel;
+            return ChoiceChip(
+              label: Text(label.name),
+              selected: isActive,
+              selectedColor: label.color.withAlpha(77),
+              onSelected: (_) =>
+                  labelProvider.setActiveLabel(isActive ? null : label),
+            );
+          }).toList(),
+        );
+      },
     );
   }
 }

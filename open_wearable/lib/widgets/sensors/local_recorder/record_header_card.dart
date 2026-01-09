@@ -266,11 +266,8 @@ class _RecorderHeaderCardState extends State<RecorderHeaderCard> {
                 const SizedBox(height: 6),
                 PlatformText(
                     'Only records sensor data streamed over Bluetooth.',),
-                const SizedBox(height: 12),
-                if (!isRecording)
-                  const LabelSetSelector(),
-                SizedBox(
-                  width: double.infinity,
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                   child: !isRecording
                       ? ElevatedButton.icon(
                           icon: const Icon(Icons.play_arrow),
@@ -350,13 +347,25 @@ class _RecorderHeaderCardState extends State<RecorderHeaderCard> {
                           ],
                         ),
                 ),
+                if (!isRecording)
+                  const LabelSetSelector(),
                 Consumer<LabelSetProvider>(
                   builder: (context, labelSetProvider, _) {
                     final labelSet = labelSetProvider.selectedLabelSet;
                     if (labelSet == null) {
                       return SizedBox.shrink();
                     }
-                    return ActiveLabelBar(labelSet: labelSet,);
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        PlatformText(
+                          'Active Label',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        ActiveLabelBar(labelSet: labelSet,),
+                      ],
+                    );
                   },
                 ),
               ],
