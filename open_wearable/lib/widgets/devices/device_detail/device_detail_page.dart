@@ -249,7 +249,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
               ),
 
             // MARK: Status LED control
-            if (widget.device.hasCapability<StatusLed>()) ...[
+            if (widget.device.hasCapability<StatusLed>() && widget.device.hasCapability<RgbLed>()) ...[
               PlatformText(
                 "Control Status LED",
                 style: Theme.of(context).textTheme.titleSmall,
