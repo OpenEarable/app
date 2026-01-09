@@ -36,9 +36,9 @@ class _FirmwareListState extends State<FirmwareList> {
     final wearable =
         Provider.of<FirmwareUpdateRequestProvider>(context, listen: false)
             .selectedWearable;
-    if (wearable is DeviceFirmwareVersion) {
+    if (wearable != null && wearable.hasCapability<DeviceFirmwareVersion>()) {
       final version =
-          await (wearable as DeviceFirmwareVersion).readDeviceFirmwareVersion();
+          await wearable.requireCapability<DeviceFirmwareVersion>().readDeviceFirmwareVersion();
       setState(() {
         firmwareVersion = version;
       });

@@ -32,7 +32,7 @@ List<AppInfo> _apps = [
     widget: SelectEarableView(startApp: (wearable, sensorConfigProvider) {
       return PostureTrackerView(
         EarableAttitudeTracker(
-          wearable as SensorManager,
+          wearable.requireCapability<SensorManager>(),
           sensorConfigProvider,
           wearable.name.endsWith("L"),
         ),
@@ -45,9 +45,9 @@ List<AppInfo> _apps = [
     description: "Track your heart rate and other vitals",
     widget: SelectEarableView(
       startApp: (wearable, _) {
-        if (wearable is SensorManager) {
+        if (wearable.hasCapability<SensorManager>()) {
           //TODO: show alert if no ppg sensor is found
-          Sensor ppgSensor = (wearable as SensorManager).sensors.firstWhere(
+          Sensor ppgSensor = wearable.requireCapability<SensorManager>().sensors.firstWhere(
             (s) => s.sensorName.toLowerCase() == "photoplethysmography".toLowerCase(),
           );
 

@@ -220,20 +220,20 @@ class DeviceRow extends StatelessWidget {
                       ),
                       Row(children: [
                         BatteryStateView(device: _device),
-                        if (_device is StereoDevice)
+                        if (_device.hasCapability<StereoDevice>())
                           Padding(
                             padding: EdgeInsets.only(left: 8.0),
-                            child: StereoPosLabel(device: _device as StereoDevice),
+                            child: StereoPosLabel(device: _device.requireCapability<StereoDevice>()),
                           ),
                       ],
                     ),
                   ],
                 ),
                 Spacer(),
-                if (_device is DeviceIdentifier)
+                if (_device.hasCapability<DeviceIdentifier>())
                     FutureBuilder(
                       future:
-                          (_device as DeviceIdentifier).readDeviceIdentifier(),
+                          _device.requireCapability<DeviceIdentifier>().readDeviceIdentifier(),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState ==
                             ConnectionState.waiting) {
@@ -249,12 +249,12 @@ class DeviceRow extends StatelessWidget {
                     PlatformText(_device.deviceId),
                 ],
               ),
-              if (_device is DeviceFirmwareVersion)
+              if (_device.hasCapability<DeviceFirmwareVersion>())
                 Row(
                   children: [
                     PlatformText("Firmware Version: "),
                     FutureBuilder(
-                      future: (_device as DeviceFirmwareVersion)
+                      future: _device.requireCapability<DeviceFirmwareVersion>()
                           .readDeviceFirmwareVersion(),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState ==
@@ -268,7 +268,7 @@ class DeviceRow extends StatelessWidget {
                       },
                     ),
                     FutureBuilder(
-                      future: (_device as DeviceFirmwareVersion)
+                      future: _device.requireCapability<DeviceFirmwareVersion>()
                           .checkFirmwareSupport(),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState ==
@@ -300,12 +300,12 @@ class DeviceRow extends StatelessWidget {
                     ),
                   ],
                 ),
-              if (_device is DeviceHardwareVersion)
+              if (_device.hasCapability<DeviceHardwareVersion>())
                 Row(
                   children: [
                     PlatformText("Hardware Version: "),
                     FutureBuilder(
-                      future: (_device as DeviceHardwareVersion)
+                      future: _device.requireCapability<DeviceHardwareVersion>()
                           .readDeviceHardwareVersion(),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState ==

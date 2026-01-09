@@ -42,7 +42,7 @@ class SensorConfigurationView extends StatelessWidget {
         : ListView(
           children: [
             ...wearablesProvider.wearables.map((wearable) {
-              if (wearable is SensorConfigurationManager) {
+              if (wearable.hasCapability<SensorConfigurationManager>()) {
                 return ChangeNotifierProvider<SensorConfigurationProvider>.value(
                   value: wearablesProvider.getSensorConfigurationProvider(wearable),
                   child: SensorConfigurationDeviceRow(device: wearable),
@@ -55,7 +55,7 @@ class SensorConfigurationView extends StatelessWidget {
             _buildSetConfigButton(
               configProviders: wearablesProvider.wearables
                 // ignore: prefer_iterable_wheretype
-                .where((wearable) => wearable is SensorConfigurationManager)
+                .where((wearable) => wearable.hasCapability<SensorConfigurationManager>())
                 .map(
                   (wearable) => wearablesProvider.getSensorConfigurationProvider(wearable),
                 ).toList(),
@@ -177,11 +177,11 @@ class SensorConfigurationView extends StatelessWidget {
 
   /// Determines how many columns a device should span
   int _getGridSpanForDevice(Wearable device) {
-    if (device is! SensorConfigurationManager) {
+    if (!device.hasCapability<SensorConfigurationManager>()) {
       return 1; // Default size
     }
 
-    int sensorConfigCount = (device as SensorConfigurationManager).sensorConfigurations.length;
+    int sensorConfigCount = device.requireCapability<SensorConfigurationManager>().sensorConfigurations.length;
 
     return sensorConfigCount.clamp(1, 4);
   }

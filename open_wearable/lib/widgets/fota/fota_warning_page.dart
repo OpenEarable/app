@@ -33,9 +33,9 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
       );
       final device = updateProvider.selectedWearable;
       
-      if (device != null && device is BatteryLevelStatus) {
+      if (device != null && device.hasCapability<BatteryLevelStatus>()) {
         // Get the current battery level from the stream
-        final batteryLevel = await (device as BatteryLevelStatus)
+        final batteryLevel = await device.requireCapability<BatteryLevelStatus>()
             .batteryPercentageStream
             .first
             .timeout(
