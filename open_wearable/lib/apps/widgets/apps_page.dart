@@ -70,6 +70,7 @@ List<AppInfo> _apps = [
       },
     ),
   ),
+  /*
   if (Platform.isAndroid)
     AppInfo(
       logoPath: "lib/apps/audio_recorder/assets/logo.png",
@@ -77,6 +78,7 @@ List<AppInfo> _apps = [
       description: "Record system audio and Bluetooth streams",
       widget: const AudioRecorderView(), // Your audio recorder page
     ),
+    */
 ];
 
 class AppsPage extends StatelessWidget {
