@@ -63,6 +63,9 @@ dependencies:
   device_info_plus: ^12.3.0
   pub_semver: ^2.2.0
   playback_capture: ^0.0.4
+  audio_waveforms: ^2.0.2
+  record: ^6.1.2
+  permission_handler: ^12.0.1
 
 dev_dependencies:
   flutter_test:
