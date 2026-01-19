@@ -261,7 +261,7 @@ class _SensorValuesPageState extends State<SensorValuesPage> {
   }
 
   Widget _buildSmallScreenLayout(BuildContext context, List<Widget> charts) {
-    return Padding(
+    return SingleChildScrollView(
       padding: EdgeInsets.all(10),
       child: Column(
         children: [
@@ -296,7 +296,6 @@ class _SensorValuesPageState extends State<SensorValuesPage> {
                 ),
               ),
             ),
-          SizedBox(height: 10),
 
           // Custom waveform widget
           if (_isRecording)
@@ -317,19 +316,21 @@ class _SensorValuesPageState extends State<SensorValuesPage> {
                 style: TextStyle(color: Colors.red),
               ),
             ),
-          if (_isRecording || _errorMessage != null) SizedBox(height: 10),
+          //if (_isRecording || _errorMessage != null) SizedBox(height: 10),
 
-          // Sensor charts
-          Expanded(
-            child: charts.isEmpty
-                ? Center(
-                    child: PlatformText(
-                      "No sensors connected",
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                  )
-                : ListView(children: charts),
-          ),
+          // Sensor charts - no longer wrapped in Expanded
+          charts.isEmpty
+              ? Center(
+                  child: PlatformText(
+                    "No sensors connected",
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                )
+              : ListView(
+                  shrinkWrap: true,
+                  physics: NeverScrollableScrollPhysics(),
+                  children: charts,
+                ),
         ],
       ),
     );
@@ -478,17 +479,22 @@ class WaveformPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
 
-    // Calculate starting position to align bars from right
-    final totalWaveformWidth = waveformData.length * spacing;
+    // Calculate how many bars can fit in the available width
+    final maxBars = (size.width / spacing).floor();
+    final startIndex =
+        waveformData.length > maxBars ? waveformData.length - maxBars : 0;
+
+    // Calculate starting position (always start at 0 or align right)
+    final visibleData = waveformData.sublist(startIndex);
+    final totalWaveformWidth = visibleData.length * spacing;
     final startX = size.width - totalWaveformWidth;
 
     // Draw each amplitude value as a vertical bar
-    for (int i = 0; i < waveformData.length; i++) {
+    for (int i = 0; i < visibleData.length; i++) {
       final x = startX + (i * spacing);
-      final amplitude = waveformData[i];
+      final amplitude = visibleData[i];
 
       // Scale amplitude to fit within the canvas height
-      // Amplitude is normalized to 0-2 range, scale it to use 80% of half height
       final barHeight = amplitude * centerY * 0.8;
 
       // Draw top half of the bar (above center line)

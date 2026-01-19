@@ -278,6 +278,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.0"
+  flutter_headset_detector:
+    dependency: "direct main"
+    description:
+      name: flutter_headset_detector
+      sha256: fe061eceb106a61b837ae58eda1575604db24299a4ebe13e34839dd3d30085df
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.1.0"
   flutter_lints:
     dependency: "direct dev"
     description:
