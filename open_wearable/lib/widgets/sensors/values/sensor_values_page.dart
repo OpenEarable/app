@@ -89,9 +89,17 @@ class _SensorValuesPageState extends State<SensorValuesPage> {
       if (mounted) {
         setState(() {
           _devices = devs;
-          if (_selectedDevice == null && _devices.isNotEmpty) {
-            _selectedDevice = _devices.first;
-            print("Selected device: ${_selectedDevice?.label}");
+          // Automatically select BLE headset
+          _selectedDevice = _devices.firstWhere(
+            (device) =>
+                device.label.toLowerCase().contains('bluetooth') ||
+                device.label.toLowerCase().contains('ble') ||
+                device.label.toLowerCase().contains('headset'),
+            orElse: () =>
+                _devices.isNotEmpty ? _devices.first : null as InputDevice,
+          );
+          if (_selectedDevice != null) {
+            print("Auto-selected BLE device: ${_selectedDevice?.label}");
           }
         });
       }
@@ -264,6 +272,8 @@ class _SensorValuesPageState extends State<SensorValuesPage> {
     return SingleChildScrollView(
       padding: EdgeInsets.all(10),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Device selector
           if (_devices.isNotEmpty)
@@ -272,8 +282,10 @@ class _SensorValuesPageState extends State<SensorValuesPage> {
                 padding: EdgeInsets.all(8.0),
                 child: Row(
                   children: [
-                    Text('Input: ',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      'Input: ',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     SizedBox(width: 8),
                     Expanded(
                       child: DropdownButton<InputDevice>(
@@ -302,9 +314,20 @@ class _SensorValuesPageState extends State<SensorValuesPage> {
             Card(
               child: Padding(
                 padding: EdgeInsets.all(16),
-                child: CustomPaint(
-                  size: Size(double.infinity, 100),
-                  painter: WaveformPainter(_waveformData),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'AUDIO WAVEFORM',
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    CustomPaint(
+                      size: Size(double.infinity, 100),
+                      painter: WaveformPainter(_waveformData),
+                    ),
+                  ],
                 ),
               ),
             )
@@ -316,7 +339,6 @@ class _SensorValuesPageState extends State<SensorValuesPage> {
                 style: TextStyle(color: Colors.red),
               ),
             ),
-          //if (_isRecording || _errorMessage != null) SizedBox(height: 10),
 
           // Sensor charts - no longer wrapped in Expanded
           charts.isEmpty
@@ -329,6 +351,7 @@ class _SensorValuesPageState extends State<SensorValuesPage> {
               : ListView(
                   shrinkWrap: true,
                   physics: NeverScrollableScrollPhysics(),
+                  padding: EdgeInsets.zero,
                   children: charts,
                 ),
         ],
@@ -379,9 +402,20 @@ class _SensorValuesPageState extends State<SensorValuesPage> {
             Card(
               child: Padding(
                 padding: EdgeInsets.all(16),
-                child: CustomPaint(
-                  size: Size(double.infinity, 80),
-                  painter: WaveformPainter(_waveformData),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Audio waveform',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    CustomPaint(
+                      size: Size(double.infinity, 80),
+                      painter: WaveformPainter(_waveformData),
+                    ),
+                  ],
                 ),
               ),
             ),
