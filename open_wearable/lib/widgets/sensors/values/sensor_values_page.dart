@@ -104,9 +104,17 @@ class _SensorValuesPageState extends State<SensorValuesPage>
       if (mounted) {
         setState(() {
           _devices = devs;
-          if (_selectedDevice == null && _devices.isNotEmpty) {
-            _selectedDevice = _devices.first;
-            print("Selected device: ${_selectedDevice?.label}");
+          // Automatically select BLE headset
+          _selectedDevice = _devices.firstWhere(
+            (device) =>
+                device.label.toLowerCase().contains('bluetooth') ||
+                device.label.toLowerCase().contains('ble') ||
+                device.label.toLowerCase().contains('headset'),
+            orElse: () =>
+                _devices.isNotEmpty ? _devices.first : null as InputDevice,
+          );
+          if (_selectedDevice != null) {
+            print("Auto-selected BLE device: ${_selectedDevice?.label}");
           }
         });
       }

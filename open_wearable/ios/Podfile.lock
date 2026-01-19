@@ -46,6 +46,8 @@ PODS:
   - flutter_archive (0.0.1):
     - Flutter
     - ZIPFoundation (= 0.9.19)
+  - flutter_headset_detector (3.1.0):
+    - Flutter
   - iOSMcuManagerLibrary (1.10.1):
     - SwiftCBOR (= 0.4.7)
     - ZIPFoundation (= 0.9.19)
@@ -89,6 +91,7 @@ DEPENDENCIES:
   - file_selector_ios (from `.symlinks/plugins/file_selector_ios/ios`)
   - Flutter (from `Flutter`)
   - flutter_archive (from `.symlinks/plugins/flutter_archive/ios`)
+  - flutter_headset_detector (from `.symlinks/plugins/flutter_headset_detector/ios`)
   - mcumgr_flutter (from `.symlinks/plugins/mcumgr_flutter/ios`)
   - open_file_ios (from `.symlinks/plugins/open_file_ios/ios`)
   - package_info_plus (from `.symlinks/plugins/package_info_plus/ios`)
@@ -126,6 +129,8 @@ EXTERNAL SOURCES:
     :path: Flutter
   flutter_archive:
     :path: ".symlinks/plugins/flutter_archive/ios"
+  flutter_headset_detector:
+    :path: ".symlinks/plugins/flutter_headset_detector/ios"
   mcumgr_flutter:
     :path: ".symlinks/plugins/mcumgr_flutter/ios"
   open_file_ios:
@@ -157,6 +162,7 @@ SPEC CHECKSUMS:
   file_selector_ios: ec57ec07954363dd730b642e765e58f199bb621a
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   flutter_archive: ad8edfd7f7d1bb12058d05424ba93e27d9930efe
+  flutter_headset_detector: 37d2407c6c59aa6e8a9daecf732854862ff6dd4a
   iOSMcuManagerLibrary: e9555825af11a61744fe369c12e1e66621061b58
   mcumgr_flutter: 969e99cc15e9fe658242669ce1075bf4612aef8a
   open_file_ios: 46184d802ee7959203f6392abcfa0dd49fdb5be0
