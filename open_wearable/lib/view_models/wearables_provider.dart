@@ -53,7 +53,7 @@ class WearableTimeSynchronizedEvent extends WearableEvent {
   WearableTimeSynchronizedEvent({
     required super.wearable,
     String? description,
-  }): super(description: description ?? 'Time synchronized for ${wearable.name}');
+  }) : super(description: description ?? 'Time synchronized for ${wearable.name}');
 
   @override
   String toString() => 'WearableTimeSynchronizedEvent for ${wearable.name}';
@@ -65,12 +65,15 @@ class WearableErrorEvent extends WearableEvent {
     required super.wearable,
     required this.errorMessage,
     String? description,
-  }): super(description: description ?? 'Error for ${wearable.name}: $errorMessage');
+  }) : super(description: description ?? 'Error for ${wearable.name}: $errorMessage');
 
   @override
   String toString() =>
       'WearableErrorEvent for ${wearable.name}: $errorMessage, description: $description';
 }
+
+
+// MARK: WearablesProvider
 
 class WearablesProvider with ChangeNotifier {
   final List<Wearable> _wearables = [];
@@ -90,42 +93,94 @@ class WearablesProvider with ChangeNotifier {
       StreamController<WearableEvent>.broadcast();
   Stream<WearableEvent> get wearableEventStream => _wearableEventController.stream;
 
+  final Map<Wearable, StreamSubscription> _capabilitySubscriptions = {};
+
+  // MARK: Internal helpers
+
+  bool _isDuplicateDevice(Wearable wearable) =>
+      _wearables.any((w) => w.deviceId == wearable.deviceId);
+
+  void _emitWearableEvent(WearableEvent event) {
+    _wearableEventController.add(event);
+  }
+
+  void _emitWearableError({
+    required Wearable wearable,
+    required String errorMessage,
+    String? description,
+  }) {
+    _emitWearableEvent(
+      WearableErrorEvent(
+        wearable: wearable,
+        errorMessage: errorMessage,
+        description: description,
+      ),
+    );
+  }
+
+  void _scheduleMicrotask(FutureOr<void> Function() work) {
+    Future.microtask(() async {
+      try {
+        await work();
+      } catch (e, st) {
+        logger.w('WearablesProvider microtask failed: $e\n$st');
+      }
+    });
+  }
+
+  Future<void> _syncTimeAndEmit({
+    required Wearable wearable,
+    required String successDescription,
+    required String failureDescription,
+  }) async {
+    try {
+      logger.d('Synchronizing time for wearable ${wearable.name}');
+      await (wearable.requireCapability<TimeSynchronizable>()).synchronizeTime();
+      logger.d('Time synchronized for wearable ${wearable.name}');
+      _emitWearableEvent(
+        WearableTimeSynchronizedEvent(
+          wearable: wearable,
+          description: successDescription,
+        ),
+      );
+    } catch (e, st) {
+      logger.w('Failed to synchronize time for wearable ${wearable.name}: $e\n$st');
+      _emitWearableError(
+        wearable: wearable,
+        errorMessage: 'Failed to synchronize time with ${wearable.name}: $e',
+        description: failureDescription,
+      );
+    }
+  }
+
   void addWearable(Wearable wearable) {
     // 1) Fast path: ignore duplicates and push into lists/maps synchronously
-    if (_wearables.any((w) => w.deviceId == wearable.deviceId)) {
-      return;
-    }
-
-    if (wearable is TimeSynchronizable) {
-      logger.d('Synchronizing time for wearable ${wearable.name}');
-      (wearable as TimeSynchronizable).synchronizeTime().then((_) {
-        logger.d('Time synchronized for wearable ${wearable.name}');
-        _wearableEventController.add(WearableTimeSynchronizedEvent(wearable: wearable, description: 'Time synchronized for ${wearable.name}'));
-      }).catchError((e, st) {
-        logger.w('Failed to synchronize time for wearable ${wearable.name}: $e\n$st');
-        _wearableEventController.add(
-          WearableErrorEvent(
-            wearable: wearable,
-            errorMessage: 'Failed to synchronize time with ${wearable.name}: $e',
-            description: 'Failed to synchronize time for ${wearable.name}',
-          ),
-        );
-      });
-    }
+    if (_isDuplicateDevice(wearable)) return;
 
     _wearables.add(wearable);
 
+    _capabilitySubscriptions[wearable] = wearable.capabilityRegistered.listen((addedCapabilities) {
+      _handleCapabilitiesChanged(wearable: wearable, addedCapabilites: addedCapabilities);
+    });
+
     // Init SensorConfigurationProvider synchronously (no awaits here)
-    if (wearable is SensorConfigurationManager) {
+    if (wearable.hasCapability<SensorConfigurationManager>()) {
       _ensureSensorConfigProvider(wearable);
       final notifier = _sensorConfigurationProviders[wearable]!;
       for (final config
-          in (wearable as SensorConfigurationManager).sensorConfigurations) {
+          in (wearable.requireCapability<SensorConfigurationManager>()).sensorConfigurations) {
         if (notifier.getSelectedConfigurationValue(config) == null &&
             config.values.isNotEmpty) {
           notifier.addSensorConfiguration(config, config.values.first);
         }
       }
+    }
+    if (wearable.hasCapability<TimeSynchronizable>()) {
+      _scheduleMicrotask(() => _syncTimeAndEmit(
+            wearable: wearable,
+            successDescription: 'Time synchronized for ${wearable.name}',
+            failureDescription: 'Failed to synchronize time for ${wearable.name}',
+          ),);
     }
 
     // Disconnect listener (sync)
@@ -139,35 +194,27 @@ class WearablesProvider with ChangeNotifier {
 
     // 2) Slow/async work: run in microtasks so it doesn't block the add
     // Stereo pairing (if applicable)
-    if (wearable is StereoDevice) {
-      Future.microtask(
-        () => _maybeAutoPairStereoAsync(wearable as StereoDevice),
-      );
+    if (wearable.hasCapability<StereoDevice>()) {
+      _scheduleMicrotask(() => _maybeAutoPairStereoAsync(wearable.requireCapability<StereoDevice>()));
     }
 
     // Firmware support check (if applicable)
-    if (wearable is DeviceFirmwareVersion) {
-      Future.microtask(
-        () => _maybeEmitUnsupportedFirmwareAsync(
-          wearable as DeviceFirmwareVersion,
-        ),
-      );
+    if (wearable.hasCapability<DeviceFirmwareVersion>()) {
+      _scheduleMicrotask(() => _maybeEmitUnsupportedFirmwareAsync(wearable.requireCapability<DeviceFirmwareVersion>()));
     }
 
     // Check for newer firmware (if applicable)
-    if (wearable is DeviceFirmwareVersion) {
-      Future.microtask(
-        () => _checkForNewerFirmwareAsync(wearable as DeviceFirmwareVersion),
-      );
+    if (wearable.hasCapability<DeviceFirmwareVersion>()) {
+      _scheduleMicrotask(() => _checkForNewerFirmwareAsync(wearable.requireCapability<DeviceFirmwareVersion>()));
     }
   }
 
-  // --- Helpers ---------------------------------------------------------------
+  // MARK: Helpers
 
   void _ensureSensorConfigProvider(Wearable wearable) {
     if (!_sensorConfigurationProviders.containsKey(wearable)) {
       _sensorConfigurationProviders[wearable] = SensorConfigurationProvider(
-        sensorConfigurationManager: wearable as SensorConfigurationManager,
+        sensorConfigurationManager: wearable.requireCapability<SensorConfigurationManager>(),
       );
     }
   }
@@ -202,6 +249,7 @@ class WearablesProvider with ChangeNotifier {
     DeviceFirmwareVersion dev,
   ) async {
     try {
+      final wearable = dev as Wearable;
       // In your abstraction, isFirmwareSupported is a Future<bool> getter.
       final supportStatus = await dev.checkFirmwareSupport();
       switch (supportStatus) {
@@ -210,21 +258,22 @@ class WearablesProvider with ChangeNotifier {
           break;
         case FirmwareSupportStatus.tooNew:
           _unsupportedFirmwareEventsController
-              .add(FirmwareTooNewEvent(dev as Wearable));
+              .add(FirmwareTooNewEvent(wearable));
           break;
         case FirmwareSupportStatus.unsupported:
           _unsupportedFirmwareEventsController
-              .add(FirmwareUnsupportedEvent(dev as Wearable));
+              .add(FirmwareUnsupportedEvent(wearable));
           break;
         case FirmwareSupportStatus.tooOld:
           _unsupportedFirmwareEventsController
-              .add(FirmwareTooOldEvent(dev as Wearable));
+              .add(FirmwareTooOldEvent(wearable));
         case FirmwareSupportStatus.unknown:
-          logger.w('Firmware support unknown for ${(dev as Wearable).name}');
+          logger.w('Firmware support unknown for ${wearable.name}');
           break;
       }
     } catch (e, st) {
-      logger.w('Firmware check failed for ${(dev as Wearable).name}: $e\n$st');
+      final wearable = dev as Wearable;
+      logger.w('Firmware check failed for ${wearable.name}: $e\n$st');
     }
   }
 
@@ -274,6 +323,7 @@ class WearablesProvider with ChangeNotifier {
   void removeWearable(Wearable wearable) {
     _wearables.remove(wearable);
     _sensorConfigurationProviders.remove(wearable);
+    _capabilitySubscriptions.remove(wearable)?.cancel();
     notifyListeners();
   }
 
@@ -286,5 +336,20 @@ class WearablesProvider with ChangeNotifier {
       );
     }
     return _sensorConfigurationProviders[wearable]!;
+  }
+
+  void _handleCapabilitiesChanged({required Wearable wearable, required List<Type> addedCapabilites}) {
+    if (addedCapabilites.contains(SensorConfigurationManager)) {
+      _ensureSensorConfigProvider(wearable);
+    }
+    if (addedCapabilites.contains(TimeSynchronizable)) {
+      _scheduleMicrotask(() => _syncTimeAndEmit(
+        wearable: wearable,
+        successDescription:
+            'Time synchronized for ${wearable.name} after capability change',
+        failureDescription:
+            'Failed to synchronize time for ${wearable.name} after capability change',
+      ),);
+    }
   }
 }

@@ -8,8 +8,7 @@ permissions:
   contents: read
   pull-requests: write
 jobs:
-  build_and_preview:
-    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,6 +24,28 @@ jobs:
       - run: (cd open_wearable && flutter build web --dart-define=BUILD_COMMIT=$(git
           rev-parse --short HEAD) --dart-define=BUILD_BRANCH=$(git rev-parse
           --abbrev-ref HEAD))
+      
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v6.0.0
+        with:
+          name: web-build
+          path: open_wearable/build/web
+          if-no-files-found: error
+          overwrite: true
+          
+  deploy_preview:
+    needs: build
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Web build artifact
+        uses: actions/download-artifact@v7.0.0
+        with:
+          name: web-build
+          path: open_wearable/build/web          
+      
       - uses: FirebaseExtended/action-hosting-deploy@v0
         if: ${{ github.event_name == 'pull_request' }}
         name: Deploy preview

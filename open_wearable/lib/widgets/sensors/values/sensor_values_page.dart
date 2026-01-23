@@ -296,8 +296,9 @@ class _SensorValuesPageState extends State<SensorValuesPage> {
         List<Widget> charts = [];
 
         for (var wearable in wearablesProvider.wearables) {
-          if (wearable is SensorManager) {
-            for (Sensor sensor in (wearable as SensorManager).sensors) {
+          if (wearable.hasCapability<SensorManager>()) {
+            for (Sensor sensor
+                in wearable.requireCapability<SensorManager>().sensors) {
               if (!_sensorDataProvider.containsKey((wearable, sensor))) {
                 _sensorDataProvider[(wearable, sensor)] =
                     SensorDataProvider(sensor: sensor);
@@ -315,22 +316,17 @@ class _SensorValuesPageState extends State<SensorValuesPage> {
           }
         }
 
-        // Proper cleanup with disposal
-        final keysToRemove = _sensorDataProvider.keys
-            .where(
-              (key) => !wearablesProvider.wearables.any(
-                (device) =>
-                    device is SensorManager &&
-                    device == key.$1 &&
-                    (device as SensorManager).sensors.contains(key.$2),
-              ),
-            )
-            .toList();
-
-        for (var key in keysToRemove) {
-          _sensorDataProvider[key]?.dispose();
-          _sensorDataProvider.remove(key);
-        }
+        _sensorDataProvider.removeWhere(
+          (key, _) => !wearablesProvider.wearables.any(
+            (device) =>
+                device.hasCapability<SensorManager>() &&
+                device == key.$1 &&
+                device
+                    .requireCapability<SensorManager>()
+                    .sensors
+                    .contains(key.$2),
+          ),
+        );
 
         return LayoutBuilder(
           builder: (context, constraints) {

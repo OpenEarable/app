@@ -132,7 +132,23 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
         discoveredDevices.remove(device);
       });
     } catch (e) {
-      logger.e('Failed to connect to device: ${device.name}, error: $e');
+      String message = _wearableManager.deviceErrorMessage(e, device.name);
+      logger.e('Failed to connect to device: ${device.name}, error: $message');
+      if (context.mounted) {
+        showPlatformDialog(
+          context: context,
+          builder: (context) => PlatformAlertDialog(
+            title: PlatformText('Connection Error'),
+            content: PlatformText(message),
+            actions: [
+              PlatformDialogAction(
+                onPressed: () => Navigator.of(context).pop(),
+                child: PlatformText('OK'),
+              ),
+            ],
+          ),
+        );
+      }
     } finally {
       setState(() {
         connectingDevices.remove(device.id);

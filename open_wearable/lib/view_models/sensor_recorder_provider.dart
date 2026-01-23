@@ -181,8 +181,8 @@ class SensorRecorderProvider with ChangeNotifier {
       notifyListeners();
     });
 
-    if (wearable is SensorManager) {
-      for (Sensor sensor in (wearable as SensorManager).sensors) {
+    if (wearable.hasCapability<SensorManager>()) {
+      for (Sensor sensor in wearable.requireCapability<SensorManager>().sensors) {
         if (!_recorders[wearable]!.containsKey(sensor)) {
           _recorders[wearable]![sensor] = Recorder(columns: sensor.axisNames);
         }

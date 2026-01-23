@@ -476,10 +476,10 @@ packages:
     dependency: "direct main"
     description:
       name: open_earable_flutter
-      sha256: fb05d84b71e5dead780f0ff7ad0483183a75e7ca5d2b0208ac402129990a74d9
+      sha256: beec110a534837dedec5ab92118824def851d9a712d1f749b486affef0af9d7d
       url: "https://pub.dev"
     source: hosted
-    version: "2.2.6"
+    version: "2.3.0"
   open_file:
     dependency: "direct main"
     description:

@@ -13,9 +13,9 @@ class BatteryStateView extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (_device is BatteryLevelStatus)
+        if (_device.hasCapability<BatteryLevelStatus>())
           StreamBuilder(
-            stream: (_device as BatteryLevelStatus).batteryPercentageStream,
+            stream: _device.requireCapability<BatteryLevelStatus>().batteryPercentageStream,
             builder: (context, snapshot) {
               if (snapshot.hasData) {
                 return PlatformText("${snapshot.data}%");
@@ -24,9 +24,9 @@ class BatteryStateView extends StatelessWidget {
               }
             },
           ),
-        if (_device is BatteryLevelStatusService)
+        if (_device.hasCapability<BatteryLevelStatusService>())
           StreamBuilder(
-            stream: (_device as BatteryLevelStatusService).powerStatusStream,
+            stream: _device.requireCapability<BatteryLevelStatusService>().powerStatusStream,
             builder: (context, snapshot) {
               if (snapshot.hasData) {
                 if (!snapshot.data!.batteryPresent) {
@@ -52,9 +52,9 @@ class BatteryStateView extends StatelessWidget {
               }
             },
           )
-        else if (_device is BatteryLevelStatus)
+        else if (_device.hasCapability<BatteryLevelStatus>())
           StreamBuilder(
-            stream: (_device as BatteryLevelStatus).batteryPercentageStream,
+            stream: _device.requireCapability<BatteryLevelStatus>().batteryPercentageStream,
             builder: (context, snapshot) {
               if (snapshot.hasData) {
                 return Icon(getBatteryIcon(snapshot.data!));
