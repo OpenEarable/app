@@ -433,11 +433,27 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
                                             onPressed: () => _shareFile(file),
                                           ),
                                           onTap: () async {
+                                            String? mimeType;
+
+                                            if (fileName.endsWith('.csv')) {
+                                              mimeType =
+                                                  'text/comma-separated-values';
+                                            } else if (fileName
+                                                .endsWith('.m4a')) {
+                                              mimeType = 'audio/mp4';
+                                            } else if (fileName
+                                                .endsWith('.mp3')) {
+                                              mimeType = 'audio/mpeg';
+                                            } else if (fileName
+                                                .endsWith('.wav')) {
+                                              mimeType = 'audio/wav';
+                                            }
+
                                             final result = await OpenFile.open(
                                               file.path,
-                                              type:
-                                                  'text/comma-separated-values',
+                                              type: mimeType,
                                             );
+
                                             if (!mounted) return;
                                             if (result.type !=
                                                 ResultType.done) {

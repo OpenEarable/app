@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:logger/logger.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/view_models/sensor_data_provider.dart';
+import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/sensors/values/sensor_value_card.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -10,6 +12,8 @@ import 'package:record/record.dart';
 import 'dart:async';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
+
+Logger _logger = Logger();
 
 class SensorValuesPage extends StatefulWidget {
   const SensorValuesPage({super.key});
@@ -20,55 +24,69 @@ class SensorValuesPage extends StatefulWidget {
 
 class _SensorValuesPageState extends State<SensorValuesPage> {
   final Map<(Wearable, Sensor), SensorDataProvider> _sensorDataProvider = {};
-  late final AudioRecorder _audioRecorder;
+  AudioRecorder? _audioRecorder; // Separate instance for preview
+  bool _isPreviewRecording = false;
 
-  bool _isRecording = false;
   String? _errorMessage;
-  List<InputDevice> _devices = [];
   InputDevice? _selectedDevice;
 
   StreamSubscription<RecordState>? _recordSub;
   StreamSubscription<Amplitude>? _amplitudeSub;
 
   RecordState _recordState = RecordState.stop;
-  List<double> _waveformData = [];
-  Amplitude? _amplitude;
+  final List<double> _waveformData = [];
+
+  bool _isInitializing = true;
 
   @override
   void initState() {
     super.initState();
-    _audioRecorder = AudioRecorder();
+    if (Platform.isAndroid) {
+      _audioRecorder = AudioRecorder();
 
-    // Only subscribe to state changes initially
-    _recordSub = _audioRecorder.onStateChanged().listen((recordState) {
-      if (mounted) {
-        setState(() => _recordState = recordState);
+      _recordSub = _audioRecorder!.onStateChanged().listen((recordState) {
+        if (mounted) {
+          setState(() => _recordState = recordState);
 
-        // Clean up amplitude subscription when recording stops
-        if (recordState == RecordState.stop) {
-          _amplitudeSub?.cancel();
-          _amplitudeSub = null;
+          if (recordState == RecordState.stop) {
+            _amplitudeSub?.cancel();
+            _amplitudeSub = null;
+          }
         }
-      }
-    });
+      });
 
-    _initRecording();
+      _initRecording();
+    }
+  }
+
+  // Add method to check if provider is recording
+  bool _isProviderRecording(BuildContext context) {
+    try {
+      final recorder =
+          Provider.of<SensorRecorderProvider>(context, listen: false);
+      return recorder.isRecording;
+    } catch (e) {
+      return false;
+    }
   }
 
   Future<void> _initRecording() async {
-    print("Initializing audio recorder");
+    if (!Platform.isAndroid || _audioRecorder == null) return;
+
+    if (_isProviderRecording(context)) {
+      if (mounted) setState(() => _isInitializing = false);
+      return;
+    }
 
     try {
-      if (await _audioRecorder.hasPermission()) {
-        print("Permission granted");
-        await _loadDevices();
-        await _startRecording();
+      if (await _audioRecorder!.hasPermission()) {
+        await _selectBLEDevice();
+        await _startPreview();
       } else {
-        print("No permission, requesting...");
         final status = await Permission.microphone.request();
         if (status.isGranted) {
-          await _loadDevices();
-          await _startRecording();
+          await _selectBLEDevice();
+          await _startPreview();
         } else {
           if (mounted) {
             setState(() => _errorMessage = 'Microphone permission denied');
@@ -76,81 +94,97 @@ class _SensorValuesPageState extends State<SensorValuesPage> {
         }
       }
     } catch (e) {
-      print("Init error: $e");
       if (mounted) {
         setState(() => _errorMessage = 'Failed to initialize: $e');
       }
+    } finally {
+      if (mounted) {
+        setState(() => _isInitializing = false);
+      }
     }
   }
 
-  Future<void> _loadDevices() async {
+  Future<void> _selectBLEDevice() async {
+    if (!Platform.isAndroid || _audioRecorder == null) return;
     try {
-      final devs = await _audioRecorder.listInputDevices();
-      if (mounted) {
-        setState(() {
-          _devices = devs;
-          // Automatically select BLE headset
-          _selectedDevice = _devices.firstWhere(
-            (device) =>
-                device.label.toLowerCase().contains('bluetooth') ||
-                device.label.toLowerCase().contains('ble') ||
-                device.label.toLowerCase().contains('headset'),
-            orElse: () =>
-                _devices.isNotEmpty ? _devices.first : null as InputDevice,
-          );
-          if (_selectedDevice != null) {
-            print("Auto-selected BLE device: ${_selectedDevice?.label}");
-          }
-        });
+      final devices = await _audioRecorder!.listInputDevices();
+
+      // Try to find BLE device
+      try {
+        _selectedDevice = devices.firstWhere(
+          (device) =>
+              device.label.toLowerCase().contains('bluetooth') ||
+              device.label.toLowerCase().contains('ble') ||
+              device.label.toLowerCase().contains('headset') ||
+              device.label.toLowerCase().contains('openearable'),
+        );
+        _logger.i(
+            "Auto-selected BLE device for preview: ${_selectedDevice!.label}");
+      } catch (e) {
+        // No BLE device found
+        _selectedDevice = null;
+        _logger.e("No BLE headset found");
       }
     } catch (e) {
-      print("Error loading devices: $e");
+      _logger.e("Error selecting BLE device: $e");
+      _selectedDevice = null;
     }
   }
 
-  Future<String> _getRecordingPath() async {
+  Future<String> _getTemporaryPath() async {
     final directory = await getTemporaryDirectory();
-    return '${directory.path}/temp_recording_${DateTime.now().millisecondsSinceEpoch}.m4a';
+    return '${directory.path}/preview_${DateTime.now().millisecondsSinceEpoch}.m4a';
   }
 
-  Future<void> _startRecording() async {
-    try {
-      const encoder = AudioEncoder.aacLc;
+  Future<void> _startPreview() async {
+    if (!Platform.isAndroid || _audioRecorder == null) return;
 
-      if (!await _audioRecorder.isEncoderSupported(encoder)) {
+    // Don't start if provider is recording
+    if (_isProviderRecording(context)) {
+      return;
+    }
+
+    // Don't start if no BLE device selected
+    if (_selectedDevice == null) {
+      if (mounted) {
+        setState(() => _errorMessage = 'No BLE headset detected');
+      }
+      return;
+    }
+
+    try {
+      const encoder = AudioEncoder.wav;
+
+      if (!await _audioRecorder!.isEncoderSupported(encoder)) {
         if (mounted) {
-          setState(() => _errorMessage = 'Encoder not supported');
+          setState(() => _errorMessage = 'WAV encoder not supported');
         }
         return;
       }
 
-      final path = await _getRecordingPath();
+      final path = await _getTemporaryPath();
 
       final config = RecordConfig(
         encoder: encoder,
+        sampleRate: 48000,
+        bitRate: 768000,
         numChannels: 1,
         device: _selectedDevice,
       );
 
-      await _audioRecorder.start(config, path: path);
-
-      // Wait a bit to ensure recording is active
+      await _audioRecorder!.start(config, path: path);
       await Future.delayed(Duration(milliseconds: 100));
 
       _amplitudeSub?.cancel();
-      // Subscribe to amplitude changes after recording started
-      _amplitudeSub = _audioRecorder
+      _amplitudeSub = _audioRecorder!
           .onAmplitudeChanged(const Duration(milliseconds: 100))
           .listen(
         (amp) {
           if (mounted) {
             setState(() {
-              _amplitude = amp;
-              // Add normalized amplitude to waveform data
               final normalized = (amp.current + 50) / 50;
               _waveformData.add(normalized.clamp(0.0, 2.0));
 
-              // Keep only last 100 samples
               if (_waveformData.length > 100) {
                 _waveformData.removeAt(0);
               }
@@ -158,52 +192,80 @@ class _SensorValuesPageState extends State<SensorValuesPage> {
           }
         },
         onError: (error) {
-          print("Amplitude stream error: $error");
+          _logger.e("Amplitude stream error: $error");
         },
       );
 
       if (mounted) {
         setState(() {
-          _isRecording = true;
+          _isPreviewRecording = true;
           _errorMessage = null;
         });
       }
     } catch (e) {
-      print("Recording start error: $e");
+      _logger.e("Preview start error: $e");
       if (mounted) {
-        setState(() => _errorMessage = 'Failed to start recording: $e');
+        setState(() => _errorMessage = 'Failed to start preview: $e');
       }
     }
   }
 
-  Future<void> _changeDevice(InputDevice? device) async {
-    if (device == null) return;
+  Future<void> _stopPreview() async {
+    if (!Platform.isAndroid || _audioRecorder == null) return;
+    if (!_isPreviewRecording) return;
 
-    // Stop current recording
-    if (_recordState != RecordState.stop) {
-      await _audioRecorder.stop();
+    try {
+      final tempPath = await _audioRecorder!.stop();
       _amplitudeSub?.cancel();
       _amplitudeSub = null;
-    }
 
-    // Update selected device and restart
-    if (mounted) {
-      setState(() {
-        _selectedDevice = device;
-        _waveformData.clear();
-        _isRecording = false;
-      });
-    }
+      if (tempPath != null) {
+        try {
+          final file = File(tempPath);
+          if (await file.exists()) {
+            await file.delete();
+          }
+        } catch (e) {
+          _logger.e("Error deleting temp preview file: $e");
+        }
+      }
 
-    await _startRecording();
+      if (mounted) {
+        setState(() {
+          _isPreviewRecording = false;
+          _waveformData.clear();
+        });
+      }
+    } catch (e) {
+      _logger.e("Error stopping preview: $e");
+    }
   }
 
   @override
   void dispose() {
-    _audioRecorder.stop();
-    _recordSub?.cancel();
-    _amplitudeSub?.cancel();
-    _audioRecorder.dispose();
+    // Stop and clean up preview recording
+    if (Platform.isAndroid && _audioRecorder != null) {
+      if (_recordState != RecordState.stop) {
+        _audioRecorder!.stop().then((tempPath) {
+          if (tempPath != null) {
+            try {
+              final file = File(tempPath);
+              file.exists().then((exists) {
+                if (exists) {
+                  file.delete();
+                }
+              });
+            } catch (e) {
+              _logger.e("Error deleting temp preview file: $e");
+            }
+          }
+        });
+      }
+
+      _recordSub?.cancel();
+      _amplitudeSub?.cancel();
+      _audioRecorder!.dispose();
+    }
 
     // Dispose all sensor data providers
     for (var provider in _sensorDataProvider.values) {
@@ -216,8 +278,21 @@ class _SensorValuesPageState extends State<SensorValuesPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<WearablesProvider>(
-      builder: (context, wearablesProvider, child) {
+    return Consumer2<WearablesProvider, SensorRecorderProvider>(
+      builder: (context, wearablesProvider, recorderProvider, child) {
+        // Stop preview if provider starts recording
+        if (Platform.isAndroid &&
+            recorderProvider.isRecording &&
+            _isPreviewRecording) {
+          _stopPreview();
+        }
+        // Restart preview if provider stops recording
+        else if (Platform.isAndroid &&
+            !recorderProvider.isRecording &&
+            !_isPreviewRecording &&
+            _audioRecorder != null) {
+          _initRecording();
+        }
         List<Widget> charts = [];
 
         for (var wearable in wearablesProvider.wearables) {
@@ -243,10 +318,12 @@ class _SensorValuesPageState extends State<SensorValuesPage> {
         // Proper cleanup with disposal
         final keysToRemove = _sensorDataProvider.keys
             .where(
-              (key) => !wearablesProvider.wearables.any((device) =>
-                  device is SensorManager &&
-                  device == key.$1 &&
-                  (device as SensorManager).sensors.contains(key.$2)),
+              (key) => !wearablesProvider.wearables.any(
+                (device) =>
+                    device is SensorManager &&
+                    device == key.$1 &&
+                    (device as SensorManager).sensors.contains(key.$2),
+              ),
             )
             .toList();
 
@@ -258,9 +335,9 @@ class _SensorValuesPageState extends State<SensorValuesPage> {
         return LayoutBuilder(
           builder: (context, constraints) {
             if (constraints.maxWidth < 600) {
-              return _buildSmallScreenLayout(context, charts);
+              return _buildSmallScreenLayout(context, charts, recorderProvider);
             } else {
-              return _buildLargeScreenLayout(context, charts);
+              return _buildLargeScreenLayout(context, charts, recorderProvider);
             }
           },
         );
@@ -268,169 +345,182 @@ class _SensorValuesPageState extends State<SensorValuesPage> {
     );
   }
 
-  Widget _buildSmallScreenLayout(BuildContext context, List<Widget> charts) {
+  Widget _buildSmallScreenLayout(
+    BuildContext context,
+    List<Widget> charts,
+    SensorRecorderProvider recorderProvider,
+  ) {
+    final showRecorderWaveform = recorderProvider.isRecording;
     return SingleChildScrollView(
       padding: EdgeInsets.all(10),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Device selector
-          if (_devices.isNotEmpty)
-            Card(
-              child: Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Row(
-                  children: [
-                    Text(
-                      'Input: ',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: DropdownButton<InputDevice>(
-                        value: _selectedDevice,
-                        isExpanded: true,
-                        items: _devices.map((d) {
-                          return DropdownMenuItem<InputDevice>(
-                            value: d,
-                            child: Text(d.label),
-                          );
-                        }).toList(),
-                        onChanged: _changeDevice,
-                      ),
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.refresh),
-                      onPressed: _loadDevices,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-          // Custom waveform widget
-          if (_isRecording)
-            Card(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'AUDIO WAVEFORM',
-                      style: Theme.of(context).textTheme.bodyLarge,
-                    ),
-                    const SizedBox(height: 8),
-                    CustomPaint(
-                      size: Size(double.infinity, 100),
-                      painter: WaveformPainter(_waveformData),
-                    ),
-                  ],
-                ),
+          if (charts.isEmpty)
+            Center(
+              child: PlatformText(
+                "No sensors connected",
+                style: Theme.of(context).textTheme.titleLarge,
               ),
             )
-          else if (_errorMessage != null)
-            Padding(
-              padding: EdgeInsets.all(8.0),
-              child: PlatformText(
-                _errorMessage!,
-                style: TextStyle(color: Colors.red),
-              ),
-            ),
-
-          // Sensor charts - no longer wrapped in Expanded
-          charts.isEmpty
-              ? Center(
-                  child: PlatformText(
-                    "No sensors connected",
-                    style: Theme.of(context).textTheme.titleLarge,
+          else ...[
+            if (Platform.isAndroid) ...[
+              if (showRecorderWaveform)
+                // Use waveform from SensorRecorderProvider when recording
+                Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.fiber_manual_record,
+                                color: Colors.red, size: 16),
+                            SizedBox(width: 8),
+                            Text(
+                              'AUDIO WAVEFORM',
+                              style: Theme.of(context).textTheme.bodyLarge,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        CustomPaint(
+                          size: Size(double.infinity, 100),
+                          painter:
+                              WaveformPainter(recorderProvider.waveformData),
+                        ),
+                      ],
+                    ),
                   ),
                 )
-              : ListView(
-                  shrinkWrap: true,
-                  physics: NeverScrollableScrollPhysics(),
-                  padding: EdgeInsets.zero,
-                  children: charts,
+              else if (_isPreviewRecording || _isInitializing)
+                Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'AUDIO WAVEFORM',
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
+                        const SizedBox(height: 8),
+                        _isInitializing
+                            ? SizedBox(
+                                height: 100,
+                                child: Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              )
+                            : CustomPaint(
+                                size: Size(double.infinity, 100),
+                                painter: WaveformPainter(_waveformData),
+                              ),
+                      ],
+                    ),
+                  ),
+                )
+              else if (_errorMessage != null)
+                Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: PlatformText(
+                    _errorMessage!,
+                    style: TextStyle(color: Colors.red),
+                  ),
                 ),
+            ],
+            ListView(
+              shrinkWrap: true,
+              physics: NeverScrollableScrollPhysics(),
+              padding: EdgeInsets.zero,
+              children: charts,
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildLargeScreenLayout(BuildContext context, List<Widget> charts) {
+  Widget _buildLargeScreenLayout(
+    BuildContext context,
+    List<Widget> charts,
+    SensorRecorderProvider recorderProvider,
+  ) {
+    final showRecorderWaveform = recorderProvider.isRecording;
+
     return SingleChildScrollView(
       padding: EdgeInsets.all(10),
       child: Column(
         children: [
-          // Device selector for large screens
-          if (_devices.isNotEmpty)
-            Card(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text('Input Device: ',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16)),
-                    SizedBox(width: 12),
-                    DropdownButton<InputDevice>(
-                      value: _selectedDevice,
-                      items: _devices.map((d) {
-                        return DropdownMenuItem<InputDevice>(
-                          value: d,
-                          child: Text(d.label),
-                        );
-                      }).toList(),
-                      onChanged: _changeDevice,
-                    ),
-                    SizedBox(width: 12),
-                    IconButton(
-                      icon: Icon(Icons.refresh),
-                      onPressed: _loadDevices,
-                    ),
-                  ],
+          if (Platform.isAndroid) ...[
+            if (showRecorderWaveform)
+              // Use waveform from SensorRecorderProvider when recording
+              Card(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.fiber_manual_record,
+                            color: Colors.red,
+                            size: 16,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Audio waveform (Recording)',
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      CustomPaint(
+                        size: Size(double.infinity, 80),
+                        painter: WaveformPainter(recorderProvider.waveformData),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else if (_isPreviewRecording || _isInitializing)
+              Card(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Audio waveform',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: 8),
+                      CustomPaint(
+                        size: Size(double.infinity, 80),
+                        painter: WaveformPainter(_waveformData),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          SizedBox(height: 10),
-
-          // Audio waveform for large screens
-          if (_isRecording)
-            Card(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Audio waveform',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    const SizedBox(height: 8),
-                    CustomPaint(
-                      size: Size(double.infinity, 80),
-                      painter: WaveformPainter(_waveformData),
-                    ),
-                  ],
+            if (_errorMessage != null)
+              Card(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: PlatformText(
+                    _errorMessage!,
+                    style: TextStyle(color: Colors.red),
+                  ),
                 ),
               ),
-            ),
-          if (_errorMessage != null)
-            Card(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: PlatformText(
-                  _errorMessage!,
-                  style: TextStyle(color: Colors.red),
-                ),
-              ),
-            ),
-          if (_isRecording || _errorMessage != null) SizedBox(height: 10),
-
+          ],
           // Sensor charts grid
           GridView.builder(
             gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
