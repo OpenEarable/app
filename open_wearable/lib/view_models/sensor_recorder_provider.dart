@@ -69,10 +69,6 @@ class SensorRecorderProvider with ChangeNotifier {
   }
 
   Future<void> _startAudioRecording(String recordingFolderPath) async {
-    if (_selectedBLEDevice == null) {
-      logger.w("No BLE headset detected, skipping audio recording");
-      return;
-    }
     if (!Platform.isAndroid) return;
     try {
       if (!await _audioRecorder.hasPermission()) {
@@ -81,6 +77,11 @@ class SensorRecorderProvider with ChangeNotifier {
       }
 
       await _selectBLEDevice();
+
+      if (_selectedBLEDevice == null) {
+        logger.w("No BLE headset detected, skipping audio recording");
+        return;
+      }
 
       const encoder = AudioEncoder.wav;
       if (!await _audioRecorder.isEncoderSupported(encoder)) {
@@ -182,7 +183,8 @@ class SensorRecorderProvider with ChangeNotifier {
     });
 
     if (wearable.hasCapability<SensorManager>()) {
-      for (Sensor sensor in wearable.requireCapability<SensorManager>().sensors) {
+      for (Sensor sensor
+          in wearable.requireCapability<SensorManager>().sensors) {
         if (!_recorders[wearable]!.containsKey(sensor)) {
           _recorders[wearable]![sensor] = Recorder(columns: sensor.axisNames);
         }
