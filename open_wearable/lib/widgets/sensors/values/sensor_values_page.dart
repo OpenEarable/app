@@ -1,19 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:logger/logger.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/view_models/sensor_data_provider.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/sensors/values/sensor_value_card.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
-import 'package:record/record.dart';
-import 'dart:async';
-import 'package:path_provider/path_provider.dart';
 import 'dart:io';
-
-Logger _logger = Logger();
 
 class SensorValuesPage extends StatefulWidget {
   const SensorValuesPage({super.key});
@@ -24,249 +17,41 @@ class SensorValuesPage extends StatefulWidget {
 
 class _SensorValuesPageState extends State<SensorValuesPage> {
   final Map<(Wearable, Sensor), SensorDataProvider> _sensorDataProvider = {};
-  AudioRecorder? _audioRecorder; // Separate instance for preview
-  bool _isPreviewRecording = false;
 
   String? _errorMessage;
-  InputDevice? _selectedDevice;
-
-  StreamSubscription<RecordState>? _recordSub;
-  StreamSubscription<Amplitude>? _amplitudeSub;
-
-  RecordState _recordState = RecordState.stop;
-  final List<double> _waveformData = [];
-
   bool _isInitializing = true;
 
   @override
   void initState() {
     super.initState();
     if (Platform.isAndroid) {
-      _audioRecorder = AudioRecorder();
-
-      _recordSub = _audioRecorder!.onStateChanged().listen((recordState) {
-        if (mounted) {
-          setState(() => _recordState = recordState);
-
-          if (recordState == RecordState.stop) {
-            _amplitudeSub?.cancel();
-            _amplitudeSub = null;
-          }
-        }
-      });
-
-      _initRecording();
+      _checkStreamingStatus();
     }
   }
 
-  // Add method to check if provider is recording
-  bool _isProviderRecording(BuildContext context) {
-    try {
-      final recorder =
-          Provider.of<SensorRecorderProvider>(context, listen: false);
-      return recorder.isRecording;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  Future<void> _initRecording() async {
-    if (!Platform.isAndroid || _audioRecorder == null) return;
-
-    if (_isProviderRecording(context)) {
-      if (mounted) setState(() => _isInitializing = false);
-      return;
-    }
-
-    try {
-      if (await _audioRecorder!.hasPermission()) {
-        await _selectBLEDevice();
-        await _startPreview();
-      } else {
-        final status = await Permission.microphone.request();
-        if (status.isGranted) {
-          await _selectBLEDevice();
-          await _startPreview();
-        } else {
-          if (mounted) {
-            setState(() => _errorMessage = 'Microphone permission denied');
-          }
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _errorMessage = 'Failed to initialize: $e');
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isInitializing = false);
-      }
-    }
-  }
-
-  Future<void> _selectBLEDevice() async {
-    if (!Platform.isAndroid || _audioRecorder == null) return;
-    try {
-      final devices = await _audioRecorder!.listInputDevices();
-
-      // Try to find BLE device
-      try {
-        _selectedDevice = devices.firstWhere(
-          (device) =>
-              device.label.toLowerCase().contains('bluetooth') ||
-              device.label.toLowerCase().contains('ble') ||
-              device.label.toLowerCase().contains('headset') ||
-              device.label.toLowerCase().contains('openearable'),
-        );
-        _logger.i(
-            "Auto-selected BLE device for preview: ${_selectedDevice!.label}");
-      } catch (e) {
-        // No BLE device found
-        _selectedDevice = null;
-        _logger.e("No BLE headset found");
-      }
-    } catch (e) {
-      _logger.e("Error selecting BLE device: $e");
-      _selectedDevice = null;
-    }
-  }
-
-  Future<String> _getTemporaryPath() async {
-    final directory = await getTemporaryDirectory();
-    return '${directory.path}/preview_${DateTime.now().millisecondsSinceEpoch}.m4a';
-  }
-
-  Future<void> _startPreview() async {
-    if (!Platform.isAndroid || _audioRecorder == null) return;
-
-    // Don't start if provider is recording
-    if (_isProviderRecording(context)) {
-      return;
-    }
-
-    // Don't start if no BLE device selected
-    if (_selectedDevice == null) {
-      if (mounted) {
-        setState(() => _errorMessage = 'No BLE headset detected');
-      }
-      return;
-    }
-
-    try {
-      const encoder = AudioEncoder.wav;
-
-      if (!await _audioRecorder!.isEncoderSupported(encoder)) {
-        if (mounted) {
-          setState(() => _errorMessage = 'WAV encoder not supported');
-        }
-        return;
-      }
-
-      final path = await _getTemporaryPath();
-
-      final config = RecordConfig(
-        encoder: encoder,
-        sampleRate: 48000,
-        bitRate: 768000,
-        numChannels: 1,
-        device: _selectedDevice,
-      );
-
-      await _audioRecorder!.start(config, path: path);
-      await Future.delayed(Duration(milliseconds: 100));
-
-      _amplitudeSub?.cancel();
-      _amplitudeSub = _audioRecorder!
-          .onAmplitudeChanged(const Duration(milliseconds: 100))
-          .listen(
-        (amp) {
-          if (mounted) {
-            setState(() {
-              final normalized = (amp.current + 50) / 50;
-              _waveformData.add(normalized.clamp(0.0, 2.0));
-
-              if (_waveformData.length > 100) {
-                _waveformData.removeAt(0);
-              }
-            });
-          }
-        },
-        onError: (error) {
-          _logger.e("Amplitude stream error: $error");
-        },
-      );
-
+  void _checkStreamingStatus() {
+    final recorderProvider =
+        Provider.of<SensorRecorderProvider>(context, listen: false);
+    if (!recorderProvider.isBLEMicrophoneStreamingEnabled) {
       if (mounted) {
         setState(() {
-          _isPreviewRecording = true;
+          _isInitializing = false;
+          _errorMessage =
+              'BLE microphone streaming not enabled. Enable it in sensor configuration.';
+        });
+      }
+    } else {
+      if (mounted) {
+        setState(() {
+          _isInitializing = false;
           _errorMessage = null;
         });
       }
-    } catch (e) {
-      _logger.e("Preview start error: $e");
-      if (mounted) {
-        setState(() => _errorMessage = 'Failed to start preview: $e');
-      }
-    }
-  }
-
-  Future<void> _stopPreview() async {
-    if (!Platform.isAndroid || _audioRecorder == null) return;
-    if (!_isPreviewRecording) return;
-
-    try {
-      final tempPath = await _audioRecorder!.stop();
-      _amplitudeSub?.cancel();
-      _amplitudeSub = null;
-
-      if (tempPath != null) {
-        try {
-          final file = File(tempPath);
-          if (await file.exists()) {
-            await file.delete();
-          }
-        } catch (e) {
-          _logger.e("Error deleting temp preview file: $e");
-        }
-      }
-
-      if (mounted) {
-        setState(() {
-          _isPreviewRecording = false;
-          _waveformData.clear();
-        });
-      }
-    } catch (e) {
-      _logger.e("Error stopping preview: $e");
     }
   }
 
   @override
   void dispose() {
-    // Stop and clean up preview recording
-    if (Platform.isAndroid && _audioRecorder != null) {
-      if (_recordState != RecordState.stop) {
-        _audioRecorder!.stop().then((tempPath) {
-          if (tempPath != null) {
-            try {
-              final file = File(tempPath);
-              file.exists().then((exists) {
-                if (exists) {
-                  file.delete();
-                }
-              });
-            } catch (e) {
-              _logger.e("Error deleting temp preview file: $e");
-            }
-          }
-        });
-      }
-
-      _recordSub?.cancel();
-      _amplitudeSub?.cancel();
-      _audioRecorder!.dispose();
-    }
-
     // Dispose all sensor data providers
     for (var provider in _sensorDataProvider.values) {
       provider.dispose();
@@ -280,18 +65,25 @@ class _SensorValuesPageState extends State<SensorValuesPage> {
   Widget build(BuildContext context) {
     return Consumer2<WearablesProvider, SensorRecorderProvider>(
       builder: (context, wearablesProvider, recorderProvider, child) {
-        // Stop preview if provider starts recording
-        if (Platform.isAndroid &&
-            recorderProvider.isRecording &&
-            _isPreviewRecording) {
-          _stopPreview();
-        }
-        // Restart preview if provider stops recording
-        else if (Platform.isAndroid &&
-            !recorderProvider.isRecording &&
-            !_isPreviewRecording &&
-            _audioRecorder != null) {
-          _initRecording();
+        // Update error message if streaming status changes
+        if (Platform.isAndroid && mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!recorderProvider.isBLEMicrophoneStreamingEnabled &&
+                _errorMessage == null &&
+                !recorderProvider.isRecording) {
+              setState(() {
+                _errorMessage =
+                    'BLE microphone streaming not enabled. Enable it in sensor configuration.';
+              });
+            } else if (recorderProvider.isBLEMicrophoneStreamingEnabled &&
+                _errorMessage != null &&
+                _errorMessage!
+                    .contains('BLE microphone streaming not enabled')) {
+              setState(() {
+                _errorMessage = null;
+              });
+            }
+          });
         }
         List<Widget> charts = [];
 
@@ -392,7 +184,8 @@ class _SensorValuesPageState extends State<SensorValuesPage> {
                     ),
                   ),
                 )
-              else if (_isPreviewRecording || _isInitializing)
+              else if (recorderProvider.isBLEMicrophoneStreamingEnabled ||
+                  _isInitializing)
                 Card(
                   child: Padding(
                     padding: EdgeInsets.all(16),
@@ -414,7 +207,8 @@ class _SensorValuesPageState extends State<SensorValuesPage> {
                               )
                             : CustomPaint(
                                 size: Size(double.infinity, 100),
-                                painter: WaveformPainter(_waveformData),
+                                painter: WaveformPainter(
+                                    recorderProvider.waveformData),
                               ),
                       ],
                     ),
@@ -485,7 +279,8 @@ class _SensorValuesPageState extends State<SensorValuesPage> {
                   ),
                 ),
               )
-            else if (_isPreviewRecording || _isInitializing)
+            else if (recorderProvider.isBLEMicrophoneStreamingEnabled ||
+                _isInitializing)
               Card(
                 child: Padding(
                   padding: EdgeInsets.all(16),
@@ -498,10 +293,18 @@ class _SensorValuesPageState extends State<SensorValuesPage> {
                         style: Theme.of(context).textTheme.titleSmall,
                       ),
                       const SizedBox(height: 8),
-                      CustomPaint(
-                        size: Size(double.infinity, 80),
-                        painter: WaveformPainter(_waveformData),
-                      ),
+                      _isInitializing
+                          ? SizedBox(
+                              height: 80,
+                              child: Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                            )
+                          : CustomPaint(
+                              size: Size(double.infinity, 80),
+                              painter: WaveformPainter(
+                                  recorderProvider.waveformData),
+                            ),
                     ],
                   ),
                 ),

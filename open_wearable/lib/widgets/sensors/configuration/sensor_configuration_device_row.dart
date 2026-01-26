@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/view_models/sensor_configuration_storage.dart';
+import 'package:open_wearable/widgets/sensors/configuration/ble_microphone_streaming_row.dart';
 import 'package:open_wearable/widgets/sensors/configuration/edge_recorder_prefix_row.dart';
 import 'package:open_wearable/widgets/sensors/configuration/save_config_row.dart';
 import 'package:open_wearable/widgets/sensors/configuration/sensor_configuration_value_row.dart';
@@ -116,6 +117,12 @@ class _SensorConfigurationDeviceRowState
     content.addAll([
       const Divider(),
       const SaveConfigRow(),
+    ]);
+
+    // Add BLE microphone streaming control (Android only)
+    content.addAll([
+      const Divider(),
+      const BLEMicrophoneStreamingRow(),
     ]);
 
     if (device.hasCapability<EdgeRecorderManager>()) {

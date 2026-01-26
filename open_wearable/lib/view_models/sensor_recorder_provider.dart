@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
+import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
 import '../models/logger.dart';
@@ -29,6 +30,14 @@ class SensorRecorderProvider with ChangeNotifier {
 
   InputDevice? _selectedBLEDevice;
 
+  bool _isBLEMicrophoneStreamingEnabled = false;
+  bool get isBLEMicrophoneStreamingEnabled => _isBLEMicrophoneStreamingEnabled;
+
+  // Separate AudioRecorder for streaming
+  AudioRecorder? _streamingAudioRecorder;
+  bool _isStreamingActive = false;
+  StreamSubscription<Amplitude>? _streamingAmplitudeSub;
+
   Future<void> _selectBLEDevice() async {
     try {
       final devices = await _audioRecorder.listInputDevices();
@@ -52,6 +61,118 @@ class SensorRecorderProvider with ChangeNotifier {
     }
   }
 
+  Future<bool> startBLEMicrophoneStream() async {
+    if (!Platform.isAndroid) {
+      logger.w("BLE microphone streaming only supported on Android");
+      return false;
+    }
+
+    if (_isStreamingActive) {
+      logger.i("BLE microphone streaming already active");
+      return true;
+    }
+
+    try {
+      if (!await _audioRecorder.hasPermission()) {
+        logger.w("No microphone permission for streaming");
+        return false;
+      }
+
+      await _selectBLEDevice();
+
+      if (_selectedBLEDevice == null) {
+        logger.w("No BLE headset detected, cannot start streaming");
+        return false;
+      }
+
+      _streamingAudioRecorder = AudioRecorder();
+
+      const encoder = AudioEncoder.wav;
+      if (!await _streamingAudioRecorder!.isEncoderSupported(encoder)) {
+        logger.w("WAV encoder not supported");
+        _streamingAudioRecorder = null;
+        return false;
+      }
+
+      final tempDir = await getTemporaryDirectory();
+      final tempPath =
+          '${tempDir.path}/ble_stream_${DateTime.now().millisecondsSinceEpoch}.wav';
+
+      final config = RecordConfig(
+        encoder: encoder,
+        sampleRate: 48000,
+        bitRate: 768000,
+        numChannels: 1,
+        device: _selectedBLEDevice,
+      );
+
+      await _streamingAudioRecorder!.start(config, path: tempPath);
+      _isStreamingActive = true;
+      _isBLEMicrophoneStreamingEnabled = true;
+
+      // Set up amplitude monitoring for waveform display
+      _streamingAmplitudeSub?.cancel();
+      _streamingAmplitudeSub = _streamingAudioRecorder!
+          .onAmplitudeChanged(const Duration(milliseconds: 100))
+          .listen((amp) {
+        final normalized = (amp.current + 50) / 50;
+        _waveformData.add(normalized.clamp(0.0, 2.0));
+
+        if (_waveformData.length > 100) {
+          _waveformData.removeAt(0);
+        }
+
+        notifyListeners();
+      });
+
+      Future.delayed(const Duration(seconds: 1), () async {
+        try {
+          final file = File(tempPath);
+          if (await file.exists()) {
+            await file.delete();
+          }
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+      });
+
+      logger.i(
+          "BLE microphone streaming started with device: ${_selectedBLEDevice!.label}");
+      notifyListeners();
+      return true;
+    } catch (e) {
+      logger.e("Failed to start BLE microphone streaming: $e");
+      _isStreamingActive = false;
+      _isBLEMicrophoneStreamingEnabled = false;
+      _streamingAudioRecorder?.dispose();
+      _streamingAudioRecorder = null;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<void> stopBLEMicrophoneStream() async {
+    if (!_isStreamingActive) {
+      return;
+    }
+
+    try {
+      await _streamingAudioRecorder?.stop();
+      _streamingAmplitudeSub?.cancel();
+      _streamingAmplitudeSub = null;
+      _streamingAudioRecorder?.dispose();
+      _streamingAudioRecorder = null;
+      _isStreamingActive = false;
+      _isBLEMicrophoneStreamingEnabled = false;
+      _waveformData.clear();
+
+      logger.i("BLE microphone streaming stopped");
+      notifyListeners();
+    } catch (e) {
+      logger.e("Error stopping BLE microphone streaming: $e");
+    }
+  }
+
   void startRecording(String dirname) async {
     _isRecording = true;
     _currentDirectory = dirname;
@@ -70,6 +191,22 @@ class SensorRecorderProvider with ChangeNotifier {
 
   Future<void> _startAudioRecording(String recordingFolderPath) async {
     if (!Platform.isAndroid) return;
+
+    // Only start recording if BLE microphone streaming is enabled
+    if (!_isBLEMicrophoneStreamingEnabled) {
+      logger
+          .w("BLE microphone streaming not enabled, skipping audio recording");
+      return;
+    }
+
+    // Stop streaming session before starting actual recording
+    if (_isStreamingActive) {
+      await _streamingAudioRecorder?.stop();
+      _streamingAmplitudeSub?.cancel();
+      _streamingAmplitudeSub = null;
+      _isStreamingActive = false;
+    }
+
     try {
       if (!await _audioRecorder.hasPermission()) {
         logger.w("No microphone permission for recording");
@@ -153,6 +290,12 @@ class SensorRecorderProvider with ChangeNotifier {
     } catch (e) {
       logger.e("Error stopping audio recording: $e");
     }
+
+    // Restart streaming if it was enabled before recording
+    if (_isBLEMicrophoneStreamingEnabled && !_isStreamingActive) {
+      unawaited(startBLEMicrophoneStream());
+    }
+
     notifyListeners();
   }
 
@@ -268,6 +411,10 @@ class SensorRecorderProvider with ChangeNotifier {
 
   @override
   void dispose() {
+    // Stop streaming
+    stopBLEMicrophoneStream();
+
+    // Stop recording
     _audioRecorder.stop().then((_) {
       _audioRecorder.dispose();
     }).catchError((e) {
