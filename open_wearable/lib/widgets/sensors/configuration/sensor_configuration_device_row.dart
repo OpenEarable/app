@@ -7,6 +7,7 @@ import 'package:open_wearable/view_models/sensor_configuration_storage.dart';
 import 'package:open_wearable/view_models/sensor_profile_service.dart';
 import 'package:open_wearable/widgets/app_toast.dart';
 import 'package:open_wearable/widgets/devices/stereo_position_badge.dart';
+import 'package:open_wearable/widgets/sensors/configuration/ble_microphone_streaming_row.dart';
 import 'package:open_wearable/widgets/sensors/configuration/edge_recorder_prefix_row.dart';
 import 'package:open_wearable/widgets/sensors/configuration/save_config_row.dart';
 import 'package:open_wearable/widgets/sensors/configuration/sensor_configuration_profile_widgets.dart';
@@ -382,6 +383,12 @@ class _SensorConfigurationDeviceRowState
         ),
       ),
     ];
+
+    // Add BLE microphone streaming control (Android only)
+    content.addAll([
+      const Divider(),
+      const BLEMicrophoneStreamingRow(),
+    ]);
 
     if (device.hasCapability<EdgeRecorderManager>()) {
       content.addAll([
