@@ -4,7 +4,6 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:provider/provider.dart';
 import '../../../view_models/sensor_recorder_provider.dart';
 
-/// Widget to control BLE microphone streaming
 class BLEMicrophoneStreamingRow extends StatelessWidget {
   const BLEMicrophoneStreamingRow({super.key});
 
@@ -16,7 +15,8 @@ class BLEMicrophoneStreamingRow extends StatelessWidget {
 
     return Consumer<SensorRecorderProvider>(
       builder: (context, recorderProvider, child) {
-        final isStreamingEnabled = recorderProvider.isBLEMicrophoneStreamingEnabled;
+        final isStreamingEnabled =
+            recorderProvider.isBLEMicrophoneStreamingEnabled;
 
         return PlatformListTile(
           title: PlatformText('BLE Microphone Streaming'),
@@ -29,7 +29,8 @@ class BLEMicrophoneStreamingRow extends StatelessWidget {
             value: isStreamingEnabled,
             onChanged: (value) async {
               if (value) {
-                final success = await recorderProvider.startBLEMicrophoneStream();
+                final success =
+                    await recorderProvider.startBLEMicrophoneStream();
                 if (!success && context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/view_models/sensor_configuration_storage.dart';
-import 'package:open_wearable/widgets/sensors/configuration/ble_microphone_streaming_row.dart';
 import 'package:open_wearable/widgets/sensors/configuration/edge_recorder_prefix_row.dart';
 import 'package:open_wearable/widgets/sensors/configuration/save_config_row.dart';
 import 'package:open_wearable/widgets/sensors/configuration/sensor_configuration_value_row.dart';
@@ -67,7 +66,8 @@ class _SensorConfigurationDeviceRowState
                       ?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 if (device.hasCapability<StereoDevice>())
-                  StereoPosLabel(device: device.requireCapability<StereoDevice>()),
+                  StereoPosLabel(
+                      device: device.requireCapability<StereoDevice>()),
               ],
             ),
             trailing: _buildTabBar(context),
@@ -87,7 +87,8 @@ class _SensorConfigurationDeviceRowState
         _content = [
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: PlatformText("This device does not support configuring sensors."),
+            child: PlatformText(
+                "This device does not support configuring sensors."),
           ),
         ];
       });
@@ -119,16 +120,11 @@ class _SensorConfigurationDeviceRowState
       const SaveConfigRow(),
     ]);
 
-    // Add BLE microphone streaming control (Android only)
-    content.addAll([
-      const Divider(),
-      const BLEMicrophoneStreamingRow(),
-    ]);
-
     if (device.hasCapability<EdgeRecorderManager>()) {
       content.addAll([
         const Divider(),
-        EdgeRecorderPrefixRow(manager: device.requireCapability<EdgeRecorderManager>()),
+        EdgeRecorderPrefixRow(
+            manager: device.requireCapability<EdgeRecorderManager>()),
       ]);
     }
 
