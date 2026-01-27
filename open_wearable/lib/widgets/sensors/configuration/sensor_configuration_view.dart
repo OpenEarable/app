@@ -4,6 +4,7 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 import 'package:open_wearable/models/wearable_display_group.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
+import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/app_toast.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
@@ -274,6 +275,10 @@ class SensorConfigurationView extends StatelessWidget {
 
     int actionableCount = 0;
 
+    final recorderProvider =
+        Provider.of<SensorRecorderProvider>(context, listen: false);
+    bool shouldEnableMicrophoneStreaming = false;
+
     for (final target in targets) {
       final primaryEntriesToApply = _entriesToApplyForProvider(target.provider);
       final mirroredEntriesToApply = _entriesToApplyForMirroredTarget(target);
@@ -286,6 +291,9 @@ class SensorConfigurationView extends StatelessWidget {
       for (final entry in primaryEntriesToApply) {
         final SensorConfiguration config = entry.$1;
         final SensorConfigurationValue value = entry.$2;
+        if (config.name.toLowerCase().contains('microphone')) {
+          shouldEnableMicrophoneStreaming = true;
+        }
         // Always push the selected canonical value to the primary device on
         // apply. This also heals primary-side drift/unknown states.
         config.setConfiguration(value);
@@ -295,6 +303,14 @@ class SensorConfigurationView extends StatelessWidget {
         final SensorConfiguration config = entry.$1;
         final SensorConfigurationValue value = entry.$2;
         config.setConfiguration(value);
+      }
+
+      if (shouldEnableMicrophoneStreaming &&
+          !recorderProvider.isBLEMicrophoneStreamingEnabled) {
+        await recorderProvider.startBLEMicrophoneStream();
+      } else if (!shouldEnableMicrophoneStreaming &&
+          recorderProvider.isBLEMicrophoneStreamingEnabled) {
+        await recorderProvider.stopBLEMicrophoneStream();
       }
 
       logger.d(
