@@ -184,8 +184,7 @@ class _SensorValuesPageState extends State<SensorValuesPage> {
                     ),
                   ),
                 )
-              else if (recorderProvider.isBLEMicrophoneStreamingEnabled ||
-                  _isInitializing)
+              else
                 Card(
                   child: Padding(
                     padding: EdgeInsets.all(16),
@@ -212,14 +211,6 @@ class _SensorValuesPageState extends State<SensorValuesPage> {
                               ),
                       ],
                     ),
-                  ),
-                )
-              else if (_errorMessage != null)
-                Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: PlatformText(
-                    _errorMessage!,
-                    style: TextStyle(color: Colors.red),
                   ),
                 ),
             ],

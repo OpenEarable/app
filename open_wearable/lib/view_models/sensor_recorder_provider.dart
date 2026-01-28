@@ -262,7 +262,7 @@ class SensorRecorderProvider with ChangeNotifier {
     }
   }
 
-  void stopRecording() async {
+  void stopRecording(bool turnOffMic) async {
     _isRecording = false;
     _recordingStart = null;
     for (Wearable wearable in _recorders.keys) {
@@ -292,7 +292,9 @@ class SensorRecorderProvider with ChangeNotifier {
     }
 
     // Restart streaming if it was enabled before recording
-    if (_isBLEMicrophoneStreamingEnabled && !_isStreamingActive) {
+    if (!turnOffMic &&
+        _isBLEMicrophoneStreamingEnabled &&
+        !_isStreamingActive) {
       unawaited(startBLEMicrophoneStream());
     }
 
