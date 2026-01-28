@@ -296,7 +296,7 @@ class SensorRecorderProvider with ChangeNotifier {
     }
   }
 
-  void stopRecording() async {
+  void stopRecording(bool turnOffMic) async {
     _isRecording = false;
     _recordingStart = null;
     _recordingFilepathsBySensorIdentity.clear();
@@ -317,7 +317,9 @@ class SensorRecorderProvider with ChangeNotifier {
     }
 
     // Restart streaming if it was enabled before recording
-    if (_isBLEMicrophoneStreamingEnabled && !_isStreamingActive) {
+    if (!turnOffMic &&
+        _isBLEMicrophoneStreamingEnabled &&
+        !_isStreamingActive) {
       unawaited(startBLEMicrophoneStream());
     }
 
