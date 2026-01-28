@@ -167,6 +167,7 @@ class _SensorValuesPageState extends State<SensorValuesPage>
                             return _buildSmallScreenLayout(
                               context,
                               charts,
+                              recorderProvider,
                               hasAnySensors: hasAnySensors,
                               hideCardsWithoutLiveData:
                                   shouldHideCardsWithoutLiveData,
@@ -175,6 +176,7 @@ class _SensorValuesPageState extends State<SensorValuesPage>
                             return _buildLargeScreenLayout(
                               context,
                               charts,
+                              recorderProvider,
                               hasAnySensors: hasAnySensors,
                               hideCardsWithoutLiveData:
                                   shouldHideCardsWithoutLiveData,
@@ -332,16 +334,16 @@ class _SensorValuesPageState extends State<SensorValuesPage>
     return ordered;
   }
 
-  Widget _buildAudioUI() {
+  Widget _buildAudioUI(SensorRecorderProvider recorderProvider) {
     return Column(
       children: [
-        if (_isRecording)
+        if (recorderProvider.isBLEMicrophoneStreamingEnabled)
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: CustomPaint(
                 size: const Size(double.infinity, 100),
-                painter: WaveformPainter(_waveformData),
+                painter: WaveformPainter(recorderProvider.waveformData),
               ),
             ),
           )
@@ -360,14 +362,15 @@ class _SensorValuesPageState extends State<SensorValuesPage>
 
   Widget _buildSmallScreenLayout(
     BuildContext context,
-    List<Widget> charts, {
+    List<Widget> charts,
+    SensorRecorderProvider recorderProvider, {
     required bool hasAnySensors,
     required bool hideCardsWithoutLiveData,
   }) {
     return ListView(
       padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
       children: [
-        _buildAudioUI(),
+        _buildAudioUI(recorderProvider),
         ...charts,
         if (charts.isEmpty)
           Center(
@@ -385,7 +388,8 @@ class _SensorValuesPageState extends State<SensorValuesPage>
 
   Widget _buildLargeScreenLayout(
     BuildContext context,
-    List<Widget> charts, {
+    List<Widget> charts,
+    SensorRecorderProvider recorderProvider, {
     required bool hasAnySensors,
     required bool hideCardsWithoutLiveData,
   }) {
@@ -393,7 +397,7 @@ class _SensorValuesPageState extends State<SensorValuesPage>
       padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
       child: Column(
         children: [
-          _buildAudioUI(),
+          _buildAudioUI(recorderProvider),
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
