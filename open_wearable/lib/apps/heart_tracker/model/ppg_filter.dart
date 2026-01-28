@@ -95,7 +95,7 @@ class PpgFilter {
 
   Stream<double> get heartRateStream async* {
     int timestampFactor = pow(10, -timestampExponent).toInt();
-    int windowDurationMs = 8 * timestampFactor; // 8 seconds
+    int windowDurationMs = 2 * timestampFactor; // 2 seconds
     final List<(int, double)> buffer = [];
 
     await for (final (timestamp, value) in filteredStream) {
