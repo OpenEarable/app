@@ -34,6 +34,8 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
   TextEditingController secController = TextEditingController(text: '0');
   String selectedSound = 'beep.mp3';
   static const List<String> availableSounds = ['beep.mp3', 'beep2.mp3', 'beep3.mp3'];
+  double currentBpm = double.nan;
+  double currentIntervalSeconds = 0.0;
 
   @override
   void initState() {
@@ -78,6 +80,9 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
         );
         isInitialized = true;
       });
+      ppgFilter.heartRateStream.listen((bpm) {
+        if (mounted) setState(() => currentBpm = bpm);
+      });
     });
   }
 
@@ -106,6 +111,7 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
       if (effectiveBpm > 0) {
         double intervalMs = (60 / effectiveBpm) * 1000;
         soundPlayer.start(intervalMs);
+        currentIntervalSeconds = 60 / effectiveBpm;
         stopwatch.reset();
         stopwatch.start();
         _timer = Timer.periodic(Duration(seconds: 1), (timer) {
@@ -153,183 +159,179 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
 
     return ListView(
       children: [
-        StreamBuilder<double>(
-          stream: ppgFilter.heartRateStream,
-          builder: (context, snapshot) {
-            double bpm = snapshot.data ?? double.nan;
-            return Padding(
-              padding: EdgeInsets.all(10),
-              child: Column(
+        Padding(
+          padding: EdgeInsets.all(10),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      PlatformText(
-                        "${bpm.isNaN ? "--" : bpm.toStringAsFixed(0)} BPM",
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 20),
-                  IgnorePointer(
-                    ignoring: isPlaying,
-                    child: Opacity(
-                      opacity: isPlaying ? 0.5 : 1.0,
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Radio<OffsetMode>(
-                                value: OffsetMode.absolute,
-                                groupValue: offsetMode,
-                                onChanged: (value) => setState(() => offsetMode = value!),
-                              ),
-                              PlatformText("Absolute"),
-                              SizedBox(width: 20),
-                              Radio<OffsetMode>(
-                                value: OffsetMode.percentual,
-                                groupValue: offsetMode,
-                                onChanged: (value) => setState(() => offsetMode = value!),
-                              ),
-                              PlatformText("Percentual"),
-                            ],
-                          ),
-                          SizedBox(height: 20),
-                          if (offsetMode == OffsetMode.absolute) ...[
-                            PlatformText("Offset (BPM): ${offsetBpm.toInt()}"),
-                            Slider(
-                              value: offsetBpm,
-                              min: -30,
-                              max: 30,
-                              divisions: 60,
-                              onChanged: (value) {
-                                setState(() => offsetBpm = value);
-                                if (isPlaying && !bpm.isNaN) {
-                                  double effectiveBpm = bpm + offsetBpm;
-                                  if (effectiveBpm > 0) {
-                                    double intervalMs = (60 / effectiveBpm) * 1000;
-                                    soundPlayer.updateInterval(intervalMs);
-                                  }
-                                }
-                              },
-                            ),
-                          ] else ...[
-                            PlatformText("Offset (%): ${offsetPercent.toInt()}"),
-                            Slider(
-                              value: offsetPercent,
-                              min: -50,
-                              max: 50,
-                              divisions: 100,
-                              onChanged: (value) {
-                                setState(() => offsetPercent = value);
-                                if (isPlaying && !bpm.isNaN) {
-                                  double effectiveBpm = bpm * (1 + offsetPercent / 100);
-                                  if (effectiveBpm > 0) {
-                                    double intervalMs = (60 / effectiveBpm) * 1000;
-                                    soundPlayer.updateInterval(intervalMs);
-                                  }
-                                }
-                              },
-                            ),
-                          ],
-                          SizedBox(height: 20),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              PlatformText("Sound: "),
-                              DropdownButton<String>(
-                                value: selectedSound,
-                                items: availableSounds.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-                                onChanged: (v) {
-                                  if (v != null) {
-                                    setState(() => selectedSound = v);
-                                    soundPlayer.changeSound(v);
-                                  }
-                                },
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 20),
-                  Card(
-                    child: Padding(
-                      padding: EdgeInsets.all(10),
-                      child: PlatformText("Elapsed Time: ${isPlaying ? '${stopwatch.elapsed.inMinutes.toString().padLeft(2, '0')}:${(stopwatch.elapsed.inSeconds % 60).toString().padLeft(2, '0')}' : '00:00'}"),
-                    ),
-                  ),
-                  SizedBox(height: 20),
-                  Card(
-                    child: Padding(
-                      padding: EdgeInsets.all(10),
-                      child: Column(
-                        children: [
-                          PlatformText("Set Duration"),
-                          SizedBox(height: 10),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Expanded(
-                                child: PlatformTextField(
-                                  controller: minController,
-                                  keyboardType: TextInputType.number,
-                                  textAlign: TextAlign.center,
-                                  enabled: !isPlaying,
-                                  onChanged: (v) {
-                                    int val = int.tryParse(v) ?? 0;
-                                    if (val < 0) val = 0;
-                                    if (val > 999) val = 999; // arbitrary max
-                                    setState(() => durationMinutes = val);
-                                    minController.text = val.toString();
-                                    minController.selection = TextSelection.fromPosition(TextPosition(offset: minController.text.length));
-                                  },
-                                ),
-                              ),
-                              SizedBox(width: 10),
-                              PlatformText("min"),
-                              SizedBox(width: 20),
-                              Expanded(
-                                child: PlatformTextField(
-                                  controller: secController,
-                                  keyboardType: TextInputType.number,
-                                  textAlign: TextAlign.center,
-                                  enabled: !isPlaying,
-                                  onChanged: (v) {
-                                    int val = int.tryParse(v) ?? 0;
-                                    if (val < 0) val = 0;
-                                    if (val > 59) val = 59;
-                                    setState(() => durationSeconds = val);
-                                    secController.text = val.toString();
-                                    secController.selection = TextSelection.fromPosition(TextPosition(offset: secController.text.length));
-                                  },
-                                ),
-                              ),
-                              SizedBox(width: 10),
-                              PlatformText("sec"),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 20),
-                  PlatformElevatedButton(
-                    material: (_, __) => MaterialElevatedButtonData(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: isPlaying ? Colors.red : Colors.green,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                    onPressed: bpm.isNaN ? null : () => _togglePlay(bpm),
-                    child: PlatformText(isPlaying ? "Stop" : "Start"),
+                  PlatformText(
+                    "${currentBpm.isNaN ? "--" : currentBpm.toStringAsFixed(0)} BPM",
+                    style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ],
               ),
-            );
-          },
+              SizedBox(height: 20),
+              IgnorePointer(
+                ignoring: isPlaying,
+                child: Opacity(
+                  opacity: isPlaying ? 0.5 : 1.0,
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Radio<OffsetMode>(
+                            value: OffsetMode.absolute,
+                            groupValue: offsetMode,
+                            onChanged: (value) => setState(() => offsetMode = value!),
+                          ),
+                          PlatformText("Absolute"),
+                          SizedBox(width: 20),
+                          Radio<OffsetMode>(
+                            value: OffsetMode.percentual,
+                            groupValue: offsetMode,
+                            onChanged: (value) => setState(() => offsetMode = value!),
+                          ),
+                          PlatformText("Percentual"),
+                        ],
+                      ),
+                      SizedBox(height: 20),
+                      if (offsetMode == OffsetMode.absolute) ...[
+                        PlatformText("Offset (BPM): ${offsetBpm.toInt()}"),
+                        Slider(
+                          value: offsetBpm,
+                          min: -30,
+                          max: 30,
+                          divisions: 60,
+                          onChanged: (value) {
+                            setState(() => offsetBpm = value);
+                            if (isPlaying && !currentBpm.isNaN) {
+                              double effectiveBpm = currentBpm + offsetBpm;
+                              if (effectiveBpm > 0) {
+                                double intervalMs = (60 / effectiveBpm) * 1000;
+                                soundPlayer.updateInterval(intervalMs);
+                                currentIntervalSeconds = 60 / effectiveBpm;
+                              }
+                            }
+                          },
+                        ),
+                      ] else ...[
+                        PlatformText("Offset (%): ${offsetPercent.toInt()}"),
+                        Slider(
+                          value: offsetPercent,
+                          min: -50,
+                          max: 50,
+                          divisions: 100,
+                          onChanged: (value) {
+                            setState(() => offsetPercent = value);
+                            if (isPlaying && !currentBpm.isNaN) {
+                              double effectiveBpm = currentBpm * (1 + offsetPercent / 100);
+                              if (effectiveBpm > 0) {
+                                double intervalMs = (60 / effectiveBpm) * 1000;
+                                soundPlayer.updateInterval(intervalMs);
+                                currentIntervalSeconds = 60 / effectiveBpm;
+                              }
+                            }
+                          },
+                        ),
+                      ],
+                      SizedBox(height: 20),
+                      Card(
+                        child: Padding(
+                          padding: EdgeInsets.all(10),
+                          child: Column(
+                            children: [
+                              PlatformText("Set Duration"),
+                              SizedBox(height: 10),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Expanded(
+                                    child: PlatformTextField(
+                                      controller: minController,
+                                      keyboardType: TextInputType.number,
+                                      textAlign: TextAlign.center,
+                                      enabled: !isPlaying,
+                                      onChanged: (v) {
+                                        int val = int.tryParse(v) ?? 0;
+                                        if (val < 0) val = 0;
+                                        if (val > 999) val = 999; // arbitrary max
+                                        setState(() => durationMinutes = val);
+                                        minController.text = val.toString();
+                                        minController.selection = TextSelection.fromPosition(TextPosition(offset: minController.text.length));
+                                      },
+                                    ),
+                                  ),
+                                  SizedBox(width: 10),
+                                  PlatformText("min"),
+                                  SizedBox(width: 20),
+                                  Expanded(
+                                    child: PlatformTextField(
+                                      controller: secController,
+                                      keyboardType: TextInputType.number,
+                                      textAlign: TextAlign.center,
+                                      enabled: !isPlaying,
+                                      onChanged: (v) {
+                                        int val = int.tryParse(v) ?? 0;
+                                        if (val < 0) val = 0;
+                                        if (val > 59) val = 59;
+                                        setState(() => durationSeconds = val);
+                                        secController.text = val.toString();
+                                        secController.selection = TextSelection.fromPosition(TextPosition(offset: secController.text.length));
+                                      },
+                                    ),
+                                  ),
+                                  SizedBox(width: 10),
+                                  PlatformText("sec"),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          PlatformText("Sound: "),
+                          DropdownButton<String>(
+                            value: selectedSound,
+                            items: availableSounds.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                            onChanged: (v) {
+                              if (v != null) {
+                                setState(() => selectedSound = v);
+                                soundPlayer.changeSound(v);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(height: 20),
+              Card(
+                child: Padding(
+                  padding: EdgeInsets.all(10),
+                  child: PlatformText("Elapsed Time: ${isPlaying ? '${stopwatch.elapsed.inMinutes.toString().padLeft(2, '0')}:${(stopwatch.elapsed.inSeconds % 60).toString().padLeft(2, '0')}' : '00:00'}${isPlaying ? ' | Interval: ${currentIntervalSeconds.toStringAsFixed(2)}s' : ''}"),
+                ),
+              ),
+              SizedBox(height: 20),
+              PlatformElevatedButton(
+                material: (_, __) => MaterialElevatedButtonData(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isPlaying ? Colors.red : Colors.green,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+                onPressed: currentBpm.isNaN ? null : () => _togglePlay(currentBpm),
+                child: PlatformText(isPlaying ? "Stop" : "Start"),
+              ),
+            ],
+          ),
         ),
       ],
     );
