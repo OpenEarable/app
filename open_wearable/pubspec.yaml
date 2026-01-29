@@ -36,7 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   open_file: ^3.3.2
   open_earable_flutter: ^2.3.0
-  flutter_platform_widgets: ^9.0.0
+  flutter_platform_widgets: ^10.0.1
   provider: ^6.1.2
   logger: ^2.5.0
   community_charts_flutter: ^1.0.4
@@ -53,7 +53,8 @@ dependencies:
   flutter_archive: ^6.0.3
   shared_preferences: ^2.5.3
   url_launcher: ^6.3.2
-  go_router: ^14.6.2
+  go_router: ^17.0.1
+  audioplayers: ^6.0.0
 
 dev_dependencies:
   flutter_test:
@@ -81,6 +82,8 @@ flutter:
   assets:
     - lib/apps/posture_tracker/assets/
     - lib/apps/heart_tracker/assets/
+    - lib/apps/sound_pulse/assets/
+    - assets/sound_pulse/
 
   # An image asset can refer to one or more resolution-specific "variants", seeq
   # https://flutter.dev/to/resolution-aware-images
