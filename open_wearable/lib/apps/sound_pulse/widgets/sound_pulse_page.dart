@@ -26,6 +26,7 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
   OffsetMode offsetMode = OffsetMode.absolute;
   bool isPlaying = false;
   bool isInitialized = false;
+  bool isSoundPlaying = false;
   Stopwatch stopwatch = Stopwatch();
   int durationMinutes = 0;
   int durationSeconds = 0;
@@ -33,14 +34,17 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
   TextEditingController minController = TextEditingController(text: '0');
   TextEditingController secController = TextEditingController(text: '0');
   String selectedSound = 'beep.mp3';
-  static const List<String> availableSounds = ['beep.mp3', 'beep2.mp3', 'beep3.mp3'];
+  static const List<String> availableSounds = ['beep.mp3'];
   double currentBpm = double.nan;
   double currentIntervalSeconds = 0.0;
 
   @override
   void initState() {
     super.initState();
-    soundPlayer = SoundPlayer(soundAsset: 'lib/apps/sound_pulse/assets/$selectedSound');
+    soundPlayer = SoundPlayer(soundAsset: 'assets/sound_pulse/$selectedSound');
+    soundPlayer.playbackStream.listen((playing) {
+      if (mounted) setState(() => isSoundPlaying = playing);
+    });
     isInitialized = false;
 
     final sensor = widget.ppgSensor;
@@ -119,7 +123,7 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
           int elapsed = stopwatch.elapsed.inSeconds;
           int totalDuration = durationMinutes * 60 + durationSeconds;
           if (elapsed >= totalDuration && totalDuration > 0) {
-            soundPlayer.playOnce('lib/apps/sound_pulse/assets/timer_done.mp3');
+            soundPlayer.playOnce('assets/sound_pulse/timer_done.mp3');
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text("Timer done!", style: TextStyle(color: Colors.white)),
@@ -316,7 +320,17 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
               Card(
                 child: Padding(
                   padding: EdgeInsets.all(10),
-                  child: PlatformText("Elapsed Time: ${isPlaying ? '${stopwatch.elapsed.inMinutes.toString().padLeft(2, '0')}:${(stopwatch.elapsed.inSeconds % 60).toString().padLeft(2, '0')}' : '00:00'}${isPlaying ? ' | Interval: ${currentIntervalSeconds.toStringAsFixed(2)}s' : ''}"),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      PlatformText("Elapsed Time: ${isPlaying ? '${stopwatch.elapsed.inMinutes.toString().padLeft(2, '0')}:${(stopwatch.elapsed.inSeconds % 60).toString().padLeft(2, '0')}' : '00:00'}${isPlaying ? ' | Interval: ${currentIntervalSeconds.toStringAsFixed(2)}s' : ''}"),
+                      SizedBox(width: 10),
+                      Icon(
+                        Icons.volume_up,
+                        color: isSoundPlaying ? Colors.green : Colors.grey,
+                      ),
+                    ],
+                  ),
                 ),
               ),
               SizedBox(height: 20),
