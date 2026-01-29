@@ -12,6 +12,7 @@ class SoundPlayer {
   final StreamController<bool> _playbackController = StreamController<bool>.broadcast();
   final Logger logger = Logger();
   int _currentPlayerIndex = 0;
+  double currentIntervalMs = 1000.0;
 
   Stream<bool> get playbackStream => _playbackController.stream;
 
@@ -32,6 +33,7 @@ class SoundPlayer {
   }
 
   void start(double intervalMs) {
+    currentIntervalMs = intervalMs;
     if (_isPlaying) stop();
     _isPlaying = true;
     logger.d("Starting sound player with interval $intervalMs ms");
@@ -52,9 +54,12 @@ class SoundPlayer {
   }
 
   void updateInterval(double intervalMs) {
+    currentIntervalMs = intervalMs;
     if (_isPlaying) {
-      stop();
-      start(intervalMs);
+      _timer?.cancel();
+      _timer = Timer.periodic(Duration(milliseconds: intervalMs.toInt()), (timer) {
+        _playSound();
+      });
     }
   }
 
@@ -93,14 +98,22 @@ class SoundPlayer {
       await player.setVolume(0.0);
       await player.play(BytesSource(bytes.buffer.asUint8List(), mimeType: _getMimeType(soundAsset)));
       _fadeIn(player);
-      // Get duration and schedule fade out
+      // Get duration and calculate playback rate
       Duration? duration = await player.getDuration();
+      double rate = 1.0;
       if (duration != null) {
-        int fadeOutStartMs = (duration.inMilliseconds - 100).clamp(0, duration.inMilliseconds);
-        Timer(Duration(milliseconds: fadeOutStartMs), () {
-          _fadeOut(player);
-        });
+        double intervalSec = currentIntervalMs / 1000.0;
+        double durSec = duration.inMilliseconds / 1000.0;
+        if (durSec > intervalSec) {
+          rate = durSec / intervalSec;
+        }
+        await player.setPlaybackRate(rate);
       }
+      // Schedule fade out based on rate
+      int fadeOutMs = (700 / rate).round();
+      Timer(Duration(milliseconds: fadeOutMs), () {
+        _fadeOut(player);
+      });
       _playbackController.add(true);
       // Reset after 200ms
       Future.delayed(Duration(milliseconds: 200), () {

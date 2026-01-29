@@ -38,12 +38,32 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
   static const List<String> availableSounds = ['heart-beat.wav'];
   double currentBpm = double.nan;
   double currentIntervalSeconds = 0.0;
+  int playCount = 0;
+  bool pendingUpdate = false;
 
   @override
   void initState() {
     super.initState();
     soundPlayer = SoundPlayer(soundAsset: 'assets/sound_pulse/$selectedSound');
     soundPlayer.playbackStream.listen((playing) {
+      if (playing) {
+        playCount++;
+        if (pendingUpdate) {
+          if (isPlaying && !currentBpm.isNaN) {
+            double effectiveBpm = offsetMode == OffsetMode.absolute ? currentBpm + offsetBpm : currentBpm * (1 + offsetPercent / 100);
+            if (effectiveBpm > 0) {
+              double intervalMs = (60 / effectiveBpm) * 1000;
+              soundPlayer.updateInterval(intervalMs);
+              currentIntervalSeconds = 60 / effectiveBpm;
+            }
+          }
+          pendingUpdate = false;
+        }
+      } else {
+        if (playCount % 9 == 0) {
+          pendingUpdate = true;
+        }
+      }
       if (mounted) setState(() => isSoundPlaying = playing);
     });
     isInitialized = false;
@@ -128,6 +148,8 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
         currentIntervalSeconds = 60 / effectiveBpm;
         stopwatch.reset();
         stopwatch.start();
+        playCount = 0;
+        pendingUpdate = false;
         _timer = Timer.periodic(Duration(seconds: 1), (timer) {
           setState(() {});
           int elapsed = stopwatch.elapsed.inSeconds;
