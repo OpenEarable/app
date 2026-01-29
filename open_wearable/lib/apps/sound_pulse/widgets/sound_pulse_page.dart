@@ -230,6 +230,8 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
       return Center(child: PlatformCircularProgressIndicator());
     }
 
+    int totalDuration = durationMinutes * 60 + durationSeconds;
+
     return ListView(
       children: [
         Padding(
@@ -360,6 +362,10 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
                                   PlatformText("sec"),
                                 ],
                               ),
+                              if (totalDuration < 5) ...[
+                                SizedBox(height: 10),
+                                PlatformText("Duration must be at least 5 seconds.", style: TextStyle(color: Colors.red)),
+                              ],
                             ],
                           ),
                         ),
@@ -418,7 +424,7 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
                     foregroundColor: Colors.white,
                   ),
                 ),
-                onPressed: currentBpm.isNaN || isStarting ? null : () => _togglePlay(currentBpm),
+                onPressed: (currentBpm.isNaN || isStarting || totalDuration < 5) ? null : () => _togglePlay(currentBpm),
                 child: PlatformText(isStarting ? "Starting..." : isPlaying ? "Stop" : "Start"),
               ),
             ],
