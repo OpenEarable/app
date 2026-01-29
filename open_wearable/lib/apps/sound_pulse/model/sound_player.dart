@@ -30,17 +30,27 @@ class SoundPlayer {
     }
   }
 
+  Future<void> playOnce(String asset) async {
+    try {
+      await _audioPlayer.play(AssetSource(asset));
+    } catch (e) {
+      // Ignore if asset not found or invalid
+    }
+  }
+
   Future<void> _playSound() async {
-    // Play a simple beep. For simplicity, use a system sound or tone.
-    // Since audioplayers can play tones, but for now, assume asset.
-    await _audioPlayer.play(AssetSource(soundAsset));
+    try {
+      await _audioPlayer.play(AssetSource(soundAsset));
+    } catch (e) {
+      // Ignore if asset not found or invalid
+    }
   }
 
   bool get isPlaying => _isPlaying;
 
   void dispose() {
-    stop();
     _audioPlayer.dispose();
+    _timer?.cancel();
   }
 
   void changeSound(String newSound) {

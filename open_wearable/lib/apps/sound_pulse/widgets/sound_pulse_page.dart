@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
@@ -23,10 +24,16 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
   double offsetBpm = 0.0; // Offset in BPM
   double offsetPercent = 0.0; // Offset in percent
   OffsetMode offsetMode = OffsetMode.absolute;
-  String selectedSound = 'beep.mp3';
-  static const List<String> availableSounds = ['beep.mp3', 'beep2.mp3', 'beep3.mp3'];
   bool isPlaying = false;
   bool isInitialized = false;
+  Stopwatch stopwatch = Stopwatch();
+  int durationMinutes = 0;
+  int durationSeconds = 0;
+  Timer? _timer;
+  TextEditingController minController = TextEditingController(text: '0');
+  TextEditingController secController = TextEditingController(text: '0');
+  String selectedSound = 'beep.mp3';
+  static const List<String> availableSounds = ['beep.mp3', 'beep2.mp3', 'beep3.mp3'];
 
   @override
   void initState() {
@@ -77,12 +84,17 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
   @override
   void dispose() {
     soundPlayer.dispose();
+    _timer?.cancel();
+    minController.dispose();
+    secController.dispose();
     super.dispose();
   }
 
   void _togglePlay(double bpm) {
     if (isPlaying) {
       soundPlayer.stop();
+      _timer?.cancel();
+      stopwatch.stop();
       setState(() => isPlaying = false);
     } else {
       double effectiveBpm;
@@ -94,6 +106,24 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
       if (effectiveBpm > 0) {
         double intervalMs = (60 / effectiveBpm) * 1000;
         soundPlayer.start(intervalMs);
+        stopwatch.reset();
+        stopwatch.start();
+        _timer = Timer.periodic(Duration(seconds: 1), (timer) {
+          setState(() {});
+          int elapsed = stopwatch.elapsed.inSeconds;
+          int totalDuration = durationMinutes * 60 + durationSeconds;
+          if (elapsed >= totalDuration && totalDuration > 0) {
+            soundPlayer.playOnce('lib/apps/sound_pulse/assets/timer_done.mp3');
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("Timer done!", style: TextStyle(color: Colors.white)),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 3),
+              ),
+            );
+            _togglePlay(bpm);
+          }
+        });
         setState(() => isPlaying = true);
       }
     }
@@ -197,6 +227,71 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
                       },
                     ),
                   ],
+                  SizedBox(height: 20),
+                  if (isPlaying) ...[
+                    Card(
+                      color: Colors.blue.shade50,
+                      child: Padding(
+                        padding: EdgeInsets.all(10),
+                        child: PlatformText(
+                          "Elapsed: ${stopwatch.elapsed.inMinutes.toString().padLeft(2,'0')}:${(stopwatch.elapsed.inSeconds % 60).toString().padLeft(2,'0')}",
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 10),
+                  ],
+                  Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(10),
+                      child: Column(
+                        children: [
+                          PlatformText("Set Duration"),
+                          SizedBox(height: 10),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: PlatformTextField(
+                                  controller: minController,
+                                  keyboardType: TextInputType.number,
+                                  textAlign: TextAlign.center,
+                                  onChanged: (v) {
+                                    int val = int.tryParse(v) ?? 0;
+                                    if (val < 0) val = 0;
+                                    if (val > 999) val = 999; // arbitrary max
+                                    setState(() => durationMinutes = val);
+                                    minController.text = val.toString();
+                                    minController.selection = TextSelection.fromPosition(TextPosition(offset: minController.text.length));
+                                  },
+                                ),
+                              ),
+                              SizedBox(width: 10),
+                              PlatformText("min"),
+                              SizedBox(width: 20),
+                              Expanded(
+                                child: PlatformTextField(
+                                  controller: secController,
+                                  keyboardType: TextInputType.number,
+                                  textAlign: TextAlign.center,
+                                  onChanged: (v) {
+                                    int val = int.tryParse(v) ?? 0;
+                                    if (val < 0) val = 0;
+                                    if (val > 59) val = 59;
+                                    setState(() => durationSeconds = val);
+                                    secController.text = val.toString();
+                                    secController.selection = TextSelection.fromPosition(TextPosition(offset: secController.text.length));
+                                  },
+                                ),
+                              ),
+                              SizedBox(width: 10),
+                              PlatformText("sec"),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                   SizedBox(height: 20),
                   PlatformText("Sound File"),
                   DropdownButton<String>(
