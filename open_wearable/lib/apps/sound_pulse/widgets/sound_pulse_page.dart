@@ -6,6 +6,9 @@ import 'package:open_wearable/apps/heart_tracker/model/ppg_filter.dart';
 import 'package:open_wearable/apps/sound_pulse/model/sound_player.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 import 'package:provider/provider.dart';
+import 'dart:io';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
 
 enum OffsetMode { absolute, percentual }
 
@@ -40,6 +43,8 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
   double currentIntervalSeconds = 0.0;
   int playCount = 0;
   bool pendingUpdate = false;
+  bool isRecording = false;
+  List<Map<String, dynamic>> sessionData = [];
 
   @override
   void initState() {
@@ -56,6 +61,13 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
               soundPlayer.updateInterval(intervalMs);
               currentIntervalSeconds = 60 / effectiveBpm;
             }
+          }
+          if (isRecording) {
+            sessionData.add({
+              'timestamp': DateTime.now().toIso8601String(),
+              'bpm': currentBpm,
+              'interval': currentIntervalSeconds,
+            });
           }
           pendingUpdate = false;
         }
@@ -129,6 +141,9 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
         isPlaying = false;
         isStarting = false;
       });
+      if (isRecording && sessionData.isNotEmpty) {
+        _exportCSV();
+      }
     } else {
       setState(() => isStarting = true);
       double effectiveBpm;
@@ -150,6 +165,14 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
         stopwatch.start();
         playCount = 0;
         pendingUpdate = false;
+        if (isRecording) {
+          sessionData.clear();
+          sessionData.add({
+            'timestamp': DateTime.now().toIso8601String(),
+            'bpm': currentBpm,
+            'interval': currentIntervalSeconds,
+          });
+        }
         _timer = Timer.periodic(Duration(seconds: 1), (timer) {
           setState(() {});
           int elapsed = stopwatch.elapsed.inSeconds;
@@ -171,6 +194,18 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
         setState(() => isStarting = false);
       }
     }
+  }
+
+  Future<void> _exportCSV() async {
+    String csv = 'Timestamp,BPM,Interval\n';
+    for (var record in sessionData) {
+      csv += '${record['timestamp']},${record['bpm']},${record['interval']}\n';
+    }
+    Directory tempDir = await getTemporaryDirectory();
+    String filePath = '${tempDir.path}/session_data.csv';
+    File file = File(filePath);
+    await file.writeAsString(csv);
+    await Share.shareXFiles([XFile(filePath)], text: 'Session Data CSV');
   }
 
   @override
@@ -349,6 +384,14 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
                     ],
                   ),
                 ),
+              ),
+              CheckboxListTile(
+                title: PlatformText("Record Session"),
+                value: isRecording,
+                enabled: !isPlaying && !isStarting,
+                onChanged: (value) {
+                  setState(() => isRecording = value ?? false);
+                },
               ),
               SizedBox(height: 20),
               Card(
