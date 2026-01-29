@@ -171,76 +171,97 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
                     ],
                   ),
                   SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Radio<OffsetMode>(
-                        value: OffsetMode.absolute,
-                        groupValue: offsetMode,
-                        onChanged: (value) => setState(() => offsetMode = value!),
+                  IgnorePointer(
+                    ignoring: isPlaying,
+                    child: Opacity(
+                      opacity: isPlaying ? 0.5 : 1.0,
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Radio<OffsetMode>(
+                                value: OffsetMode.absolute,
+                                groupValue: offsetMode,
+                                onChanged: (value) => setState(() => offsetMode = value!),
+                              ),
+                              PlatformText("Absolute"),
+                              SizedBox(width: 20),
+                              Radio<OffsetMode>(
+                                value: OffsetMode.percentual,
+                                groupValue: offsetMode,
+                                onChanged: (value) => setState(() => offsetMode = value!),
+                              ),
+                              PlatformText("Percentual"),
+                            ],
+                          ),
+                          SizedBox(height: 20),
+                          if (offsetMode == OffsetMode.absolute) ...[
+                            PlatformText("Offset (BPM): ${offsetBpm.toInt()}"),
+                            Slider(
+                              value: offsetBpm,
+                              min: -30,
+                              max: 30,
+                              divisions: 60,
+                              onChanged: (value) {
+                                setState(() => offsetBpm = value);
+                                if (isPlaying && !bpm.isNaN) {
+                                  double effectiveBpm = bpm + offsetBpm;
+                                  if (effectiveBpm > 0) {
+                                    double intervalMs = (60 / effectiveBpm) * 1000;
+                                    soundPlayer.updateInterval(intervalMs);
+                                  }
+                                }
+                              },
+                            ),
+                          ] else ...[
+                            PlatformText("Offset (%): ${offsetPercent.toInt()}"),
+                            Slider(
+                              value: offsetPercent,
+                              min: -50,
+                              max: 50,
+                              divisions: 100,
+                              onChanged: (value) {
+                                setState(() => offsetPercent = value);
+                                if (isPlaying && !bpm.isNaN) {
+                                  double effectiveBpm = bpm * (1 + offsetPercent / 100);
+                                  if (effectiveBpm > 0) {
+                                    double intervalMs = (60 / effectiveBpm) * 1000;
+                                    soundPlayer.updateInterval(intervalMs);
+                                  }
+                                }
+                              },
+                            ),
+                          ],
+                          SizedBox(height: 20),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              PlatformText("Sound: "),
+                              DropdownButton<String>(
+                                value: selectedSound,
+                                items: availableSounds.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                                onChanged: (v) {
+                                  if (v != null) {
+                                    setState(() => selectedSound = v);
+                                    soundPlayer.changeSound(v);
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                      PlatformText("Absolute"),
-                      SizedBox(width: 20),
-                      Radio<OffsetMode>(
-                        value: OffsetMode.percentual,
-                        groupValue: offsetMode,
-                        onChanged: (value) => setState(() => offsetMode = value!),
-                      ),
-                      PlatformText("Percentual"),
-                    ],
+                    ),
                   ),
                   SizedBox(height: 20),
-                  if (offsetMode == OffsetMode.absolute) ...[
-                    PlatformText("Offset (BPM): ${offsetBpm.toInt()}"),
-                    Slider(
-                      value: offsetBpm,
-                      min: -30,
-                      max: 30,
-                      divisions: 60,
-                      onChanged: (value) {
-                        setState(() => offsetBpm = value);
-                        if (isPlaying && !bpm.isNaN) {
-                          double effectiveBpm = bpm + offsetBpm;
-                          if (effectiveBpm > 0) {
-                            double intervalMs = (60 / effectiveBpm) * 1000;
-                            soundPlayer.updateInterval(intervalMs);
-                          }
-                        }
-                      },
+                  Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(10),
+                      child: PlatformText("Elapsed Time: ${isPlaying ? '${stopwatch.elapsed.inMinutes.toString().padLeft(2, '0')}:${(stopwatch.elapsed.inSeconds % 60).toString().padLeft(2, '0')}' : '00:00'}"),
                     ),
-                  ] else ...[
-                    PlatformText("Offset (%): ${offsetPercent.toInt()}"),
-                    Slider(
-                      value: offsetPercent,
-                      min: -50,
-                      max: 50,
-                      divisions: 100,
-                      onChanged: (value) {
-                        setState(() => offsetPercent = value);
-                        if (isPlaying && !bpm.isNaN) {
-                          double effectiveBpm = bpm * (1 + offsetPercent / 100);
-                          if (effectiveBpm > 0) {
-                            double intervalMs = (60 / effectiveBpm) * 1000;
-                            soundPlayer.updateInterval(intervalMs);
-                          }
-                        }
-                      },
-                    ),
-                  ],
+                  ),
                   SizedBox(height: 20),
-                  if (isPlaying) ...[
-                    Card(
-                      color: Colors.blue.shade50,
-                      child: Padding(
-                        padding: EdgeInsets.all(10),
-                        child: PlatformText(
-                          "Elapsed: ${stopwatch.elapsed.inMinutes.toString().padLeft(2,'0')}:${(stopwatch.elapsed.inSeconds % 60).toString().padLeft(2,'0')}",
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 10),
-                  ],
                   Card(
                     child: Padding(
                       padding: EdgeInsets.all(10),
@@ -256,6 +277,7 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
                                   controller: minController,
                                   keyboardType: TextInputType.number,
                                   textAlign: TextAlign.center,
+                                  enabled: !isPlaying,
                                   onChanged: (v) {
                                     int val = int.tryParse(v) ?? 0;
                                     if (val < 0) val = 0;
@@ -274,6 +296,7 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
                                   controller: secController,
                                   keyboardType: TextInputType.number,
                                   textAlign: TextAlign.center,
+                                  enabled: !isPlaying,
                                   onChanged: (v) {
                                     int val = int.tryParse(v) ?? 0;
                                     if (val < 0) val = 0;
@@ -293,17 +316,13 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
                     ),
                   ),
                   SizedBox(height: 20),
-                  PlatformText("Sound File"),
-                  DropdownButton<String>(
-                    value: selectedSound,
-                    onChanged: (value) {
-                      setState(() => selectedSound = value!);
-                      soundPlayer.changeSound(value!);
-                    },
-                    items: availableSounds.map((sound) => DropdownMenuItem(value: sound, child: PlatformText(sound))).toList(),
-                  ),
-                  SizedBox(height: 20),
                   PlatformElevatedButton(
+                    material: (_, __) => MaterialElevatedButtonData(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isPlaying ? Colors.red : Colors.green,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
                     onPressed: bpm.isNaN ? null : () => _togglePlay(bpm),
                     child: PlatformText(isPlaying ? "Stop" : "Start"),
                   ),
