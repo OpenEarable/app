@@ -34,8 +34,8 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
   Timer? _timer;
   TextEditingController minController = TextEditingController(text: '0');
   TextEditingController secController = TextEditingController(text: '0');
-  String selectedSound = 'beep.mp3';
-  static const List<String> availableSounds = ['beep.mp3'];
+  String selectedSound = 'heart-beat.wav';
+  static const List<String> availableSounds = ['heart-beat.wav'];
   double currentBpm = double.nan;
   double currentIntervalSeconds = 0.0;
 
@@ -314,7 +314,7 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
                           PlatformText("Sound: "),
                           DropdownButton<String>(
                             value: selectedSound,
-                            items: availableSounds.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                            items: availableSounds.map((s) => DropdownMenuItem(value: s, child: Text(s.split('.').first))).toList(),
                             onChanged: (v) {
                               if (v != null) {
                                 setState(() => selectedSound = v);
