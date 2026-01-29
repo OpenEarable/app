@@ -25,6 +25,7 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
   double offsetPercent = 0.0; // Offset in percent
   OffsetMode offsetMode = OffsetMode.absolute;
   bool isPlaying = false;
+  bool isStarting = false;
   bool isInitialized = false;
   bool isSoundPlaying = false;
   Stopwatch stopwatch = Stopwatch();
@@ -99,13 +100,17 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
     super.dispose();
   }
 
-  void _togglePlay(double bpm) {
-    if (isPlaying) {
+  void _togglePlay(double bpm) async {
+    if (isPlaying || isStarting) {
       soundPlayer.stop();
       _timer?.cancel();
       stopwatch.stop();
-      setState(() => isPlaying = false);
+      setState(() {
+        isPlaying = false;
+        isStarting = false;
+      });
     } else {
+      setState(() => isStarting = true);
       double effectiveBpm;
       if (offsetMode == OffsetMode.absolute) {
         effectiveBpm = bpm + offsetBpm;
@@ -114,7 +119,12 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
       }
       if (effectiveBpm > 0) {
         double intervalMs = (60 / effectiveBpm) * 1000;
-        soundPlayer.start(intervalMs);
+        await soundPlayer.playCurrentOnce();
+        await Future.delayed(Duration(seconds: 1)); // Wait for sound to play
+        setState(() {
+          isStarting = false;
+          isPlaying = true;
+        });
         currentIntervalSeconds = 60 / effectiveBpm;
         stopwatch.reset();
         stopwatch.start();
@@ -134,7 +144,9 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
             _togglePlay(bpm);
           }
         });
-        setState(() => isPlaying = true);
+        soundPlayer.start(intervalMs);
+      } else {
+        setState(() => isStarting = false);
       }
     }
   }
@@ -178,9 +190,9 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
               ),
               SizedBox(height: 20),
               IgnorePointer(
-                ignoring: isPlaying,
+                ignoring: isPlaying || isStarting,
                 child: Opacity(
-                  opacity: isPlaying ? 0.5 : 1.0,
+                  opacity: (isPlaying || isStarting) ? 0.5 : 1.0,
                   child: Column(
                     children: [
                       Row(
@@ -341,8 +353,8 @@ class _SoundPulsePageState extends State<SoundPulsePage> {
                     foregroundColor: Colors.white,
                   ),
                 ),
-                onPressed: currentBpm.isNaN ? null : () => _togglePlay(currentBpm),
-                child: PlatformText(isPlaying ? "Stop" : "Start"),
+                onPressed: currentBpm.isNaN || isStarting ? null : () => _togglePlay(currentBpm),
+                child: PlatformText(isStarting ? "Starting..." : isPlaying ? "Stop" : "Start"),
               ),
             ],
           ),

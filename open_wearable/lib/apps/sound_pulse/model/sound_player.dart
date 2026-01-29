@@ -55,6 +55,16 @@ class SoundPlayer {
     }
   }
 
+  Future<void> playCurrentOnce() async {
+    try {
+      final bytes = await rootBundle.load(soundAsset);
+      await _audioPlayer.stop();
+      await _audioPlayer.play(BytesSource(bytes.buffer.asUint8List(), mimeType: 'audio/mpeg'));
+    } catch (e) {
+      logger.e("Error playing current: $e");
+    }
+  }
+
   Future<void> _playSound() async {
     try {
       logger.d("Playing sound: $soundAsset");
