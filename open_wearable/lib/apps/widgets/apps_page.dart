@@ -67,7 +67,7 @@ List<AppInfo> _apps = [
   AppInfo(
     logoPath: "lib/apps/sound_pulse/assets/logo.png",
     title: "Sound Pulse",
-    description: "Relative heart sound feedback",
+    description: "Play sounds relative to your heart rate",
     widget: SelectEarableView(
       startApp: (wearable, _) {
         if (wearable.hasCapability<SensorManager>()) {
