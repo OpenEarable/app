@@ -29,11 +29,15 @@ class SensorConfigurationView extends StatelessWidget {
   }
 
   Widget _buildSmallScreenLayout(
-      BuildContext context, WearablesProvider wearablesProvider) {
+    BuildContext context,
+    WearablesProvider wearablesProvider,
+  ) {
     if (wearablesProvider.wearables.isEmpty) {
       return Center(
-        child: PlatformText("No devices connected",
-            style: Theme.of(context).textTheme.titleLarge),
+        child: PlatformText(
+          "No devices connected",
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
       );
     }
 
@@ -41,8 +45,10 @@ class SensorConfigurationView extends StatelessWidget {
       padding: EdgeInsets.all(10),
       child: wearablesProvider.wearables.isEmpty
           ? Center(
-              child: PlatformText("No devices connected",
-                  style: Theme.of(context).textTheme.titleLarge),
+              child: PlatformText(
+                "No devices connected",
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
             )
           : ListView(
               children: [
@@ -62,8 +68,10 @@ class SensorConfigurationView extends StatelessWidget {
                 _buildSetConfigButton(
                   configProviders: wearablesProvider.wearables
                       // ignore: prefer_iterable_wheretype
-                      .where((wearable) =>
-                          wearable.hasCapability<SensorConfigurationManager>())
+                      .where(
+                        (wearable) => wearable
+                            .hasCapability<SensorConfigurationManager>(),
+                      )
                       .map(
                         (wearable) => wearablesProvider
                             .getSensorConfigurationProvider(wearable),
@@ -75,8 +83,9 @@ class SensorConfigurationView extends StatelessWidget {
     );
   }
 
-  Widget _buildSetConfigButton(
-      {required List<SensorConfigurationProvider> configProviders}) {
+  Widget _buildSetConfigButton({
+    required List<SensorConfigurationProvider> configProviders,
+  }) {
     return Builder(
       builder: (context) => PlatformElevatedButton(
         onPressed: () async {
@@ -152,7 +161,9 @@ class SensorConfigurationView extends StatelessWidget {
 
   // ignore: unused_element
   Widget _buildLargeScreenLayout(
-      BuildContext context, WearablesProvider wearablesProvider) {
+    BuildContext context,
+    WearablesProvider wearablesProvider,
+  ) {
     final List<Wearable> devices = wearablesProvider.wearables;
     List<StaggeredGridTile> tiles =
         _generateTiles(devices, wearablesProvider.sensorConfigurationProviders);
@@ -169,8 +180,10 @@ class SensorConfigurationView extends StatelessWidget {
             mainAxisExtent: 100.0,
             child: _buildSetConfigButton(
               configProviders: devices
-                  .map((device) =>
-                      wearablesProvider.getSensorConfigurationProvider(device))
+                  .map(
+                    (device) => wearablesProvider
+                        .getSensorConfigurationProvider(device),
+                  )
                   .toList(),
             ),
           ),
@@ -201,8 +214,10 @@ class SensorConfigurationView extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Center(
-                    child: PlatformText("No devices connected",
-                        style: Theme.of(context).textTheme.titleLarge),
+                    child: PlatformText(
+                      "No devices connected",
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
                   ),
                 ),
               ),
@@ -211,8 +226,10 @@ class SensorConfigurationView extends StatelessWidget {
   }
 
   /// Generates a dynamic quilted grid layout based on the device properties
-  List<StaggeredGridTile> _generateTiles(List<Wearable> devices,
-      Map<Wearable, SensorConfigurationProvider> notifiers) {
+  List<StaggeredGridTile> _generateTiles(
+    List<Wearable> devices,
+    Map<Wearable, SensorConfigurationProvider> notifiers,
+  ) {
     // Sort devices by size dynamically for a balanced layout
     devices.sort((a, b) => _getGridSpanForDevice(b) - _getGridSpanForDevice(a));
 

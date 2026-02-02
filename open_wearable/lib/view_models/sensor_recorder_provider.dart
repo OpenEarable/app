@@ -137,7 +137,8 @@ class SensorRecorderProvider with ChangeNotifier {
       });
 
       logger.i(
-          "BLE microphone streaming started with device: ${_selectedBLEDevice!.label}");
+        "BLE microphone streaming started with device: ${_selectedBLEDevice!.label}",
+      );
       notifyListeners();
       return true;
     } catch (e) {
@@ -242,7 +243,8 @@ class SensorRecorderProvider with ChangeNotifier {
       _isAudioRecording = true;
 
       logger.i(
-          "Audio recording started: $_currentAudioPath with device: ${_selectedBLEDevice?.label ?? 'default'}");
+        "Audio recording started: $_currentAudioPath with device: ${_selectedBLEDevice?.label ?? 'default'}",
+      );
 
       _amplitudeSub = _audioRecorder
           .onAmplitudeChanged(const Duration(milliseconds: 100))

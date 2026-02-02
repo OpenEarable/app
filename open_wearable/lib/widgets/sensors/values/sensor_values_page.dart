@@ -165,8 +165,11 @@ class _SensorValuesPageState extends State<SensorValuesPage> {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.fiber_manual_record,
-                                color: Colors.red, size: 16),
+                            Icon(
+                              Icons.fiber_manual_record,
+                              color: Colors.red,
+                              size: 16,
+                            ),
                             SizedBox(width: 8),
                             Text(
                               'AUDIO WAVEFORM',
@@ -207,7 +210,8 @@ class _SensorValuesPageState extends State<SensorValuesPage> {
                             : CustomPaint(
                                 size: Size(double.infinity, 100),
                                 painter: WaveformPainter(
-                                    recorderProvider.waveformData),
+                                  recorderProvider.waveformData,
+                                ),
                               ),
                       ],
                     ),
@@ -294,7 +298,8 @@ class _SensorValuesPageState extends State<SensorValuesPage> {
                           : CustomPaint(
                               size: Size(double.infinity, 80),
                               painter: WaveformPainter(
-                                  recorderProvider.waveformData),
+                                recorderProvider.waveformData,
+                              ),
                             ),
                     ],
                   ),
