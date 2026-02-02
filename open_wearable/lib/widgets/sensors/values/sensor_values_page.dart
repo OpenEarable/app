@@ -335,24 +335,65 @@ class _SensorValuesPageState extends State<SensorValuesPage>
   }
 
   Widget _buildAudioUI(SensorRecorderProvider recorderProvider) {
+    // If initializing, show a loading card
+    if (_isInitializing && Platform.isAndroid) {
+      return Card(
+        child: Container(
+          height: 100,
+          alignment: Alignment.center,
+          child: const CircularProgressIndicator(),
+        ),
+      );
+    }
+
     return Column(
       children: [
         if (recorderProvider.isBLEMicrophoneStreamingEnabled)
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: CustomPaint(
-                size: const Size(double.infinity, 100),
-                painter: WaveformPainter(recorderProvider.waveformData),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.fiber_manual_record,
+                        color: Colors.red,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'AUDIO WAVEFORM ${recorderProvider.isRecording ? "(RECORDING)" : ""}',
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  CustomPaint(
+                    size: const Size(double.infinity, 100),
+                    painter: WaveformPainter(recorderProvider.waveformData),
+                  ),
+                ],
               ),
             ),
           )
         else if (_errorMessage != null)
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: PlatformText(
-              _errorMessage!,
-              style: const TextStyle(color: Colors.red),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.red),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: PlatformText(
+                      _errorMessage!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         const SizedBox(height: 10),
