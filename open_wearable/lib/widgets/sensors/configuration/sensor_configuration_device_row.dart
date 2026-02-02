@@ -349,9 +349,17 @@ class _SensorConfigurationDeviceRowState
       if (!mounted) return;
       setState(() {
         _content = [
+<<<<<<< HEAD
           const Padding(
             padding: EdgeInsets.all(12),
             child: Text('This device does not support sensor configuration.'),
+=======
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: PlatformText(
+              "This device does not support configuring sensors.",
+            ),
+>>>>>>> 445a3da (add missing trailing commas)
           ),
         ];
       });
