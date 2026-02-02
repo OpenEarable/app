@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -292,7 +293,11 @@ class SensorConfigurationView extends StatelessWidget {
         final SensorConfiguration config = entry.$1;
         final SensorConfigurationValue value = entry.$2;
         if (config.name.toLowerCase().contains('microphone')) {
-          shouldEnableMicrophoneStreaming = true;
+          final options =
+              target.provider.getSelectedConfigurationOptions(config);
+          if (options.any((opt) => opt is StreamSensorConfigOption)) {
+            shouldEnableMicrophoneStreaming = true;
+          }
         }
         // Always push the selected canonical value to the primary device on
         // apply. This also heals primary-side drift/unknown states.
