@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
@@ -70,7 +71,13 @@ class SensorConfigurationValueRow extends StatelessWidget {
                     if (sensorConfiguration is ConfigurableSensorConfiguration)
                       ...(sensorConfigNotifier.getSelectedConfigurationOptions(
                         sensorConfiguration,
-                      )).map(
+                      )).where((option) {
+                        if (Platform.isAndroid) return true;
+                        return !(sensorConfiguration.name
+                                .toLowerCase()
+                                .contains('microphone') &&
+                            option is StreamSensorConfigOption);
+                      }).map(
                         (option) {
                           return Icon(
                             getSensorConfigurationOptionIcon(option),

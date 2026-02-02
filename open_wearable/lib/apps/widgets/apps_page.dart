@@ -1,11 +1,8 @@
-import 'dart:io';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
-import 'package:open_wearable/apps/audio_recorder/view/audio_recorder_view.dart';
 import 'package:open_wearable/apps/heart_tracker/widgets/heart_tracker_page.dart';
 import 'package:open_wearable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_wearable/apps/posture_tracker/view/posture_tracker_view.dart';
@@ -71,15 +68,6 @@ List<AppInfo> _apps = [
       },
     ),
   ),
-  /*
-  if (Platform.isAndroid)
-    AppInfo(
-      logoPath: "lib/apps/audio_recorder/assets/logo.png",
-      title: "Audio Recorder",
-      description: "Record system audio and Bluetooth streams",
-      widget: const AudioRecorderView(), // Your audio recorder page
-    ),
-    */
 ];
 
 class AppsPage extends StatelessWidget {

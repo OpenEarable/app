@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
@@ -13,35 +14,54 @@ class SensorConfigurationDetailView extends StatefulWidget {
     super.key,
     required this.sensorConfiguration,
   });
-  
+
   @override
   State<StatefulWidget> createState() {
     return _SensorConfigurationDetailViewState();
   }
 }
 
-class _SensorConfigurationDetailViewState extends State<SensorConfigurationDetailView> {
+class _SensorConfigurationDetailViewState
+    extends State<SensorConfigurationDetailView> {
   SensorConfigurationValue? _selectedValue;
 
   @override
   Widget build(BuildContext context) {
-    SensorConfigurationProvider sensorConfigNotifier = Provider.of<SensorConfigurationProvider>(context);
-    _selectedValue = sensorConfigNotifier.getSelectedConfigurationValue(widget.sensorConfiguration);
+    SensorConfigurationProvider sensorConfigNotifier =
+        Provider.of<SensorConfigurationProvider>(context);
+    _selectedValue = sensorConfigNotifier
+        .getSelectedConfigurationValue(widget.sensorConfiguration);
 
     return ListView(
       children: [
         if (widget.sensorConfiguration is ConfigurableSensorConfiguration)
-          ...(widget.sensorConfiguration as ConfigurableSensorConfiguration).availableOptions.map((option) {
+          ...(widget.sensorConfiguration as ConfigurableSensorConfiguration)
+              .availableOptions
+              .where((option) {
+            if (Platform.isAndroid) return true;
+            return !(widget.sensorConfiguration.name
+                    .toLowerCase()
+                    .contains('microphone') &&
+                option is StreamSensorConfigOption);
+          }).map((option) {
             return PlatformListTile(
               leading: Icon(getSensorConfigurationOptionIcon(option)),
               title: PlatformText(option.name),
               trailing: PlatformSwitch(
-                value: sensorConfigNotifier.getSelectedConfigurationOptions(widget.sensorConfiguration).contains(option),
+                value: sensorConfigNotifier
+                    .getSelectedConfigurationOptions(widget.sensorConfiguration)
+                    .contains(option),
                 onChanged: (value) {
                   if (value) {
-                    sensorConfigNotifier.addSensorConfigurationOption(widget.sensorConfiguration, option);
+                    sensorConfigNotifier.addSensorConfigurationOption(
+                      widget.sensorConfiguration,
+                      option,
+                    );
                   } else {
-                    sensorConfigNotifier.removeSensorConfigurationOption(widget.sensorConfiguration, option);
+                    sensorConfigNotifier.removeSensorConfigurationOption(
+                      widget.sensorConfiguration,
+                      option,
+                    );
                   }
                 },
               ),
@@ -52,13 +72,22 @@ class _SensorConfigurationDetailViewState extends State<SensorConfigurationDetai
           title: PlatformText("Sampling Rate"),
           trailing: Material(
             child: DropdownButton<SensorConfigurationValue>(
-              value: sensorConfigNotifier.getSelectedConfigurationValue(widget.sensorConfiguration),
-              items: sensorConfigNotifier.getSensorConfigurationValues(widget.sensorConfiguration, distinct: true).where(
+              value: sensorConfigNotifier
+                  .getSelectedConfigurationValue(widget.sensorConfiguration),
+              items: sensorConfigNotifier
+                  .getSensorConfigurationValues(
+                widget.sensorConfiguration,
+                distinct: true,
+              )
+                  .where(
                 (value) {
                   if (value is SensorFrequencyConfigurationValue) {
-                    return value.frequencyHz >= 0.1
-                      || value.frequencyHz == 0
-                      || sensorConfigNotifier.getSelectedConfigurationValue(widget.sensorConfiguration) == value;
+                    return value.frequencyHz >= 0.1 ||
+                        value.frequencyHz == 0 ||
+                        sensorConfigNotifier.getSelectedConfigurationValue(
+                              widget.sensorConfiguration,
+                            ) ==
+                            value;
                   }
                   return true;
                 },
@@ -66,7 +95,7 @@ class _SensorConfigurationDetailViewState extends State<SensorConfigurationDetai
                 if (value is SensorFrequencyConfigurationValue) {
                   return DropdownMenuItem<SensorConfigurationValue>(
                     value: value,
-                      child: PlatformText(value.frequencyHz.toStringAsFixed(2)),
+                    child: PlatformText(value.frequencyHz.toStringAsFixed(2)),
                   );
                 }
                 return DropdownMenuItem<SensorConfigurationValue>(
@@ -79,7 +108,10 @@ class _SensorConfigurationDetailViewState extends State<SensorConfigurationDetai
                   _selectedValue = value;
                 });
                 if (_selectedValue != null) {
-                  sensorConfigNotifier.addSensorConfiguration(widget.sensorConfiguration, _selectedValue!);
+                  sensorConfigNotifier.addSensorConfiguration(
+                    widget.sensorConfiguration,
+                    _selectedValue!,
+                  );
                 }
               },
             ),

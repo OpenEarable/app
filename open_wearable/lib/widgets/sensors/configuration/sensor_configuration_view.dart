@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -93,17 +94,18 @@ class SensorConfigurationView extends StatelessWidget {
             context,
             listen: false,
           );
-          bool shouldEnableMicrophoneStreaming =
+          bool shouldEnableMicrophoneStreaming = Platform.isAndroid &&
               configProviders.any((notifier) {
-            return notifier.getSelectedConfigurations().any((entry) {
-              final config = entry.$1;
-              final selectedOptions =
-                  notifier.getSelectedConfigurationOptions(config);
-              return config is ConfigurableSensorConfiguration &&
-                  config.name.toLowerCase().contains('microphone') &&
-                  selectedOptions.any((opt) => opt is StreamSensorConfigOption);
-            });
-          });
+                return notifier.getSelectedConfigurations().any((entry) {
+                  final config = entry.$1;
+                  final selectedOptions =
+                      notifier.getSelectedConfigurationOptions(config);
+                  return config is ConfigurableSensorConfiguration &&
+                      config.name.toLowerCase().contains('microphone') &&
+                      selectedOptions
+                          .any((opt) => opt is StreamSensorConfigOption);
+                });
+              });
 
           // Start or stop streaming based on configuration
           if (shouldEnableMicrophoneStreaming &&

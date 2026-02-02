@@ -6,6 +6,7 @@ import '../../../view_models/sensor_configuration_provider.dart';
 import '../../../view_models/sensor_configuration_storage.dart';
 
 import '../../../models/logger.dart';
+
 class SaveConfigRow extends StatefulWidget {
   const SaveConfigRow({super.key});
 
