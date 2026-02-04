@@ -38,8 +38,9 @@ class _FirmwareListState extends State<FirmwareList> {
         Provider.of<FirmwareUpdateRequestProvider>(context, listen: false)
             .selectedWearable;
     if (wearable != null && wearable.hasCapability<DeviceFirmwareVersion>()) {
-      final version =
-          await wearable.requireCapability<DeviceFirmwareVersion>().readDeviceFirmwareVersion();
+      final version = await wearable
+          .requireCapability<DeviceFirmwareVersion>()
+          .readDeviceFirmwareVersion();
       setState(() {
         firmwareVersion = version;
       });
@@ -193,7 +194,7 @@ class _FirmwareListState extends State<FirmwareList> {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
-      color: Colors.orange.withOpacity(0.2),
+      color: Colors.orange.withValues(alpha: 0.2),
       child: Row(
         children: [
           Icon(Icons.warning, color: Colors.orange, size: 20),
@@ -214,7 +215,10 @@ class _FirmwareListState extends State<FirmwareList> {
   }
 
   Widget _firmwareListItem(
-      FirmwareEntry entry, FirmwareEntry? latestStable, int index) {
+    FirmwareEntry entry,
+    FirmwareEntry? latestStable,
+    int index,
+  ) {
     final firmware = entry.firmware;
     final isBeta = entry.isBeta;
     final isLatestStable = entry == latestStable;
