@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
+import 'package:path_provider/path_provider.dart';
+import 'package:record/record.dart';
 
 import '../models/logger.dart';
 
@@ -13,11 +15,159 @@ class SensorRecorderProvider with ChangeNotifier {
   bool _hasSensorsConnected = false;
   String? _currentDirectory;
   DateTime? _recordingStart;
+  final AudioRecorder _audioRecorder = AudioRecorder();
+  bool _isAudioRecording = false;
+  String? _currentAudioPath;
+  StreamSubscription<Amplitude>? _amplitudeSub;
 
   bool get isRecording => _isRecording;
   bool get hasSensorsConnected => _hasSensorsConnected;
   String? get currentDirectory => _currentDirectory;
   DateTime? get recordingStart => _recordingStart;
+
+  final List<double> _waveformData = [];
+  List<double> get waveformData => List.unmodifiable(_waveformData);
+
+  InputDevice? _selectedBLEDevice;
+
+  bool _isBLEMicrophoneStreamingEnabled = false;
+  bool get isBLEMicrophoneStreamingEnabled => _isBLEMicrophoneStreamingEnabled;
+
+  // Path for temporary streaming file
+  String? _streamingPath;
+  bool _isStreamingActive = false;
+
+  Future<void> _selectBLEDevice() async {
+    try {
+      final devices = await _audioRecorder.listInputDevices();
+
+      try {
+        _selectedBLEDevice = devices.firstWhere(
+          (device) =>
+              device.label.toLowerCase().contains('bluetooth') ||
+              device.label.toLowerCase().contains('ble') ||
+              device.label.toLowerCase().contains('headset') ||
+              device.label.toLowerCase().contains('openearable'),
+        );
+        logger.i("Selected audio input device: ${_selectedBLEDevice!.label}");
+      } catch (e) {
+        _selectedBLEDevice = null;
+        logger.w("No BLE headset found");
+      }
+    } catch (e) {
+      logger.e("Error selecting BLE device: $e");
+      _selectedBLEDevice = null;
+    }
+  }
+
+  Future<bool> startBLEMicrophoneStream() async {
+    if (!Platform.isAndroid) {
+      logger.w("BLE microphone streaming only supported on Android");
+      return false;
+    }
+
+    if (_isStreamingActive) {
+      logger.i("BLE microphone streaming already active");
+      return true;
+    }
+
+    try {
+      if (!await _audioRecorder.hasPermission()) {
+        logger.w("No microphone permission for streaming");
+        return false;
+      }
+
+      await _selectBLEDevice();
+
+      if (_selectedBLEDevice == null) {
+        logger.w("No BLE headset detected, cannot start streaming");
+        return false;
+      }
+
+      const encoder = AudioEncoder.wav;
+      if (!await _audioRecorder.isEncoderSupported(encoder)) {
+        logger.w("WAV encoder not supported");
+        return false;
+      }
+
+      final tempDir = await getTemporaryDirectory();
+      _streamingPath =
+          '${tempDir.path}/ble_stream_${DateTime.now().millisecondsSinceEpoch}.wav';
+
+      final config = RecordConfig(
+        encoder: encoder,
+        sampleRate: 48000,
+        bitRate: 768000,
+        numChannels: 1,
+        device: _selectedBLEDevice,
+      );
+
+      await _audioRecorder.start(config, path: _streamingPath!);
+      _isStreamingActive = true;
+      _isBLEMicrophoneStreamingEnabled = true;
+
+      // Set up amplitude monitoring for waveform display
+      _amplitudeSub?.cancel();
+      _amplitudeSub = _audioRecorder
+          .onAmplitudeChanged(const Duration(milliseconds: 100))
+          .listen((amp) {
+        final normalized = (amp.current + 50) / 50;
+        _waveformData.add(normalized.clamp(0.0, 2.0));
+
+        if (_waveformData.length > 100) {
+          _waveformData.removeAt(0);
+        }
+
+        notifyListeners();
+      });
+
+      logger.i(
+        "BLE microphone streaming started with device: ${_selectedBLEDevice!.label}",
+      );
+      notifyListeners();
+      return true;
+    } catch (e) {
+      logger.e("Failed to start BLE microphone streaming: $e");
+      _isStreamingActive = false;
+      _isBLEMicrophoneStreamingEnabled = false;
+      _streamingPath = null;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<void> stopBLEMicrophoneStream() async {
+    if (!_isStreamingActive) {
+      return;
+    }
+
+    try {
+      await _audioRecorder.stop();
+      _amplitudeSub?.cancel();
+      _amplitudeSub = null;
+      _isStreamingActive = false;
+      _isBLEMicrophoneStreamingEnabled = false;
+      _waveformData.clear();
+
+      // Clean up temporary streaming file
+      if (_streamingPath != null) {
+        try {
+          final file = File(_streamingPath!);
+          if (await file.exists()) {
+            await file.delete();
+          }
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+        _streamingPath = null;
+      }
+
+      logger.i("BLE microphone streaming stopped");
+      notifyListeners();
+    } catch (e) {
+      logger.e("Error stopping BLE microphone streaming: $e");
+    }
+  }
 
   void startRecording(String dirname) async {
     _isRecording = true;
@@ -28,10 +178,101 @@ class SensorRecorderProvider with ChangeNotifier {
       await _startRecorderForWearable(wearable, dirname);
     }
 
+    await _startAudioRecording(
+      dirname,
+    );
+
     notifyListeners();
   }
 
-  void stopRecording() {
+  Future<void> _startAudioRecording(String recordingFolderPath) async {
+    if (!Platform.isAndroid) return;
+
+    // Only start recording if BLE microphone streaming is enabled
+    if (!_isBLEMicrophoneStreamingEnabled) {
+      logger
+          .w("BLE microphone streaming not enabled, skipping audio recording");
+      return;
+    }
+
+    // Stop streaming session before starting actual recording
+    if (_isStreamingActive) {
+      await _audioRecorder.stop();
+      _amplitudeSub?.cancel();
+      _amplitudeSub = null;
+      _isStreamingActive = false;
+
+      // Clean up temporary streaming file
+      if (_streamingPath != null) {
+        try {
+          final file = File(_streamingPath!);
+          if (await file.exists()) {
+            await file.delete();
+          }
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+        _streamingPath = null;
+      }
+    }
+
+    try {
+      if (!await _audioRecorder.hasPermission()) {
+        logger.w("No microphone permission for recording");
+        return;
+      }
+
+      await _selectBLEDevice();
+
+      if (_selectedBLEDevice == null) {
+        logger.w("No BLE headset detected, skipping audio recording");
+        return;
+      }
+
+      const encoder = AudioEncoder.wav;
+      if (!await _audioRecorder.isEncoderSupported(encoder)) {
+        logger.w("WAV encoder not supported");
+        return;
+      }
+
+      final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
+      final audioPath = '$recordingFolderPath/audio_$timestamp.wav';
+
+      final config = RecordConfig(
+        encoder: encoder,
+        sampleRate: 48000, // Set to 48kHz for BLE audio quality
+        bitRate: 768000, // 16-bit * 48kHz * 1 channel = 768 kbps
+        numChannels: 1,
+        device: _selectedBLEDevice,
+      );
+
+      await _audioRecorder.start(config, path: audioPath);
+      _currentAudioPath = audioPath;
+      _isAudioRecording = true;
+
+      logger.i(
+        "Audio recording started: $_currentAudioPath with device: ${_selectedBLEDevice?.label ?? 'default'}",
+      );
+
+      _amplitudeSub = _audioRecorder
+          .onAmplitudeChanged(const Duration(milliseconds: 100))
+          .listen((amp) {
+        final normalized = (amp.current + 50) / 50;
+        _waveformData.add(normalized.clamp(0.0, 2.0));
+
+        if (_waveformData.length > 100) {
+          _waveformData.removeAt(0);
+        }
+
+        notifyListeners();
+      });
+    } catch (e) {
+      logger.e("Failed to start audio recording: $e");
+      _isAudioRecording = false;
+    }
+  }
+
+  void stopRecording(bool turnOffMic) async {
     _isRecording = false;
     _recordingStart = null;
     for (Wearable wearable in _recorders.keys) {
@@ -45,6 +286,27 @@ class SensorRecorderProvider with ChangeNotifier {
         }
       }
     }
+    try {
+      if (_isAudioRecording) {
+        final path = await _audioRecorder.stop();
+        _amplitudeSub?.cancel();
+        _amplitudeSub = null;
+        _isAudioRecording = false;
+
+        logger.i("Audio recording saved to: $path");
+        _currentAudioPath = null;
+      }
+    } catch (e) {
+      logger.e("Error stopping audio recording: $e");
+    }
+
+    // Restart streaming if it was enabled before recording
+    if (!turnOffMic &&
+        _isBLEMicrophoneStreamingEnabled &&
+        !_isStreamingActive) {
+      unawaited(startBLEMicrophoneStream());
+    }
+
     notifyListeners();
   }
 
@@ -75,7 +337,8 @@ class SensorRecorderProvider with ChangeNotifier {
     });
 
     if (wearable.hasCapability<SensorManager>()) {
-      for (Sensor sensor in wearable.requireCapability<SensorManager>().sensors) {
+      for (Sensor sensor
+          in wearable.requireCapability<SensorManager>().sensors) {
         if (!_recorders[wearable]!.containsKey(sensor)) {
           _recorders[wearable]![sensor] = Recorder(columns: sensor.axisNames);
         }
@@ -155,5 +418,28 @@ class SensorRecorderProvider with ChangeNotifier {
         '${wearable.name} - ${sensor.sensorName} to ${file.path}',
       );
     }
+  }
+
+  @override
+  void dispose() {
+    // Stop streaming
+    stopBLEMicrophoneStream();
+
+    // Stop recording
+    _audioRecorder.stop().then((_) {
+      _audioRecorder.dispose();
+    }).catchError((e) {
+      logger.e("Error stopping audio in dispose: $e");
+    });
+
+    _amplitudeSub?.cancel();
+    _waveformData.clear();
+
+    for (final wearable in _recorders.keys) {
+      _disposeWearable(wearable);
+    }
+    _recorders.clear();
+
+    super.dispose();
   }
 }

@@ -9,7 +9,6 @@ import 'package:open_wearable/apps/posture_tracker/view/posture_tracker_view.dar
 import 'package:open_wearable/apps/widgets/select_earable_view.dart';
 import 'package:open_wearable/apps/widgets/app_tile.dart';
 
-
 class AppInfo {
   final String logoPath;
   final String title;
@@ -29,15 +28,17 @@ List<AppInfo> _apps = [
     logoPath: "lib/apps/posture_tracker/assets/logo.png",
     title: "Posture Tracker",
     description: "Get feedback on bad posture",
-    widget: SelectEarableView(startApp: (wearable, sensorConfigProvider) {
-      return PostureTrackerView(
-        EarableAttitudeTracker(
-          wearable.requireCapability<SensorManager>(),
-          sensorConfigProvider,
-          wearable.name.endsWith("L"),
-        ),
-      );
-    },),
+    widget: SelectEarableView(
+      startApp: (wearable, sensorConfigProvider) {
+        return PostureTrackerView(
+          EarableAttitudeTracker(
+            wearable.requireCapability<SensorManager>(),
+            sensorConfigProvider,
+            wearable.name.endsWith("L"),
+          ),
+        );
+      },
+    ),
   ),
   AppInfo(
     logoPath: "lib/apps/heart_tracker/assets/logo.png",
@@ -47,9 +48,12 @@ List<AppInfo> _apps = [
       startApp: (wearable, _) {
         if (wearable.hasCapability<SensorManager>()) {
           //TODO: show alert if no ppg sensor is found
-          Sensor ppgSensor = wearable.requireCapability<SensorManager>().sensors.firstWhere(
-            (s) => s.sensorName.toLowerCase() == "photoplethysmography".toLowerCase(),
-          );
+          Sensor ppgSensor =
+              wearable.requireCapability<SensorManager>().sensors.firstWhere(
+                    (s) =>
+                        s.sensorName.toLowerCase() ==
+                        "photoplethysmography".toLowerCase(),
+                  );
 
           return HeartTrackerPage(ppgSensor: ppgSensor);
         }
@@ -75,7 +79,7 @@ class AppsPage extends StatelessWidget {
       appBar: PlatformAppBar(
         title: PlatformText("Apps"),
         trailingActions: [
-            PlatformIconButton(
+          PlatformIconButton(
             icon: Icon(context.platformIcons.bluetooth),
             onPressed: () {
               context.push('/connect-devices');

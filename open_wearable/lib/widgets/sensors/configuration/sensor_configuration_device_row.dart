@@ -66,7 +66,9 @@ class _SensorConfigurationDeviceRowState
                       ?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 if (device.hasCapability<StereoDevice>())
-                  StereoPosLabel(device: device.requireCapability<StereoDevice>()),
+                  StereoPosLabel(
+                    device: device.requireCapability<StereoDevice>(),
+                  ),
               ],
             ),
             trailing: _buildTabBar(context),
@@ -86,7 +88,9 @@ class _SensorConfigurationDeviceRowState
         _content = [
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: PlatformText("This device does not support configuring sensors."),
+            child: PlatformText(
+              "This device does not support configuring sensors.",
+            ),
           ),
         ];
       });
@@ -121,7 +125,9 @@ class _SensorConfigurationDeviceRowState
     if (device.hasCapability<EdgeRecorderManager>()) {
       content.addAll([
         const Divider(),
-        EdgeRecorderPrefixRow(manager: device.requireCapability<EdgeRecorderManager>()),
+        EdgeRecorderPrefixRow(
+          manager: device.requireCapability<EdgeRecorderManager>(),
+        ),
       ]);
     }
 

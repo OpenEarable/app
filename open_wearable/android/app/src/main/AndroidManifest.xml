@@ -40,6 +40,8 @@
     <!-- internet persmission, for fetching firmware update -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
     <!-- Provide required visibility configuration for API level 30 and above -->
     <queries>
     <!-- If your app checks for SMS support -->
