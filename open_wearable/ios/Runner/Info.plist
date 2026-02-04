@@ -62,5 +62,7 @@
 		<string>http</string>
 		<string>https</string>
 	</array>
+	<key>MinimumOSVersion</key>
+	<string>13.0</string>
 </dict>
 </plist>

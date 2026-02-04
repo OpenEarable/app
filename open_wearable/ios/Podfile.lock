@@ -46,11 +46,8 @@ PODS:
     - Flutter
     - iOSMcuManagerLibrary (= 1.10.1)
     - SwiftProtobuf
-  - open_file_ios (0.0.1):
+  - open_file_ios (1.0.3):
     - Flutter
-  - path_provider_foundation (0.0.1):
-    - Flutter
-    - FlutterMacOS
   - permission_handler_apple (9.3.0):
     - Flutter
   - SDWebImage (5.21.3):
@@ -78,7 +75,6 @@ DEPENDENCIES:
   - flutter_archive (from `.symlinks/plugins/flutter_archive/ios`)
   - mcumgr_flutter (from `.symlinks/plugins/mcumgr_flutter/ios`)
   - open_file_ios (from `.symlinks/plugins/open_file_ios/ios`)
-  - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
   - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
   - share_plus (from `.symlinks/plugins/share_plus/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
@@ -109,8 +105,6 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/mcumgr_flutter/ios"
   open_file_ios:
     :path: ".symlinks/plugins/open_file_ios/ios"
-  path_provider_foundation:
-    :path: ".symlinks/plugins/path_provider_foundation/darwin"
   permission_handler_apple:
     :path: ".symlinks/plugins/permission_handler_apple/ios"
   share_plus:
@@ -131,8 +125,7 @@ SPEC CHECKSUMS:
   flutter_archive: ad8edfd7f7d1bb12058d05424ba93e27d9930efe
   iOSMcuManagerLibrary: e9555825af11a61744fe369c12e1e66621061b58
   mcumgr_flutter: 969e99cc15e9fe658242669ce1075bf4612aef8a
-  open_file_ios: 5ff7526df64e4394b4fe207636b67a95e83078bb
-  path_provider_foundation: bb55f6dbba17d0dccd6737fe6f7f34fbd0376880
+  open_file_ios: 46184d802ee7959203f6392abcfa0dd49fdb5be0
   permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
   SDWebImage: 16309af6d214ba3f77a7c6f6fdda888cb313a50a
   share_plus: 50da8cb520a8f0f65671c6c6a99b3617ed10a58a
