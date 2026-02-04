@@ -33,10 +33,9 @@ class SensorRecorderProvider with ChangeNotifier {
   bool _isBLEMicrophoneStreamingEnabled = false;
   bool get isBLEMicrophoneStreamingEnabled => _isBLEMicrophoneStreamingEnabled;
 
-  // Separate AudioRecorder for streaming
-  AudioRecorder? _streamingAudioRecorder;
+  // Path for temporary streaming file
+  String? _streamingPath;
   bool _isStreamingActive = false;
-  StreamSubscription<Amplitude>? _streamingAmplitudeSub;
 
   Future<void> _selectBLEDevice() async {
     try {
@@ -85,17 +84,14 @@ class SensorRecorderProvider with ChangeNotifier {
         return false;
       }
 
-      _streamingAudioRecorder = AudioRecorder();
-
       const encoder = AudioEncoder.wav;
-      if (!await _streamingAudioRecorder!.isEncoderSupported(encoder)) {
+      if (!await _audioRecorder.isEncoderSupported(encoder)) {
         logger.w("WAV encoder not supported");
-        _streamingAudioRecorder = null;
         return false;
       }
 
       final tempDir = await getTemporaryDirectory();
-      final tempPath =
+      _streamingPath =
           '${tempDir.path}/ble_stream_${DateTime.now().millisecondsSinceEpoch}.wav';
 
       final config = RecordConfig(
@@ -106,13 +102,13 @@ class SensorRecorderProvider with ChangeNotifier {
         device: _selectedBLEDevice,
       );
 
-      await _streamingAudioRecorder!.start(config, path: tempPath);
+      await _audioRecorder.start(config, path: _streamingPath!);
       _isStreamingActive = true;
       _isBLEMicrophoneStreamingEnabled = true;
 
       // Set up amplitude monitoring for waveform display
-      _streamingAmplitudeSub?.cancel();
-      _streamingAmplitudeSub = _streamingAudioRecorder!
+      _amplitudeSub?.cancel();
+      _amplitudeSub = _audioRecorder
           .onAmplitudeChanged(const Duration(milliseconds: 100))
           .listen((amp) {
         final normalized = (amp.current + 50) / 50;
@@ -125,17 +121,6 @@ class SensorRecorderProvider with ChangeNotifier {
         notifyListeners();
       });
 
-      Future.delayed(const Duration(seconds: 1), () async {
-        try {
-          final file = File(tempPath);
-          if (await file.exists()) {
-            await file.delete();
-          }
-        } catch (e) {
-          // Ignore cleanup errors
-        }
-      });
-
       logger.i(
         "BLE microphone streaming started with device: ${_selectedBLEDevice!.label}",
       );
@@ -145,8 +130,7 @@ class SensorRecorderProvider with ChangeNotifier {
       logger.e("Failed to start BLE microphone streaming: $e");
       _isStreamingActive = false;
       _isBLEMicrophoneStreamingEnabled = false;
-      _streamingAudioRecorder?.dispose();
-      _streamingAudioRecorder = null;
+      _streamingPath = null;
       notifyListeners();
       return false;
     }
@@ -158,14 +142,25 @@ class SensorRecorderProvider with ChangeNotifier {
     }
 
     try {
-      await _streamingAudioRecorder?.stop();
-      _streamingAmplitudeSub?.cancel();
-      _streamingAmplitudeSub = null;
-      _streamingAudioRecorder?.dispose();
-      _streamingAudioRecorder = null;
+      await _audioRecorder.stop();
+      _amplitudeSub?.cancel();
+      _amplitudeSub = null;
       _isStreamingActive = false;
       _isBLEMicrophoneStreamingEnabled = false;
       _waveformData.clear();
+
+      // Clean up temporary streaming file
+      if (_streamingPath != null) {
+        try {
+          final file = File(_streamingPath!);
+          if (await file.exists()) {
+            await file.delete();
+          }
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+        _streamingPath = null;
+      }
 
       logger.i("BLE microphone streaming stopped");
       notifyListeners();
@@ -202,10 +197,23 @@ class SensorRecorderProvider with ChangeNotifier {
 
     // Stop streaming session before starting actual recording
     if (_isStreamingActive) {
-      await _streamingAudioRecorder?.stop();
-      _streamingAmplitudeSub?.cancel();
-      _streamingAmplitudeSub = null;
+      await _audioRecorder.stop();
+      _amplitudeSub?.cancel();
+      _amplitudeSub = null;
       _isStreamingActive = false;
+
+      // Clean up temporary streaming file
+      if (_streamingPath != null) {
+        try {
+          final file = File(_streamingPath!);
+          if (await file.exists()) {
+            await file.delete();
+          }
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+        _streamingPath = null;
+      }
     }
 
     try {
@@ -284,7 +292,6 @@ class SensorRecorderProvider with ChangeNotifier {
         _amplitudeSub?.cancel();
         _amplitudeSub = null;
         _isAudioRecording = false;
-        _waveformData.clear();
 
         logger.i("Audio recording saved to: $path");
         _currentAudioPath = null;
