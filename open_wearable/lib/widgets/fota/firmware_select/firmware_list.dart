@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:provider/provider.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
-import 'firmware_repository.dart';
 
 class FirmwareList extends StatefulWidget {
   const FirmwareList({super.key});
