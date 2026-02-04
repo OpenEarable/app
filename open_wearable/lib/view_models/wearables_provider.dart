@@ -54,8 +54,8 @@ class WearableTimeSynchronizedEvent extends WearableEvent {
     required super.wearable,
     String? description,
   }) : super(
-            description:
-                description ?? 'Time synchronized for ${wearable.name}');
+          description: description ?? 'Time synchronized for ${wearable.name}',
+        );
 
   @override
   String toString() => 'WearableTimeSynchronizedEvent for ${wearable.name}';
@@ -68,14 +68,14 @@ class WearableErrorEvent extends WearableEvent {
     required this.errorMessage,
     String? description,
   }) : super(
-            description:
-                description ?? 'Error for ${wearable.name}: $errorMessage');
+          description:
+              description ?? 'Error for ${wearable.name}: $errorMessage',
+        );
 
   @override
   String toString() =>
       'WearableErrorEvent for ${wearable.name}: $errorMessage, description: $description';
 }
-
 
 // MARK: WearablesProvider
 
@@ -139,7 +139,8 @@ class WearablesProvider with ChangeNotifier {
   }) async {
     try {
       logger.d('Synchronizing time for wearable ${wearable.name}');
-      await (wearable.requireCapability<TimeSynchronizable>()).synchronizeTime();
+      await (wearable.requireCapability<TimeSynchronizable>())
+          .synchronizeTime();
       logger.d('Time synchronized for wearable ${wearable.name}');
       _emitWearableEvent(
         WearableTimeSynchronizedEvent(
@@ -148,7 +149,9 @@ class WearablesProvider with ChangeNotifier {
         ),
       );
     } catch (e, st) {
-      logger.w('Failed to synchronize time for wearable ${wearable.name}: $e\n$st');
+      logger.w(
+        'Failed to synchronize time for wearable ${wearable.name}: $e\n$st',
+      );
       _emitWearableError(
         wearable: wearable,
         errorMessage: 'Failed to synchronize time with ${wearable.name}: $e',
@@ -163,8 +166,12 @@ class WearablesProvider with ChangeNotifier {
 
     _wearables.add(wearable);
 
-    _capabilitySubscriptions[wearable] = wearable.capabilityRegistered.listen((addedCapabilities) {
-      _handleCapabilitiesChanged(wearable: wearable, addedCapabilites: addedCapabilities);
+    _capabilitySubscriptions[wearable] =
+        wearable.capabilityRegistered.listen((addedCapabilities) {
+      _handleCapabilitiesChanged(
+        wearable: wearable,
+        addedCapabilites: addedCapabilities,
+      );
     });
 
     // Init SensorConfigurationProvider synchronously (no awaits here)
@@ -172,7 +179,8 @@ class WearablesProvider with ChangeNotifier {
       _ensureSensorConfigProvider(wearable);
       final notifier = _sensorConfigurationProviders[wearable]!;
       for (final config
-          in (wearable.requireCapability<SensorConfigurationManager>()).sensorConfigurations) {
+          in (wearable.requireCapability<SensorConfigurationManager>())
+              .sensorConfigurations) {
         if (notifier.getSelectedConfigurationValue(config) == null &&
             config.values.isNotEmpty) {
           notifier.addSensorConfiguration(config, config.values.first);
@@ -180,11 +188,13 @@ class WearablesProvider with ChangeNotifier {
       }
     }
     if (wearable.hasCapability<TimeSynchronizable>()) {
-      _scheduleMicrotask(() => _syncTimeAndEmit(
-            wearable: wearable,
-            successDescription: 'Time synchronized for ${wearable.name}',
-            failureDescription: 'Failed to synchronize time for ${wearable.name}',
-          ),);
+      _scheduleMicrotask(
+        () => _syncTimeAndEmit(
+          wearable: wearable,
+          successDescription: 'Time synchronized for ${wearable.name}',
+          failureDescription: 'Failed to synchronize time for ${wearable.name}',
+        ),
+      );
     }
 
     // Disconnect listener (sync)
@@ -199,17 +209,29 @@ class WearablesProvider with ChangeNotifier {
     // 2) Slow/async work: run in microtasks so it doesn't block the add
     // Stereo pairing (if applicable)
     if (wearable.hasCapability<StereoDevice>()) {
-      _scheduleMicrotask(() => _maybeAutoPairStereoAsync(wearable.requireCapability<StereoDevice>()));
+      _scheduleMicrotask(
+        () => _maybeAutoPairStereoAsync(
+          wearable.requireCapability<StereoDevice>(),
+        ),
+      );
     }
 
     // Firmware support check (if applicable)
     if (wearable.hasCapability<DeviceFirmwareVersion>()) {
-      _scheduleMicrotask(() => _maybeEmitUnsupportedFirmwareAsync(wearable.requireCapability<DeviceFirmwareVersion>()));
+      _scheduleMicrotask(
+        () => _maybeEmitUnsupportedFirmwareAsync(
+          wearable.requireCapability<DeviceFirmwareVersion>(),
+        ),
+      );
     }
 
     // Check for newer firmware (if applicable)
     if (wearable.hasCapability<DeviceFirmwareVersion>()) {
-      _scheduleMicrotask(() => _checkForNewerFirmwareAsync(wearable.requireCapability<DeviceFirmwareVersion>()));
+      _scheduleMicrotask(
+        () => _checkForNewerFirmwareAsync(
+          wearable.requireCapability<DeviceFirmwareVersion>(),
+        ),
+      );
     }
   }
 
@@ -218,7 +240,8 @@ class WearablesProvider with ChangeNotifier {
   void _ensureSensorConfigProvider(Wearable wearable) {
     if (!_sensorConfigurationProviders.containsKey(wearable)) {
       _sensorConfigurationProviders[wearable] = SensorConfigurationProvider(
-        sensorConfigurationManager: wearable.requireCapability<SensorConfigurationManager>(),
+        sensorConfigurationManager:
+            wearable.requireCapability<SensorConfigurationManager>(),
       );
     }
   }
@@ -343,18 +366,23 @@ class WearablesProvider with ChangeNotifier {
     return _sensorConfigurationProviders[wearable]!;
   }
 
-  void _handleCapabilitiesChanged({required Wearable wearable, required List<Type> addedCapabilites}) {
+  void _handleCapabilitiesChanged({
+    required Wearable wearable,
+    required List<Type> addedCapabilites,
+  }) {
     if (addedCapabilites.contains(SensorConfigurationManager)) {
       _ensureSensorConfigProvider(wearable);
     }
     if (addedCapabilites.contains(TimeSynchronizable)) {
-      _scheduleMicrotask(() => _syncTimeAndEmit(
-        wearable: wearable,
-        successDescription:
-            'Time synchronized for ${wearable.name} after capability change',
-        failureDescription:
-            'Failed to synchronize time for ${wearable.name} after capability change',
-      ),);
+      _scheduleMicrotask(
+        () => _syncTimeAndEmit(
+          wearable: wearable,
+          successDescription:
+              'Time synchronized for ${wearable.name} after capability change',
+          failureDescription:
+              'Failed to synchronize time for ${wearable.name} after capability change',
+        ),
+      );
     }
   }
 }
