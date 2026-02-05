@@ -50,9 +50,9 @@ PODS:
     - Flutter
   - permission_handler_apple (9.3.0):
     - Flutter
-  - SDWebImage (5.21.3):
-    - SDWebImage/Core (= 5.21.3)
-  - SDWebImage/Core (5.21.3)
+  - SDWebImage (5.21.5):
+    - SDWebImage/Core (= 5.21.5)
+  - SDWebImage/Core (5.21.5)
   - share_plus (0.0.1):
     - Flutter
   - shared_preferences_foundation (0.0.1):
@@ -127,7 +127,7 @@ SPEC CHECKSUMS:
   mcumgr_flutter: 969e99cc15e9fe658242669ce1075bf4612aef8a
   open_file_ios: 46184d802ee7959203f6392abcfa0dd49fdb5be0
   permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
-  SDWebImage: 16309af6d214ba3f77a7c6f6fdda888cb313a50a
+  SDWebImage: e9c98383c7572d713c1a0d7dd2783b10599b9838
   share_plus: 50da8cb520a8f0f65671c6c6a99b3617ed10a58a
   shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb
   SwiftCBOR: 465775bed0e8bac7bfb8160bcf7b95d7f75971e4
