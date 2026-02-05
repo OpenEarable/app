@@ -303,7 +303,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" embed_and_thin";
+			shellScript = "/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" embed_and_thin\n\n# Fix App.framework MinimumOSVersion\nAPP_FRAMEWORK=\"${BUILT_PRODUCTS_DIR}/${FRAMEWORKS_FOLDER_PATH}/App.framework\"\nAPP_PLIST=\"${APP_FRAMEWORK}/Info.plist\"\n\nif [ -f \"$APP_PLIST\" ]; then\n  echo \"Fixing MinimumOSVersion in App.framework\"\n  /usr/libexec/PlistBuddy -c \"Delete :MinimumOSVersion\" \"$APP_PLIST\" 2>/dev/null || true\n  /usr/libexec/PlistBuddy -c \"Add :MinimumOSVersion string 13.0\" \"$APP_PLIST\"\n  echo \"Successfully set MinimumOSVersion to 13.0\"\nfi\n";
 		};
 		5718563614C8F7894157DC10 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
