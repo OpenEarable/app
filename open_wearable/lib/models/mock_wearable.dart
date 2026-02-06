@@ -72,15 +72,15 @@ class MockAccelerometer extends Sensor<SensorDoubleValue> {
             MockConfigurableSensorConfiguration(
                 name: "Sensor Rate",
                 availableOptions: {
-                  StreamSensorConfigOption()
+                  StreamSensorConfigOption(),
                 },
                 values: [
                   MockConfigurableSensorConfigurationValue(
                       key: "30Hz",
                       options: {
                         StreamSensorConfigOption(),
-                      })
-                ])
+                      },),
+                ],),
           ],
         );
 
@@ -112,7 +112,7 @@ class MockConfigurableSensorConfiguration
 
   @override
   void setConfiguration(
-      MockConfigurableSensorConfigurationValue configuration) {
+      MockConfigurableSensorConfigurationValue configuration,) {
     // no-op
   }
 }
