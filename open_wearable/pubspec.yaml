@@ -59,6 +59,7 @@ dependencies:
   audioplayers: ^6.6.0
   wakelock_plus: ^1.4.0
   package_info_plus: ^9.0.0
+  sensors_plus: ^7.0.0
 
 dev_dependencies:
   flutter_test:

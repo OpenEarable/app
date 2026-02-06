@@ -6,7 +6,9 @@ import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 import 'package:universal_ble/universal_ble.dart';
 import 'package:open_wearable/models/connect_devices_scan_session.dart';
 import 'package:open_wearable/models/device_name_formatter.dart';
+import 'package:open_wearable/models/mock_wearable.dart';
 import 'package:open_wearable/models/wearable_display_group.dart';
+import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/devices/devices_page.dart';
 import 'package:open_wearable/widgets/recording_activity_indicator.dart';
@@ -191,6 +193,21 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                   const SizedBox(width: 8),
                   Text(_scanSnapshot.isScanning ? 'Scanning...' : 'Scan Again'),
                 ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: PlatformElevatedButton(
+                onPressed: () {
+                  final mockWearable = MockWearable(
+                    disconnectNotifier: WearableDisconnectNotifier(),
+                  );
+                  context.read<WearablesProvider>().addWearable(mockWearable);
+                  context
+                      .read<SensorRecorderProvider>()
+                      .addWearable(mockWearable);
+                },
+                child: PlatformText('Simulate Device'),
               ),
             ),
           ],
