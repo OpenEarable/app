@@ -55,6 +55,7 @@ dependencies:
   url_launcher: ^6.3.2
   go_router: ^14.6.2
   http: ^1.6.0
+  sensors_plus: ^7.0.0
 
 dev_dependencies:
   flutter_test:
