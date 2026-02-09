@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
-import 'package:open_wearable/models/mock_wearable.dart';
+import 'package:open_wearable/models/this_device_wearable.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:provider/provider.dart';
@@ -92,7 +92,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
               padding: const EdgeInsets.only(top: 8.0),
               child: PlatformElevatedButton(
                 onPressed: () {
-                  final mockWearable = MockWearable(
+                  final mockWearable = ThisDeviceWearable(
                     disconnectNotifier: WearableDisconnectNotifier(),
                   );
                   context.read<WearablesProvider>().addWearable(mockWearable);

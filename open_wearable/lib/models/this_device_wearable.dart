@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
-class MockWearable extends Wearable
+class ThisDeviceWearable extends Wearable
     implements SensorManager, SensorConfigurationManager {
   @override
   final List<Sensor> sensors = [];
@@ -15,14 +15,14 @@ class MockWearable extends Wearable
   Stream<Map<SensorConfiguration, SensorConfigurationValue>>
       get sensorConfigurationStream => const Stream.empty();
 
-  MockWearable({required super.disconnectNotifier})
-      : super(name: "Mock Device") {
+  ThisDeviceWearable({required super.disconnectNotifier})
+      : super(name: "This Device") {
     sensors.add(MockGyroSensor());
     sensors.add(MockAccelerometer());
   }
 
   @override
-  String get deviceId => "MOCK-001";
+  String get deviceId => "THIS-DEVICE-001";
 
   @override
   Future<void> disconnect() async {
