@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
@@ -34,6 +35,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
 
   late ConnectDevicesScanSnapshot _scanSnapshot;
   late final VoidCallback _scanSnapshotListener;
+  DiscoveredDevice? _thisDeviceEntry;
 
   @override
   void initState() {
@@ -52,6 +54,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
     if (!_scanSnapshot.isScanning) {
       unawaited(ConnectDevicesScanSession.startScanning(clearPrevious: true));
     }
+    unawaited(_addThisDeviceToDiscovered());
   }
 
   @override
@@ -70,9 +73,16 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
           .toList(),
     );
 
-    final availableDevices = _scanSnapshot.discoveredDevices
+    final scannedDevices = _scanSnapshot.discoveredDevices
         .where((device) => !connectedDeviceIds.contains(device.id))
         .toList();
+    final thisDeviceEntry = _thisDeviceEntry;
+    final availableDevices = [
+      if (thisDeviceEntry != null &&
+          !connectedDeviceIds.contains(thisDeviceEntry.id))
+        thisDeviceEntry,
+      ...scannedDevices.where((device) => device.id != thisDeviceEntry?.id),
+    ];
 
     return PlatformScaffold(
       appBar: PlatformAppBar(
@@ -159,18 +169,30 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
               )
             else
               ...availableDevices.map(
-                (device) => Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: PlatformListTile(
-                    leading: const Icon(Icons.bluetooth),
-                    title: PlatformText(_deviceName(device)),
-                    subtitle: PlatformText(device.id),
-                    trailing: _buildTrailingWidget(device),
-                    onTap: _connectingDevices[device.id] == true
-                        ? null
-                        : () => _connectToDevice(device, context),
-                  ),
-                ),
+                (device) {
+                  final isThisDevice = device.id == _thisDeviceEntry?.id;
+                  final connect = isThisDevice
+                      ? () => _connectToThisDevice(context)
+                      : () => _connectToDevice(device, context);
+
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: PlatformListTile(
+                      leading: Icon(
+                        isThisDevice ? Icons.smartphone : Icons.bluetooth,
+                      ),
+                      title: PlatformText(_deviceName(device)),
+                      subtitle: PlatformText(device.id),
+                      trailing: _buildTrailingWidget(
+                        device,
+                        onConnect: connect,
+                      ),
+                      onTap: _connectingDevices[device.id] == true
+                          ? null
+                          : connect,
+                    ),
+                  );
+                },
               ),
             const SizedBox(height: 10),
             PlatformElevatedButton(
@@ -193,22 +215,6 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                   const SizedBox(width: 8),
                   Text(_scanSnapshot.isScanning ? 'Scanning...' : 'Scan Again'),
                 ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(top: 8.0),
-              child: PlatformElevatedButton(
-                onPressed: () async {
-                  final mockWearable = await ThisDeviceWearable.create(
-                    disconnectNotifier: WearableDisconnectNotifier(),
-                  );
-                  if (!context.mounted) return;
-                  context.read<WearablesProvider>().addWearable(mockWearable);
-                  context
-                      .read<SensorRecorderProvider>()
-                      .addWearable(mockWearable);
-                },
-                child: PlatformText('Simulate Device'),
               ),
             ),
           ],
@@ -311,7 +317,10 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
     );
   }
 
-  Widget _buildTrailingWidget(DiscoveredDevice device) {
+  Widget _buildTrailingWidget(
+    DiscoveredDevice device, {
+    required VoidCallback onConnect,
+  }) {
     return SizedBox(
       width: 90,
       child: Align(
@@ -326,7 +335,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                 ),
               )
             : PlatformTextButton(
-                onPressed: () => _connectToDevice(device, context),
+                onPressed: onConnect,
                 child: const Text('Connect'),
               ),
       ),
@@ -345,6 +354,49 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
     if (elapsed.inMinutes < 1) return '${elapsed.inSeconds}s ago';
     if (elapsed.inHours < 1) return '${elapsed.inMinutes}m ago';
     return '${elapsed.inHours}h ago';
+  }
+
+  Future<void> _addThisDeviceToDiscovered() async {
+    if (_thisDeviceEntry != null) return;
+    final profile = await DeviceProfile.fetch();
+    if (!mounted) return;
+
+    final thisDevice = DiscoveredDevice(
+      id: profile.deviceId,
+      name: profile.displayName,
+      manufacturerData: Uint8List(0),
+      rssi: 0,
+      serviceUuids: const [],
+    );
+
+    setState(() {
+      _thisDeviceEntry = thisDevice;
+    });
+  }
+
+  Future<void> _connectToThisDevice(BuildContext context) async {
+    final device = _thisDeviceEntry;
+    if (device == null) return;
+    if (_connectingDevices[device.id] == true) return;
+
+    setState(() {
+      _connectingDevices[device.id] = true;
+    });
+
+    try {
+      final wearable = await ThisDeviceWearable.create(
+        disconnectNotifier: WearableDisconnectNotifier(),
+      );
+      if (!context.mounted) return;
+      context.read<WearablesProvider>().addWearable(wearable);
+      context.read<SensorRecorderProvider>().addWearable(wearable);
+    } finally {
+      if (context.mounted) {
+        setState(() {
+          _connectingDevices.remove(device.id);
+        });
+      }
+    }
   }
 
   Future<void> _connectToDevice(
