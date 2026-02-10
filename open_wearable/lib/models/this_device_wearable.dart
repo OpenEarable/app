@@ -18,20 +18,19 @@ class ThisDeviceWearable extends Wearable
   ThisDeviceWearable._({
     required super.disconnectNotifier,
     required this.deviceProfile,
-  }) : super(name: deviceProfile.displayName) {
-    sensors.add(MockGyroSensor());
-    sensors.add(MockAccelerometer());
-  }
+  }) : super(name: deviceProfile.displayName);
 
   static Future<ThisDeviceWearable> create({
     required WearableDisconnectNotifier disconnectNotifier,
   }) async {
     final profile = await DeviceProfile.fetch();
     logger.d('Fetched device profile: $profile');
-    return ThisDeviceWearable._(
+    final wearable = ThisDeviceWearable._(
       disconnectNotifier: disconnectNotifier,
       deviceProfile: profile,
     );
+    await wearable._initSensors();
+    return wearable;
   }
 
   @override
@@ -46,6 +45,26 @@ class ThisDeviceWearable extends Wearable
   @override
   String? getWearableIconPath({bool darkmode = false}) {
     return null;
+  }
+
+  Future<void> _initSensors() async {
+    if (await _isSensorAvailable<GyroscopeEvent>(gyroscopeEventStream())) {
+      sensors.add(MockGyroSensor());
+    }
+    if (await _isSensorAvailable<AccelerometerEvent>(
+      accelerometerEventStream(),
+    )) {
+      sensors.add(MockAccelerometer());
+    }
+  }
+
+  static Future<bool> _isSensorAvailable<T>(Stream<T> stream) async {
+    try {
+      await stream.first.timeout(const Duration(milliseconds: 800));
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   @override
