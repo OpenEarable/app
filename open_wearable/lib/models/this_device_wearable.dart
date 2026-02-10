@@ -425,9 +425,11 @@ class ThisDeviceSensor<SensorEvent> extends Sensor<SensorDoubleValue> {
       onListen: _updateSubscription,
       onCancel: _updateSubscription,
     );
+    config.changes.listen((value) {
+      _updateSubscription();
+    });
   }
 
-  
   final List<String> _axisNames;
   @override
   List<String> get axisNames => _axisNames;
