@@ -25,10 +25,13 @@ class ThisDeviceWearable extends Wearable
 
   final DeviceProfile deviceProfile;
 
+  final WearableDisconnectNotifier _disconnectNotifier;
+
   ThisDeviceWearable._({
-    required super.disconnectNotifier,
+    required WearableDisconnectNotifier disconnectNotifier,
     required this.deviceProfile,
-  }) : super(name: deviceProfile.displayName);
+  }) : _disconnectNotifier = disconnectNotifier,
+       super(name: deviceProfile.displayName, disconnectNotifier: disconnectNotifier);
 
   static Future<ThisDeviceWearable> create({
     required WearableDisconnectNotifier disconnectNotifier,
@@ -48,8 +51,7 @@ class ThisDeviceWearable extends Wearable
 
   @override
   Future<void> disconnect() async {
-    // TODO: Call disconnect listeners
-    return Future.value();
+    _disconnectNotifier.notifyListeners();
   }
 
   @override
