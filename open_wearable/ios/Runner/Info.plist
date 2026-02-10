@@ -41,6 +41,8 @@
 	<string>This app requires Bluetooth access to communicate with wearable devices.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>This app uses the local network to host a webserver for tools integration.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>This app requires access to device motion in order to provide sensor data.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Needed for optional file selection functionality.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
