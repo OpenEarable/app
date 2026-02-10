@@ -2,14 +2,18 @@ import 'dart:async';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
-import 'package:open_earable_flutter/open_earable_flutter.dart' hide Version, logger;
+import 'package:open_earable_flutter/open_earable_flutter.dart'
+    hide Version, logger;
 import 'package:pub_semver/pub_semver.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
 import 'logger.dart';
 
 class ThisDeviceWearable extends Wearable
-    implements SensorManager, SensorConfigurationManager, DeviceFirmwareVersion {
+    implements
+        SensorManager,
+        SensorConfigurationManager,
+        DeviceFirmwareVersion {
   @override
   final List<Sensor> sensors = [];
 
@@ -28,10 +32,10 @@ class ThisDeviceWearable extends Wearable
   final WearableDisconnectNotifier _disconnectNotifier;
 
   ThisDeviceWearable._({
-    required WearableDisconnectNotifier disconnectNotifier,
+    required super.disconnectNotifier,
     required this.deviceProfile,
-  }) : _disconnectNotifier = disconnectNotifier,
-       super(name: deviceProfile.displayName, disconnectNotifier: disconnectNotifier);
+  })  : _disconnectNotifier = disconnectNotifier,
+        super(name: deviceProfile.displayName);
 
   static Future<ThisDeviceWearable> create({
     required WearableDisconnectNotifier disconnectNotifier,
@@ -55,7 +59,10 @@ class ThisDeviceWearable extends Wearable
   }
 
   @override
-  String? getWearableIconPath({bool darkmode = false}) {
+  String? getWearableIconPath({
+    bool darkmode = false,
+    WearableIconVariant variant = WearableIconVariant.single,
+  }) {
     return null;
   }
 
@@ -407,7 +414,8 @@ class ThisDeviceSensor<SensorEvent> extends Sensor<SensorDoubleValue> {
   final DeviceSensorConfiguration config;
   late final StreamController<SensorDoubleValue> _controller;
   StreamSubscription<SensorEvent>? _subscription;
-  final Stream<SensorEvent> Function({required Duration samplingPeriod}) _sensorStreamProvider;
+  final Stream<SensorEvent> Function({required Duration samplingPeriod})
+      _sensorStreamProvider;
   final SensorDoubleValue Function(SensorEvent event) _valueExtractor;
 
   ThisDeviceSensor({
@@ -418,11 +426,12 @@ class ThisDeviceSensor<SensorEvent> extends Sensor<SensorDoubleValue> {
     required List<String> axisNames,
     required List<String> axisUnits,
     required SensorDoubleValue Function(SensorEvent event) valueExtractor,
-    required Stream<SensorEvent> Function({required Duration samplingPeriod}) sensorStreamProvider,
-  }) : _axisNames = axisNames,
-       _axisUnits = axisUnits,
-       _valueExtractor = valueExtractor,
-       _sensorStreamProvider = sensorStreamProvider {
+    required Stream<SensorEvent> Function({required Duration samplingPeriod})
+        sensorStreamProvider,
+  })  : _axisNames = axisNames,
+        _axisUnits = axisUnits,
+        _valueExtractor = valueExtractor,
+        _sensorStreamProvider = sensorStreamProvider {
     _controller = StreamController<SensorDoubleValue>.broadcast(
       onListen: _updateSubscription,
       onCancel: _updateSubscription,
@@ -435,11 +444,11 @@ class ThisDeviceSensor<SensorEvent> extends Sensor<SensorDoubleValue> {
   final List<String> _axisNames;
   @override
   List<String> get axisNames => _axisNames;
-  
+
   final List<String> _axisUnits;
   @override
   List<String> get axisUnits => _axisUnits;
-  
+
   @override
   Stream<SensorDoubleValue> get sensorStream => _controller.stream;
 
@@ -455,7 +464,9 @@ class ThisDeviceSensor<SensorEvent> extends Sensor<SensorDoubleValue> {
       return;
     }
 
-    final samplingPeriod = value.frequencyHz > 0 ? Duration(milliseconds: (1000 / value.frequencyHz).round()) : SensorInterval.normalInterval;
+    final samplingPeriod = value.frequencyHz > 0
+        ? Duration(milliseconds: (1000 / value.frequencyHz).round())
+        : SensorInterval.normalInterval;
 
     _cancelSubscription();
     _subscription =
@@ -495,8 +506,7 @@ class DeviceSensorConfiguration
 
   DeviceSensorFrequencyValue get currentValue => _currentValue;
 
-  Stream<DeviceSensorFrequencyValue> get changes =>
-      _changesController.stream;
+  Stream<DeviceSensorFrequencyValue> get changes => _changesController.stream;
 
   final StreamController<DeviceSensorFrequencyValue> _changesController =
       StreamController.broadcast();
