@@ -9,9 +9,19 @@ import 'package:sensors_plus/sensors_plus.dart';
 import 'logger.dart';
 
 class ThisDeviceWearable extends Wearable
-    implements SensorManager, DeviceFirmwareVersion {
+    implements SensorManager, SensorConfigurationManager, DeviceFirmwareVersion {
   @override
   final List<Sensor> sensors = [];
+
+  @override
+  final List<SensorConfiguration> sensorConfigurations = [];
+
+  final StreamController<Map<SensorConfiguration, SensorConfigurationValue>>
+      _sensorConfigurationController = StreamController.broadcast();
+
+  @override
+  Stream<Map<SensorConfiguration, SensorConfigurationValue>>
+      get sensorConfigurationStream => _sensorConfigurationController.stream;
 
   final DeviceProfile deviceProfile;
 
@@ -47,14 +57,107 @@ class ThisDeviceWearable extends Wearable
     return null;
   }
 
+  void _emitSensorConfigurationChange(
+    SensorConfiguration configuration,
+    SensorConfigurationValue value,
+  ) {
+    _sensorConfigurationController.add({configuration: value});
+  }
+
   Future<void> _initSensors() async {
     if (await _isSensorAvailable<GyroscopeEvent>(gyroscopeEventStream())) {
-      sensors.add(MockGyroSensor());
+      final gyroConfig = DeviceSensorConfiguration(
+        name: 'Gyroscope',
+        onChange: _emitSensorConfigurationChange,
+      );
+      sensorConfigurations.add(gyroConfig);
+      _emitSensorConfigurationChange(gyroConfig, gyroConfig.currentValue);
+      sensors.add(
+        ThisDeviceSensor<GyroscopeEvent>(
+          config: gyroConfig,
+          sensorName: 'Gyroscope',
+          chartTitle: 'Gyroscope',
+          shortChartTitle: 'Gyro',
+          axisNames: ['X', 'Y', 'Z'],
+          axisUnits: ['rad/s', 'rad/s', 'rad/s'],
+          valueExtractor: (event) => SensorDoubleValue(
+            values: [event.x, event.y, event.z],
+            timestamp: event.timestamp.millisecondsSinceEpoch,
+          ),
+          sensorStreamProvider: gyroscopeEventStream,
+        ),
+      );
     }
     if (await _isSensorAvailable<AccelerometerEvent>(
       accelerometerEventStream(),
     )) {
-      sensors.add(MockAccelerometer());
+      final accelConfig = DeviceSensorConfiguration(
+        name: 'Accelerometer',
+        onChange: _emitSensorConfigurationChange,
+      );
+      sensorConfigurations.add(accelConfig);
+      _emitSensorConfigurationChange(accelConfig, accelConfig.currentValue);
+      sensors.add(
+        ThisDeviceSensor<AccelerometerEvent>(
+          config: accelConfig,
+          sensorName: 'Accelerometer',
+          chartTitle: 'Accelerometer',
+          shortChartTitle: 'Accel',
+          axisNames: ['X', 'Y', 'Z'],
+          axisUnits: ['m/s²', 'm/s²', 'm/s²'],
+          valueExtractor: (event) => SensorDoubleValue(
+            values: [event.x, event.y, event.z],
+            timestamp: event.timestamp.millisecondsSinceEpoch,
+          ),
+          sensorStreamProvider: accelerometerEventStream,
+        ),
+      );
+    }
+    if (await _isSensorAvailable(magnetometerEventStream())) {
+      final magConfig = DeviceSensorConfiguration(
+        name: 'Magnetometer',
+        onChange: _emitSensorConfigurationChange,
+      );
+      sensorConfigurations.add(magConfig);
+      _emitSensorConfigurationChange(magConfig, magConfig.currentValue);
+      sensors.add(
+        ThisDeviceSensor<MagnetometerEvent>(
+          config: magConfig,
+          sensorName: 'Magnetometer',
+          chartTitle: 'Magnetometer',
+          shortChartTitle: 'Mag',
+          axisNames: ['X', 'Y', 'Z'],
+          axisUnits: ['µT', 'µT', 'µT'],
+          valueExtractor: (event) => SensorDoubleValue(
+            values: [event.x, event.y, event.z],
+            timestamp: event.timestamp.millisecondsSinceEpoch,
+          ),
+          sensorStreamProvider: magnetometerEventStream,
+        ),
+      );
+    }
+    if (await _isSensorAvailable(barometerEventStream())) {
+      final baroConfig = DeviceSensorConfiguration(
+        name: 'Barometer',
+        onChange: _emitSensorConfigurationChange,
+      );
+      sensorConfigurations.add(baroConfig);
+      _emitSensorConfigurationChange(baroConfig, baroConfig.currentValue);
+      sensors.add(
+        ThisDeviceSensor<BarometerEvent>(
+          config: baroConfig,
+          sensorName: 'Barometer',
+          chartTitle: 'Barometer',
+          shortChartTitle: 'Baro',
+          axisNames: ['Pressure'],
+          axisUnits: ['hPa'],
+          valueExtractor: (event) => SensorDoubleValue(
+            values: [event.pressure],
+            timestamp: event.timestamp.millisecondsSinceEpoch,
+          ),
+          sensorStreamProvider: barometerEventStream,
+        ),
+      );
     }
   }
 
@@ -298,96 +401,153 @@ String? _joinNonEmpty(List<String?> parts) {
   return cleaned.join(' ');
 }
 
-class MockGyroSensor extends Sensor<SensorDoubleValue> {
-  MockGyroSensor()
-      : super(
-          sensorName: "Gyroscope",
-          chartTitle: "Gyroscope",
-          shortChartTitle: "Gyro",
-          relatedConfigurations: [],
+class ThisDeviceSensor<SensorEvent> extends Sensor<SensorDoubleValue> {
+  final DeviceSensorConfiguration config;
+  late final StreamController<SensorDoubleValue> _controller;
+  StreamSubscription<SensorEvent>? _subscription;
+  final Stream<SensorEvent> Function({required Duration samplingPeriod}) _sensorStreamProvider;
+  final SensorDoubleValue Function(SensorEvent event) _valueExtractor;
+
+  ThisDeviceSensor({
+    required super.sensorName,
+    required super.chartTitle,
+    required super.shortChartTitle,
+    required this.config,
+    required List<String> axisNames,
+    required List<String> axisUnits,
+    required SensorDoubleValue Function(SensorEvent event) valueExtractor,
+    required Stream<SensorEvent> Function({required Duration samplingPeriod}) sensorStreamProvider,
+  }) : _axisNames = axisNames,
+       _axisUnits = axisUnits,
+       _valueExtractor = valueExtractor,
+       _sensorStreamProvider = sensorStreamProvider {
+    _controller = StreamController<SensorDoubleValue>.broadcast(
+      onListen: _updateSubscription,
+      onCancel: _updateSubscription,
+    );
+  }
+
+  
+  final List<String> _axisNames;
+  @override
+  List<String> get axisNames => _axisNames;
+  
+  final List<String> _axisUnits;
+  @override
+  List<String> get axisUnits => _axisUnits;
+  
+  @override
+  Stream<SensorDoubleValue> get sensorStream => _controller.stream;
+
+  void _updateSubscription() {
+    if (!_controller.hasListener) {
+      _cancelSubscription();
+      return;
+    }
+
+    final value = config.currentValue;
+    if (value.isOff) {
+      _cancelSubscription();
+      return;
+    }
+
+    final samplingPeriod = value.frequencyHz > 0 ? Duration(milliseconds: (1000 / value.frequencyHz).round()) : SensorInterval.normalInterval;
+
+    _cancelSubscription();
+    _subscription =
+        _sensorStreamProvider(samplingPeriod: samplingPeriod).listen(
+      (event) {
+        _controller.add(
+          _valueExtractor(event),
         );
+      },
+      onError: _controller.addError,
+    );
+  }
 
-  @override
-  List<String> get axisNames => ['X', 'Y', 'Z'];
-
-  @override
-  List<String> get axisUnits => ['rad/s', 'rad/s', 'rad/s'];
-
-  @override
-  Stream<SensorDoubleValue> get sensorStream {
-    return gyroscopeEventStream().map((event) {
-      return SensorDoubleValue(
-        values: [event.x, event.y, event.z],
-        timestamp: DateTime.now().millisecondsSinceEpoch,
-      );
-    });
+  void _cancelSubscription() {
+    _subscription?.cancel();
+    _subscription = null;
   }
 }
 
-class MockAccelerometer extends Sensor<SensorDoubleValue> {
-  MockAccelerometer()
-      : super(
-          sensorName: "Accelerometer",
-          chartTitle: "Accelerometer",
-          shortChartTitle: "Accel",
-          relatedConfigurations: [
-            MockConfigurableSensorConfiguration(
-                name: "Sensor Rate",
-                availableOptions: {
-                  StreamSensorConfigOption(),
-                },
-                values: [
-                  MockConfigurableSensorConfigurationValue(
-                      key: "30Hz",
-                      options: {
-                        StreamSensorConfigOption(),
-                      },),
-                ],),
-          ],
-        );
+class DeviceSensorConfiguration
+    extends SensorFrequencyConfiguration<DeviceSensorFrequencyValue> {
+  final void Function(
+    SensorConfiguration configuration,
+    SensorConfigurationValue value,
+  ) onChange;
 
-  @override
-  List<String> get axisNames => ['X', 'Y', 'Z'];
+  DeviceSensorFrequencyValue _currentValue;
 
-  @override
-  List<String> get axisUnits => ['m/s²', 'm/s²', 'm/s²'];
-
-  @override
-  Stream<SensorDoubleValue> get sensorStream {
-    return accelerometerEventStream().map((event) {
-      return SensorDoubleValue(
-        values: [event.x, event.y, event.z],
-        timestamp: DateTime.now().millisecondsSinceEpoch,
-      );
-    });
-  }
-}
-
-class MockConfigurableSensorConfiguration
-    extends ConfigurableSensorConfiguration<
-        MockConfigurableSensorConfigurationValue> {
-  MockConfigurableSensorConfiguration({
+  DeviceSensorConfiguration({
     required super.name,
-    required super.values,
-    super.availableOptions,
-  });
+    required this.onChange,
+  })  : _currentValue = DeviceSensorFrequencyValue.normal(),
+        super(
+          values: DeviceSensorFrequencyValue.defaults(),
+          offValue: DeviceSensorFrequencyValue.off(),
+        );
+
+  DeviceSensorFrequencyValue get currentValue => _currentValue;
+
+  Stream<DeviceSensorFrequencyValue> get changes =>
+      _changesController.stream;
+
+  final StreamController<DeviceSensorFrequencyValue> _changesController =
+      StreamController.broadcast();
 
   @override
-  void setConfiguration(
-      MockConfigurableSensorConfigurationValue configuration,) {
-    // no-op
+  void setConfiguration(DeviceSensorFrequencyValue configuration) {
+    _currentValue = configuration;
+    onChange(this, configuration);
+    _changesController.add(configuration);
   }
 }
 
-class MockConfigurableSensorConfigurationValue
-    extends ConfigurableSensorConfigurationValue {
-  MockConfigurableSensorConfigurationValue({
-    required super.key,
-    super.options,
-  });
+class DeviceSensorFrequencyValue extends SensorFrequencyConfigurationValue {
+  DeviceSensorFrequencyValue({
+    required super.frequencyHz,
+    String? key,
+  }) : super(
+          key: key ?? _formatKey(frequencyHz),
+        );
 
-  @override
-  MockConfigurableSensorConfigurationValue withoutOptions() {
-    return MockConfigurableSensorConfigurationValue(key: key);
+  bool get isOff => frequencyHz <= 0;
+
+  static DeviceSensorFrequencyValue off() {
+    return DeviceSensorFrequencyValue(
+      frequencyHz: 0,
+      key: 'Off',
+    );
+  }
+
+  static DeviceSensorFrequencyValue normal() {
+    return DeviceSensorFrequencyValue(
+      frequencyHz: 5,
+    );
+  }
+
+  static List<DeviceSensorFrequencyValue> defaults() {
+    return [
+      off(),
+      normal(),
+      DeviceSensorFrequencyValue(
+        frequencyHz: 15,
+      ),
+      DeviceSensorFrequencyValue(
+        frequencyHz: 30,
+      ),
+      DeviceSensorFrequencyValue(
+        frequencyHz: 50,
+      ),
+    ];
+  }
+
+  static String _formatKey(double frequencyHz) {
+    if (frequencyHz == frequencyHz.roundToDouble()) {
+      return '${frequencyHz.toInt()} Hz';
+    }
+    return '${frequencyHz.toStringAsFixed(2)} Hz';
   }
 }
