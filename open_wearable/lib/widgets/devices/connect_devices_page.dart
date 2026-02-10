@@ -51,7 +51,11 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
         trailing: Icon(PlatformIcons(context).checkMark),
       );
     }).toList();
-    List<Widget> discoveredDevicesWidgets = discoveredDevices.map((device) {
+    final connectedIds =
+        wearablesProvider.wearables.map((wearable) => wearable.deviceId).toSet();
+    List<Widget> discoveredDevicesWidgets = discoveredDevices
+        .where((device) => !connectedIds.contains(device.id))
+        .map((device) {
       return PlatformListTile(
         title: PlatformText(device.name),
         subtitle: PlatformText(device.id),
