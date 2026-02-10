@@ -28,10 +28,10 @@ class ThisDeviceWearable extends Wearable
   final WearableDisconnectNotifier _disconnectNotifier;
 
   ThisDeviceWearable._({
-    required WearableDisconnectNotifier disconnectNotifier,
+    required super.disconnectNotifier,
     required this.deviceProfile,
   }) : _disconnectNotifier = disconnectNotifier,
-       super(name: deviceProfile.displayName, disconnectNotifier: disconnectNotifier);
+       super(name: deviceProfile.displayName);
 
   static Future<ThisDeviceWearable> create({
     required WearableDisconnectNotifier disconnectNotifier,
