@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
@@ -28,11 +29,13 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
 
   List<DiscoveredDevice> discoveredDevices = [];
   Map<String, bool> connectingDevices = {};
+  DiscoveredDevice? _thisDeviceEntry;
 
   @override
   void initState() {
     super.initState();
     _startScanning();
+    _addThisDeviceToDiscovered();
   }
 
   @override
@@ -54,7 +57,11 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
         subtitle: PlatformText(device.id),
         trailing: _buildTrailingWidget(device.id),
         onTap: () {
-          _connectToDevice(device, context);
+          if (_thisDeviceEntry?.id == device.id) {
+            _connectToThisDevice(context);
+          } else {
+            _connectToDevice(device, context);
+          }
         },
       );
     }).toList();
@@ -88,22 +95,6 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
               onPressed: _startScanning,
               child: PlatformText('Scan'),
             ),
-            Padding(
-              padding: const EdgeInsets.only(top: 8.0),
-              child: PlatformElevatedButton(
-                onPressed: () async {
-                  final mockWearable = await ThisDeviceWearable.create(
-                    disconnectNotifier: WearableDisconnectNotifier(),
-                  );
-                  if (!context.mounted) return;
-                  context.read<WearablesProvider>().addWearable(mockWearable);
-                  context
-                      .read<SensorRecorderProvider>()
-                      .addWearable(mockWearable);
-                },
-                child: PlatformText('Simulate Device'),
-              ),
-            ),
           ],
         ),
       ),
@@ -133,6 +124,54 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
         });
       }
     });
+  }
+
+  Future<void> _addThisDeviceToDiscovered() async {
+    if (_thisDeviceEntry != null) return;
+    final profile = await DeviceProfile.fetch();
+    if (!mounted) return;
+
+    final thisDevice = DiscoveredDevice(
+      id: profile.deviceId,
+      name: profile.displayName,
+      manufacturerData: Uint8List(0),
+      rssi: 0,
+      serviceUuids: const [],
+    );
+
+    setState(() {
+      _thisDeviceEntry = thisDevice;
+      if (!discoveredDevices.any((device) => device.id == thisDevice.id)) {
+        discoveredDevices.insert(0, thisDevice);
+      }
+    });
+  }
+
+  Future<void> _connectToThisDevice(BuildContext context) async {
+    final device = _thisDeviceEntry;
+    if (device == null) return;
+
+    setState(() {
+      connectingDevices[device.id] = true;
+    });
+
+    try {
+      final wearable = await ThisDeviceWearable.create(
+        disconnectNotifier: WearableDisconnectNotifier(),
+      );
+      if (!context.mounted) return;
+      context.read<WearablesProvider>().addWearable(wearable);
+      context.read<SensorRecorderProvider>().addWearable(wearable);
+      setState(() {
+        discoveredDevices.removeWhere((d) => d.id == device.id);
+      });
+    } finally {
+      if (context.mounted) {
+        setState(() {
+          connectingDevices.remove(device.id);
+        });
+      }
+    }
   }
 
   Future<void> _connectToDevice(
