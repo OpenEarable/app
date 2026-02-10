@@ -91,10 +91,11 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
               child: PlatformElevatedButton(
-                onPressed: () {
-                  final mockWearable = ThisDeviceWearable(
+                onPressed: () async {
+                  final mockWearable = await ThisDeviceWearable.create(
                     disconnectNotifier: WearableDisconnectNotifier(),
                   );
+                  if (!context.mounted) return;
                   context.read<WearablesProvider>().addWearable(mockWearable);
                   context
                       .read<SensorRecorderProvider>()
