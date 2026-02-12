@@ -40,17 +40,14 @@ class _DevicesPageState extends State<DevicesPage> {
     );
   }
 
-  Widget _buildSmallScreenLayout(BuildContext context, WearablesProvider wearablesProvider) {
+  Widget _buildSmallScreenLayout(
+    BuildContext context,
+    WearablesProvider wearablesProvider,
+  ) {
     return PlatformScaffold(
       appBar: PlatformAppBar(
         title: PlatformText("Devices"),
         trailingActions: [
-          PlatformIconButton(
-            icon: Icon(context.platformIcons.info),
-            onPressed: () {
-              context.push('/log-files');
-            },
-          ),
           PlatformIconButton(
             icon: Icon(context.platformIcons.bluetooth),
             onPressed: () {
@@ -63,7 +60,10 @@ class _DevicesPageState extends State<DevicesPage> {
     );
   }
 
-  Widget _buildSmallScreenContent(BuildContext context, WearablesProvider wearablesProvider) {
+  Widget _buildSmallScreenContent(
+    BuildContext context,
+    WearablesProvider wearablesProvider,
+  ) {
     if (wearablesProvider.wearables.isEmpty) {
       return RefreshIndicator(
         onRefresh: () async {
@@ -160,7 +160,6 @@ class _DevicesPageState extends State<DevicesPage> {
   }
 }
 
-
 // MARK: DeviceRow
 
 /// This widget represents a single device in the list/grid.
@@ -218,22 +217,27 @@ class DeviceRow extends StatelessWidget {
                             .bodyLarge
                             ?.copyWith(fontWeight: FontWeight.bold),
                       ),
-                      Row(children: [
-                        BatteryStateView(device: _device),
-                        if (_device.hasCapability<StereoDevice>())
-                          Padding(
-                            padding: EdgeInsets.only(left: 8.0),
-                            child: StereoPosLabel(device: _device.requireCapability<StereoDevice>()),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-                Spacer(),
-                if (_device.hasCapability<DeviceIdentifier>())
+                      Row(
+                        children: [
+                          BatteryStateView(device: _device),
+                          if (_device.hasCapability<StereoDevice>())
+                            Padding(
+                              padding: EdgeInsets.only(left: 8.0),
+                              child: StereoPosLabel(
+                                device:
+                                    _device.requireCapability<StereoDevice>(),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  Spacer(),
+                  if (_device.hasCapability<DeviceIdentifier>())
                     FutureBuilder(
-                      future:
-                          _device.requireCapability<DeviceIdentifier>().readDeviceIdentifier(),
+                      future: _device
+                          .requireCapability<DeviceIdentifier>()
+                          .readDeviceIdentifier(),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState ==
                             ConnectionState.waiting) {
@@ -254,7 +258,8 @@ class DeviceRow extends StatelessWidget {
                   children: [
                     PlatformText("Firmware Version: "),
                     FutureBuilder(
-                      future: _device.requireCapability<DeviceFirmwareVersion>()
+                      future: _device
+                          .requireCapability<DeviceFirmwareVersion>()
                           .readDeviceFirmwareVersion(),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState ==
@@ -268,7 +273,8 @@ class DeviceRow extends StatelessWidget {
                       },
                     ),
                     FutureBuilder(
-                      future: _device.requireCapability<DeviceFirmwareVersion>()
+                      future: _device
+                          .requireCapability<DeviceFirmwareVersion>()
                           .checkFirmwareSupport(),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState ==
@@ -305,7 +311,8 @@ class DeviceRow extends StatelessWidget {
                   children: [
                     PlatformText("Hardware Version: "),
                     FutureBuilder(
-                      future: _device.requireCapability<DeviceHardwareVersion>()
+                      future: _device
+                          .requireCapability<DeviceHardwareVersion>()
                           .readDeviceHardwareVersion(),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState ==

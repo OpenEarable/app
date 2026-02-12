@@ -8,7 +8,6 @@ import 'package:provider/provider.dart';
 
 import '../../view_models/sensor_recorder_provider.dart';
 
-
 class SensorPage extends StatelessWidget {
   const SensorPage({super.key});
 
@@ -36,8 +35,8 @@ class SensorPage extends StatelessWidget {
                 forceElevated: innerBoxIsScrolled,
                 bottom: TabBar(
                   tabs: [
-                    const Tab(text: 'Configuration'),
-                    const Tab(text: 'Charts'),
+                    const Tab(text: 'Configure'),
+                    const Tab(text: 'Live Data'),
                     Tab(
                       child: Row(
                         children: [
@@ -60,9 +59,7 @@ class SensorPage extends StatelessWidget {
                   },
                 ),
               ),
-
               SensorValuesPage(),
-
               LocalRecorderView(),
             ],
           ),
@@ -80,7 +77,9 @@ class _RecordingIndicator extends StatelessWidget {
     return Consumer<SensorRecorderProvider>(
       builder: (context, recorderProvider, child) {
         return Icon(
-          recorderProvider.isRecording ? Icons.fiber_manual_record : Icons.fiber_manual_record_outlined,
+          recorderProvider.isRecording
+              ? Icons.fiber_manual_record
+              : Icons.fiber_manual_record_outlined,
           color: recorderProvider.isRecording ? Colors.red : Colors.grey,
         );
       },

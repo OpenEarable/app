@@ -7,6 +7,7 @@ import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 import 'package:open_wearable/models/log_file_manager.dart';
 import 'package:open_wearable/models/wearable_connector.dart';
 import 'package:open_wearable/router.dart';
+import 'package:open_wearable/theme/app_theme.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
 import 'package:open_wearable/widgets/app_banner.dart';
 import 'package:open_wearable/widgets/global_app_banner_overlay.dart';
@@ -98,7 +99,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       );
     });
 
-    _wearableProvEventSub = wearablesProvider.wearableEventStream.listen((event) {
+    _wearableProvEventSub =
+        wearablesProvider.wearableEventStream.listen((event) {
       if (!mounted) return;
 
       // Handle firmware update available events with a dialog
@@ -127,7 +129,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   child: const Text('Update Now'),
                   onPressed: () {
                     // Set the selected peripheral for firmware update
-                    final updateProvider = Provider.of<FirmwareUpdateRequestProvider>(
+                    final updateProvider =
+                        Provider.of<FirmwareUpdateRequestProvider>(
                       rootNavigatorKey.currentContext!,
                       listen: false,
                     );
@@ -165,8 +168,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             content: Text(
               event.description,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: textColor,
-              ),
+                    color: textColor,
+                  ),
             ),
             backgroundColor: backgroundColor,
             key: ValueKey(id),
@@ -247,14 +250,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         iosUsesMaterialWidgets: true,
       ),
       builder: (context) => PlatformTheme(
-        materialLightTheme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-          cardTheme: const CardThemeData(
-            color: Colors.white,
-            elevation: 0,
-          ),
-        ),
+        materialLightTheme: AppTheme.lightTheme(),
+        materialDarkTheme: AppTheme.darkTheme(),
+        themeMode: ThemeMode.light,
         builder: (context) => GlobalAppBannerOverlay(
           child: PlatformApp.router(
             routerConfig: router,
