@@ -10,25 +10,21 @@ class SensorValueCard extends StatelessWidget {
   final Sensor sensor;
   final Wearable wearable;
 
-  const SensorValueCard({
-    super.key,
-    required this.sensor,
-    required this.wearable,
-  });
+  const SensorValueCard({super.key, required this.sensor, required this.wearable});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        final provider = context.read<SensorDataProvider>();
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => ChangeNotifierProvider.value(
-              value: provider,
-              child: SensorValueDetail(sensor: sensor, wearable: wearable),
+          final provider = context.read<SensorDataProvider>();
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => ChangeNotifierProvider.value(
+                value: provider,
+                child: SensorValueDetail(sensor: sensor, wearable: wearable),
+              ),
             ),
-          ),
-        );
+          );
       },
       child: Card(
         child: Padding(
@@ -37,26 +33,16 @@ class SensorValueCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  PlatformText(
-                    sensor.sensorName,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
+                  PlatformText(sensor.sensorName, style: Theme.of(context).textTheme.bodyLarge),
                   Spacer(),
-                  PlatformText(
-                    wearable.name,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
+                  PlatformText(wearable.name, style: Theme.of(context).textTheme.bodyMedium),
                 ],
               ),
               Padding(
                 padding: const EdgeInsets.only(top: 10.0),
-                child: SizedBox(
+                  child: SizedBox(
                   height: 200,
-                  child: SensorChart(
-                    allowToggleAxes: false,
-                  ),
+                  child: SensorChart(allowToggleAxes: false,),
                 ),
               ),
             ],

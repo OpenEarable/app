@@ -3,8 +3,6 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
 class SensorConfigurationStorage {
-  static const String _scopeSeparator = '__';
-
   /// Returns the directory where sensor configurations are stored.
   /// Creates the directory if it does not exist.
   static Future<Directory> _getConfigDirectory() async {
@@ -20,13 +18,9 @@ class SensorConfigurationStorage {
   /// Each file is expected to be a JSON file with a specific configuration.
   static Future<List<File>> _getAllConfigFiles() async {
     final configDir = await _getConfigDirectory();
-    return configDir
-        .list()
-        .where(
-          (file) => file is File && file.path.endsWith('.json'),
-        )
-        .cast<File>()
-        .toList();
+    return configDir.list().where((file) =>
+      file is File && file.path.endsWith('.json'),
+    ).cast<File>().toList();
   }
 
   /// Returns the file for a specific configuration key.
@@ -39,10 +33,7 @@ class SensorConfigurationStorage {
   /// Saves a configuration for a specific key.
   /// If the file already exists, it will be overwritten.
   /// The configuration is expected to be a map of string key-value pairs.
-  static Future<void> saveConfiguration(
-    String key,
-    Map<String, String> config,
-  ) async {
+  static Future<void> saveConfiguration(String key, Map<String, String> config) async {
     final File file = await _getConfigFile(key);
     await file.writeAsString(jsonEncode(config));
   }
@@ -63,8 +54,7 @@ class SensorConfigurationStorage {
     final configFiles = await _getAllConfigFiles();
     for (final file in configFiles) {
       final contents = await file.readAsString();
-      allConfigs[_getKeyFromFile(file)] =
-          Map<String, String>.from(jsonDecode(contents));
+      allConfigs[_getKeyFromFile(file)] = Map<String, String>.from(jsonDecode(contents));
     }
     return allConfigs;
   }
@@ -87,33 +77,5 @@ class SensorConfigurationStorage {
     }
   }
 
-  static String scopedPrefix(String scope) =>
-      '${sanitizeKey(scope)}$_scopeSeparator';
-
-  static String buildScopedKey({
-    required String scope,
-    required String name,
-  }) {
-    final sanitizedName = sanitizeKey(name.trim());
-    return '${scopedPrefix(scope)}$sanitizedName';
-  }
-
-  static bool keyMatchesScope(String key, String scope) {
-    return key.startsWith(scopedPrefix(scope));
-  }
-
-  static String displayNameFromScopedKey(
-    String key, {
-    required String scope,
-  }) {
-    if (!keyMatchesScope(key, scope)) {
-      return key.replaceAll('_', ' ');
-    }
-    return key.substring(scopedPrefix(scope).length).replaceAll('_', ' ');
-  }
-
-  static bool isLegacyUnscopedKey(String key) => !key.contains(_scopeSeparator);
-
-  static String sanitizeKey(String key) =>
-      key.replaceAll(RegExp(r'[^\w\-]'), '_');
+  static String sanitizeKey(String key) => key.replaceAll(RegExp(r'[^\w\-]'), '_');
 }

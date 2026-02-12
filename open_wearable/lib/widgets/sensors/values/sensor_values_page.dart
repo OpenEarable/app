@@ -18,35 +18,24 @@ class SensorValuesPage extends StatelessWidget {
         List<Widget> charts = [];
         for (var wearable in wearablesProvider.wearables) {
           if (wearable.hasCapability<SensorManager>()) {
-            for (Sensor sensor
-                in wearable.requireCapability<SensorManager>().sensors) {
+            for (Sensor sensor in wearable.requireCapability<SensorManager>().sensors) {
               if (!_sensorDataProvider.containsKey((wearable, sensor))) {
-                _sensorDataProvider[(wearable, sensor)] =
-                    SensorDataProvider(sensor: sensor);
+                _sensorDataProvider[(wearable, sensor)] = SensorDataProvider(sensor: sensor);
               }
               charts.add(
                 ChangeNotifierProvider.value(
                   value: _sensorDataProvider[(wearable, sensor)],
-                  child: SensorValueCard(
-                    sensor: sensor,
-                    wearable: wearable,
-                  ),
+                  child: SensorValueCard(sensor: sensor, wearable: wearable,),
                 ),
               );
             }
           }
         }
 
-        _sensorDataProvider.removeWhere(
-          (key, _) => !wearablesProvider.wearables.any(
-            (device) =>
-                device.hasCapability<SensorManager>() &&
-                device == key.$1 &&
-                device
-                    .requireCapability<SensorManager>()
-                    .sensors
-                    .contains(key.$2),
-          ),
+        _sensorDataProvider.removeWhere((key, _) =>
+          !wearablesProvider.wearables.any((device) => device.hasCapability<SensorManager>()
+          && device == key.$1
+          && device.requireCapability<SensorManager>().sensors.contains(key.$2),),
         );
 
         return LayoutBuilder(
@@ -63,18 +52,15 @@ class SensorValuesPage extends StatelessWidget {
   }
 
   Widget _buildSmallScreenLayout(BuildContext context, List<Widget> charts) {
-    if (charts.isEmpty) {
-      return Center(
-        child: PlatformText(
-          "No sensors connected",
-          style: Theme.of(context).textTheme.titleLarge,
+    return Padding(
+      padding: EdgeInsets.all(10),
+      child: charts.isEmpty
+        ? Center(
+          child: PlatformText("No sensors connected", style: Theme.of(context).textTheme.titleLarge),
+        )
+        : ListView(
+          children: charts,
         ),
-      );
-    }
-
-    return ListView(
-      padding: const EdgeInsets.all(10),
-      children: charts,
     );
   }
 
@@ -102,10 +88,7 @@ class SensorValuesPage extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Center(
-              child: PlatformText(
-                "No sensors available",
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+              child: PlatformText("No sensors available", style: Theme.of(context).textTheme.titleLarge),
             ),
           );
         }
