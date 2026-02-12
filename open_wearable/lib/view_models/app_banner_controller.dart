@@ -22,7 +22,19 @@ class AppBannerController with ChangeNotifier {
   }
 
   void hideBanner(AppBanner banner) {
-    activeBanners.removeWhere((b) => b.key == banner.key);
+    final removed = activeBanners.remove(banner);
+    if (!removed) {
+      return;
+    }
+    notifyListeners();
+  }
+
+  void hideBannerByKey(Key key) {
+    final before = activeBanners.length;
+    activeBanners.removeWhere((b) => b.key == key);
+    if (activeBanners.length == before) {
+      return;
+    }
     notifyListeners();
   }
 }

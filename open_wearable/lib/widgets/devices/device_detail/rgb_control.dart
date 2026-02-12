@@ -38,9 +38,9 @@ class _RgbControlViewState extends State<RgbControlView> {
               child: PlatformText('Done'),
               onPressed: () {
                 widget.rgbLed.writeLedColor(
-                  r: (255 *_currentColor.r).round(),
-                  g: (255 *_currentColor.g).round(),
-                  b: (255 *_currentColor.b).round(),
+                  r: (255 * _currentColor.r).round(),
+                  g: (255 * _currentColor.g).round(),
+                  b: (255 * _currentColor.b).round(),
                 );
                 Navigator.of(context).pop();
               },
@@ -53,15 +53,37 @@ class _RgbControlViewState extends State<RgbControlView> {
 
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton(
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return OutlinedButton.icon(
       onPressed: _showColorPickerDialog,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: _currentColor,
-        foregroundColor: _currentColor.computeLuminance() > 0.5
-            ? Colors.black
-            : Colors.white,
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        minimumSize: const Size(0, 34),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        side: BorderSide(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.65),
+        ),
+        foregroundColor: colorScheme.onSurface,
       ),
-      child: PlatformText('Color'),
+      icon: Container(
+        width: 14,
+        height: 14,
+        decoration: BoxDecoration(
+          color: _currentColor,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: Colors.black.withValues(alpha: 0.18),
+          ),
+        ),
+      ),
+      label: PlatformText(
+        'Color',
+        style: theme.textTheme.labelLarge?.copyWith(
+          fontWeight: FontWeight.w700,
+        ),
+      ),
     );
   }
 }
