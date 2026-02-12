@@ -1,53 +1,70 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-
-import '../view_models/app_banner_controller.dart';
 
 class AppBanner extends StatelessWidget {
   final Widget content;
   final Color backgroundColor;
+  final Color? foregroundColor;
+  final IconData? leadingIcon;
 
   const AppBanner({
     super.key,
     required this.content,
     this.backgroundColor = Colors.blue,
+    this.foregroundColor,
+    this.leadingIcon,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Card(
-          elevation: 3,
+    final resolvedForeground = foregroundColor ?? Colors.white;
+    final borderColor = resolvedForeground.withValues(alpha: 0.22);
+
+    return Material(
+      color: Colors.transparent,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
           color: backgroundColor,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 40, 16),
-            child: content,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: borderColor),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.11),
+              blurRadius: 14,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: DefaultTextStyle(
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: resolvedForeground,
+                      fontWeight: FontWeight.w600,
+                    ) ??
+                TextStyle(
+                  color: resolvedForeground,
+                  fontWeight: FontWeight.w600,
+                ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (leadingIcon != null) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(top: 1),
+                    child: Icon(
+                      leadingIcon,
+                      size: 18,
+                      color: resolvedForeground,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                ],
+                Expanded(child: content),
+              ],
+            ),
           ),
         ),
-        Positioned(
-          top: 8,
-          right: 8,
-          child: IconButton(
-            padding: const EdgeInsets.all(0),
-            constraints: const BoxConstraints(
-              minWidth: 32,
-              minHeight: 32,
-            ),
-            style: ButtonStyle(
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            splashRadius: 18,
-            icon: const Icon(Icons.close, size: 20, color: Colors.white),
-            onPressed: () {
-              final controller =
-                  Provider.of<AppBannerController>(context, listen: false);
-              controller.hideBanner(this);
-            },
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

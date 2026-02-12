@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
 class SensorConfigurationStorage {
+  static const String _scopeSeparator = '__';
+
   /// Returns the directory where sensor configurations are stored.
   /// Creates the directory if it does not exist.
   static Future<Directory> _getConfigDirectory() async {
@@ -18,9 +20,17 @@ class SensorConfigurationStorage {
   /// Each file is expected to be a JSON file with a specific configuration.
   static Future<List<File>> _getAllConfigFiles() async {
     final configDir = await _getConfigDirectory();
-    return configDir.list().where((file) =>
-      file is File && file.path.endsWith('.json'),
-    ).cast<File>().toList();
+    final files = <File>[];
+    try {
+      await for (final entity in configDir.list(followLinks: false)) {
+        if (entity is File && entity.path.toLowerCase().endsWith('.json')) {
+          files.add(entity);
+        }
+      }
+    } on FileSystemException {
+      return const [];
+    }
+    return files;
   }
 
   /// Returns the file for a specific configuration key.
@@ -33,14 +43,17 @@ class SensorConfigurationStorage {
   /// Saves a configuration for a specific key.
   /// If the file already exists, it will be overwritten.
   /// The configuration is expected to be a map of string key-value pairs.
-  static Future<void> saveConfiguration(String key, Map<String, String> config) async {
+  static Future<void> saveConfiguration(
+    String key,
+    Map<String, String> config,
+  ) async {
     final File file = await _getConfigFile(key);
     await file.writeAsString(jsonEncode(config));
   }
 
   static Future<List<String>> listConfigurationKeys() async {
     final files = await _getAllConfigFiles();
-    return files.map(_getKeyFromFile).toList();
+    return files.map(_getKeyFromFile).where((key) => key.isNotEmpty).toList();
   }
 
   static String _getKeyFromFile(File file) =>
@@ -54,7 +67,8 @@ class SensorConfigurationStorage {
     final configFiles = await _getAllConfigFiles();
     for (final file in configFiles) {
       final contents = await file.readAsString();
-      allConfigs[_getKeyFromFile(file)] = Map<String, String>.from(jsonDecode(contents));
+      allConfigs[_getKeyFromFile(file)] =
+          Map<String, String>.from(jsonDecode(contents));
     }
     return allConfigs;
   }
@@ -77,5 +91,110 @@ class SensorConfigurationStorage {
     }
   }
 
-  static String sanitizeKey(String key) => key.replaceAll(RegExp(r'[^\w\-]'), '_');
+  static String scopedPrefix(String scope) =>
+      '${sanitizeKey(scope)}$_scopeSeparator';
+
+  static String normalizeDeviceNameForScope(String deviceName) {
+    final compact = deviceName.trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (compact.isEmpty) {
+      return 'unknown_device';
+    }
+    return sanitizeKey(compact.toLowerCase());
+  }
+
+  static String? normalizeFirmwareVersionForScope(String? firmwareVersion) {
+    if (firmwareVersion == null) {
+      return null;
+    }
+    var normalized = firmwareVersion.trim().toLowerCase();
+    if (normalized.isEmpty) {
+      return null;
+    }
+    normalized = normalized.replaceFirst(RegExp(r'^v(?=\d)'), '');
+    if (normalized.isEmpty) {
+      return null;
+    }
+    return sanitizeKey(normalized);
+  }
+
+  static String deviceNameScope(String deviceName) =>
+      'name_${normalizeDeviceNameForScope(deviceName)}';
+
+  static String? deviceNameFirmwareScope({
+    required String deviceName,
+    required String? firmwareVersion,
+  }) {
+    final normalizedFirmware =
+        normalizeFirmwareVersionForScope(firmwareVersion);
+    if (normalizedFirmware == null) {
+      return null;
+    }
+    return '${deviceNameScope(deviceName)}__fw_$normalizedFirmware';
+  }
+
+  static String buildScopedKey({
+    required String scope,
+    required String name,
+  }) {
+    final sanitizedName = sanitizeKey(name.trim());
+    return '${scopedPrefix(scope)}$sanitizedName';
+  }
+
+  static bool keyMatchesScope(String key, String scope) {
+    return key.startsWith(scopedPrefix(scope));
+  }
+
+  static String displayNameFromScopedKey(
+    String key, {
+    required String scope,
+  }) {
+    if (!keyMatchesScope(key, scope)) {
+      return key.replaceAll('_', ' ');
+    }
+    return key.substring(scopedPrefix(scope).length).replaceAll('_', ' ');
+  }
+
+  static bool isLegacyUnscopedKey(String key) => !key.contains(_scopeSeparator);
+
+  static String sanitizeKey(String key) =>
+      key.replaceAll(RegExp(r'[^\w\-]'), '_');
+}
+
+class DeviceProfileScopeMatch {
+  final String nameScope;
+  final String? firmwareScope;
+
+  const DeviceProfileScopeMatch({
+    required this.nameScope,
+    required this.firmwareScope,
+  });
+
+  factory DeviceProfileScopeMatch.forDevice({
+    required String deviceName,
+    String? firmwareVersion,
+  }) {
+    return DeviceProfileScopeMatch(
+      nameScope: SensorConfigurationStorage.deviceNameScope(deviceName),
+      firmwareScope: SensorConfigurationStorage.deviceNameFirmwareScope(
+        deviceName: deviceName,
+        firmwareVersion: firmwareVersion,
+      ),
+    );
+  }
+
+  String get saveScope => firmwareScope ?? nameScope;
+
+  String? matchingScopeForKey(String key) {
+    final preferredScope = firmwareScope ?? nameScope;
+    if (SensorConfigurationStorage.keyMatchesScope(key, preferredScope)) {
+      return preferredScope;
+    }
+    return null;
+  }
+
+  bool matchesScopedKey(String key) => matchingScopeForKey(key) != null;
+
+  bool allowsKey(String key) =>
+      matchesScopedKey(key) ||
+      SensorConfigurationStorage.isLegacyUnscopedKey(key);
 }
