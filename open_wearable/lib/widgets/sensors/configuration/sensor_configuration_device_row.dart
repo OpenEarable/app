@@ -192,7 +192,7 @@ class _SensorConfigurationDeviceRowState
         const Padding(
           padding: EdgeInsets.all(12),
           child: Text(
-            'No profiles saved yet. Save current settings above, then tap a profile to apply it.',
+            'No profiles saved yet. Save current settings above, then tap a profile to load as current.',
           ),
         ),
       );
@@ -224,7 +224,7 @@ class _SensorConfigurationDeviceRowState
       ),
       title: PlatformText(title),
       subtitle: PlatformText(
-        isDeviceScoped ? 'Tap to load into settings' : 'Legacy shared profile',
+        isDeviceScoped ? 'Tap to load as current' : 'Legacy shared profile',
       ),
       onTap: () => _loadProfile(key: key, title: title),
       trailing: PlatformIconButton(
@@ -283,11 +283,11 @@ class _SensorConfigurationDeviceRowState
 
     if (result.skippedCount > 0 || result.unknownConfigCount > 0) {
       _showSnackBar(
-        'Loaded "$title" (${result.restoredCount} restored, ${result.skippedCount + result.unknownConfigCount} skipped). Tap "Apply Configurations" to push.',
+        'Loaded "$title" (${result.restoredCount} restored, ${result.skippedCount + result.unknownConfigCount} skipped). Tap "Apply Profiles" to push.',
       );
     } else {
       _showSnackBar(
-        'Loaded profile "$title". Tap "Apply Configurations" at the bottom to push to hardware.',
+        'Loaded profile "$title". Tap "Apply Profiles" at the bottom to push to hardware.',
       );
     }
 

@@ -119,7 +119,7 @@ class SensorConfigurationView extends StatelessWidget {
 
         (onSetConfigPressed ?? () {})();
       },
-      child: PlatformText('Apply Configurations'),
+      child: PlatformText('Apply Profiles'),
     );
   }
 
