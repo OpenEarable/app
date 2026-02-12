@@ -3,120 +3,286 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
-import 'package:shared_preferences/shared_preferences.dart'; // New dependency for persistence
+import 'package:shared_preferences/shared_preferences.dart';
 
+import 'auto_connect_preferences.dart';
 import 'logger.dart';
-import 'wearable_connector.dart';
-
-const String _connectedDeviceNamesKey = "connectedDeviceNames";
 
 class BluetoothAutoConnector {
+  static const Duration _scanRetryInterval = Duration(seconds: 3);
+
   final NavigatorState? Function() navStateGetter;
   final WearableManager wearableManager;
-  final WearableConnector connector;
   final Future<SharedPreferences> prefsFuture;
   final void Function(Wearable wearable) onWearableConnected;
 
   StreamSubscription<Wearable>? _connectSubscription;
   StreamSubscription<DiscoveredDevice>? _scanSubscription;
+  StreamSubscription<void>? _preferencesSubscription;
+  Timer? _scanRetryTimer;
 
   bool _isConnecting = false;
+  bool _isAttemptingConnection = false;
   bool _askedPermissionsThisSession = false;
+  int _sessionToken = 0;
 
   // Names to look for during scanning
   List<String> _targetNames = [];
+  Map<String, int> _targetNameCounts = const <String, int>{};
+  final Set<String> _connectedDeviceIds = <String>{};
+  final Map<String, int> _connectedNameCounts = <String, int>{};
+  final Set<String> _pendingDeviceIds = <String>{};
 
   BluetoothAutoConnector({
     required this.navStateGetter,
     required this.wearableManager,
-    required this.connector,
     required this.prefsFuture,
     required this.onWearableConnected,
   });
 
   void start() async {
-    stop();
+    final token = ++_sessionToken;
+    _stopInternal();
+    _connectedDeviceIds.clear();
+    _connectedNameCounts.clear();
+    _pendingDeviceIds.clear();
 
     // Load the last connected names
-    final prefs = await prefsFuture;
-    _targetNames = prefs.getStringList(_connectedDeviceNamesKey) ?? [];
+    await _reloadTargetNames(token: token, reloadPrefs: false);
+    if (token != _sessionToken) {
+      return;
+    }
 
     // Start listening for successful connections (to save names and set disconnect logic)
     _connectSubscription =
         wearableManager.connectStream.listen(_onDeviceConnected);
+    _preferencesSubscription = AutoConnectPreferences.changes.listen((_) {
+      unawaited(_syncTargetsWithPreferences(token: token, restartScan: true));
+    });
+    _ensureScanRetryLoop(token: token);
 
     // Initiate the connection sequence
-    _attemptConnection();
+    _attemptConnection(token: token);
   }
 
   void stop() {
+    _sessionToken++;
+    _stopInternal();
+  }
+
+  void _stopInternal() {
     _connectSubscription?.cancel();
     _connectSubscription = null;
-    _scanSubscription?.cancel();
-    _scanSubscription = null;
-    // Stop any ongoing scan initiated by this class
-    // Use the public WearableManager function to stop the scan
-    wearableManager.setAutoConnect([]);
+    _preferencesSubscription?.cancel();
+    _preferencesSubscription = null;
+    _isAttemptingConnection = false;
+    _isConnecting = false;
+    _pendingDeviceIds.clear();
+    _scanRetryTimer?.cancel();
+    _scanRetryTimer = null;
+    _stopScanning();
+  }
 
-    // Cancel the local listener to prevent further triggers
-    _scanSubscription?.cancel();
-    _scanSubscription = null;
+  String _normalizeDeviceId(String id) => id.trim().toUpperCase();
+
+  Map<String, int> _buildNameCounts(List<String> names) {
+    final counts = <String, int>{};
+    for (final name in names) {
+      counts[name] = (counts[name] ?? 0) + 1;
+    }
+    return counts;
+  }
+
+  int _requiredConnectionsForName(String name) => _targetNameCounts[name] ?? 0;
+
+  void _markConnected({
+    required String deviceId,
+    required String deviceName,
+  }) {
+    final normalizedId = _normalizeDeviceId(deviceId);
+    final inserted = _connectedDeviceIds.add(normalizedId);
+    if (!inserted) {
+      return;
+    }
+    _connectedNameCounts[deviceName] =
+        (_connectedNameCounts[deviceName] ?? 0) + 1;
+  }
+
+  void _markDisconnected({
+    required String deviceId,
+    required String deviceName,
+  }) {
+    final normalizedId = _normalizeDeviceId(deviceId);
+    final removed = _connectedDeviceIds.remove(normalizedId);
+    if (!removed) {
+      return;
+    }
+    final current = _connectedNameCounts[deviceName];
+    if (current == null) {
+      return;
+    }
+    if (current <= 1) {
+      _connectedNameCounts.remove(deviceName);
+      return;
+    }
+    _connectedNameCounts[deviceName] = current - 1;
+  }
+
+  bool _hasUnconnectedTargets() {
+    if (_targetNameCounts.isEmpty) {
+      return false;
+    }
+    return _targetNameCounts.entries.any((entry) {
+      return (_connectedNameCounts[entry.key] ?? 0) < entry.value;
+    });
+  }
+
+  String _deviceErrorMessageSafe(Object error, DiscoveredDevice device) {
+    try {
+      return wearableManager.deviceErrorMessage(error, device.name);
+    } catch (_) {
+      final fallback = error.toString().trim();
+      if (fallback.isEmpty) {
+        return 'Unknown connection error.';
+      }
+      return fallback;
+    }
+  }
+
+  bool _isAlreadyConnectedMessage(String message) =>
+      message.toLowerCase().contains('already connected');
+
+  Future<void> _reloadTargetNames({
+    required int token,
+    bool reloadPrefs = true,
+  }) async {
+    final prefs = await prefsFuture;
+    if (token != _sessionToken) {
+      return;
+    }
+    if (reloadPrefs) {
+      await prefs.reload();
+      if (token != _sessionToken) {
+        return;
+      }
+    }
+    _targetNames = AutoConnectPreferences.readRememberedDeviceNames(prefs);
+    _targetNameCounts = _buildNameCounts(_targetNames);
+  }
+
+  Future<void> _syncTargetsWithPreferences({
+    required int token,
+    bool restartScan = false,
+  }) async {
+    await _reloadTargetNames(token: token);
+    if (token != _sessionToken) {
+      return;
+    }
+
+    if (_targetNames.isEmpty || !_hasUnconnectedTargets()) {
+      _stopScanning();
+      return;
+    }
+
+    if (restartScan) {
+      await _restartScanIfNeeded();
+    }
+  }
+
+  void _ensureScanRetryLoop({required int token}) {
+    _scanRetryTimer?.cancel();
+    _scanRetryTimer = Timer.periodic(_scanRetryInterval, (timer) {
+      if (token != _sessionToken) {
+        timer.cancel();
+        return;
+      }
+      if (_isAttemptingConnection || _isConnecting) {
+        return;
+      }
+      unawaited(_syncTargetsWithPreferences(token: token, restartScan: true));
+    });
   }
 
   /// Called when the WearableManager successfully connects to a device.
   void _onDeviceConnected(Wearable wearable) async {
-    final prefs = await prefsFuture;
+    final token = _sessionToken;
+    _markConnected(deviceId: wearable.deviceId, deviceName: wearable.name);
 
-    List<String> deviceNames =
-        prefs.getStringList(_connectedDeviceNamesKey) ?? [];
-    if (!deviceNames.contains(wearable.name)) {
-      deviceNames.add(wearable.name);
-      await prefs.setStringList(_connectedDeviceNamesKey, deviceNames);
+    final prefs = await prefsFuture;
+    if (token != _sessionToken) {
+      return;
+    }
+    final rememberedCount = AutoConnectPreferences.countRememberedDeviceName(
+      prefs,
+      wearable.name,
+    );
+    final connectedCount = _connectedNameCounts[wearable.name] ?? 0;
+    if (connectedCount > rememberedCount) {
+      await AutoConnectPreferences.rememberDeviceName(prefs, wearable.name);
     }
 
     // Stop scanning immediately when a successful connection is made
-    if (_scanSubscription != null) {
-      // stop scan
-      wearableManager.setAutoConnect([]);
-
-      _scanSubscription?.cancel();
-      _scanSubscription = null;
-
-      _scanSubscription?.cancel();
-      _scanSubscription = null;
-    }
+    _stopScanning();
 
     // Set up the disconnect listener to trigger a scan for the saved name.
-    wearable.addDisconnectListener(() {
+    wearable.addDisconnectListener(() async {
+      if (token != _sessionToken) {
+        return;
+      }
       logger.i(
         "Device ${wearable.name} disconnected. Initiating reconnection scan.",
       );
+      _markDisconnected(deviceId: wearable.deviceId, deviceName: wearable.name);
 
-      prefs.reload();
-      _targetNames = prefs.getStringList(_connectedDeviceNamesKey) ?? [];
+      await _syncTargetsWithPreferences(token: token);
 
-      _attemptConnection();
+      if (_hasUnconnectedTargets()) {
+        _attemptConnection();
+      }
     });
   }
 
-  Future<void> _attemptConnection() async {
+  Future<void> _attemptConnection({int? token}) async {
+    final activeToken = token ?? _sessionToken;
+    if (activeToken != _sessionToken) {
+      return;
+    }
+    if (_isAttemptingConnection) {
+      return;
+    }
+
+    _isAttemptingConnection = true;
     if (!Platform.isIOS) {
       final hasPerm = await wearableManager.hasPermissions();
+      if (activeToken != _sessionToken) {
+        _isAttemptingConnection = false;
+        return;
+      }
       if (!hasPerm) {
         if (!_askedPermissionsThisSession) {
           _askedPermissionsThisSession = true;
           _showPermissionsDialog();
         }
         logger.w('Skipping auto-connect: no permissions granted yet.');
+        _isAttemptingConnection = false;
         return;
       }
     }
 
-    await connector.connectToSystemDevices();
+    try {
+      await _syncTargetsWithPreferences(token: activeToken);
+      if (activeToken != _sessionToken) {
+        return;
+      }
 
-    if (_targetNames.isNotEmpty) {
-      _setupScanListener();
-      await wearableManager.startScan();
+      if (_targetNames.isNotEmpty && _hasUnconnectedTargets()) {
+        _setupScanListener();
+        await wearableManager.startScan();
+      }
+    } catch (error, stackTrace) {
+      logger.w('Auto-connect attempt failed: $error\n$stackTrace');
+    } finally {
+      _isAttemptingConnection = false;
     }
   }
 
@@ -126,29 +292,75 @@ class BluetoothAutoConnector {
     _scanSubscription = wearableManager.scanStream.listen((device) {
       if (_isConnecting) return;
 
-      if (_targetNames.contains(device.name)) {
-        _isConnecting = true;
-        // stop scan
-        wearableManager.setAutoConnect([]);
-        _scanSubscription?.cancel();
-        _scanSubscription = null;
-
-        logger.i(
-          "Match found for ${device.name}. Connecting using rotating ID: ${device.id}",
-        );
-
-        wearableManager
-            .connectToDevice(device)
-            .then(onWearableConnected)
-            .catchError((e) {
-          logger.e(
-            "Failed to connect to ${device.id}: ${wearableManager.deviceErrorMessage(e, device.name)}",
-          );
-        }).whenComplete(() {
-          _isConnecting = false;
-        });
+      final normalizedId = _normalizeDeviceId(device.id);
+      if (_pendingDeviceIds.contains(normalizedId) ||
+          _connectedDeviceIds.contains(normalizedId)) {
+        return;
       }
+      final requiredConnections = _requiredConnectionsForName(device.name);
+      if (requiredConnections == 0) {
+        return;
+      }
+      if ((_connectedNameCounts[device.name] ?? 0) >= requiredConnections) {
+        return;
+      }
+
+      _isConnecting = true;
+      _pendingDeviceIds.add(normalizedId);
+      _stopScanning();
+
+      logger.i(
+        "Match found for ${device.name}. Connecting using rotating ID: ${device.id}",
+      );
+
+      wearableManager.connectToDevice(device).then((wearable) {
+        _markConnected(
+          deviceId: wearable.deviceId,
+          deviceName: wearable.name,
+        );
+        onWearableConnected(wearable);
+      }).catchError((error, stackTrace) {
+        final message = _deviceErrorMessageSafe(error, device);
+        if (_isAlreadyConnectedMessage(message)) {
+          _markConnected(deviceId: device.id, deviceName: device.name);
+          logger.i(
+            'Skipping auto-connect for ${device.id}: $message',
+          );
+          return;
+        }
+        logger.w(
+          'Failed to connect to ${device.id}: $message\n$stackTrace',
+        );
+      }).whenComplete(() {
+        _pendingDeviceIds.remove(normalizedId);
+        _isConnecting = false;
+        unawaited(_restartScanIfNeeded());
+      });
     });
+  }
+
+  Future<void> _restartScanIfNeeded() async {
+    if (_isConnecting || _isAttemptingConnection) {
+      return;
+    }
+    if (_scanSubscription != null) {
+      return;
+    }
+    if (!_hasUnconnectedTargets()) {
+      return;
+    }
+    try {
+      _setupScanListener();
+      await wearableManager.startScan();
+    } catch (error, stackTrace) {
+      logger.w('Failed to restart auto-connect scan: $error\n$stackTrace');
+      _stopScanning();
+    }
+  }
+
+  void _stopScanning() {
+    _scanSubscription?.cancel();
+    _scanSubscription = null;
   }
 
   void _showPermissionsDialog() {

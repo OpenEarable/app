@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
+import 'package:open_wearable/models/device_name_formatter.dart';
+import 'package:open_wearable/models/wearable_display_group.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 
 import '../models/logger.dart';
@@ -17,12 +19,12 @@ class NewFirmwareAvailableEvent extends WearableEvent {
     required this.latestVersion,
   }) : super(
           description:
-              'Firmware update available for ${wearable.name}: $currentVersion -> $latestVersion',
+              'Firmware update available for ${formatWearableDisplayName(wearable.name)}: $currentVersion -> $latestVersion',
         );
 
   @override
   String toString() =>
-      'NewFirmwareAvailableEvent for ${wearable.name}: $currentVersion -> $latestVersion';
+      'NewFirmwareAvailableEvent for ${formatWearableDisplayName(wearable.name)}: $currentVersion -> $latestVersion';
 }
 
 abstract class UnsupportedFirmwareEvent {
@@ -54,11 +56,13 @@ class WearableTimeSynchronizedEvent extends WearableEvent {
     required super.wearable,
     String? description,
   }) : super(
-          description: description ?? 'Time synchronized for ${wearable.name}',
+          description: description ??
+              'Time synchronized for ${formatWearableDisplayName(wearable.name)}',
         );
 
   @override
-  String toString() => 'WearableTimeSynchronizedEvent for ${wearable.name}';
+  String toString() =>
+      'WearableTimeSynchronizedEvent for ${formatWearableDisplayName(wearable.name)}';
 }
 
 class WearableErrorEvent extends WearableEvent {
@@ -68,13 +72,13 @@ class WearableErrorEvent extends WearableEvent {
     required this.errorMessage,
     String? description,
   }) : super(
-          description:
-              description ?? 'Error for ${wearable.name}: $errorMessage',
+          description: description ??
+              'Error for ${formatWearableDisplayName(wearable.name)}: $errorMessage',
         );
 
   @override
   String toString() =>
-      'WearableErrorEvent for ${wearable.name}: $errorMessage, description: $description';
+      'WearableErrorEvent for ${formatWearableDisplayName(wearable.name)}: $errorMessage, description: $description';
 }
 
 // MARK: WearablesProvider
@@ -83,10 +87,43 @@ class WearablesProvider with ChangeNotifier {
   final List<Wearable> _wearables = [];
   final Map<Wearable, SensorConfigurationProvider>
       _sensorConfigurationProviders = {};
+  final Set<String> _splitStereoPairKeys = {};
 
   List<Wearable> get wearables => _wearables;
   Map<Wearable, SensorConfigurationProvider> get sensorConfigurationProviders =>
       _sensorConfigurationProviders;
+  bool isStereoPairCombined({
+    required Wearable first,
+    required Wearable second,
+  }) {
+    final pairKey = WearableDisplayGroup.stereoPairKeyForDevices(first, second);
+    return !_splitStereoPairKeys.contains(pairKey);
+  }
+
+  bool isStereoPairKeyCombined(String pairKey) {
+    return !_splitStereoPairKeys.contains(pairKey);
+  }
+
+  void setStereoPairCombined({
+    required Wearable first,
+    required Wearable second,
+    required bool combined,
+  }) {
+    final pairKey = WearableDisplayGroup.stereoPairKeyForDevices(first, second);
+    setStereoPairKeyCombined(pairKey: pairKey, combined: combined);
+  }
+
+  void setStereoPairKeyCombined({
+    required String pairKey,
+    required bool combined,
+  }) {
+    final changed = combined
+        ? _splitStereoPairKeys.remove(pairKey)
+        : _splitStereoPairKeys.add(pairKey);
+    if (changed) {
+      notifyListeners();
+    }
+  }
 
   final _unsupportedFirmwareEventsController =
       StreamController<UnsupportedFirmwareEvent>.broadcast();
@@ -132,11 +169,38 @@ class WearablesProvider with ChangeNotifier {
     });
   }
 
+  Future<String> _wearableNameWithSide(Wearable wearable) async {
+    final displayName = formatWearableDisplayName(wearable.name);
+
+    if (!wearable.hasCapability<StereoDevice>()) {
+      return displayName;
+    }
+
+    try {
+      final position =
+          await wearable.requireCapability<StereoDevice>().position;
+      return switch (position) {
+        DevicePosition.left => '$displayName (Left)',
+        DevicePosition.right => '$displayName (Right)',
+        _ => displayName,
+      };
+    } catch (_) {
+      return displayName;
+    }
+  }
+
   Future<void> _syncTimeAndEmit({
     required Wearable wearable,
-    required String successDescription,
-    required String failureDescription,
+    required bool fromCapabilityChange,
   }) async {
+    final wearableLabel = await _wearableNameWithSide(wearable);
+    final successDescription = fromCapabilityChange
+        ? 'Time synchronized for $wearableLabel after capability update'
+        : 'Time synchronized for $wearableLabel';
+    final failureDescription = fromCapabilityChange
+        ? 'Failed to synchronize time for $wearableLabel after capability update'
+        : 'Failed to synchronize time for $wearableLabel';
+
     try {
       logger.d('Synchronizing time for wearable ${wearable.name}');
       await (wearable.requireCapability<TimeSynchronizable>())
@@ -154,7 +218,7 @@ class WearablesProvider with ChangeNotifier {
       );
       _emitWearableError(
         wearable: wearable,
-        errorMessage: 'Failed to synchronize time with ${wearable.name}: $e',
+        errorMessage: 'Failed to synchronize time with $wearableLabel: $e',
         description: failureDescription,
       );
     }
@@ -175,24 +239,12 @@ class WearablesProvider with ChangeNotifier {
     });
 
     // Init SensorConfigurationProvider synchronously (no awaits here)
-    if (wearable.hasCapability<SensorConfigurationManager>()) {
-      _ensureSensorConfigProvider(wearable);
-      final notifier = _sensorConfigurationProviders[wearable]!;
-      for (final config
-          in (wearable.requireCapability<SensorConfigurationManager>())
-              .sensorConfigurations) {
-        if (notifier.getSelectedConfigurationValue(config) == null &&
-            config.values.isNotEmpty) {
-          notifier.addSensorConfiguration(config, config.values.first);
-        }
-      }
-    }
+    _initializeSensorConfigurations(wearable);
     if (wearable.hasCapability<TimeSynchronizable>()) {
       _scheduleMicrotask(
         () => _syncTimeAndEmit(
           wearable: wearable,
-          successDescription: 'Time synchronized for ${wearable.name}',
-          failureDescription: 'Failed to synchronize time for ${wearable.name}',
+          fromCapabilityChange: false,
         ),
       );
     }
@@ -243,6 +295,26 @@ class WearablesProvider with ChangeNotifier {
         sensorConfigurationManager:
             wearable.requireCapability<SensorConfigurationManager>(),
       );
+    }
+  }
+
+  void _initializeSensorConfigurations(Wearable wearable) {
+    if (!wearable.hasCapability<SensorConfigurationManager>()) {
+      return;
+    }
+
+    _ensureSensorConfigProvider(wearable);
+    final notifier = _sensorConfigurationProviders[wearable]!;
+    final manager = wearable.requireCapability<SensorConfigurationManager>();
+    for (final config in manager.sensorConfigurations) {
+      if (notifier.getSelectedConfigurationValue(config) == null &&
+          config.values.isNotEmpty) {
+        notifier.addSensorConfiguration(
+          config,
+          config.values.first,
+          markPending: false,
+        );
+      }
     }
   }
 
@@ -348,7 +420,50 @@ class WearablesProvider with ChangeNotifier {
     }
   }
 
+  Future<void> _turnOffSensorsForDeviceWithProvider({
+    required Wearable wearable,
+    required SensorConfigurationProvider provider,
+  }) async {
+    try {
+      await provider.turnOffAllSensors();
+    } catch (e, st) {
+      logger.w(
+        'Failed to turn off sensors for ${formatWearableDisplayName(wearable.name)}: $e\n$st',
+      );
+    }
+  }
+
+  Future<void> turnOffSensorsForDevice(Wearable wearable) async {
+    final provider = _sensorConfigurationProviders[wearable];
+    if (provider == null) {
+      return;
+    }
+    await _turnOffSensorsForDeviceWithProvider(
+      wearable: wearable,
+      provider: provider,
+    );
+  }
+
+  Future<void> turnOffSensorsForAllDevices() async {
+    final providersByWearable = Map<Wearable, SensorConfigurationProvider>.from(
+      _sensorConfigurationProviders,
+    );
+
+    for (final entry in providersByWearable.entries) {
+      await _turnOffSensorsForDeviceWithProvider(
+        wearable: entry.key,
+        provider: entry.value,
+      );
+    }
+  }
+
   void removeWearable(Wearable wearable) {
+    _splitStereoPairKeys.removeWhere(
+      (key) => WearableDisplayGroup.stereoPairKeyContainsDevice(
+        key,
+        wearable.deviceId,
+      ),
+    );
     _wearables.remove(wearable);
     _sensorConfigurationProviders.remove(wearable);
     _capabilitySubscriptions.remove(wearable)?.cancel();
@@ -371,18 +486,18 @@ class WearablesProvider with ChangeNotifier {
     required List<Type> addedCapabilites,
   }) {
     if (addedCapabilites.contains(SensorConfigurationManager)) {
-      _ensureSensorConfigProvider(wearable);
+      _initializeSensorConfigurations(wearable);
     }
     if (addedCapabilites.contains(TimeSynchronizable)) {
       _scheduleMicrotask(
         () => _syncTimeAndEmit(
           wearable: wearable,
-          successDescription:
-              'Time synchronized for ${wearable.name} after capability change',
-          failureDescription:
-              'Failed to synchronize time for ${wearable.name} after capability change',
+          fromCapabilityChange: true,
         ),
       );
+    }
+    if (addedCapabilites.isNotEmpty) {
+      notifyListeners();
     }
   }
 }
