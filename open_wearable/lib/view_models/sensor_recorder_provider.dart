@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 
 import '../models/logger.dart';
+import '../models/sensor_streams.dart';
 
 class SensorRecorderProvider with ChangeNotifier {
   final Map<Wearable, Map<Sensor, Recorder>> _recorders = {};
@@ -75,7 +76,8 @@ class SensorRecorderProvider with ChangeNotifier {
     });
 
     if (wearable.hasCapability<SensorManager>()) {
-      for (Sensor sensor in wearable.requireCapability<SensorManager>().sensors) {
+      for (Sensor sensor
+          in wearable.requireCapability<SensorManager>().sensors) {
         if (!_recorders[wearable]!.containsKey(sensor)) {
           _recorders[wearable]![sensor] = Recorder(columns: sensor.axisNames);
         }
@@ -147,7 +149,7 @@ class SensorRecorderProvider with ChangeNotifier {
 
       File file = await recorder.start(
         filepath: filepath,
-        inputStream: sensor.sensorStream,
+        inputStream: SensorStreams.shared(sensor),
       );
 
       logger.i(

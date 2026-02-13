@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 import 'package:open_wearable/view_models/wearables_provider.dart';
+import 'package:open_wearable/widgets/recording_activity_indicator.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/logger.dart';
@@ -59,6 +60,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
       appBar: PlatformAppBar(
         title: const Text('Connect Devices'),
         trailingActions: [
+          const AppBarRecordingIndicator(),
           PlatformIconButton(
             icon: _isScanning
                 ? const SizedBox(

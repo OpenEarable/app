@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/view_models/sensor_data_provider.dart';
+import 'package:open_wearable/widgets/devices/stereo_position_badge.dart';
 import 'package:open_wearable/widgets/sensors/values/sensor_chart.dart';
 import 'package:open_wearable/widgets/sensors/values/sensor_value_detail.dart';
 import 'package:provider/provider.dart';
@@ -37,16 +38,32 @@ class SensorValueCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  PlatformText(
-                    sensor.sensorName,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                  Expanded(
+                    child: PlatformText(
+                      sensor.sensorName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
                   ),
-                  Spacer(),
-                  PlatformText(
-                    wearable.name,
-                    style: Theme.of(context).textTheme.bodyMedium,
+                  const SizedBox(width: 8),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      PlatformText(
+                        wearable.name,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      if (wearable.hasCapability<StereoDevice>())
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8),
+                          child: StereoPositionBadge(
+                            device: wearable.requireCapability<StereoDevice>(),
+                          ),
+                        ),
+                    ],
                   ),
                 ],
               ),

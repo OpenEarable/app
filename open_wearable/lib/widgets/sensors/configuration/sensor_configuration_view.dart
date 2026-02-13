@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
+import 'package:open_wearable/models/wearable_display_group.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
+import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 import 'package:open_wearable/widgets/sensors/configuration/sensor_configuration_device_row.dart';
 import 'package:provider/provider.dart';
 
@@ -39,45 +41,190 @@ class SensorConfigurationView extends StatelessWidget {
       );
     }
 
-    return ListView(
-      padding: const EdgeInsets.all(10),
-      children: [
-        ...wearablesProvider.wearables.map((wearable) {
-          if (wearable.hasCapability<SensorConfigurationManager>()) {
-            return ChangeNotifierProvider<SensorConfigurationProvider>.value(
-              value: wearablesProvider.getSensorConfigurationProvider(wearable),
-              child: SensorConfigurationDeviceRow(device: wearable),
-            );
-          } else {
-            return SensorConfigurationDeviceRow(device: wearable);
-          }
-        }),
-        _buildApplyConfigButton(
-          context,
-          configProviders: wearablesProvider.wearables
-              // ignore: prefer_iterable_wheretype
-              .where(
-                (wearable) =>
-                    wearable.hasCapability<SensorConfigurationManager>(),
-              )
-              .map(
-                (wearable) =>
-                    wearablesProvider.getSensorConfigurationProvider(wearable),
-              )
-              .toList(),
+    return FutureBuilder<List<WearableDisplayGroup>>(
+      future: buildWearableDisplayGroups(
+        wearablesProvider.wearables,
+        shouldCombinePair: (left, right) =>
+            wearablesProvider.isStereoPairCombined(
+          first: left,
+          second: right,
         ),
-        _buildThroughputWarningBanner(context),
-      ],
+      ),
+      builder: (context, snapshot) {
+        final groups = _orderGroupsForConfigure(
+          snapshot.data ??
+              wearablesProvider.wearables
+                  .map(
+                    (wearable) =>
+                        WearableDisplayGroup.single(wearable: wearable),
+                  )
+                  .toList(),
+        );
+        final applyTargets = _buildApplyTargets(
+          groups: groups,
+          wearablesProvider: wearablesProvider,
+        );
+        final sections = <Widget>[
+          ...groups.map(
+            (group) => _buildGroupConfigurationRow(
+              group: group,
+              wearablesProvider: wearablesProvider,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: _buildApplyConfigButton(
+              context,
+              targets: applyTargets,
+            ),
+          ),
+          _buildThroughputWarningBanner(context),
+        ];
+
+        return ListView(
+          padding: SensorPageSpacing.pagePadding,
+          children: sections,
+        );
+      },
     );
+  }
+
+  List<WearableDisplayGroup> _orderGroupsForConfigure(
+    List<WearableDisplayGroup> groups,
+  ) {
+    final indexed = groups.asMap().entries.toList();
+
+    indexed.sort((a, b) {
+      final groupA = a.value;
+      final groupB = b.value;
+      final sameName =
+          groupA.displayName.toLowerCase() == groupB.displayName.toLowerCase();
+      final bothSingle = !groupA.isCombined && !groupB.isCombined;
+      if (sameName && bothSingle) {
+        final sideOrderA = _configureSideOrder(groupA.primaryPosition);
+        final sideOrderB = _configureSideOrder(groupB.primaryPosition);
+        final knownSides = sideOrderA <= 1 && sideOrderB <= 1;
+        if (knownSides && sideOrderA != sideOrderB) {
+          return sideOrderA.compareTo(sideOrderB);
+        }
+      }
+
+      // Preserve existing order for all other rows.
+      return a.key.compareTo(b.key);
+    });
+
+    return indexed.map((entry) => entry.value).toList();
+  }
+
+  int _configureSideOrder(DevicePosition? position) {
+    if (position == DevicePosition.left) {
+      return 0;
+    }
+    if (position == DevicePosition.right) {
+      return 1;
+    }
+    return 2;
+  }
+
+  Widget _buildGroupConfigurationRow({
+    required WearableDisplayGroup group,
+    required WearablesProvider wearablesProvider,
+  }) {
+    final primary = _resolvePrimaryForConfiguration(group);
+    final secondary = _resolveMirroredDevice(group, primary);
+    final storageScope = _storageScopeForGroup(group);
+    final supportsConfig = primary.hasCapability<SensorConfigurationManager>();
+
+    if (!supportsConfig) {
+      return SensorConfigurationDeviceRow(
+        device: primary,
+        pairedDevice: secondary,
+        displayName: group.displayName,
+        storageScope: storageScope,
+      );
+    }
+
+    return ChangeNotifierProvider<SensorConfigurationProvider>.value(
+      value: wearablesProvider.getSensorConfigurationProvider(primary),
+      child: SensorConfigurationDeviceRow(
+        device: primary,
+        pairedDevice: secondary,
+        displayName: group.displayName,
+        storageScope: storageScope,
+      ),
+    );
+  }
+
+  String _storageScopeForGroup(WearableDisplayGroup group) {
+    if (!group.isCombined) {
+      return 'device_${group.representative.deviceId}';
+    }
+
+    final ids = group.members.map((device) => device.deviceId).toList()..sort();
+    return 'stereo_${ids.join('_')}';
+  }
+
+  List<_ConfigApplyTarget> _buildApplyTargets({
+    required List<WearableDisplayGroup> groups,
+    required WearablesProvider wearablesProvider,
+  }) {
+    final targets = <_ConfigApplyTarget>[];
+    for (final group in groups) {
+      final primary = _resolvePrimaryForConfiguration(group);
+      if (!primary.hasCapability<SensorConfigurationManager>()) {
+        continue;
+      }
+
+      final partner = _resolveMirroredDevice(group, primary);
+      final mirrorTarget =
+          partner != null && partner.hasCapability<SensorConfigurationManager>()
+              ? partner
+              : null;
+
+      targets.add(
+        _ConfigApplyTarget(
+          primaryDevice: primary,
+          mirroredDevice: mirrorTarget,
+          provider: wearablesProvider.getSensorConfigurationProvider(primary),
+        ),
+      );
+    }
+    return targets;
+  }
+
+  Wearable _resolvePrimaryForConfiguration(WearableDisplayGroup group) {
+    if (group.isCombined) {
+      for (final member in group.members) {
+        if (member.hasCapability<SensorConfigurationManager>()) {
+          return member;
+        }
+      }
+    }
+    return group.representative;
+  }
+
+  Wearable? _resolveMirroredDevice(
+    WearableDisplayGroup group,
+    Wearable primary,
+  ) {
+    if (!group.isCombined) {
+      return null;
+    }
+    for (final member in group.members) {
+      if (member.deviceId != primary.deviceId) {
+        return member;
+      }
+    }
+    return null;
   }
 
   Widget _buildApplyConfigButton(
     BuildContext context, {
-    required List<SensorConfigurationProvider> configProviders,
+    required List<_ConfigApplyTarget> targets,
   }) {
     return PlatformElevatedButton(
       onPressed: () async {
-        if (configProviders.isEmpty) {
+        if (targets.isEmpty) {
           await showPlatformDialog<void>(
             context: context,
             builder: (dialogContext) => PlatformAlertDialog(
@@ -97,23 +244,54 @@ class SensorConfigurationView extends StatelessWidget {
         }
 
         int appliedCount = 0;
-        for (SensorConfigurationProvider notifier in configProviders) {
-          logger.d("Setting sensor configurations for notifier: $notifier");
-          notifier.getSelectedConfigurations().forEach((entry) {
-            SensorConfiguration config = entry.$1;
-            SensorConfigurationValue value = entry.$2;
+        int mirroredCount = 0;
+        int mirrorSkippedCount = 0;
+
+        for (final target in targets) {
+          logger.d(
+            "Setting sensor configurations for ${target.primaryDevice.name}",
+          );
+
+          for (final entry in target.provider.getSelectedConfigurations()) {
+            final SensorConfiguration config = entry.$1;
+            final SensorConfigurationValue value = entry.$2;
             config.setConfiguration(value);
             appliedCount += 1;
-          });
+
+            final mirroredDevice = target.mirroredDevice;
+            if (mirroredDevice != null) {
+              final mirrored = _applyConfigurationToDevice(
+                mirroredDevice: mirroredDevice,
+                configName: config.name,
+                valueKey: value.key,
+              );
+              if (mirrored) {
+                mirroredCount += 1;
+              } else {
+                mirrorSkippedCount += 1;
+              }
+            }
+          }
         }
 
         final messenger = ScaffoldMessenger.maybeOf(context);
         messenger?.hideCurrentSnackBar();
+
+        final message = StringBuffer(
+          'Applied $appliedCount sensor settings to ${targets.length} row(s).',
+        );
+        if (mirroredCount > 0) {
+          message.write(' Mirrored $mirroredCount settings to paired devices.');
+        }
+        if (mirrorSkippedCount > 0) {
+          message.write(
+            ' $mirrorSkippedCount mirrored settings were unavailable on partner firmware.',
+          );
+        }
+
         messenger?.showSnackBar(
           SnackBar(
-            content: Text(
-              'Applied $appliedCount sensor settings to ${configProviders.length} device(s).',
-            ),
+            content: Text(message.toString()),
           ),
         );
 
@@ -202,6 +380,43 @@ class SensorConfigurationView extends StatelessWidget {
     );
   }
 
+  bool _applyConfigurationToDevice({
+    required Wearable mirroredDevice,
+    required String configName,
+    required String valueKey,
+  }) {
+    if (!mirroredDevice.hasCapability<SensorConfigurationManager>()) {
+      return false;
+    }
+
+    final manager =
+        mirroredDevice.requireCapability<SensorConfigurationManager>();
+    SensorConfiguration? mirroredConfig;
+    for (final config in manager.sensorConfigurations) {
+      if (config.name == configName) {
+        mirroredConfig = config;
+        break;
+      }
+    }
+    if (mirroredConfig == null) {
+      return false;
+    }
+
+    SensorConfigurationValue? mirroredValue;
+    for (final value in mirroredConfig.values) {
+      if (value.key == valueKey) {
+        mirroredValue = value;
+        break;
+      }
+    }
+    if (mirroredValue == null) {
+      return false;
+    }
+
+    mirroredConfig.setConfiguration(mirroredValue);
+    return true;
+  }
+
   // ignore: unused_element
   Widget _buildLargeScreenLayout(
     BuildContext context,
@@ -218,10 +433,18 @@ class SensorConfigurationView extends StatelessWidget {
             mainAxisExtent: 100.0,
             child: _buildApplyConfigButton(
               context,
-              configProviders: devices
+              targets: devices
+                  .where(
+                    (device) =>
+                        device.hasCapability<SensorConfigurationManager>(),
+                  )
                   .map(
-                    (device) => wearablesProvider
-                        .getSensorConfigurationProvider(device),
+                    (device) => _ConfigApplyTarget(
+                      primaryDevice: device,
+                      mirroredDevice: null,
+                      provider: wearablesProvider
+                          .getSensorConfigurationProvider(device),
+                    ),
                   )
                   .toList(),
             ),
@@ -239,8 +462,8 @@ class SensorConfigurationView extends StatelessWidget {
       crossAxisCount: (MediaQuery.of(context).size.width / 250)
           .floor()
           .clamp(1, 4), // Adaptive grid
-      mainAxisSpacing: 10,
-      crossAxisSpacing: 10,
+      mainAxisSpacing: SensorPageSpacing.gridGap,
+      crossAxisSpacing: SensorPageSpacing.gridGap,
       children: tiles.isNotEmpty
           ? tiles
           : [
@@ -306,4 +529,16 @@ class SensorConfigurationView extends StatelessWidget {
 
     return sensorConfigCount.clamp(1, 4);
   }
+}
+
+class _ConfigApplyTarget {
+  final Wearable primaryDevice;
+  final Wearable? mirroredDevice;
+  final SensorConfigurationProvider provider;
+
+  const _ConfigApplyTarget({
+    required this.primaryDevice,
+    required this.mirroredDevice,
+    required this.provider,
+  });
 }

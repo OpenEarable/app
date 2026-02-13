@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
+import 'package:open_wearable/models/wearable_display_group.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 
 import '../models/logger.dart';
@@ -83,10 +84,43 @@ class WearablesProvider with ChangeNotifier {
   final List<Wearable> _wearables = [];
   final Map<Wearable, SensorConfigurationProvider>
       _sensorConfigurationProviders = {};
+  final Set<String> _splitStereoPairKeys = {};
 
   List<Wearable> get wearables => _wearables;
   Map<Wearable, SensorConfigurationProvider> get sensorConfigurationProviders =>
       _sensorConfigurationProviders;
+  bool isStereoPairCombined({
+    required Wearable first,
+    required Wearable second,
+  }) {
+    final pairKey = WearableDisplayGroup.stereoPairKeyForDevices(first, second);
+    return !_splitStereoPairKeys.contains(pairKey);
+  }
+
+  bool isStereoPairKeyCombined(String pairKey) {
+    return !_splitStereoPairKeys.contains(pairKey);
+  }
+
+  void setStereoPairCombined({
+    required Wearable first,
+    required Wearable second,
+    required bool combined,
+  }) {
+    final pairKey = WearableDisplayGroup.stereoPairKeyForDevices(first, second);
+    setStereoPairKeyCombined(pairKey: pairKey, combined: combined);
+  }
+
+  void setStereoPairKeyCombined({
+    required String pairKey,
+    required bool combined,
+  }) {
+    final changed = combined
+        ? _splitStereoPairKeys.remove(pairKey)
+        : _splitStereoPairKeys.add(pairKey);
+    if (changed) {
+      notifyListeners();
+    }
+  }
 
   final _unsupportedFirmwareEventsController =
       StreamController<UnsupportedFirmwareEvent>.broadcast();
@@ -349,6 +383,12 @@ class WearablesProvider with ChangeNotifier {
   }
 
   void removeWearable(Wearable wearable) {
+    _splitStereoPairKeys.removeWhere(
+      (key) => WearableDisplayGroup.stereoPairKeyContainsDevice(
+        key,
+        wearable.deviceId,
+      ),
+    );
     _wearables.remove(wearable);
     _sensorConfigurationProviders.remove(wearable);
     _capabilitySubscriptions.remove(wearable)?.cancel();

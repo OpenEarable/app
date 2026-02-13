@@ -3,6 +3,7 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/view_models/sensor_data_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
+import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 import 'package:open_wearable/widgets/sensors/values/sensor_value_card.dart';
 import 'package:provider/provider.dart';
 
@@ -73,18 +74,19 @@ class SensorValuesPage extends StatelessWidget {
     }
 
     return ListView(
-      padding: const EdgeInsets.all(10),
+      padding: SensorPageSpacing.pagePadding,
       children: charts,
     );
   }
 
   Widget _buildLargeScreenLayout(BuildContext context, List<Widget> charts) {
     return GridView.builder(
+      padding: SensorPageSpacing.pagePadding,
       gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 500,
         childAspectRatio: 1.5,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
+        crossAxisSpacing: SensorPageSpacing.gridGap,
+        mainAxisSpacing: SensorPageSpacing.gridGap,
       ),
       shrinkWrap: true,
       physics: NeverScrollableScrollPhysics(),

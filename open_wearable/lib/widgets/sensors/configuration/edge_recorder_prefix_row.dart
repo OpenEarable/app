@@ -33,12 +33,30 @@ class _RecorderPrefixRowState extends State<EdgeRecorderPrefixRow> {
       context: context,
       builder: (context) => PlatformAlertDialog(
         title: PlatformText('Set Recording Prefix'),
-        content: PlatformTextField(
-          controller: controller,
-          autofocus: true,
-          material: (_, __) => MaterialTextFieldData(
-            decoration: const InputDecoration(hintText: 'Prefix'),
-          ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This prefix is placed before the current time on the device when recordings are created.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Format: <prefix> + <device-time>',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 10),
+            PlatformTextField(
+              controller: controller,
+              autofocus: true,
+              material: (_, __) => MaterialTextFieldData(
+                decoration: const InputDecoration(hintText: 'Prefix'),
+              ),
+            ),
+          ],
         ),
         actions: <Widget>[
           PlatformDialogAction(
@@ -52,9 +70,13 @@ class _RecorderPrefixRowState extends State<EdgeRecorderPrefixRow> {
         ],
       ),
     );
+    controller.dispose();
 
     if (result == true) {
       await widget.manager.setFilePrefix(controller.text.trim());
+      if (!mounted) {
+        return;
+      }
       setState(_loadPrefix);
     }
   }
@@ -65,15 +87,25 @@ class _RecorderPrefixRowState extends State<EdgeRecorderPrefixRow> {
       future: _prefixFuture,
       builder: (context, snapshot) {
         final isDone = snapshot.connectionState == ConnectionState.done;
-        final prefix = snapshot.data ?? '';
+        final rawPrefix = snapshot.data ?? '';
+        final prefix = rawPrefix.trim();
+        final hasPrefix = prefix.isNotEmpty;
 
         return PlatformListTile(
           title: PlatformText('On-Device Filename Prefix'),
+          subtitle: Text(
+            hasPrefix
+                ? 'Used as: "$prefix" + <device-time>'
+                : 'Used as: <prefix> + <device-time>',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
           trailing: isDone
               ? Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    PlatformText(prefix),
+                    PlatformText(hasPrefix ? prefix : '(empty)'),
                     const SizedBox(width: 8),
                     GestureDetector(
                       onTap: () => _showEditDialog(prefix),

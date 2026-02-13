@@ -216,89 +216,103 @@ class _SensorChartState extends State<SensorChart> {
         Padding(
           padding: const EdgeInsets.only(top: 6),
           child: LayoutBuilder(
-            builder: (context, constraints) => SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minWidth: constraints.maxWidth),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Time (s)',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w700,
+            builder: (context, constraints) => Row(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minWidth: max(0.0, constraints.maxWidth - 70),
+                      ),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children:
+                              sensor.axisNames.asMap().entries.map((entry) {
+                            final axisIndex = entry.key;
+                            final axisName = entry.value;
+                            final axisColor = _axisColor(
+                              axisIndex: axisIndex,
+                              axisName: axisName,
+                              colorScheme: colorScheme,
+                            );
+                            final selected = _axisEnabled[axisName] ?? false;
+                            final chipLabelColor = selected
+                                ? axisColor.withValues(alpha: 0.95)
+                                : disabledChipLabelColor;
+                            final chipBackgroundColor = selected
+                                ? axisColor.withValues(alpha: 0.18)
+                                : disabledChipBackgroundColor;
+                            final chipBorderColor = selected
+                                ? axisColor.withValues(alpha: 0.28)
+                                : disabledChipBorderColor;
+                            final chipDotColor = axisColor;
+                            final disabledDotColor = disabledChipDotColor;
+
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: FilterChip(
+                                label: Text(
+                                  axisName,
+                                  style: axisChipTextStyle?.copyWith(
+                                    color: chipLabelColor,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: compactMode ? 10.5 : 11.5,
+                                  ),
+                                ),
+                                avatar: Container(
+                                  width: 7,
+                                  height: 7,
+                                  decoration: BoxDecoration(
+                                    color: selected
+                                        ? chipDotColor
+                                        : disabledDotColor,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                selected: selected,
+                                onSelected: (value) =>
+                                    _toggleAxis(axisName, value),
+                                showCheckmark: false,
+                                visualDensity: compactMode
+                                    ? const VisualDensity(
+                                        horizontal: -3,
+                                        vertical: -3,
+                                      )
+                                    : const VisualDensity(
+                                        horizontal: -2,
+                                        vertical: -2,
+                                      ),
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                                labelPadding:
+                                    const EdgeInsets.symmetric(horizontal: 4),
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 4),
+                                selectedColor: chipBackgroundColor,
+                                backgroundColor: chipBackgroundColor,
+                                side: BorderSide(
+                                  color: chipBorderColor,
+                                ),
+                              ),
+                            );
+                          }).toList(growable: false),
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    ...sensor.axisNames.asMap().entries.map((entry) {
-                      final axisIndex = entry.key;
-                      final axisName = entry.value;
-                      final axisColor = _axisColor(
-                        axisIndex: axisIndex,
-                        axisName: axisName,
-                        colorScheme: colorScheme,
-                      );
-                      final selected = _axisEnabled[axisName] ?? false;
-                      final chipLabelColor = selected
-                          ? axisColor.withValues(alpha: 0.95)
-                          : disabledChipLabelColor;
-                      final chipBackgroundColor = selected
-                          ? axisColor.withValues(alpha: 0.18)
-                          : disabledChipBackgroundColor;
-                      final chipBorderColor = selected
-                          ? axisColor.withValues(alpha: 0.28)
-                          : disabledChipBorderColor;
-                      final chipDotColor = axisColor;
-                      final disabledDotColor = disabledChipDotColor;
-
-                      return Padding(
-                        padding: const EdgeInsets.only(left: 6),
-                        child: FilterChip(
-                          label: Text(
-                            axisName,
-                            style: axisChipTextStyle?.copyWith(
-                              color: chipLabelColor,
-                              fontWeight: FontWeight.w700,
-                              fontSize: compactMode ? 10.5 : 11.5,
-                            ),
-                          ),
-                          avatar: Container(
-                            width: 7,
-                            height: 7,
-                            decoration: BoxDecoration(
-                              color: selected ? chipDotColor : disabledDotColor,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          selected: selected,
-                          onSelected: (value) => _toggleAxis(axisName, value),
-                          showCheckmark: false,
-                          visualDensity: compactMode
-                              ? const VisualDensity(
-                                  horizontal: -3,
-                                  vertical: -3,
-                                )
-                              : const VisualDensity(
-                                  horizontal: -2,
-                                  vertical: -2,
-                                ),
-                          materialTapTargetSize:
-                              MaterialTapTargetSize.shrinkWrap,
-                          labelPadding:
-                              const EdgeInsets.symmetric(horizontal: 4),
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          selectedColor: chipBackgroundColor,
-                          backgroundColor: chipBackgroundColor,
-                          side: BorderSide(
-                            color: chipBorderColor,
-                          ),
-                        ),
-                      );
-                    }),
-                  ],
+                  ),
                 ),
-              ),
+                const SizedBox(width: 8),
+                Text(
+                  'Time (s)',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
             ),
           ),
         ),

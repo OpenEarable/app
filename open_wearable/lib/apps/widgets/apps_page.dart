@@ -8,6 +8,7 @@ import 'package:open_wearable/apps/posture_tracker/view/posture_tracker_view.dar
 import 'package:open_wearable/apps/widgets/select_earable_view.dart';
 import 'package:open_wearable/apps/widgets/app_tile.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
+import 'package:open_wearable/widgets/recording_activity_indicator.dart';
 import 'package:provider/provider.dart';
 
 class AppInfo {
@@ -104,6 +105,7 @@ class AppsPage extends StatelessWidget {
       appBar: PlatformAppBar(
         title: PlatformText("Apps"),
         trailingActions: [
+          const AppBarRecordingIndicator(),
           PlatformIconButton(
             icon: Icon(context.platformIcons.bluetooth),
             onPressed: () {

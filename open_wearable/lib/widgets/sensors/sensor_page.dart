@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
+import 'package:open_wearable/widgets/recording_activity_indicator.dart';
 import 'package:open_wearable/widgets/sensors/configuration/sensor_configuration_view.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_view.dart';
 import 'package:open_wearable/widgets/sensors/values/sensor_values_page.dart';
-import 'package:provider/provider.dart';
-
-import '../../view_models/sensor_recorder_provider.dart';
 
 class SensorPage extends StatelessWidget {
   const SensorPage({super.key});
@@ -22,6 +20,7 @@ class SensorPage extends StatelessWidget {
               SliverAppBar(
                 title: PlatformText("Sensors"),
                 actions: [
+                  const AppBarRecordingIndicator(),
                   PlatformIconButton(
                     icon: Icon(context.platformIcons.bluetooth),
                     onPressed: () {
@@ -39,8 +38,10 @@ class SensorPage extends StatelessWidget {
                     const Tab(text: 'Live Data'),
                     Tab(
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          const _RecordingIndicator(),
+                          const RecordingActivityIndicator(size: 14),
+                          const SizedBox(width: 4),
                           PlatformText('Recorder'),
                         ],
                       ),
@@ -65,24 +66,6 @@ class SensorPage extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _RecordingIndicator extends StatelessWidget {
-  const _RecordingIndicator();
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<SensorRecorderProvider>(
-      builder: (context, recorderProvider, child) {
-        return Icon(
-          recorderProvider.isRecording
-              ? Icons.fiber_manual_record
-              : Icons.fiber_manual_record_outlined,
-          color: recorderProvider.isRecording ? Colors.red : Colors.grey,
-        );
-      },
     );
   }
 }

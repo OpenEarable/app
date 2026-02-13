@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:open_wearable/apps/widgets/apps_page.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/devices/devices_page.dart';
+import 'package:open_wearable/widgets/recording_activity_indicator.dart';
 import 'package:provider/provider.dart';
 
 import 'sensors/sensor_page.dart';
@@ -73,6 +74,7 @@ class _HomePageState extends State<HomePage> {
       const AppsPage(),
       _IntegrationsPage(
         onLogsRequested: _openLogFiles,
+        onConnectRequested: _openConnectDevices,
       ),
     ];
   }
@@ -214,6 +216,7 @@ class _OverviewPage extends StatelessWidget {
       appBar: PlatformAppBar(
         title: const Text('Overview'),
         trailingActions: [
+          const AppBarRecordingIndicator(),
           PlatformIconButton(
             icon: Icon(context.platformIcons.bluetooth),
             onPressed: onConnectRequested,
@@ -299,9 +302,11 @@ class _OverviewPage extends StatelessWidget {
 
 class _IntegrationsPage extends StatelessWidget {
   final VoidCallback onLogsRequested;
+  final VoidCallback onConnectRequested;
 
   const _IntegrationsPage({
     required this.onLogsRequested,
+    required this.onConnectRequested,
   });
 
   @override
@@ -309,6 +314,13 @@ class _IntegrationsPage extends StatelessWidget {
     return PlatformScaffold(
       appBar: PlatformAppBar(
         title: const Text('Utilities'),
+        trailingActions: [
+          const AppBarRecordingIndicator(),
+          PlatformIconButton(
+            icon: Icon(context.platformIcons.bluetooth),
+            onPressed: onConnectRequested,
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
