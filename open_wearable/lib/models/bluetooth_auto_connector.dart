@@ -19,9 +19,14 @@ class BluetoothAutoConnector {
 
   StreamSubscription<Wearable>? _connectSubscription;
   StreamSubscription<DiscoveredDevice>? _scanSubscription;
+  StreamSubscription<BluetoothAvailabilityState>? _availabilitySubscription;
 
   bool _isConnecting = false;
+  bool _isAttemptingConnection = false;
   bool _askedPermissionsThisSession = false;
+  BluetoothAvailabilityState _availabilityState =
+      BluetoothAvailabilityState.unknown;
+  int _sessionToken = 0;
 
   // Names to look for during scanning
   List<String> _targetNames = [];
@@ -34,33 +39,59 @@ class BluetoothAutoConnector {
     required this.onWearableConnected,
   });
 
+  bool get _isBluetoothReady =>
+      _availabilityState == BluetoothAvailabilityState.poweredOn;
+
   void start() async {
-    stop();
+    final token = ++_sessionToken;
+    _stopInternal();
 
     // Load the last connected names
     final prefs = await prefsFuture;
+    if (token != _sessionToken) {
+      return;
+    }
     _targetNames = prefs.getStringList(_connectedDeviceNamesKey) ?? [];
 
     // Start listening for successful connections (to save names and set disconnect logic)
     _connectSubscription =
         wearableManager.connectStream.listen(_onDeviceConnected);
 
+    _availabilitySubscription =
+        wearableManager.bluetoothAvailabilityStream.listen(
+      _handleAvailabilityChanged,
+      onError: (Object error, StackTrace stackTrace) {
+        logger.w('Bluetooth availability stream error: $error\n$stackTrace');
+      },
+    );
+
+    try {
+      _availabilityState =
+          await wearableManager.getBluetoothAvailabilityState();
+    } catch (error, stackTrace) {
+      logger.w('Failed to read Bluetooth availability: $error\n$stackTrace');
+    }
+    if (token != _sessionToken) {
+      return;
+    }
+
     // Initiate the connection sequence
-    _attemptConnection();
+    _attemptConnection(token: token);
   }
 
   void stop() {
+    _sessionToken++;
+    _stopInternal();
+  }
+
+  void _stopInternal() {
     _connectSubscription?.cancel();
     _connectSubscription = null;
-    _scanSubscription?.cancel();
-    _scanSubscription = null;
-    // Stop any ongoing scan initiated by this class
-    // Use the public WearableManager function to stop the scan
-    wearableManager.setAutoConnect([]);
-
-    // Cancel the local listener to prevent further triggers
-    _scanSubscription?.cancel();
-    _scanSubscription = null;
+    _availabilitySubscription?.cancel();
+    _availabilitySubscription = null;
+    _isAttemptingConnection = false;
+    _isConnecting = false;
+    _stopScanning();
   }
 
   /// Called when the WearableManager successfully connects to a device.
@@ -75,16 +106,7 @@ class BluetoothAutoConnector {
     }
 
     // Stop scanning immediately when a successful connection is made
-    if (_scanSubscription != null) {
-      // stop scan
-      wearableManager.setAutoConnect([]);
-
-      _scanSubscription?.cancel();
-      _scanSubscription = null;
-
-      _scanSubscription?.cancel();
-      _scanSubscription = null;
-    }
+    _stopScanning();
 
     // Set up the disconnect listener to trigger a scan for the saved name.
     wearable.addDisconnectListener(() {
@@ -99,24 +121,51 @@ class BluetoothAutoConnector {
     });
   }
 
-  Future<void> _attemptConnection() async {
+  Future<void> _attemptConnection({int? token}) async {
+    final activeToken = token ?? _sessionToken;
+    if (activeToken != _sessionToken) {
+      return;
+    }
+    if (_isAttemptingConnection) {
+      return;
+    }
+    if (!_isBluetoothReady) {
+      logger.w('Skipping auto-connect: Bluetooth is not ready.');
+      return;
+    }
+
+    _isAttemptingConnection = true;
     if (!Platform.isIOS) {
       final hasPerm = await wearableManager.hasPermissions();
+      if (activeToken != _sessionToken) {
+        _isAttemptingConnection = false;
+        return;
+      }
       if (!hasPerm) {
         if (!_askedPermissionsThisSession) {
           _askedPermissionsThisSession = true;
           _showPermissionsDialog();
         }
         logger.w('Skipping auto-connect: no permissions granted yet.');
+        _isAttemptingConnection = false;
         return;
       }
     }
 
-    await connector.connectToSystemDevices();
+    try {
+      await connector.connectToSystemDevices();
+      if (activeToken != _sessionToken) {
+        return;
+      }
 
-    if (_targetNames.isNotEmpty) {
-      _setupScanListener();
-      await wearableManager.startScan();
+      if (_targetNames.isNotEmpty && _isBluetoothReady) {
+        _setupScanListener();
+        await wearableManager.startScan();
+      }
+    } catch (error, stackTrace) {
+      logger.w('Auto-connect attempt failed: $error\n$stackTrace');
+    } finally {
+      _isAttemptingConnection = false;
     }
   }
 
@@ -124,14 +173,12 @@ class BluetoothAutoConnector {
     if (_scanSubscription != null) return;
 
     _scanSubscription = wearableManager.scanStream.listen((device) {
+      if (!_isBluetoothReady) return;
       if (_isConnecting) return;
 
       if (_targetNames.contains(device.name)) {
         _isConnecting = true;
-        // stop scan
-        wearableManager.setAutoConnect([]);
-        _scanSubscription?.cancel();
-        _scanSubscription = null;
+        _stopScanning();
 
         logger.i(
           "Match found for ${device.name}. Connecting using rotating ID: ${device.id}",
@@ -149,6 +196,31 @@ class BluetoothAutoConnector {
         });
       }
     });
+  }
+
+  void _handleAvailabilityChanged(BluetoothAvailabilityState state) {
+    final previous = _availabilityState;
+    _availabilityState = state;
+
+    if (!_isBluetoothReady) {
+      if (previous == BluetoothAvailabilityState.poweredOn) {
+        _sessionToken++;
+      }
+      _isAttemptingConnection = false;
+      _isConnecting = false;
+      _stopScanning();
+      return;
+    }
+
+    if (previous != BluetoothAvailabilityState.poweredOn && _isBluetoothReady) {
+      _attemptConnection();
+    }
+  }
+
+  void _stopScanning() {
+    _scanSubscription?.cancel();
+    _scanSubscription = null;
+    unawaited(wearableManager.stopScan());
   }
 
   void _showPermissionsDialog() {

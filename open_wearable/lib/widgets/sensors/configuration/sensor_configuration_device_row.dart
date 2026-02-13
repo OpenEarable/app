@@ -171,13 +171,7 @@ class _SensorConfigurationDeviceRowState
 
     if (device.hasCapability<EdgeRecorderManager>()) {
       content.addAll([
-        Divider(
-          height: 1,
-          thickness: 0.6,
-          color: Theme.of(context).colorScheme.outlineVariant.withValues(
-                alpha: 0.55,
-              ),
-        ),
+        const _InsetSectionDivider(),
         EdgeRecorderPrefixRow(
           manager: device.requireCapability<EdgeRecorderManager>(),
         ),
@@ -688,6 +682,24 @@ class _CombinedStereoBadge extends StatelessWidget {
               color: foregroundColor,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.1,
+            ),
+      ),
+    );
+  }
+}
+
+class _InsetSectionDivider extends StatelessWidget {
+  const _InsetSectionDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: Divider(
+        height: 1,
+        thickness: 0.6,
+        color: Theme.of(context).colorScheme.outlineVariant.withValues(
+              alpha: 0.55,
             ),
       ),
     );

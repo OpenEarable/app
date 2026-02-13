@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/apps/widgets/apps_page.dart';
+import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/devices/devices_page.dart';
 import 'package:open_wearable/widgets/recording_activity_indicator.dart';
@@ -13,6 +15,7 @@ const int _overviewIndex = 0;
 const int _devicesIndex = 1;
 const int _sensorsIndex = 2;
 const int _appsIndex = 3;
+const int _utilitiesIndex = 4;
 
 const double _largeScreenBreakpoint = 960;
 
@@ -223,25 +226,121 @@ class _OverviewPage extends StatelessWidget {
           ),
         ],
       ),
-      body: Consumer<WearablesProvider>(
-        builder: (context, wearablesProvider, _) {
+      body: Consumer2<WearablesProvider, SensorRecorderProvider>(
+        builder: (context, wearablesProvider, recorderProvider, _) {
           final wearables = wearablesProvider.wearables;
+          final connectedCount = wearables.length;
+          final configurableCount = wearables
+              .where(
+                (wearable) =>
+                    wearable.hasCapability<SensorConfigurationManager>(),
+              )
+              .length;
+          final sensorDeviceCount = wearables
+              .where((wearable) => wearable.hasCapability<SensorManager>())
+              .length;
+          final totalSensors = wearables
+              .where((wearable) => wearable.hasCapability<SensorManager>())
+              .fold<int>(
+                0,
+                (sum, wearable) =>
+                    sum +
+                    wearable.requireCapability<SensorManager>().sensors.length,
+              );
+          final edgeRecorderCount = wearables
+              .where(
+                (wearable) => wearable.hasCapability<EdgeRecorderManager>(),
+              )
+              .length;
+          final compatibleApps = getCompatibleAppsCountForWearables(wearables);
+          final totalApps = getAvailableAppsCount();
+          final isRecording = recorderProvider.isRecording;
+          final hasSensorStreams = recorderProvider.hasSensorsConnected;
+          final recordingStart = recorderProvider.recordingStart;
 
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              _OverviewHeroCard(
+                connectedCount: connectedCount,
+                isRecording: isRecording,
+                hasSensorStreams: hasSensorStreams,
+                recordingStart: recordingStart,
+                onConnectRequested: onConnectRequested,
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _OverviewMetricPill(
+                    icon: Icons.watch_outlined,
+                    label: 'Devices',
+                    value: '$connectedCount',
+                  ),
+                  _OverviewMetricPill(
+                    icon: Icons.tune_outlined,
+                    label: 'Configurable',
+                    value: '$configurableCount',
+                  ),
+                  _OverviewMetricPill(
+                    icon: Icons.ssid_chart_outlined,
+                    label: 'Sensors',
+                    value: '$totalSensors',
+                  ),
+                  _OverviewMetricPill(
+                    icon: Icons.sd_storage_outlined,
+                    label: 'Edge Recorder',
+                    value: '$edgeRecorderCount',
+                  ),
+                  _OverviewMetricPill(
+                    icon: Icons.apps_outlined,
+                    label: 'Apps Ready',
+                    value: '$compatibleApps/$totalApps',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
               Text(
-                'Connected devices',
+                'Section Snapshot',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
-              if (wearables.isEmpty)
+              _OverviewSectionCard(
+                icon: Icons.devices_outlined,
+                title: 'Devices',
+                subtitle:
+                    '$connectedCount connected • $configurableCount configurable',
+                onTap: () => onSectionRequested(_devicesIndex),
+              ),
+              _OverviewSectionCard(
+                icon: Icons.ssid_chart_outlined,
+                title: 'Sensors',
+                subtitle:
+                    '$sensorDeviceCount sensor devices • $totalSensors sensor streams',
+                onTap: () => onSectionRequested(_sensorsIndex),
+              ),
+              _OverviewSectionCard(
+                icon: Icons.apps_outlined,
+                title: 'Apps',
+                subtitle:
+                    '$compatibleApps app${compatibleApps == 1 ? '' : 's'} compatible with current devices',
+                onTap: () => onSectionRequested(_appsIndex),
+              ),
+              _OverviewSectionCard(
+                icon: Icons.handyman_outlined,
+                title: 'Utilities',
+                subtitle: 'Log files, connectors, and diagnostics',
+                onTap: () => onSectionRequested(_utilitiesIndex),
+              ),
+              const SizedBox(height: 8),
+              if (connectedCount == 0)
                 Card(
                   child: ListTile(
                     leading: const Icon(Icons.info_outline),
                     title: const Text('No devices connected'),
                     subtitle: const Text(
-                      'Connect a wearable to access sensors and apps.',
+                      'Connect a wearable to unlock sensors, recording, and apps.',
                     ),
                     trailing: PlatformTextButton(
                       onPressed: onConnectRequested,
@@ -249,52 +348,185 @@ class _OverviewPage extends StatelessWidget {
                     ),
                   ),
                 )
-              else
-                ...wearables.map(
-                  (wearable) => Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.watch),
-                      title: Text(wearable.name),
-                      subtitle: Text(wearable.deviceId),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () =>
-                          context.push('/device-detail', extra: wearable),
+              else if (!hasSensorStreams)
+                const Card(
+                  child: ListTile(
+                    leading: Icon(Icons.sensors_off_outlined),
+                    title: Text('No active sensor streams'),
+                    subtitle: Text(
+                      'Enable sensors in the Sensors tab before starting a recording.',
                     ),
                   ),
                 ),
-              const SizedBox(height: 20),
-              Text(
-                'Quick actions',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              _QuickActionTile(
-                icon: Icons.bluetooth_searching,
-                title: 'Connect device',
-                subtitle: 'Scan and pair a wearable',
-                onTap: onConnectRequested,
-              ),
-              _QuickActionTile(
-                icon: Icons.devices,
-                title: 'Manage devices',
-                subtitle: 'Open connected devices and hardware controls',
-                onTap: () => onSectionRequested(_devicesIndex),
-              ),
-              _QuickActionTile(
-                icon: Icons.tune,
-                title: 'Configure sensors',
-                subtitle: 'Open sensor configuration and apply settings',
-                onTap: () => onSectionRequested(_sensorsIndex),
-              ),
-              _QuickActionTile(
-                icon: Icons.apps,
-                title: 'Open apps',
-                subtitle: 'Launch tracking apps for connected wearables',
-                onTap: () => onSectionRequested(_appsIndex),
-              ),
             ],
           );
         },
+      ),
+    );
+  }
+
+  static String formatRecordingTime(DateTime? time) {
+    if (time == null) return 'Recording active';
+    final local = time.toLocal();
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    return 'Recording since ${twoDigits(local.hour)}:${twoDigits(local.minute)}';
+  }
+}
+
+class _OverviewHeroCard extends StatelessWidget {
+  final int connectedCount;
+  final bool isRecording;
+  final bool hasSensorStreams;
+  final DateTime? recordingStart;
+  final VoidCallback onConnectRequested;
+
+  const _OverviewHeroCard({
+    required this.connectedCount,
+    required this.isRecording,
+    required this.hasSensorStreams,
+    required this.recordingStart,
+    required this.onConnectRequested,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final title = connectedCount == 0 ? 'Dashboard is idle' : 'System overview';
+    final subtitle = connectedCount == 0
+        ? 'Connect your first wearable to start streaming and recording.'
+        : isRecording
+            ? _OverviewPage.formatRecordingTime(recordingStart)
+            : hasSensorStreams
+                ? 'Sensors are ready for a recording session.'
+                : 'Devices connected. Enable sensors to start recording.';
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: 34,
+                  width: 34,
+                  decoration: BoxDecoration(
+                    color: isRecording
+                        ? colorScheme.errorContainer.withValues(alpha: 0.55)
+                        : colorScheme.primaryContainer.withValues(alpha: 0.55),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    isRecording
+                        ? Icons.fiber_manual_record
+                        : Icons.dashboard_outlined,
+                    size: 20,
+                    color:
+                        isRecording ? colorScheme.error : colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (connectedCount == 0)
+                  PlatformTextButton(
+                    onPressed: onConnectRequested,
+                    child: const Text('Connect'),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OverviewMetricPill extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _OverviewMetricPill({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.4),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: colorScheme.primary),
+          const SizedBox(width: 6),
+          Text(
+            '$label: $value',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OverviewSectionCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _OverviewSectionCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: Icon(icon),
+        title: Text(title),
+        subtitle: Text(subtitle),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: onTap,
       ),
     );
   }

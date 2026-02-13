@@ -5,6 +5,7 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/apps/heart_tracker/widgets/heart_tracker_page.dart';
 import 'package:open_wearable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_wearable/apps/posture_tracker/view/posture_tracker_view.dart';
+import 'package:open_wearable/apps/widgets/app_compatibility.dart';
 import 'package:open_wearable/apps/widgets/select_earable_view.dart';
 import 'package:open_wearable/apps/widgets/app_tile.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
@@ -93,6 +94,22 @@ final List<AppInfo> _apps = [
     ),
   ),
 ];
+
+int getAvailableAppsCount() => _apps.length;
+
+int getCompatibleAppsCountForWearables(Iterable<Wearable> wearables) {
+  final names = wearables.map((wearable) => wearable.name).toList();
+  if (names.isEmpty) return 0;
+
+  return _apps.where((app) {
+    return names.any(
+      (name) => wearableIsCompatibleWithApp(
+        wearableName: name,
+        supportedDevicePrefixes: app.supportedDevices,
+      ),
+    );
+  }).length;
+}
 
 class AppsPage extends StatelessWidget {
   const AppsPage({super.key});
