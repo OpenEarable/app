@@ -20,6 +20,9 @@ class AppInfo {
   final List<String> supportedDevices;
   final Color accentColor;
   final Widget widget;
+  final double? svgIconInset;
+  final double? svgIconScale;
+  final Color? iconBackgroundColor;
 
   AppInfo({
     required this.logoPath,
@@ -28,6 +31,9 @@ class AppInfo {
     required this.supportedDevices,
     required this.accentColor,
     required this.widget,
+    this.svgIconInset,
+    this.svgIconScale,
+    this.iconBackgroundColor,
   });
 }
 
@@ -98,12 +104,14 @@ final List<AppInfo> _apps = [
     ),
   ),
   AppInfo(
-    logoPath:
-        "packages/open_earable_flutter/assets/wearable_icons/open_earable_v2/icon_no_text.svg",
-    title: "Self Test",
+    logoPath: "lib/apps/self_test/assets/self_test_icon.svg",
+    title: "Device Self Test",
     description: "Run guided OpenEarable hardware checks with a test report",
     supportedDevices: _selfTestSupportedDevices,
     accentColor: _appAccentColor,
+    svgIconInset: 0,
+    svgIconScale: 1.14,
+    iconBackgroundColor: const Color(0xFFF0E6E4),
     widget: SelectEarableView(
       supportedDevicePrefixes: _selfTestSupportedDevices,
       startApp: (wearable, sensorConfigProvider) {

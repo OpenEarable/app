@@ -52,10 +52,13 @@ class AppTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(13.0),
                   child: app.logoPath.toLowerCase().endsWith('.svg')
                       ? Padding(
-                          padding: const EdgeInsets.all(10),
-                          child: SvgPicture.asset(
-                            app.logoPath,
-                            fit: BoxFit.contain,
+                          padding: EdgeInsets.all(app.svgIconInset ?? 10),
+                          child: Transform.scale(
+                            scale: app.svgIconScale ?? 1,
+                            child: SvgPicture.asset(
+                              app.logoPath,
+                              fit: BoxFit.contain,
+                            ),
                           ),
                         )
                       : Image.asset(

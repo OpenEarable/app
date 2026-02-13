@@ -146,7 +146,7 @@ class _SelfTestPageState extends State<SelfTestPage> {
 
     return PlatformScaffold(
       appBar: PlatformAppBar(
-        title: PlatformText('Self Test'),
+        title: PlatformText('Device Self Test'),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 20),
