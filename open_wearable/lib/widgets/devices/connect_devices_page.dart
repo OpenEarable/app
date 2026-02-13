@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
-import 'package:open_wearable/view_models/bluetooth_availability_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/recording_activity_indicator.dart';
 import 'package:provider/provider.dart';
@@ -24,7 +23,6 @@ class ConnectDevicesPage extends StatefulWidget {
 
 class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
   final WearableManager _wearableManager = WearableManager();
-  BluetoothAvailabilityProvider? _bluetoothAvailabilityProvider;
   StreamSubscription<DiscoveredDevice>? _scanSubscription;
   Timer? _scanIndicatorTimer;
 
@@ -41,25 +39,8 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final provider = context.read<BluetoothAvailabilityProvider>();
-    if (!identical(_bluetoothAvailabilityProvider, provider)) {
-      _bluetoothAvailabilityProvider
-          ?.removeListener(_handleBluetoothAvailabilityChanged);
-      _bluetoothAvailabilityProvider = provider;
-      _bluetoothAvailabilityProvider
-          ?.addListener(_handleBluetoothAvailabilityChanged);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     final wearablesProvider = context.watch<WearablesProvider>();
-    final bluetoothAvailability =
-        context.watch<BluetoothAvailabilityProvider>();
-    final bluetoothState = bluetoothAvailability.state;
-    final bluetoothBlocked = !bluetoothAvailability.isReady;
     final connectedWearables = wearablesProvider.wearables;
     final connectedDeviceIds =
         connectedWearables.map((wearable) => wearable.deviceId).toSet();
@@ -81,18 +62,15 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
         trailingActions: [
           const AppBarRecordingIndicator(),
           PlatformIconButton(
-            icon: bluetoothBlocked
-                ? const Icon(Icons.bluetooth_disabled)
-                : _isScanning
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.bluetooth_searching),
-            onPressed: _isScanning || bluetoothBlocked
-                ? null
-                : () => _startScanning(clearPrevious: true),
+            icon: _isScanning
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.bluetooth_searching),
+            onPressed:
+                _isScanning ? null : () => _startScanning(clearPrevious: true),
           ),
         ],
       ),
@@ -106,7 +84,6 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
               context,
               connectedCount: connectedWearables.length,
               discoveredCount: availableDevices.length,
-              bluetoothState: bluetoothState,
             ),
             const SizedBox(height: 12),
             _buildSectionHeader(
@@ -144,16 +121,12 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
             if (availableDevices.isEmpty)
               _buildEmptyCard(
                 context,
-                title: bluetoothBlocked
-                    ? _availabilityTitle(bluetoothState)
-                    : _isScanning
-                        ? 'Scanning for devices...'
-                        : 'No devices found yet',
-                subtitle: bluetoothBlocked
-                    ? _availabilitySubtitle(bluetoothState)
-                    : _isScanning
-                        ? 'Make sure your wearable is turned on and nearby.'
-                        : 'Press scan again or pull to refresh.',
+                title: _isScanning
+                    ? 'Scanning for devices...'
+                    : 'No devices found yet',
+                subtitle: _isScanning
+                    ? 'Make sure your wearable is turned on and nearby.'
+                    : 'Press scan again or pull to refresh.',
               )
             else
               ...availableDevices.map(
@@ -172,7 +145,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
               ),
             const SizedBox(height: 10),
             PlatformElevatedButton(
-              onPressed: _isScanning || bluetoothBlocked
+              onPressed: _isScanning
                   ? null
                   : () => _startScanning(clearPrevious: true),
               child: Row(
@@ -201,20 +174,12 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
     BuildContext context, {
     required int connectedCount,
     required int discoveredCount,
-    required BluetoothAvailabilityState bluetoothState,
   }) {
-    final bluetoothBlocked =
-        bluetoothState != BluetoothAvailabilityState.poweredOn;
-    final statusText = bluetoothBlocked
-        ? _availabilityTitle(bluetoothState)
-        : _isScanning
-            ? 'Scanning for nearby devices'
-            : 'Ready to scan';
-    final helperText = bluetoothBlocked
-        ? _availabilitySubtitle(bluetoothState)
-        : _lastScanStartedAt == null
-            ? 'Use Scan to discover nearby wearables.'
-            : 'Last scan: ${_formatScanTime(_lastScanStartedAt!)}';
+    final statusText =
+        _isScanning ? 'Scanning for nearby devices' : 'Ready to scan';
+    final helperText = _lastScanStartedAt == null
+        ? 'Use Scan to discover nearby wearables.'
+        : 'Last scan: ${_formatScanTime(_lastScanStartedAt!)}';
 
     return Card(
       child: Padding(
@@ -225,14 +190,8 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
             Row(
               children: [
                 Icon(
-                  bluetoothBlocked
-                      ? Icons.bluetooth_disabled
-                      : _isScanning
-                          ? Icons.radar
-                          : Icons.bluetooth_searching,
-                  color: bluetoothBlocked
-                      ? Theme.of(context).colorScheme.error
-                      : Theme.of(context).colorScheme.primary,
+                  _isScanning ? Icons.radar : Icons.bluetooth_searching,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -257,8 +216,6 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
               children: [
                 _StatusPill(label: '$connectedCount connected'),
                 _StatusPill(label: '$discoveredCount available'),
-                if (bluetoothBlocked)
-                  _StatusPill(label: _availabilityPillLabel(bluetoothState)),
               ],
             ),
           ],
@@ -332,55 +289,6 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
     return '${elapsed.inHours}h ago';
   }
 
-  String _availabilityTitle(BluetoothAvailabilityState state) {
-    return switch (state) {
-      BluetoothAvailabilityState.poweredOff => 'Bluetooth is turned off',
-      BluetoothAvailabilityState.unauthorized =>
-        'Bluetooth permission required',
-      BluetoothAvailabilityState.unsupported => 'Bluetooth not supported',
-      BluetoothAvailabilityState.resetting => 'Bluetooth is restarting',
-      _ => 'Bluetooth unavailable',
-    };
-  }
-
-  String _availabilitySubtitle(BluetoothAvailabilityState state) {
-    return switch (state) {
-      BluetoothAvailabilityState.poweredOff =>
-        'Enable Bluetooth in your system settings to discover and connect devices.',
-      BluetoothAvailabilityState.unauthorized =>
-        'Grant Bluetooth permissions in your system settings and try again.',
-      BluetoothAvailabilityState.unsupported =>
-        'This device does not support Bluetooth Low Energy.',
-      BluetoothAvailabilityState.resetting =>
-        'Wait a moment until Bluetooth is ready, then scan again.',
-      _ => 'Checking Bluetooth availability. Please try again.',
-    };
-  }
-
-  String _availabilityPillLabel(BluetoothAvailabilityState state) {
-    return switch (state) {
-      BluetoothAvailabilityState.poweredOff => 'Bluetooth off',
-      BluetoothAvailabilityState.unauthorized => 'Permission needed',
-      BluetoothAvailabilityState.unsupported => 'Not supported',
-      BluetoothAvailabilityState.resetting => 'Restarting',
-      _ => 'Unavailable',
-    };
-  }
-
-  void _handleBluetoothAvailabilityChanged() {
-    final provider = _bluetoothAvailabilityProvider;
-    if (provider == null || provider.isReady) {
-      return;
-    }
-    if (!mounted) {
-      _connectingDevices.clear();
-      _stopScanning(clearDiscovered: true);
-      return;
-    }
-    _connectingDevices.clear();
-    _stopScanning(clearDiscovered: true);
-  }
-
   void _stopScanning({
     bool clearDiscovered = false,
     bool updateUi = true,
@@ -389,7 +297,6 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
     _scanIndicatorTimer = null;
     _scanSubscription?.cancel();
     _scanSubscription = null;
-    unawaited(_wearableManager.stopScan());
 
     if (!updateUi || !mounted) {
       _isScanning = false;
@@ -409,12 +316,6 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
 
   Future<void> _startScanning({bool clearPrevious = false}) async {
     _scanIndicatorTimer?.cancel();
-    final bluetoothAvailability = context.read<BluetoothAvailabilityProvider>();
-    await bluetoothAvailability.refresh();
-    if (!bluetoothAvailability.isReady) {
-      _stopScanning();
-      return;
-    }
 
     if (mounted) {
       setState(() {
@@ -507,8 +408,6 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
 
   @override
   void dispose() {
-    _bluetoothAvailabilityProvider
-        ?.removeListener(_handleBluetoothAvailabilityChanged);
     _stopScanning(updateUi: false);
     super.dispose();
   }

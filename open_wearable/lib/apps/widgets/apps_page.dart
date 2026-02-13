@@ -5,6 +5,7 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/apps/heart_tracker/widgets/heart_tracker_page.dart';
 import 'package:open_wearable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_wearable/apps/posture_tracker/view/posture_tracker_view.dart';
+import 'package:open_wearable/apps/self_test/self_test_page.dart';
 import 'package:open_wearable/apps/widgets/app_compatibility.dart';
 import 'package:open_wearable/apps/widgets/select_earable_view.dart';
 import 'package:open_wearable/apps/widgets/app_tile.dart';
@@ -40,6 +41,9 @@ const List<String> _heartSupportedDevices = [
   "OpenEarable",
   "OpenRing",
   "Cosinuss",
+];
+const List<String> _selfTestSupportedDevices = [
+  "OpenEarable",
 ];
 
 final List<AppInfo> _apps = [
@@ -89,6 +93,23 @@ final List<AppInfo> _apps = [
           body: Center(
             child: PlatformText("No PPG Sensor Found"),
           ),
+        );
+      },
+    ),
+  ),
+  AppInfo(
+    logoPath:
+        "packages/open_earable_flutter/assets/wearable_icons/open_earable_v2/icon_no_text.svg",
+    title: "Self Test",
+    description: "Run guided OpenEarable hardware checks with a test report",
+    supportedDevices: _selfTestSupportedDevices,
+    accentColor: _appAccentColor,
+    widget: SelectEarableView(
+      supportedDevicePrefixes: _selfTestSupportedDevices,
+      startApp: (wearable, sensorConfigProvider) {
+        return SelfTestPage(
+          wearable: wearable,
+          sensorConfigProvider: sensorConfigProvider,
         );
       },
     ),

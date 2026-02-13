@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:open_wearable/apps/widgets/app_compatibility.dart';
 import 'package:open_wearable/apps/widgets/apps_page.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
@@ -49,10 +50,18 @@ class AppTile extends StatelessWidget {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(13.0),
-                  child: Image.asset(
-                    app.logoPath,
-                    fit: BoxFit.cover,
-                  ),
+                  child: app.logoPath.toLowerCase().endsWith('.svg')
+                      ? Padding(
+                          padding: const EdgeInsets.all(10),
+                          child: SvgPicture.asset(
+                            app.logoPath,
+                            fit: BoxFit.contain,
+                          ),
+                        )
+                      : Image.asset(
+                          app.logoPath,
+                          fit: BoxFit.cover,
+                        ),
                 ),
               ),
               const SizedBox(width: 12),

@@ -1,15 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 
-class StereoPositionBadge extends StatelessWidget {
+class StereoPositionBadge extends StatefulWidget {
   final StereoDevice device;
 
   const StereoPositionBadge({super.key, required this.device});
 
   @override
+  State<StereoPositionBadge> createState() => _StereoPositionBadgeState();
+}
+
+class _StereoPositionBadgeState extends State<StereoPositionBadge> {
+  late Future<DevicePosition?> _positionFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _positionFuture = widget.device.position;
+  }
+
+  @override
+  void didUpdateWidget(covariant StereoPositionBadge oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.device != widget.device) {
+      _positionFuture = widget.device.position;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return FutureBuilder<DevicePosition?>(
-      future: device.position,
+      future: _positionFuture,
       builder: (context, snapshot) {
         final foregroundColor = Theme.of(context).colorScheme.primary;
         final backgroundColor = foregroundColor.withValues(alpha: 0.12);

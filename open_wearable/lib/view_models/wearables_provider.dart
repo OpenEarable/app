@@ -166,11 +166,35 @@ class WearablesProvider with ChangeNotifier {
     });
   }
 
+  Future<String> _wearableNameWithSide(Wearable wearable) async {
+    if (!wearable.hasCapability<StereoDevice>()) {
+      return wearable.name;
+    }
+
+    try {
+      final position = await wearable.requireCapability<StereoDevice>().position;
+      return switch (position) {
+        DevicePosition.left => '${wearable.name} (Left)',
+        DevicePosition.right => '${wearable.name} (Right)',
+        _ => wearable.name,
+      };
+    } catch (_) {
+      return wearable.name;
+    }
+  }
+
   Future<void> _syncTimeAndEmit({
     required Wearable wearable,
-    required String successDescription,
-    required String failureDescription,
+    required bool fromCapabilityChange,
   }) async {
+    final wearableLabel = await _wearableNameWithSide(wearable);
+    final successDescription = fromCapabilityChange
+        ? 'Time synchronized for $wearableLabel after capability update'
+        : 'Time synchronized for $wearableLabel';
+    final failureDescription = fromCapabilityChange
+        ? 'Failed to synchronize time for $wearableLabel after capability update'
+        : 'Failed to synchronize time for $wearableLabel';
+
     try {
       logger.d('Synchronizing time for wearable ${wearable.name}');
       await (wearable.requireCapability<TimeSynchronizable>())
@@ -188,7 +212,7 @@ class WearablesProvider with ChangeNotifier {
       );
       _emitWearableError(
         wearable: wearable,
-        errorMessage: 'Failed to synchronize time with ${wearable.name}: $e',
+        errorMessage: 'Failed to synchronize time with $wearableLabel: $e',
         description: failureDescription,
       );
     }
@@ -225,8 +249,7 @@ class WearablesProvider with ChangeNotifier {
       _scheduleMicrotask(
         () => _syncTimeAndEmit(
           wearable: wearable,
-          successDescription: 'Time synchronized for ${wearable.name}',
-          failureDescription: 'Failed to synchronize time for ${wearable.name}',
+          fromCapabilityChange: false,
         ),
       );
     }
@@ -417,10 +440,7 @@ class WearablesProvider with ChangeNotifier {
       _scheduleMicrotask(
         () => _syncTimeAndEmit(
           wearable: wearable,
-          successDescription:
-              'Time synchronized for ${wearable.name} after capability change',
-          failureDescription:
-              'Failed to synchronize time for ${wearable.name} after capability change',
+          fromCapabilityChange: true,
         ),
       );
     }

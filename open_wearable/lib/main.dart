@@ -17,7 +17,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'models/bluetooth_auto_connector.dart';
 import 'models/logger.dart';
 import 'view_models/app_banner_controller.dart';
-import 'view_models/bluetooth_availability_provider.dart';
 import 'view_models/wearables_provider.dart';
 
 void main() async {
@@ -39,9 +38,6 @@ void main() async {
         Provider.value(value: WearableConnector()),
         ChangeNotifierProvider(
           create: (context) => AppBannerController(),
-        ),
-        ChangeNotifierProvider(
-          create: (context) => BluetoothAvailabilityProvider(),
         ),
         ChangeNotifierProvider.value(value: logFileManager),
       ],
@@ -154,32 +150,36 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       final appBannerController = context.read<AppBannerController>();
       appBannerController.showBanner(
         (id) {
-          late final Color backgroundColor;
-          if (event is WearableErrorEvent) {
-            backgroundColor = Theme.of(context).colorScheme.error;
-          } else {
-            backgroundColor = Theme.of(context).colorScheme.primary;
-          }
-
-          late final Color textColor;
-          if (event is WearableErrorEvent) {
-            textColor = Theme.of(context).colorScheme.onError;
-          } else {
-            textColor = Theme.of(context).colorScheme.onPrimary;
-          }
+          final colorScheme = Theme.of(context).colorScheme;
+          final bool isError = event is WearableErrorEvent;
+          final bool isTimeSync = event is WearableTimeSynchronizedEvent;
+          final backgroundColor = isError
+              ? colorScheme.errorContainer
+              : colorScheme.primaryContainer;
+          final textColor = isError
+              ? colorScheme.onErrorContainer
+              : colorScheme.onPrimaryContainer;
+          final icon = isError
+              ? Icons.error_outline_rounded
+              : isTimeSync
+                  ? Icons.schedule_rounded
+                  : Icons.info_outline_rounded;
 
           return AppBanner(
             content: Text(
               event.description,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: textColor,
+                    fontWeight: FontWeight.w600,
                   ),
             ),
             backgroundColor: backgroundColor,
+            foregroundColor: textColor,
+            leadingIcon: icon,
             key: ValueKey(id),
           );
         },
-        duration: const Duration(seconds: 3),
+        duration: const Duration(seconds: 4),
       );
     });
 
@@ -212,7 +212,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed) {
-      context.read<BluetoothAvailabilityProvider>().refresh();
       _autoConnector.start();
     } else if (state == AppLifecycleState.paused) {
       _autoConnector.stop();
