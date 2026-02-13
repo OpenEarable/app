@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -37,7 +36,9 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
 
   Future<void> _initSelectedMicrophone() async {
     if (widget.device.hasCapability<MicrophoneManager>()) {
-      final mic = await widget.device.requireCapability<MicrophoneManager>().getMicrophone();
+      final mic = await widget.device
+          .requireCapability<MicrophoneManager>()
+          .getMicrophone();
       setState(() {
         selectedMicrophone = mic;
       });
@@ -70,7 +71,10 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                     if (widget.device.hasCapability<StereoDevice>())
                       Padding(
                         padding: const EdgeInsets.only(left: 8.0),
-                        child: StereoPosLabel(device: widget.device.requireCapability<StereoDevice>()),
+                        child: StereoPosLabel(
+                          device:
+                              widget.device.requireCapability<StereoDevice>(),
+                        ),
                       ),
                   ],
                 ),
@@ -79,7 +83,10 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    if (widget.device.hasCapability<SystemDevice>() && widget.device.requireCapability<SystemDevice>().isConnectedViaSystem)
+                    if (widget.device.hasCapability<SystemDevice>() &&
+                        widget.device
+                            .requireCapability<SystemDevice>()
+                            .isConnectedViaSystem)
                       PlatformElevatedButton(
                         child: PlatformText("Forget Device"),
                         onPressed: () {
@@ -88,10 +95,15 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                             context: context,
                             builder: (_) => PlatformAlertDialog(
                               title: PlatformText('Forget'),
-                              content: PlatformText('To disconnect this device permanently, please go to your system Bluetooth settings and ignore the device from there.'),
+                              content: PlatformText(
+                                'To disconnect this device permanently, please go to your system Bluetooth settings and ignore the device from there.',
+                              ),
                               actions: <Widget>[
                                 PlatformDialogAction(
-                                  cupertino: (_, __) => CupertinoDialogActionData(isDefaultAction: true),
+                                  cupertino: (_, __) =>
+                                      CupertinoDialogActionData(
+                                    isDefaultAction: true,
+                                  ),
                                   child: PlatformText('OK'),
                                   onPressed: () => Navigator.of(context).pop(),
                                 ),
@@ -113,14 +125,17 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
             ),
             // MARK: Audio Mode
             if (widget.device.hasCapability<AudioModeManager>())
-              AudioModeWidget(device: widget.device.requireCapability<AudioModeManager>()),
+              AudioModeWidget(device: widget.device),
             // MARK: Microphone Control
             if (widget.device.hasCapability<MicrophoneManager>())
               MicrophoneSelectionWidget(
                 device: widget.device.requireCapability<MicrophoneManager>(),
               ),
             // MARK: Device info
-            PlatformText("Device Info", style: Theme.of(context).textTheme.titleSmall),
+            PlatformText(
+              "Device Info",
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
             PlatformListTile(
               title: PlatformText(
                 "Bluetooth Address",
@@ -136,7 +151,8 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
                 subtitle: FutureBuilder(
-                  future: widget.device.requireCapability<DeviceIdentifier>()
+                  future: widget.device
+                      .requireCapability<DeviceIdentifier>()
                       .readDeviceIdentifier(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.done) {
@@ -161,57 +177,62 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                   "Firmware Version",
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
-                subtitle: Row(children: [
-                  FutureBuilder(
-                    future: widget.device.requireCapability<DeviceFirmwareVersion>()
-                        .readDeviceFirmwareVersion(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.done) {
-                        return PlatformText(snapshot.data.toString());
-                      } else {
-                        return Align(
-                          alignment: Alignment.centerLeft,
-                          child: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: PlatformCircularProgressIndicator(),
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                  FutureBuilder(
-                    future: widget.device.requireCapability<DeviceFirmwareVersion>()
-                        .checkFirmwareSupport(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.done) {
-                        switch (snapshot.data) {
-                          case FirmwareSupportStatus.supported:
-                            return SizedBox.shrink();
-                          case FirmwareSupportStatus.tooNew:
-                          case FirmwareSupportStatus.tooOld:
-                            return Padding(
-                              padding: const EdgeInsets.only(left: 8.0),
-                              child: Icon(Icons.warning, color: Colors.orange),
-                            );
-                          case FirmwareSupportStatus.unknown:
-                            return Padding(
-                              padding: const EdgeInsets.only(left: 8.0),
-                              child: Icon(Icons.help, color: Colors.grey),
-                            );
-                          default:
-                            return Container();
+                subtitle: Row(
+                  children: [
+                    FutureBuilder(
+                      future: widget.device
+                          .requireCapability<DeviceFirmwareVersion>()
+                          .readDeviceFirmwareVersion(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.done) {
+                          return PlatformText(snapshot.data.toString());
+                        } else {
+                          return Align(
+                            alignment: Alignment.centerLeft,
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: PlatformCircularProgressIndicator(),
+                            ),
+                          );
                         }
-                      } else {
-                        return Container();
-                      }
-                    },
-                  ),
-                ],),
+                      },
+                    ),
+                    FutureBuilder(
+                      future: widget.device
+                          .requireCapability<DeviceFirmwareVersion>()
+                          .checkFirmwareSupport(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.done) {
+                          switch (snapshot.data) {
+                            case FirmwareSupportStatus.supported:
+                              return SizedBox.shrink();
+                            case FirmwareSupportStatus.tooNew:
+                            case FirmwareSupportStatus.tooOld:
+                              return Padding(
+                                padding: const EdgeInsets.only(left: 8.0),
+                                child:
+                                    Icon(Icons.warning, color: Colors.orange),
+                              );
+                            case FirmwareSupportStatus.unknown:
+                              return Padding(
+                                padding: const EdgeInsets.only(left: 8.0),
+                                child: Icon(Icons.help, color: Colors.grey),
+                              );
+                            default:
+                              return Container();
+                          }
+                        } else {
+                          return Container();
+                        }
+                      },
+                    ),
+                  ],
+                ),
                 trailing: PlatformIconButton(
                   icon: Icon(Icons.upload),
                   onPressed: () {
-                      Provider.of<FirmwareUpdateRequestProvider>(
+                    Provider.of<FirmwareUpdateRequestProvider>(
                       context,
                       listen: false,
                     ).setSelectedPeripheral(widget.device);
@@ -229,7 +250,8 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
                 subtitle: FutureBuilder(
-                  future: widget.device.requireCapability<DeviceHardwareVersion>()
+                  future: widget.device
+                      .requireCapability<DeviceHardwareVersion>()
                       .readDeviceHardwareVersion(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.done) {
@@ -249,7 +271,8 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
               ),
 
             // MARK: Status LED control
-            if (widget.device.hasCapability<StatusLed>() && widget.device.hasCapability<RgbLed>()) ...[
+            if (widget.device.hasCapability<StatusLed>() &&
+                widget.device.hasCapability<RgbLed>()) ...[
               PlatformText(
                 "Control Status LED",
                 style: Theme.of(context).textTheme.titleSmall,
@@ -269,7 +292,9 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                   "LED Color",
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
-                trailing: RgbControlView(rgbLed: widget.device.requireCapability<RgbLed>()),
+                trailing: RgbControlView(
+                  rgbLed: widget.device.requireCapability<RgbLed>(),
+                ),
               ),
             ],
 
@@ -280,7 +305,8 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               StreamBuilder<BatteryEnergyStatus>(
-                stream: widget.device.requireCapability<BatteryEnergyStatusService>()
+                stream: widget.device
+                    .requireCapability<BatteryEnergyStatusService>()
                     .energyStatusStream,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -332,7 +358,8 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               StreamBuilder<BatteryHealthStatus>(
-                stream: widget.device.requireCapability<BatteryHealthStatusService>()
+                stream: widget.device
+                    .requireCapability<BatteryHealthStatusService>()
                     .healthStatusStream,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -354,12 +381,14 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                       children: [
                         PlatformListTile(
                           title: PlatformText("Battery Temperature"),
-                          subtitle:
-                              PlatformText("${healthStatus.currentTemperature} °C"),
+                          subtitle: PlatformText(
+                            "${healthStatus.currentTemperature} °C",
+                          ),
                         ),
                         PlatformListTile(
                           title: PlatformText("Battery Cycle Count"),
-                          subtitle: PlatformText("${healthStatus.cycleCount} cycles"),
+                          subtitle:
+                              PlatformText("${healthStatus.cycleCount} cycles"),
                         ),
                       ],
                     );

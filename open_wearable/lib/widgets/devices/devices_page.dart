@@ -614,11 +614,10 @@ class DeviceRow extends StatelessWidget {
     required Wearable device,
     required String sideLabel,
   }) {
+    final positionLabel = sideLabel == 'Left' ? 'L' : 'R';
+
     return ListTile(
-      leading: CircleAvatar(
-        radius: 14,
-        child: Text(sideLabel == 'Left' ? 'L' : 'R'),
-      ),
+      leading: _MetadataBubble(label: positionLabel),
       title: Text(device.name),
       subtitle: Text(device.deviceId),
       onTap: () {

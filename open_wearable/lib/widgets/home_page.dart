@@ -41,13 +41,13 @@ class _HomePageState extends State<HomePage> {
     _destinations = const [
       _HomeDestination(
         title: 'Overview',
-        icon: Icons.dashboard_outlined,
-        selectedIcon: Icons.dashboard,
+        icon: Icons.home_outlined,
+        selectedIcon: Icons.home,
       ),
       _HomeDestination(
         title: 'Devices',
-        icon: Icons.devices_outlined,
-        selectedIcon: Icons.devices,
+        icon: Icons.dashboard_outlined,
+        selectedIcon: Icons.dashboard,
       ),
       _HomeDestination(
         title: 'Sensors',
