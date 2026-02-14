@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
+import 'package:open_wearable/models/wearable_display_group.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
+import 'package:open_wearable/widgets/devices/devices_page.dart';
 import 'package:open_wearable/widgets/recording_activity_indicator.dart';
 import 'package:provider/provider.dart';
 
@@ -44,6 +46,15 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
     final connectedWearables = wearablesProvider.wearables;
     final connectedDeviceIds =
         connectedWearables.map((wearable) => wearable.deviceId).toSet();
+    final connectedGroups = _orderGroupsForOverview(
+      connectedWearables
+          .map(
+            (wearable) => WearableDisplayGroup.single(
+              wearable: wearable,
+            ),
+          )
+          .toList(),
+    );
 
     final availableDevices = _discoveredDevices
         .where((device) => !connectedDeviceIds.contains(device.id))
@@ -98,19 +109,15 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                 subtitle: 'Tap a discovered device below to connect.',
               )
             else
-              ...connectedWearables.map(
-                (wearable) => Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: PlatformListTile(
-                    leading: const Icon(Icons.watch_outlined),
-                    title: PlatformText(wearable.name),
-                    subtitle: PlatformText(wearable.deviceId),
-                    trailing: Icon(
-                      PlatformIcons(context).checkMark,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var i = 0; i < connectedGroups.length; i++) ...[
+                    DeviceRow(group: connectedGroups[i]),
+                    if (i < connectedGroups.length - 1)
+                      const SizedBox(height: 8),
+                  ],
+                ],
               ),
             const SizedBox(height: 12),
             _buildSectionHeader(
@@ -279,6 +286,46 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
     final name = device.name.trim();
     if (name.isEmpty) return 'Unnamed device';
     return name;
+  }
+
+  List<WearableDisplayGroup> _orderGroupsForOverview(
+    List<WearableDisplayGroup> groups,
+  ) {
+    final indexed = groups.asMap().entries.toList();
+
+    int rank(WearableDisplayGroup group) {
+      if (group.isCombined) {
+        return 0;
+      }
+      if (group.primaryPosition == DevicePosition.left) {
+        return 1;
+      }
+      if (group.primaryPosition == DevicePosition.right) {
+        return 2;
+      }
+      return 3;
+    }
+
+    indexed.sort((a, b) {
+      final rankA = rank(a.value);
+      final rankB = rank(b.value);
+      if (rankA != rankB) {
+        return rankA.compareTo(rankB);
+      }
+
+      if (rankA <= 2) {
+        final byName = a.value.displayName
+            .toLowerCase()
+            .compareTo(b.value.displayName.toLowerCase());
+        if (byName != 0) {
+          return byName;
+        }
+      }
+
+      return a.key.compareTo(b.key);
+    });
+
+    return indexed.map((entry) => entry.value).toList();
   }
 
   String _formatScanTime(DateTime startedAt) {

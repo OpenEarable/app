@@ -1,31 +1,64 @@
 import 'package:flutter/material.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 
-class BatteryStateView extends StatelessWidget {
-  final Wearable _device;
+class BatteryStateView extends StatefulWidget {
+  final Wearable device;
 
-  const BatteryStateView({super.key, required Wearable device})
-      : _device = device;
+  const BatteryStateView({super.key, required this.device});
+
+  @override
+  State<BatteryStateView> createState() => _BatteryStateViewState();
+}
+
+class _BatteryStateViewState extends State<BatteryStateView> {
+  bool _hasBatteryLevel = false;
+  bool _hasPowerStatus = false;
+  Stream<int>? _batteryPercentageStream;
+  Stream<BatteryPowerStatus>? _powerStatusStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolveBatteryStreams();
+  }
+
+  @override
+  void didUpdateWidget(covariant BatteryStateView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.device != widget.device) {
+      _resolveBatteryStreams();
+    }
+  }
+
+  void _resolveBatteryStreams() {
+    _hasBatteryLevel = widget.device.hasCapability<BatteryLevelStatus>();
+    _hasPowerStatus = widget.device.hasCapability<BatteryLevelStatusService>();
+
+    _batteryPercentageStream = _hasBatteryLevel
+        ? widget.device
+            .requireCapability<BatteryLevelStatus>()
+            .batteryPercentageStream
+        : null;
+
+    _powerStatusStream = _hasPowerStatus
+        ? widget.device
+            .requireCapability<BatteryLevelStatusService>()
+            .powerStatusStream
+        : null;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final hasBatteryLevel = _device.hasCapability<BatteryLevelStatus>();
-    final hasPowerStatus = _device.hasCapability<BatteryLevelStatusService>();
-
-    if (!hasBatteryLevel && !hasPowerStatus) {
+    if (!_hasBatteryLevel && !_hasPowerStatus) {
       return const SizedBox.shrink();
     }
 
-    if (hasBatteryLevel && hasPowerStatus) {
+    if (_hasBatteryLevel && _hasPowerStatus) {
       return StreamBuilder<int>(
-        stream: _device
-            .requireCapability<BatteryLevelStatus>()
-            .batteryPercentageStream,
+        stream: _batteryPercentageStream,
         builder: (context, batterySnapshot) {
           return StreamBuilder<BatteryPowerStatus>(
-            stream: _device
-                .requireCapability<BatteryLevelStatusService>()
-                .powerStatusStream,
+            stream: _powerStatusStream,
             builder: (context, powerSnapshot) {
               return _BatteryBadge(
                 batteryLevel: batterySnapshot.data,
@@ -38,11 +71,9 @@ class BatteryStateView extends StatelessWidget {
       );
     }
 
-    if (hasPowerStatus) {
+    if (_hasPowerStatus) {
       return StreamBuilder<BatteryPowerStatus>(
-        stream: _device
-            .requireCapability<BatteryLevelStatusService>()
-            .powerStatusStream,
+        stream: _powerStatusStream,
         builder: (context, snapshot) {
           return _BatteryBadge(
             batteryLevel: null,
@@ -54,9 +85,7 @@ class BatteryStateView extends StatelessWidget {
     }
 
     return StreamBuilder<int>(
-      stream: _device
-          .requireCapability<BatteryLevelStatus>()
-          .batteryPercentageStream,
+      stream: _batteryPercentageStream,
       builder: (context, snapshot) {
         return _BatteryBadge(
           batteryLevel: snapshot.data,
@@ -93,15 +122,17 @@ class _BatteryBadge extends StatelessWidget {
     final IconData icon;
     final String label;
 
-    if (!batteryPresent) {
+    if (normalizedLevel != null) {
+      icon = charging
+          ? Icons.battery_charging_full_rounded
+          : _batteryIconForPercent(normalizedLevel);
+      label = "$normalizedLevel%";
+    } else if (!batteryPresent) {
       icon = Icons.battery_unknown_rounded;
       label = "No battery";
     } else if (charging) {
       icon = Icons.battery_charging_full_rounded;
-      label = normalizedLevel == null ? "Charging" : "$normalizedLevel%";
-    } else if (normalizedLevel != null) {
-      icon = _batteryIconForPercent(normalizedLevel);
-      label = "$normalizedLevel%";
+      label = "Charging";
     } else {
       icon = _batteryIconForChargeLevel(powerStatus?.chargeLevel);
       label = switch (powerStatus?.chargeLevel) {
@@ -111,6 +142,12 @@ class _BatteryBadge extends StatelessWidget {
         _ => "--",
       };
     }
+
+    final showLoadingPlaceholder =
+        isLoading && batteryLevel == null && powerStatus == null;
+    final displayIcon =
+        showLoadingPlaceholder ? Icons.battery_unknown_rounded : icon;
+    final displayLabel = showLoadingPlaceholder ? "..." : label;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -124,20 +161,10 @@ class _BatteryBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (isLoading)
-            SizedBox(
-              width: 14,
-              height: 14,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: foregroundColor,
-              ),
-            )
-          else
-            Icon(icon, size: 15, color: foregroundColor),
+          Icon(displayIcon, size: 15, color: foregroundColor),
           const SizedBox(width: 6),
           Text(
-            label,
+            displayLabel,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
                   color: foregroundColor,
                   fontWeight: FontWeight.w700,

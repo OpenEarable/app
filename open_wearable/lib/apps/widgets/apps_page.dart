@@ -11,6 +11,7 @@ import 'package:open_wearable/apps/widgets/select_earable_view.dart';
 import 'package:open_wearable/apps/widgets/app_tile.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/recording_activity_indicator.dart';
+import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 import 'package:provider/provider.dart';
 
 class AppInfo {
@@ -161,13 +162,13 @@ class AppsPage extends StatelessWidget {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
+        padding: SensorPageSpacing.pagePadding,
         children: [
           _AppsHeroCard(
             totalApps: _apps.length,
             connectedDevices: connectedCount,
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: SensorPageSpacing.sectionGap),
           Padding(
             padding: const EdgeInsets.only(left: 2, bottom: 8),
             child: Text(
@@ -263,7 +264,7 @@ class _AppsHeroCard extends StatelessWidget {
               ),
               _HeroStatPill(
                 label: '$connectedDevices connected',
-                icon: Icons.watch_outlined,
+                icon: Icons.dashboard_outlined,
               ),
             ],
           ),

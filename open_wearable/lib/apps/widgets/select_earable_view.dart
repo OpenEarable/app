@@ -430,10 +430,12 @@ class _SelectableWearableCard extends StatelessWidget {
         child: ConstrainedBox(
           constraints: BoxConstraints(minWidth: constraints.maxWidth),
           child: Row(
-            mainAxisAlignment: pills.length == 1
-                ? MainAxisAlignment.start
-                : MainAxisAlignment.spaceBetween,
-            children: pills,
+            children: [
+              for (var i = 0; i < pills.length; i++) ...[
+                if (i > 0) const SizedBox(width: 8),
+                pills[i],
+              ],
+            ],
           ),
         ),
       ),
@@ -557,6 +559,8 @@ class _MetadataBubble extends StatelessWidget {
     final resolvedForeground = foregroundColor ?? defaultForeground;
     final backgroundColor = resolvedForeground.withValues(alpha: 0.12);
     final borderColor = resolvedForeground.withValues(alpha: 0.24);
+    final displayText =
+        isLoading ? '$label ...' : (value == null ? label : '$label $value');
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -568,24 +572,15 @@ class _MetadataBubble extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (isLoading)
-            SizedBox(
-              width: 14,
-              height: 14,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: resolvedForeground,
-              ),
-            )
-          else if (trailingIcon != null)
+          if (!isLoading && trailingIcon != null)
             Icon(
               trailingIcon,
               size: 14,
               color: resolvedForeground,
             ),
-          if (isLoading || trailingIcon != null) const SizedBox(width: 6),
+          if (!isLoading && trailingIcon != null) const SizedBox(width: 6),
           Text(
-            value == null ? label : '$label $value',
+            displayText,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
                   color: resolvedForeground,
                   fontWeight: FontWeight.w700,

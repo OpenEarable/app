@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -9,9 +8,11 @@ import 'package:open_wearable/models/wearable_display_group.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/devices/battery_state.dart';
 import 'package:open_wearable/widgets/devices/connect_devices_page.dart';
+import 'package:open_wearable/widgets/devices/device_detail/audio_mode_widget.dart';
 import 'package:open_wearable/widgets/devices/device_detail/device_detail_page.dart';
 import 'package:open_wearable/widgets/devices/stereo_position_badge.dart';
 import 'package:open_wearable/widgets/recording_activity_indicator.dart';
+import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 import 'package:provider/provider.dart';
 
 /// On this page the user can see all connected devices.
@@ -74,13 +75,14 @@ class _DevicesPageState extends State<DevicesPage> {
           //TODO: implement refresh logic
         },
         child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: SensorPageSpacing.pagePadding,
           children: [
             SizedBox(
-              height: MediaQuery.of(context).size.height * 0.8,
+              height: MediaQuery.of(context).size.height * 0.62,
               child: Center(
-                child: PlatformText(
-                  "No devices connected",
-                  style: Theme.of(context).textTheme.titleLarge,
+                child: _NoDevicesPromptView(
+                  onScanPressed: () => context.push('/connect-devices'),
                 ),
               ),
             ),
@@ -161,6 +163,20 @@ class _DevicesPageState extends State<DevicesPage> {
                   )
                   .toList(),
         );
+
+        if (groups.isEmpty) {
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: _NoDevicesPromptView(
+                  onScanPressed: () => context.push('/connect-devices'),
+                ),
+              ),
+            ),
+          );
+        }
 
         return GridView.builder(
           gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
@@ -265,6 +281,69 @@ class _DevicesPageState extends State<DevicesPage> {
   }
 }
 
+class _NoDevicesPromptView extends StatelessWidget {
+  final VoidCallback onScanPressed;
+
+  const _NoDevicesPromptView({required this.onScanPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 58,
+            height: 58,
+            decoration: BoxDecoration(
+              color: colorScheme.primaryContainer.withValues(alpha: 0.45),
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: Icon(
+              Icons.bluetooth_searching_rounded,
+              size: 28,
+              color: colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: 14),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 280),
+            child: Text(
+              'No devices connected',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 280),
+            child: Text(
+              'Scan for devices to start streaming and recording data.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          FilledButton.icon(
+            onPressed: onScanPressed,
+            icon: const Icon(Icons.search_rounded, size: 18),
+            label: const Text('Scan for devices'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // MARK: DeviceRow
 
 /// This widget represents a single device in the list/grid.
@@ -272,11 +351,15 @@ class _DevicesPageState extends State<DevicesPage> {
 class DeviceRow extends StatelessWidget {
   final WearableDisplayGroup group;
   final void Function(String pairKey, bool combined)? onPairCombineChanged;
+  final void Function(Wearable device)? onSingleDeviceSelected;
+  final bool showWearableIcon;
 
   const DeviceRow({
     super.key,
     required this.group,
     this.onPairCombineChanged,
+    this.onSingleDeviceSelected,
+    this.showWearableIcon = true,
   });
 
   @override
@@ -284,7 +367,11 @@ class DeviceRow extends StatelessWidget {
     final primary = group.representative;
     final secondary = group.secondary;
     final pairKey = group.stereoPairKey;
-    final wearableIconPath = primary.getWearableIconPath();
+    final knownIconVariant = _resolveWearableIconVariant();
+    final hasWearableIcon =
+        showWearableIcon &&
+        (primary.getWearableIconPath(variant: knownIconVariant)?.isNotEmpty ??
+            false);
     final statusPills = _buildDeviceStatusPills(
       primary,
       includeSideLabel: false,
@@ -302,15 +389,15 @@ class DeviceRow extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (wearableIconPath != null) ...[
+                  if (hasWearableIcon) ...[
                     Padding(
                       padding: const EdgeInsets.only(top: 2),
                       child: SizedBox(
                         width: 56,
                         height: 56,
-                        child: SvgPicture.asset(
-                          wearableIconPath,
-                          fit: BoxFit.contain,
+                        child: _WearableIconView(
+                          device: primary,
+                          initialVariant: knownIconVariant,
                         ),
                       ),
                     ),
@@ -370,7 +457,7 @@ class DeviceRow extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.only(top: 4),
                             child: Text(
-                              'Tap to choose left or right device details',
+                              'Tap to choose left or right device controls',
                               style: Theme.of(context)
                                   .textTheme
                                   .bodySmall
@@ -407,6 +494,21 @@ class DeviceRow extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  WearableIconVariant _resolveWearableIconVariant() {
+    if (group.isCombined) {
+      return WearableIconVariant.pair;
+    }
+
+    switch (group.primaryPosition) {
+      case DevicePosition.left:
+        return WearableIconVariant.left;
+      case DevicePosition.right:
+        return WearableIconVariant.right;
+      case null:
+        return WearableIconVariant.single;
+    }
   }
 
   Widget _buildPairToggleButton(
@@ -536,10 +638,12 @@ class DeviceRow extends StatelessWidget {
         child: ConstrainedBox(
           constraints: BoxConstraints(minWidth: constraints.maxWidth),
           child: Row(
-            mainAxisAlignment: pills.length == 1
-                ? MainAxisAlignment.start
-                : MainAxisAlignment.spaceBetween,
-            children: pills,
+            children: [
+              for (var i = 0; i < pills.length; i++) ...[
+                if (i > 0) const SizedBox(width: 8),
+                pills[i],
+              ],
+            ],
           ),
         ),
       ),
@@ -549,81 +653,33 @@ class DeviceRow extends StatelessWidget {
   Future<void> _openDetails(BuildContext context) async {
     final devices = group.members;
     if (devices.length == 1) {
-      _openDeviceDetail(context, devices.first);
+      final device = devices.first;
+      if (onSingleDeviceSelected != null) {
+        onSingleDeviceSelected!(device);
+      } else {
+        _openDeviceDetail(context, device);
+      }
       return;
     }
 
+    final leftDevice = group.leftDevice ?? devices.first;
+    final rightDevice = group.rightDevice ?? devices.last;
+
     await showPlatformModalSheet<void>(
       context: context,
-      builder: (sheetContext) => PlatformWidget(
-        material: (_, __) => SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildPairedActionTile(
-                sheetContext: sheetContext,
-                rootContext: context,
-                device: group.leftDevice ?? devices.first,
-                sideLabel: 'Left',
-              ),
-              _buildPairedActionTile(
-                sheetContext: sheetContext,
-                rootContext: context,
-                device: group.rightDevice ?? devices.last,
-                sideLabel: 'Right',
-              ),
-            ],
-          ),
-        ),
-        cupertino: (_, __) => CupertinoActionSheet(
-          title: Text(group.displayName),
-          actions: [
-            CupertinoActionSheetAction(
-              onPressed: () {
-                Navigator.of(sheetContext).pop();
-                _openDeviceDetail(
-                  context,
-                  group.leftDevice ?? devices.first,
-                );
-              },
-              child: const Text('Open Left Device'),
-            ),
-            CupertinoActionSheetAction(
-              onPressed: () {
-                Navigator.of(sheetContext).pop();
-                _openDeviceDetail(
-                  context,
-                  group.rightDevice ?? devices.last,
-                );
-              },
-              child: const Text('Open Right Device'),
-            ),
-          ],
-          cancelButton: CupertinoActionSheetAction(
-            onPressed: () => Navigator.of(sheetContext).pop(),
-            child: const Text('Cancel'),
-          ),
-        ),
+      builder: (sheetContext) => _PairedDeviceSheet(
+        title: group.displayName,
+        leftDevice: leftDevice,
+        rightDevice: rightDevice,
+        onOpenDeviceDetail: (device) {
+          Navigator.of(sheetContext).pop();
+          if (onSingleDeviceSelected != null) {
+            onSingleDeviceSelected!(device);
+          } else {
+            _openDeviceDetail(context, device);
+          }
+        },
       ),
-    );
-  }
-
-  Widget _buildPairedActionTile({
-    required BuildContext sheetContext,
-    required BuildContext rootContext,
-    required Wearable device,
-    required String sideLabel,
-  }) {
-    final positionLabel = sideLabel == 'Left' ? 'L' : 'R';
-
-    return ListTile(
-      leading: _MetadataBubble(label: positionLabel),
-      title: Text(device.name),
-      subtitle: Text(device.deviceId),
-      onTap: () {
-        Navigator.of(sheetContext).pop();
-        _openDeviceDetail(rootContext, device);
-      },
     );
   }
 
@@ -648,15 +704,276 @@ class DeviceRow extends StatelessWidget {
   }
 }
 
-class _FirmwareVersionBubble extends StatelessWidget {
+class _WearableIconView extends StatefulWidget {
+  final Wearable device;
+  final WearableIconVariant initialVariant;
+
+  const _WearableIconView({
+    required this.device,
+    required this.initialVariant,
+  });
+
+  @override
+  State<_WearableIconView> createState() => _WearableIconViewState();
+}
+
+class _WearableIconViewState extends State<_WearableIconView> {
+  static final Expando<Future<DevicePosition?>> _positionFutureCache =
+      Expando<Future<DevicePosition?>>();
+
+  Future<DevicePosition?>? _positionFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _configurePositionFuture();
+  }
+
+  @override
+  void didUpdateWidget(covariant _WearableIconView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.device, widget.device) ||
+        oldWidget.initialVariant != widget.initialVariant) {
+      _configurePositionFuture();
+    }
+  }
+
+  void _configurePositionFuture() {
+    if (widget.initialVariant != WearableIconVariant.single ||
+        !widget.device.hasCapability<StereoDevice>()) {
+      _positionFuture = null;
+      return;
+    }
+
+    final stereoDevice = widget.device.requireCapability<StereoDevice>();
+    _positionFuture =
+        _positionFutureCache[stereoDevice] ??= stereoDevice.position;
+  }
+
+  WearableIconVariant _variantForPosition(DevicePosition? position) {
+    return switch (position) {
+      DevicePosition.left => WearableIconVariant.left,
+      DevicePosition.right => WearableIconVariant.right,
+      _ => widget.initialVariant,
+    };
+  }
+
+  String? _resolveIconPath(WearableIconVariant variant) {
+    final variantPath = widget.device.getWearableIconPath(variant: variant);
+    if (variantPath != null && variantPath.isNotEmpty) {
+      return variantPath;
+    }
+
+    if (variant != WearableIconVariant.single) {
+      final fallbackPath = widget.device.getWearableIconPath();
+      if (fallbackPath != null && fallbackPath.isNotEmpty) {
+        return fallbackPath;
+      }
+    }
+    return null;
+  }
+
+  Widget _buildIcon(WearableIconVariant variant) {
+    final path = _resolveIconPath(variant);
+    if (path == null) {
+      return const SizedBox.shrink();
+    }
+
+    if (path.toLowerCase().endsWith('.svg')) {
+      return SvgPicture.asset(
+        path,
+        fit: BoxFit.contain,
+      );
+    }
+
+    return Image.asset(
+      path,
+      fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => const Icon(Icons.watch_outlined),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_positionFuture == null) {
+      return _buildIcon(widget.initialVariant);
+    }
+
+    return FutureBuilder<DevicePosition?>(
+      future: _positionFuture,
+      builder: (context, snapshot) {
+        final variant = _variantForPosition(snapshot.data);
+        return _buildIcon(variant);
+      },
+    );
+  }
+}
+
+class _PairedDeviceSheet extends StatelessWidget {
+  final String title;
+  final Wearable leftDevice;
+  final Wearable rightDevice;
+  final void Function(Wearable device) onOpenDeviceDetail;
+
+  const _PairedDeviceSheet({
+    required this.title,
+    required this.leftDevice,
+    required this.rightDevice,
+    required this.onOpenDeviceDetail,
+  });
+
+  bool _supportsStereoListeningMode(Wearable device) {
+    return device.hasCapability<StereoDevice>() &&
+        device.hasCapability<AudioModeManager>();
+  }
+
+  Wearable? _resolveListeningModeDevice() {
+    if (_supportsStereoListeningMode(leftDevice)) {
+      return leftDevice;
+    }
+    if (_supportsStereoListeningMode(rightDevice)) {
+      return rightDevice;
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final listeningModeDevice = _resolveListeningModeDevice();
+
+    return SafeArea(
+      child: Material(
+        color: theme.colorScheme.surface,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Select a device to open details.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    tooltip: 'Close',
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close_rounded, size: 20),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              DeviceRow(
+                group: WearableDisplayGroup.single(
+                  wearable: leftDevice,
+                  position: DevicePosition.left,
+                ),
+                onSingleDeviceSelected: onOpenDeviceDetail,
+              ),
+              const SizedBox(height: 8),
+              DeviceRow(
+                group: WearableDisplayGroup.single(
+                  wearable: rightDevice,
+                  position: DevicePosition.right,
+                ),
+                onSingleDeviceSelected: onOpenDeviceDetail,
+              ),
+              if (listeningModeDevice != null) ...[
+                const SizedBox(height: 12),
+                AudioModeWidget(
+                  key: ValueKey(
+                    'pair_audio_${leftDevice.deviceId}_${rightDevice.deviceId}',
+                  ),
+                  device: listeningModeDevice,
+                  applyScope: AudioModeApplyScope.pairOnly,
+                ),
+              ] else ...[
+                const SizedBox(height: 10),
+                Text(
+                  'Listening mode is not available for this stereo pair.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FirmwareVersionBubble extends StatefulWidget {
   final DeviceFirmwareVersion firmwareVersion;
 
   const _FirmwareVersionBubble({required this.firmwareVersion});
 
   @override
+  State<_FirmwareVersionBubble> createState() => _FirmwareVersionBubbleState();
+}
+
+class _FirmwareVersionBubbleState extends State<_FirmwareVersionBubble> {
+  static final Expando<Future<Object?>> _versionFutureCache =
+      Expando<Future<Object?>>();
+  static final Expando<Future<FirmwareSupportStatus>> _supportFutureCache =
+      Expando<Future<FirmwareSupportStatus>>();
+
+  late Future<Object?> _versionFuture;
+  late Future<FirmwareSupportStatus> _supportFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _versionFuture = _resolveVersionFuture(widget.firmwareVersion);
+    _supportFuture = _resolveSupportFuture(widget.firmwareVersion);
+  }
+
+  @override
+  void didUpdateWidget(covariant _FirmwareVersionBubble oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.firmwareVersion, widget.firmwareVersion)) {
+      _versionFuture = _resolveVersionFuture(widget.firmwareVersion);
+      _supportFuture = _resolveSupportFuture(widget.firmwareVersion);
+    }
+  }
+
+  Future<Object?> _resolveVersionFuture(DeviceFirmwareVersion firmwareVersion) {
+    return _versionFutureCache[firmwareVersion] ??=
+        firmwareVersion.readDeviceFirmwareVersion();
+  }
+
+  Future<FirmwareSupportStatus> _resolveSupportFuture(
+    DeviceFirmwareVersion firmwareVersion,
+  ) {
+    return _supportFutureCache[firmwareVersion] ??=
+        firmwareVersion.checkFirmwareSupport();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return FutureBuilder<Object?>(
-      future: firmwareVersion.readDeviceFirmwareVersion(),
+      future: _versionFuture,
       builder: (context, versionSnapshot) {
         if (versionSnapshot.connectionState == ConnectionState.waiting) {
           return const _MetadataBubble(label: "FW", isLoading: true);
@@ -667,7 +984,7 @@ class _FirmwareVersionBubble extends StatelessWidget {
             : (versionSnapshot.data?.toString() ?? "--");
 
         return FutureBuilder<FirmwareSupportStatus>(
-          future: firmwareVersion.checkFirmwareSupport(),
+          future: _supportFuture,
           builder: (context, supportSnapshot) {
             IconData? statusIcon;
             Color? statusColor;
@@ -699,15 +1016,44 @@ class _FirmwareVersionBubble extends StatelessWidget {
   }
 }
 
-class _HardwareVersionBubble extends StatelessWidget {
+class _HardwareVersionBubble extends StatefulWidget {
   final DeviceHardwareVersion hardwareVersion;
 
   const _HardwareVersionBubble({required this.hardwareVersion});
 
   @override
+  State<_HardwareVersionBubble> createState() => _HardwareVersionBubbleState();
+}
+
+class _HardwareVersionBubbleState extends State<_HardwareVersionBubble> {
+  static final Expando<Future<Object?>> _versionFutureCache =
+      Expando<Future<Object?>>();
+
+  late Future<Object?> _versionFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _versionFuture = _resolveVersionFuture(widget.hardwareVersion);
+  }
+
+  @override
+  void didUpdateWidget(covariant _HardwareVersionBubble oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.hardwareVersion, widget.hardwareVersion)) {
+      _versionFuture = _resolveVersionFuture(widget.hardwareVersion);
+    }
+  }
+
+  Future<Object?> _resolveVersionFuture(DeviceHardwareVersion hardwareVersion) {
+    return _versionFutureCache[hardwareVersion] ??=
+        hardwareVersion.readDeviceHardwareVersion();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return FutureBuilder<Object?>(
-      future: hardwareVersion.readDeviceHardwareVersion(),
+      future: _versionFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const _MetadataBubble(label: "HW", isLoading: true);
@@ -746,6 +1092,8 @@ class _MetadataBubble extends StatelessWidget {
     final resolvedForeground = foregroundColor ?? defaultForeground;
     final backgroundColor = resolvedForeground.withValues(alpha: 0.12);
     final borderColor = resolvedForeground.withValues(alpha: 0.24);
+    final displayText =
+        isLoading ? "$label ..." : (value == null ? label : "$label $value");
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
@@ -759,24 +1107,15 @@ class _MetadataBubble extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (isLoading)
-            SizedBox(
-              width: 14,
-              height: 14,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: resolvedForeground,
-              ),
-            )
-          else if (trailingIcon != null)
+          if (!isLoading && trailingIcon != null)
             Icon(
               trailingIcon,
               size: 14,
               color: resolvedForeground,
             ),
-          if (isLoading || trailingIcon != null) const SizedBox(width: 6),
+          if (!isLoading && trailingIcon != null) const SizedBox(width: 6),
           Text(
-            value == null ? label : "$label $value",
+            displayText,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
                   color: resolvedForeground,
                   fontWeight: FontWeight.w700,

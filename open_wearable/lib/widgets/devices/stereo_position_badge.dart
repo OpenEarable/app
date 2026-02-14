@@ -48,6 +48,8 @@ class _StereoPositionBadgeState extends State<StereoPositionBadge> {
           return const SizedBox.shrink();
         }
 
+        final displayLabel = isLoading ? '...' : (label ?? '--');
+
         return AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,
@@ -60,18 +62,8 @@ class _StereoPositionBadgeState extends State<StereoPositionBadge> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (isLoading)
-                SizedBox(
-                  width: 14,
-                  height: 14,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: foregroundColor,
-                  ),
-                ),
-              if (isLoading) const SizedBox(width: 6),
               Text(
-                label ?? '--',
+                displayLabel,
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
                       color: foregroundColor,
                       fontWeight: FontWeight.w700,

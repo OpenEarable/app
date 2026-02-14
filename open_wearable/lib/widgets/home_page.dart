@@ -1,4 +1,7 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
@@ -6,12 +9,16 @@ import 'package:open_wearable/apps/widgets/apps_page.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/devices/devices_page.dart';
+import 'package:open_wearable/widgets/devices/device_detail/device_detail_page.dart';
 import 'package:open_wearable/widgets/recording_activity_indicator.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'sensors/sensor_page.dart';
+import 'sensors/sensor_page_spacing.dart';
 
 const int _overviewIndex = 0;
+const int _devicesIndex = 1;
 const int _sensorsIndex = 2;
 
 const double _largeScreenBreakpoint = 960;
@@ -60,9 +67,9 @@ class _HomePageState extends State<HomePage> {
         selectedIcon: Icons.apps,
       ),
       _HomeDestination(
-        title: 'Utilities',
-        icon: Icons.handyman_outlined,
-        selectedIcon: Icons.handyman,
+        title: 'Settings',
+        icon: Icons.settings_outlined,
+        selectedIcon: Icons.settings,
       ),
     ];
 
@@ -75,7 +82,7 @@ class _HomePageState extends State<HomePage> {
       const DevicesPage(),
       SensorPage(controller: _sensorPageController),
       const AppsPage(),
-      _IntegrationsPage(
+      _SettingsPage(
         onLogsRequested: _openLogFiles,
         onConnectRequested: _openConnectDevices,
       ),
@@ -243,7 +250,7 @@ class _OverviewPage extends StatelessWidget {
           final recordingStart = recorderProvider.recordingStart;
 
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: SensorPageSpacing.pagePadding,
             children: [
               _OverviewHeroCard(
                 wearables: wearables,
@@ -251,8 +258,10 @@ class _OverviewPage extends StatelessWidget {
                 isRecording: isRecording,
                 hasSensorStreams: hasSensorStreams,
                 recordingStart: recordingStart,
+                onWearableTap: (wearable) =>
+                    _openDeviceFromOverview(context, wearable),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: SensorPageSpacing.sectionGap),
               _OverviewWorkflowIntroCard(
                 onConnectRequested: onConnectRequested,
                 onSensorTabRequested: onSensorTabRequested,
@@ -269,6 +278,34 @@ class _OverviewPage extends StatelessWidget {
     final local = time.toLocal();
     String twoDigits(int n) => n.toString().padLeft(2, '0');
     return 'Recording since ${twoDigits(local.hour)}:${twoDigits(local.minute)}';
+  }
+
+  void _openDeviceFromOverview(BuildContext context, Wearable wearable) {
+    onSectionRequested(_devicesIndex);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!context.mounted) {
+        return;
+      }
+
+      final isLargeScreen = MediaQuery.of(context).size.width > 600;
+      if (isLargeScreen) {
+        showGeneralDialog(
+          context: context,
+          pageBuilder: (dialogContext, animation1, animation2) {
+            return Center(
+              child: SizedBox(
+                width: MediaQuery.of(dialogContext).size.width * 0.5,
+                height: MediaQuery.of(dialogContext).size.height * 0.5,
+                child: DeviceDetailPage(device: wearable),
+              ),
+            );
+          },
+        );
+        return;
+      }
+      context.push('/device-detail', extra: wearable);
+    });
   }
 }
 
@@ -459,10 +496,19 @@ class _OverviewWorkflowStep extends StatelessWidget {
                             ],
                           ),
                         ),
-                        Icon(
-                          Icons.chevron_right,
-                          size: 20,
-                          color: colorScheme.onSurfaceVariant,
+                        Container(
+                          margin: const EdgeInsets.only(left: 8),
+                          height: 30,
+                          width: 30,
+                          decoration: BoxDecoration(
+                            color: colorScheme.primary.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 18,
+                            color: colorScheme.primary.withValues(alpha: 0.9),
+                          ),
                         ),
                       ],
                     ),
@@ -483,6 +529,7 @@ class _OverviewHeroCard extends StatelessWidget {
   final bool isRecording;
   final bool hasSensorStreams;
   final DateTime? recordingStart;
+  final void Function(Wearable wearable) onWearableTap;
 
   const _OverviewHeroCard({
     required this.wearables,
@@ -490,6 +537,7 @@ class _OverviewHeroCard extends StatelessWidget {
     required this.isRecording,
     required this.hasSensorStreams,
     required this.recordingStart,
+    required this.onWearableTap,
   });
 
   @override
@@ -522,11 +570,9 @@ class _OverviewHeroCard extends StatelessWidget {
                 : 'Setup required';
     final subtitle = isRecording
         ? _OverviewPage.formatRecordingTime(recordingStart)
-        : isReady
-            ? 'Connected devices are ready. You can start recording.'
-            : connectedCount == 0
-                ? 'Pair at least one wearable to begin.'
-                : 'Configure required sensors in the Sensors tab.';
+        : connectedCount > 0
+            ? 'You can start streaming and recording data.'
+            : 'Pair at least one wearable to begin.';
 
     final visibleWearables = wearables.take(5).toList(growable: false);
     final hiddenWearablesCount = wearables.length - visibleWearables.length;
@@ -577,14 +623,21 @@ class _OverviewHeroCard extends StatelessWidget {
             const SizedBox(height: 12),
             Row(
               children: [
-                Container(
-                  height: 8,
-                  width: 8,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: statusColor,
+                if (isRecording)
+                  const RecordingActivityIndicator(
+                    size: 8,
+                    showIdleOutline: false,
+                    padding: EdgeInsets.zero,
+                  )
+                else
+                  Container(
+                    height: 8,
+                    width: 8,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: statusColor,
+                    ),
                   ),
-                ),
                 const SizedBox(width: 8),
                 Text(
                   'Connected Devices ($connectedCount)',
@@ -608,7 +661,10 @@ class _OverviewHeroCard extends StatelessWidget {
                 runSpacing: 6,
                 children: [
                   for (final wearable in visibleWearables)
-                    _ConnectedWearablePill.device(wearable: wearable),
+                    _ConnectedWearablePill.device(
+                      wearable: wearable,
+                      onWearableTap: onWearableTap,
+                    ),
                   if (hiddenWearablesCount > 0)
                     _ConnectedWearablePill.summary(
                       summaryLabel: '+$hiddenWearablesCount more',
@@ -625,14 +681,17 @@ class _OverviewHeroCard extends StatelessWidget {
 class _ConnectedWearablePill extends StatefulWidget {
   final Wearable? wearable;
   final String? summaryLabel;
+  final void Function(Wearable wearable)? onWearableTap;
 
   const _ConnectedWearablePill.device({
     required this.wearable,
+    required this.onWearableTap,
   }) : summaryLabel = null;
 
   const _ConnectedWearablePill.summary({
     required this.summaryLabel,
-  }) : wearable = null;
+  })  : wearable = null,
+        onWearableTap = null;
 
   String get label => wearable?.name ?? summaryLabel ?? '';
 
@@ -669,7 +728,7 @@ class _ConnectedWearablePillState extends State<_ConnectedWearablePill> {
     final colorScheme = Theme.of(context).colorScheme;
 
     Widget buildPill(String? sideLabel) {
-      return Container(
+      final pill = Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
@@ -710,6 +769,20 @@ class _ConnectedWearablePillState extends State<_ConnectedWearablePill> {
           ],
         ),
       );
+
+      final wearable = widget.wearable;
+      if (wearable == null || widget.onWearableTap == null) {
+        return pill;
+      }
+
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(999),
+          onTap: () => widget.onWearableTap!(wearable),
+          child: pill,
+        ),
+      );
     }
 
     if (_positionFuture == null) {
@@ -730,20 +803,24 @@ class _ConnectedWearablePillState extends State<_ConnectedWearablePill> {
   }
 }
 
-class _IntegrationsPage extends StatelessWidget {
+class _SettingsPage extends StatelessWidget {
+  static final Uri _openWearablesUri = Uri.parse('https://openwearables.com');
+
   final VoidCallback onLogsRequested;
   final VoidCallback onConnectRequested;
 
-  const _IntegrationsPage({
+  const _SettingsPage({
     required this.onLogsRequested,
     required this.onConnectRequested,
   });
 
   @override
   Widget build(BuildContext context) {
+    const badgeScale = 1.2;
+
     return PlatformScaffold(
       appBar: PlatformAppBar(
-        title: const Text('Utilities'),
+        title: const Text('Settings'),
         trailingActions: [
           const AppBarRecordingIndicator(),
           PlatformIconButton(
@@ -753,7 +830,7 @@ class _IntegrationsPage extends StatelessWidget {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: SensorPageSpacing.pagePadding,
         children: [
           _QuickActionTile(
             icon: Icons.hub,
@@ -767,8 +844,667 @@ class _IntegrationsPage extends StatelessWidget {
             subtitle: 'View, share, and remove diagnostic logs',
             onTap: onLogsRequested,
           ),
+          _QuickActionTile(
+            icon: Icons.info_outline_rounded,
+            title: 'About',
+            subtitle: 'App information, version, and licenses',
+            onTap: () => Navigator.push(
+              context,
+              platformPageRoute(
+                context: context,
+                builder: (_) => const _AboutPage(),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: SensorPageSpacing.sectionGap,
+            ),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: _OpenWearablesFloatingBadge(
+                scale: badgeScale,
+                onTap: () => _openOpenWearables(context),
+              ),
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  Future<void> _openOpenWearables(BuildContext context) async {
+    final opened = await launchUrl(
+      _openWearablesUri,
+      mode: LaunchMode.externalApplication,
+    );
+    if (opened || !context.mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Could not open openwearables.com.'),
+      ),
+    );
+  }
+}
+
+class _AboutPage extends StatelessWidget {
+  const _AboutPage();
+
+  static final Uri _repoUri = Uri.parse('https://github.com/OpenEarable/app');
+  static final Uri _tecoUri = Uri.parse('https://teco.edu');
+  static final Uri _openWearablesUri = Uri.parse('https://openwearables.com');
+  static const String _aboutAttribution =
+      'The OpenWearables App is developed and maintained by the TECO research group at the Karlsruhe Institute of Technology and OpenWearables GmbH.';
+
+  Future<void> _openExternalUrl(
+    BuildContext context, {
+    required Uri uri,
+    required String label,
+  }) async {
+    final opened = await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication,
+    );
+    if (opened || !context.mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Could not open $label.'),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return PlatformScaffold(
+      appBar: PlatformAppBar(
+        title: const Text('About'),
+      ),
+      body: ListView(
+        padding: SensorPageSpacing.pagePadding,
+        children: [
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.asset(
+                          'android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png',
+                          width: 44,
+                          height: 44,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'OpenWearables App',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    _aboutAttribution,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text.rich(
+                    TextSpan(
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                      children: [
+                        const TextSpan(text: 'Made with'),
+                        WidgetSpan(
+                          alignment: PlaceholderAlignment.middle,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                            ),
+                            child: Icon(
+                              Icons.favorite,
+                              size: 15,
+                              color: colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                        const TextSpan(text: 'in Karlsruhe, Germany.'),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _AboutExternalLink(
+                        icon: Icons.code_rounded,
+                        title: 'Source Code',
+                        urlText: 'github.com/OpenEarable/app',
+                        onTap: () => _openExternalUrl(
+                          context,
+                          uri: _repoUri,
+                          label: 'GitHub repository',
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      _AboutExternalLink(
+                        icon: Icons.school_outlined,
+                        title: 'TECO Research Group',
+                        urlText: 'teco.edu',
+                        onTap: () => _openExternalUrl(
+                          context,
+                          uri: _tecoUri,
+                          label: 'teco.edu',
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      _AboutExternalLink(
+                        icon: Icons.language_rounded,
+                        title: 'OpenWearables GmbH',
+                        urlText: 'openwearables.com',
+                        onTap: () => _openExternalUrl(
+                          context,
+                          uri: _openWearablesUri,
+                          label: 'openwearables.com',
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: colorScheme.primaryContainer.withValues(
+                            alpha: 0.4,
+                          ),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        alignment: Alignment.center,
+                        child: Icon(
+                          Icons.verified_user_outlined,
+                          size: 18,
+                          color: colorScheme.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Privacy & Data Protection',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Designed for transparency and control.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const _PrivacyChecklistItem(
+                    text: 'Only data required for app features is processed.',
+                  ),
+                  const SizedBox(height: 8),
+                  const _PrivacyChecklistItem(
+                    text: 'Recorded data stays on your device by default.',
+                  ),
+                  const SizedBox(height: 8),
+                  const _PrivacyChecklistItem(
+                    text:
+                        'Export and sharing happen only when you explicitly choose it.',
+                  ),
+                  const SizedBox(height: 8),
+                  const _PrivacyChecklistItem(
+                    text:
+                        'Diagnostic logs are shared only through manual user action.',
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.description_outlined),
+              title: const Text('Open source licenses'),
+              subtitle: const Text('View third-party software licenses'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(
+                context,
+                platformPageRoute(
+                  context: context,
+                  builder: (_) => const _OpenSourceLicensesPage(),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OpenSourceLicensesPage extends StatefulWidget {
+  const _OpenSourceLicensesPage();
+
+  @override
+  State<_OpenSourceLicensesPage> createState() =>
+      _OpenSourceLicensesPageState();
+}
+
+class _OpenSourceLicensesPageState extends State<_OpenSourceLicensesPage> {
+  late final Future<List<_PackageLicenseEntry>> _licensesFuture =
+      _loadLicenses();
+
+  Future<List<_PackageLicenseEntry>> _loadLicenses() async {
+    final byPackage = <String, Set<String>>{};
+
+    await for (final entry in LicenseRegistry.licenses) {
+      final licenseText = entry.paragraphs.map((p) => p.text).join('\n').trim();
+      if (licenseText.isEmpty) {
+        continue;
+      }
+
+      for (final package in entry.packages) {
+        byPackage.putIfAbsent(package, () => <String>{}).add(licenseText);
+      }
+    }
+
+    final items = byPackage.entries
+        .map(
+          (entry) => _PackageLicenseEntry(
+            packageName: entry.key,
+            licenseTexts: entry.value.toList(growable: false),
+          ),
+        )
+        .toList()
+      ..sort(
+        (a, b) => a.packageName.toLowerCase().compareTo(
+              b.packageName.toLowerCase(),
+            ),
+      );
+
+    return items;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return PlatformScaffold(
+      appBar: PlatformAppBar(
+        title: const Text('Open source licenses'),
+      ),
+      body: FutureBuilder<List<_PackageLicenseEntry>>(
+        future: _licensesFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Center(
+              child: SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            );
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Text(
+                  'Unable to load licenses.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.error,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            );
+          }
+
+          final licenses = snapshot.data ?? const <_PackageLicenseEntry>[];
+
+          return ListView(
+            padding: SensorPageSpacing.pagePadding,
+            children: [
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Why this list exists',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'The OpenWearables App uses third-party open source software. '
+                        'This list provides the required license notices and '
+                        'credits for those dependencies.',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (licenses.isEmpty)
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                    child: Text(
+                      'No licenses found.',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                )
+              else
+                for (final item in licenses) ...[
+                  Card(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: Theme(
+                      data: Theme.of(context).copyWith(
+                        dividerColor: Colors.transparent,
+                      ),
+                      child: ExpansionTile(
+                        tilePadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 2,
+                        ),
+                        childrenPadding: const EdgeInsets.fromLTRB(
+                          14,
+                          0,
+                          14,
+                          12,
+                        ),
+                        shape: const RoundedRectangleBorder(
+                          side: BorderSide.none,
+                        ),
+                        collapsedShape: const RoundedRectangleBorder(
+                          side: BorderSide.none,
+                        ),
+                        title: Text(
+                          item.packageName,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        subtitle: Text(
+                          '${item.licenseTexts.length} license text${item.licenseTexts.length == 1 ? '' : 's'}',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        children: [
+                          for (var i = 0;
+                              i < item.licenseTexts.length;
+                              i++) ...[
+                            SelectableText(
+                              item.licenseTexts[i],
+                              style: theme.textTheme.bodySmall,
+                            ),
+                            if (i < item.licenseTexts.length - 1) ...[
+                              const SizedBox(height: 10),
+                              Divider(
+                                height: 1,
+                                color: colorScheme.outlineVariant.withValues(
+                                  alpha: 0.55,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                            ],
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _PackageLicenseEntry {
+  final String packageName;
+  final List<String> licenseTexts;
+
+  const _PackageLicenseEntry({
+    required this.packageName,
+    required this.licenseTexts,
+  });
+}
+
+class _AboutExternalLink extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String urlText;
+  final VoidCallback onTap;
+
+  const _AboutExternalLink({
+    required this.icon,
+    required this.title,
+    required this.urlText,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+        child: SizedBox(
+          width: double.infinity,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: colorScheme.primary,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurface,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      urlText,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OpenWearablesFloatingBadge extends StatelessWidget {
+  final VoidCallback onTap;
+  final double scale;
+
+  const _OpenWearablesFloatingBadge({
+    required this.onTap,
+    this.scale = 1.0,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final badgeBorderRadius = BorderRadius.circular(999);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: badgeBorderRadius,
+        child: ClipRRect(
+          borderRadius: badgeBorderRadius,
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+            child: Container(
+              padding: EdgeInsets.fromLTRB(
+                5 * scale,
+                5 * scale,
+                9 * scale,
+                5 * scale,
+              ),
+              decoration: BoxDecoration(
+                color: const Color.fromRGBO(22, 22, 22, 0.40),
+                borderRadius: badgeBorderRadius,
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.22),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.18),
+                    blurRadius: 14,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 18 * scale,
+                    height: 18 * scale,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2FB26F),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFF5ED394),
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      Icons.check_rounded,
+                      size: 10 * scale,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(width: 7 * scale),
+                  Text(
+                    'OpenWearables',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontSize:
+                          (theme.textTheme.labelSmall?.fontSize ?? 11) * scale,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.1,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PrivacyChecklistItem extends StatelessWidget {
+  final String text;
+
+  const _PrivacyChecklistItem({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    const checkColor = Color(0xFF2E7D32);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 20,
+          height: 20,
+          alignment: Alignment.center,
+          child: const Icon(
+            Icons.check_circle_rounded,
+            size: 18,
+            color: checkColor,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+              height: 1.25,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
