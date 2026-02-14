@@ -20,11 +20,14 @@ import 'sensors/sensor_page_spacing.dart';
 const int _overviewIndex = 0;
 const int _devicesIndex = 1;
 const int _sensorsIndex = 2;
+const int _sectionCount = 5;
 
 const double _largeScreenBreakpoint = 960;
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final int initialSectionIndex;
+
+  const HomePage({super.key, this.initialSectionIndex = _overviewIndex});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -41,7 +44,14 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
 
-    _tabController = PlatformTabController(initialIndex: _overviewIndex);
+    final requestedInitial = widget.initialSectionIndex;
+    final initialIndex =
+        (requestedInitial >= _overviewIndex && requestedInitial < _sectionCount)
+            ? requestedInitial
+            : _overviewIndex;
+    _selectedIndex = initialIndex;
+
+    _tabController = PlatformTabController(initialIndex: initialIndex);
     _sensorPageController = SensorPageController();
     _tabController.addListener(_syncSelectedIndex);
 
@@ -731,10 +741,10 @@ class _ConnectedWearablePillState extends State<_ConnectedWearablePill> {
       final pill = Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
+          color: colorScheme.surface,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.4),
+            color: colorScheme.outlineVariant.withValues(alpha: 0.6),
           ),
         ),
         child: Row(
@@ -754,7 +764,7 @@ class _ConnectedWearablePillState extends State<_ConnectedWearablePill> {
                   color: colorScheme.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(999),
                   border: Border.all(
-                    color: colorScheme.primary.withValues(alpha: 0.28),
+                    color: colorScheme.primary.withValues(alpha: 0.24),
                   ),
                 ),
                 child: Text(
@@ -804,8 +814,6 @@ class _ConnectedWearablePillState extends State<_ConnectedWearablePill> {
 }
 
 class _SettingsPage extends StatelessWidget {
-  static final Uri _openWearablesUri = Uri.parse('https://openwearables.com');
-
   final VoidCallback onLogsRequested;
   final VoidCallback onConnectRequested;
 
@@ -816,8 +824,6 @@ class _SettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const badgeScale = 1.2;
-
     return PlatformScaffold(
       appBar: PlatformAppBar(
         title: const Text('Settings'),
@@ -829,66 +835,34 @@ class _SettingsPage extends StatelessWidget {
           ),
         ],
       ),
-      body: Stack(
+      body: ListView(
+        padding: SensorPageSpacing.pagePadding,
         children: [
-          ListView(
-            padding: SensorPageSpacing.pagePadding.add(
-              const EdgeInsets.only(bottom: 120),
-            ),
-            children: [
-              _QuickActionTile(
-                icon: Icons.hub,
-                title: 'Connectors',
-                subtitle: 'External connector integrations\n(coming soon)',
-                enabled: false,
-              ),
-              _QuickActionTile(
-                icon: Icons.receipt_long,
-                title: 'Log files',
-                subtitle: 'View, share, and remove diagnostic logs',
-                onTap: onLogsRequested,
-              ),
-              _QuickActionTile(
-                icon: Icons.info_outline_rounded,
-                title: 'About',
-                subtitle: 'App information, version, and licenses',
-                onTap: () => Navigator.push(
-                  context,
-                  platformPageRoute(
-                    context: context,
-                    builder: (_) => const _AboutPage(),
-                  ),
-                ),
-              ),
-            ],
+          _QuickActionTile(
+            icon: Icons.hub,
+            title: 'Connectors',
+            subtitle: 'External connector integrations\n(coming soon)',
+            enabled: false,
           ),
-          SafeArea(
-            minimum: const EdgeInsets.only(right: 12, bottom: 12),
-            child: Align(
-              alignment: Alignment.bottomRight,
-              child: _OpenWearablesFloatingBadge(
-                scale: badgeScale,
-                onTap: () => _openOpenWearables(context),
+          _QuickActionTile(
+            icon: Icons.receipt_long,
+            title: 'Log files',
+            subtitle: 'View, share, and remove diagnostic logs',
+            onTap: onLogsRequested,
+          ),
+          _QuickActionTile(
+            icon: Icons.info_outline_rounded,
+            title: 'About',
+            subtitle: 'App information, version, and licenses',
+            onTap: () => Navigator.push(
+              context,
+              platformPageRoute(
+                context: context,
+                builder: (_) => const _AboutPage(),
               ),
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Future<void> _openOpenWearables(BuildContext context) async {
-    final opened = await launchUrl(
-      _openWearablesUri,
-      mode: LaunchMode.externalApplication,
-    );
-    if (opened || !context.mounted) {
-      return;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Could not open openwearables.com.'),
       ),
     );
   }
@@ -1025,6 +999,7 @@ class _AboutPage extends StatelessWidget {
                         icon: Icons.language_rounded,
                         title: 'OpenWearables GmbH',
                         urlText: 'openwearables.com',
+                        trailing: const _OpenWearablesFloatingBadge(),
                         onTap: () => _openExternalUrl(
                           context,
                           uri: _openWearablesUri,
@@ -1330,12 +1305,14 @@ class _AboutExternalLink extends StatelessWidget {
   final IconData icon;
   final String title;
   final String urlText;
+  final Widget? trailing;
   final VoidCallback onTap;
 
   const _AboutExternalLink({
     required this.icon,
     required this.title,
     required this.urlText,
+    this.trailing,
     required this.onTap,
   });
 
@@ -1381,6 +1358,10 @@ class _AboutExternalLink extends StatelessWidget {
                   ],
                 ),
               ),
+              if (trailing != null) ...[
+                const SizedBox(width: 8),
+                trailing!,
+              ],
             ],
           ),
         ),
@@ -1390,83 +1371,68 @@ class _AboutExternalLink extends StatelessWidget {
 }
 
 class _OpenWearablesFloatingBadge extends StatelessWidget {
-  final VoidCallback onTap;
-  final double scale;
-
-  const _OpenWearablesFloatingBadge({
-    required this.onTap,
-    this.scale = 1.0,
-  });
+  const _OpenWearablesFloatingBadge();
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final badgeBorderRadius = BorderRadius.circular(999);
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: badgeBorderRadius,
-        child: ClipRRect(
-          borderRadius: badgeBorderRadius,
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-            child: Container(
-              padding: EdgeInsets.fromLTRB(
-                5 * scale,
-                5 * scale,
-                9 * scale,
-                5 * scale,
-              ),
-              decoration: BoxDecoration(
-                color: const Color.fromRGBO(69, 69, 69, 0.40),
-                borderRadius: badgeBorderRadius,
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.22),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.18),
-                    blurRadius: 14,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 18 * scale,
-                    height: 18 * scale,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2FB26F),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: const Color(0xFF5ED394),
-                      ),
-                    ),
-                    alignment: Alignment.center,
-                    child: Icon(
-                      Icons.check_rounded,
-                      size: 10 * scale,
-                      color: Colors.white,
-                    ),
-                  ),
-                  SizedBox(width: 7 * scale),
-                  Text(
-                    'OpenWearables',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      fontSize:
-                          (theme.textTheme.labelSmall?.fontSize ?? 11) * scale,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.1,
-                    ),
-                  ),
-                ],
-              ),
+    return ClipRRect(
+      borderRadius: badgeBorderRadius,
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(
+            5,
+            5,
+            9,
+            5,
+          ),
+          decoration: BoxDecoration(
+            color: const Color.fromRGBO(69, 69, 69, 0.40),
+            borderRadius: badgeBorderRadius,
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.22),
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.18),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 18,
+                height: 18,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2FB26F),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFF5ED394),
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: const Icon(
+                  Icons.check_rounded,
+                  size: 10,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 7),
+              Text(
+                'OpenWearables',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontSize: theme.textTheme.labelSmall?.fontSize ?? 11,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.1,
+                ),
+              ),
+            ],
           ),
         ),
       ),

@@ -7,6 +7,8 @@ import 'package:provider/provider.dart';
 
 import 'sensor_config_option_icon_factory.dart';
 
+const double _kSensorStatusPillHeight = 22;
+
 /// A row that displays a sensor configuration and allows the user to select a value.
 ///
 /// The selected value is added to the [SensorConfigurationProvider].
@@ -20,86 +22,136 @@ class SensorConfigurationValueRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sensorConfigNotifier =
-        Provider.of<SensorConfigurationProvider>(context);
+    final sensorConfigNotifier = context.watch<SensorConfigurationProvider>();
+    final colorScheme = Theme.of(context).colorScheme;
+    final isOn = _isOn(sensorConfigNotifier, sensorConfiguration);
+    final selectedValue =
+        sensorConfigNotifier.getSelectedConfigurationValue(sensorConfiguration);
+    final selectedOptions =
+        sensorConfiguration is ConfigurableSensorConfiguration
+            ? sensorConfigNotifier
+                .getSelectedConfigurationOptions(
+                  sensorConfiguration,
+                )
+                .toList(growable: false)
+            : const <SensorConfigurationOption>[];
 
-    return PlatformListTile(
-      onTap: () {
-        showPlatformModalSheet(
-          context: context,
-          builder: (modalContext) {
-            return ChangeNotifierProvider.value(
-              value: sensorConfigNotifier,
-              child: PlatformScaffold(
-                appBar: PlatformAppBar(
-                  title: PlatformText(sensorConfiguration.name),
-                  leading: IconButton(
-                    icon: Icon(Icons.close),
-                    onPressed: () => Navigator.of(modalContext).pop(),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 2, 12, 2),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () => _openConfigurationSheet(context, sensorConfigNotifier),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(2, 8, 2, 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  width: isOn ? 3 : 2,
+                  height: 26,
+                  decoration: BoxDecoration(
+                    color: (isOn
+                            ? colorScheme.primary
+                            : colorScheme.outlineVariant)
+                        .withValues(alpha: isOn ? 0.7 : 0.6),
+                    borderRadius: BorderRadius.circular(999),
                   ),
                 ),
-                body: SensorConfigurationDetailView(
-                  sensorConfiguration: sensorConfiguration,
+                const SizedBox(width: 6),
+                Icon(
+                  isOn ? Icons.sensors_rounded : Icons.sensors_off_rounded,
+                  size: 14,
+                  color: isOn ? colorScheme.primary : colorScheme.outline,
                 ),
-              ),
-            );
-          },
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Text(
+                    sensorConfiguration.name,
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                ),
+                if (selectedOptions.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  _OptionsCompactBadge(
+                    options: selectedOptions,
+                  ),
+                ],
+                const SizedBox(width: 6),
+                _SamplingRatePill(
+                  label: _statusPillLabel(selectedValue, isOn: isOn),
+                  enabled: isOn,
+                ),
+                const SizedBox(width: 2),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 16,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openConfigurationSheet(
+    BuildContext context,
+    SensorConfigurationProvider sensorConfigNotifier,
+  ) {
+    showPlatformModalSheet<void>(
+      context: context,
+      builder: (modalContext) {
+        return ChangeNotifierProvider.value(
+          value: sensorConfigNotifier,
+          child: PlatformScaffold(
+            appBar: PlatformAppBar(
+              title: Text(sensorConfiguration.name),
+              trailingActions: [
+                PlatformIconButton(
+                  icon: const Icon(Icons.close_rounded),
+                  padding: EdgeInsets.zero,
+                  onPressed: () => Navigator.of(modalContext).pop(),
+                ),
+              ],
+            ),
+            body: SensorConfigurationDetailView(
+              sensorConfiguration: sensorConfiguration,
+            ),
+          ),
         );
       },
-      title: PlatformText(sensorConfiguration.name),
-      trailing: _isOn(sensorConfigNotifier, sensorConfiguration)
-          ? () {
-              if (sensorConfigNotifier
-                      .getSelectedConfigurationValue(sensorConfiguration) ==
-                  null) {
-                return PlatformText(
-                  "Internal Error",
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.secondary,
-                  ),
-                );
-              }
-              SensorConfigurationValue value = sensorConfigNotifier
-                  .getSelectedConfigurationValue(sensorConfiguration)!;
-              if (value is SensorFrequencyConfigurationValue) {
-                SensorFrequencyConfigurationValue freqValue = value;
-
-                return Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (sensorConfiguration is ConfigurableSensorConfiguration)
-                      ...(sensorConfigNotifier.getSelectedConfigurationOptions(
-                        sensorConfiguration,
-                      )).map(
-                        (option) {
-                          return Icon(
-                            getSensorConfigurationOptionIcon(option),
-                            color: Theme.of(context).colorScheme.secondary,
-                          );
-                        },
-                      ),
-                    PlatformText(
-                      "${freqValue.frequencyHz} Hz",
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.secondary,
-                      ),
-                    ),
-                  ],
-                );
-              }
-
-              return PlatformText(
-                value.toString(),
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.secondary,
-                ),
-              );
-            }()
-          : PlatformText(
-              "Off",
-              style: TextStyle(color: Theme.of(context).colorScheme.secondary),
-            ),
     );
+  }
+
+  String _statusPillLabel(
+    SensorConfigurationValue? value, {
+    required bool isOn,
+  }) {
+    if (!isOn) {
+      return 'Off';
+    }
+    if (value is SensorFrequencyConfigurationValue) {
+      return _formatFrequency(value.frequencyHz);
+    }
+    return 'On';
+  }
+
+  String _formatFrequency(double hz) {
+    if ((hz - hz.roundToDouble()).abs() < 0.01) {
+      return '${hz.round()} Hz';
+    }
+    if (hz >= 10) {
+      return '${hz.toStringAsFixed(1)} Hz';
+    }
+    return '${hz.toStringAsFixed(2)} Hz';
   }
 
   bool _isOn(SensorConfigurationProvider notifier, SensorConfiguration config) {
@@ -116,5 +168,101 @@ class SensorConfigurationValueRow extends StatelessWidget {
     }
 
     return isOn;
+  }
+}
+
+class _OptionsCompactBadge extends StatelessWidget {
+  final List<SensorConfigurationOption> options;
+
+  const _OptionsCompactBadge({
+    required this.options,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final visibleCount = options.length > 2 ? 2 : options.length;
+    final remainingCount = options.length - visibleCount;
+
+    return SizedBox(
+      height: _kSensorStatusPillHeight,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < visibleCount; i++) ...[
+              Icon(
+                getSensorConfigurationOptionIcon(options[i]) ??
+                    Icons.tune_rounded,
+                size: 10,
+                color: colorScheme.onSurfaceVariant,
+              ),
+              if (i < visibleCount - 1) const SizedBox(width: 3),
+            ],
+            if (remainingCount > 0) ...[
+              const SizedBox(width: 4),
+              Text(
+                '+$remainingCount',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SamplingRatePill extends StatelessWidget {
+  final String label;
+  final bool enabled;
+
+  const _SamplingRatePill({
+    required this.label,
+    required this.enabled,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final foreground =
+        enabled ? colorScheme.primary : colorScheme.onSurfaceVariant;
+
+    return SizedBox(
+      height: _kSensorStatusPillHeight,
+      child: Container(
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 7),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: foreground.withValues(alpha: 0.42),
+          ),
+        ),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 38),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: foreground,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ),
+      ),
+    );
   }
 }

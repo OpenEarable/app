@@ -15,6 +15,31 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 /// Global navigator key for go_router
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
+int _parseHomeSectionIndex(String? tabParam) {
+  if (tabParam == null || tabParam.isEmpty) {
+    return 0;
+  }
+
+  switch (tabParam.toLowerCase()) {
+    case 'overview':
+      return 0;
+    case 'devices':
+      return 1;
+    case 'sensors':
+      return 2;
+    case 'apps':
+      return 3;
+    case 'settings':
+      return 4;
+    default:
+      final parsed = int.tryParse(tabParam);
+      if (parsed == null || parsed < 0 || parsed > 4) {
+        return 0;
+      }
+      return parsed;
+  }
+}
+
 /// Router configuration for the app
 final GoRouter router = GoRouter(
   navigatorKey: rootNavigatorKey,
@@ -23,10 +48,15 @@ final GoRouter router = GoRouter(
     GoRoute(
       path: '/',
       name: 'home',
-      builder: (context, state) => const HeroMode(
-        enabled: false,
-        child: HomePage(),
-      ),
+      builder: (context, state) {
+        final initialSection = _parseHomeSectionIndex(
+          state.uri.queryParameters['tab'],
+        );
+        return HeroMode(
+          enabled: false,
+          child: HomePage(initialSectionIndex: initialSection),
+        );
+      },
     ),
     GoRoute(
       path: '/connect-devices',

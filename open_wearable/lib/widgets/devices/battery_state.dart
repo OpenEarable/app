@@ -116,8 +116,8 @@ class _BatteryBadge extends StatelessWidget {
     final charging = powerStatus?.chargeState == ChargeState.charging;
     final Color foregroundColor = colors.primary;
 
-    final Color backgroundColor = foregroundColor.withValues(alpha: 0.12);
-    final Color borderColor = foregroundColor.withValues(alpha: 0.24);
+    final Color backgroundColor = colors.surface;
+    final Color borderColor = foregroundColor.withValues(alpha: 0.42);
 
     final IconData icon;
     final String label;

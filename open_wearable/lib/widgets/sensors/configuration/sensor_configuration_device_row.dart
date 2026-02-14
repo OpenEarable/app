@@ -116,7 +116,7 @@ class _SensorConfigurationDeviceRowState
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
               child: Text(
-                'Settings from this row are applied to both paired devices when you tap "Apply Profiles".',
+                'Settings are applied to both paired devices.',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -501,10 +501,13 @@ class _SensorConfigurationDeviceRowState
       builder: (sheetContext) => PlatformScaffold(
         appBar: PlatformAppBar(
           title: const Text('Profile details'),
-          leading: IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () => Navigator.of(sheetContext).pop(),
-          ),
+          trailingActions: [
+            PlatformIconButton(
+              icon: const Icon(Icons.close_rounded),
+              padding: EdgeInsets.zero,
+              onPressed: () => Navigator.of(sheetContext).pop(),
+            ),
+          ],
         ),
         body: ListView(
           children: [
@@ -665,7 +668,8 @@ class _CombinedStereoBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foregroundColor = Theme.of(context).colorScheme.primary;
+    final colorScheme = Theme.of(context).colorScheme;
+    final foregroundColor = colorScheme.primary;
     final backgroundColor = foregroundColor.withValues(alpha: 0.12);
     final borderColor = foregroundColor.withValues(alpha: 0.24);
 

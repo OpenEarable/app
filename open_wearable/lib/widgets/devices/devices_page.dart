@@ -410,6 +410,7 @@ class DeviceRow extends StatelessWidget {
                         Row(
                           children: [
                             Expanded(
+                              flex: group.isCombined ? 6 : 7,
                               child: Text(
                                 group.displayName,
                                 maxLines: 1,
@@ -424,23 +425,11 @@ class DeviceRow extends StatelessWidget {
                             ),
                             if (topRightIdentifierLabel != null) ...[
                               const SizedBox(width: 8),
-                              ConstrainedBox(
-                                constraints:
-                                    const BoxConstraints(maxWidth: 170),
-                                child: Text(
+                              Expanded(
+                                flex: group.isCombined ? 5 : 4,
+                                child: _buildIdentifierLabel(
+                                  context,
                                   topRightIdentifierLabel,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.right,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurfaceVariant,
-                                        fontWeight: FontWeight.w600,
-                                      ),
                                 ),
                               ),
                             ],
@@ -529,12 +518,79 @@ class DeviceRow extends StatelessWidget {
     return '${_compactIdentifier(leftId)} / ${_compactIdentifier(rightId)}';
   }
 
+  Widget _buildIdentifierLabel(BuildContext context, String label) {
+    final style = Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          fontWeight: FontWeight.w600,
+        );
+
+    if (!group.isCombined) {
+      return Align(
+        alignment: Alignment.centerRight,
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.right,
+          style: style,
+        ),
+      );
+    }
+
+    final parts = label.split(' / ');
+    if (parts.length != 2) {
+      return Align(
+        alignment: Alignment.centerRight,
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.right,
+          style: style,
+        ),
+      );
+    }
+
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            parts[0],
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.right,
+            style: style,
+          ),
+        ),
+        Text(' / ', style: style),
+        Expanded(
+          child: Text(
+            parts[1],
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.left,
+            style: style,
+          ),
+        ),
+      ],
+    );
+  }
+
   String _compactIdentifier(String id) {
     final normalized = id.trim();
-    if (normalized.length <= 5) {
+    const maxChars = 14;
+    if (normalized.length <= maxChars) {
       return normalized;
     }
-    return '${normalized.substring(0, 5)}...';
+
+    const ellipsis = '...';
+    final keep = maxChars - ellipsis.length;
+    final prefixLength = (keep / 2).ceil();
+    final suffixLength = keep - prefixLength;
+
+    return '${normalized.substring(0, prefixLength)}'
+        '$ellipsis'
+        '${normalized.substring(normalized.length - suffixLength)}';
   }
 
   Widget _buildPairToggleButton(
@@ -618,7 +674,7 @@ class DeviceRow extends StatelessWidget {
 
     return [
       _buildStatusPillLine(
-        const [_MetadataBubble(label: 'L+R')],
+        const [_MetadataBubble(label: 'L+R', highlighted: true)],
       ),
     ];
   }
@@ -638,7 +694,7 @@ class DeviceRow extends StatelessWidget {
 
     return <Widget>[
       if (includeSideLabel && sideLabel != null)
-        _MetadataBubble(label: sideLabel),
+        _MetadataBubble(label: sideLabel, highlighted: true),
       if (hasStereoPositionPill)
         StereoPositionBadge(device: device.requireCapability<StereoDevice>()),
       if (hasBatteryStatus) BatteryStateView(device: device),
@@ -1108,6 +1164,7 @@ class _MetadataBubble extends StatelessWidget {
   final String label;
   final String? value;
   final bool isLoading;
+  final bool highlighted;
   final IconData? trailingIcon;
   final Color? foregroundColor;
 
@@ -1115,16 +1172,24 @@ class _MetadataBubble extends StatelessWidget {
     required this.label,
     this.value,
     this.isLoading = false,
+    this.highlighted = false,
     this.trailingIcon,
     this.foregroundColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    final defaultForeground = Theme.of(context).colorScheme.primary;
+    final colorScheme = Theme.of(context).colorScheme;
+    final defaultForeground = colorScheme.primary;
     final resolvedForeground = foregroundColor ?? defaultForeground;
-    final backgroundColor = resolvedForeground.withValues(alpha: 0.12);
-    final borderColor = resolvedForeground.withValues(alpha: 0.24);
+    final effectiveForeground =
+        highlighted ? colorScheme.primary : resolvedForeground;
+    final backgroundColor = highlighted
+        ? effectiveForeground.withValues(alpha: 0.12)
+        : colorScheme.surface;
+    final borderColor = highlighted
+        ? effectiveForeground.withValues(alpha: 0.24)
+        : resolvedForeground.withValues(alpha: 0.42);
     final displayText =
         isLoading ? "$label ..." : (value == null ? label : "$label $value");
 
@@ -1144,13 +1209,13 @@ class _MetadataBubble extends StatelessWidget {
             Icon(
               trailingIcon,
               size: 14,
-              color: resolvedForeground,
+              color: effectiveForeground,
             ),
           if (!isLoading && trailingIcon != null) const SizedBox(width: 6),
           Text(
             displayText,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: resolvedForeground,
+                  color: effectiveForeground,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.1,
                 ),

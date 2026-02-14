@@ -686,10 +686,10 @@ class _ModeSideBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
       decoration: BoxDecoration(
-        color: colorScheme.primaryContainer.withValues(alpha: 0.8),
+        color: colorScheme.primary.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
-          color: colorScheme.primary.withValues(alpha: 0.5),
+          color: colorScheme.primary.withValues(alpha: 0.24),
         ),
       ),
       child: Text(

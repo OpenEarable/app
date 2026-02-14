@@ -32,7 +32,8 @@ class _StereoPositionBadgeState extends State<StereoPositionBadge> {
     return FutureBuilder<DevicePosition?>(
       future: _positionFuture,
       builder: (context, snapshot) {
-        final foregroundColor = Theme.of(context).colorScheme.primary;
+        final colorScheme = Theme.of(context).colorScheme;
+        final foregroundColor = colorScheme.primary;
         final backgroundColor = foregroundColor.withValues(alpha: 0.12);
         final borderColor = foregroundColor.withValues(alpha: 0.24);
 

@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
@@ -25,6 +27,10 @@ class DeviceDetailPage extends StatefulWidget {
 }
 
 class _DeviceDetailPageState extends State<DeviceDetailPage> {
+  static const MethodChannel _systemSettingsChannel = MethodChannel(
+    'edu.kit.teco.open_wearable/system_settings',
+  );
+
   Future<Object?>? _deviceIdentifierFuture;
   Future<Object?>? _firmwareVersionFuture;
   Future<FirmwareSupportStatus>? _firmwareSupportFuture;
@@ -73,21 +79,66 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
         widget.device.requireCapability<SystemDevice>().isConnectedViaSystem;
   }
 
+  bool get _opensBluetoothScreenDirectly {
+    return defaultTargetPlatform == TargetPlatform.android;
+  }
+
+  Future<void> _openBluetoothSettings() async {
+    bool opened = false;
+    try {
+      opened = await _systemSettingsChannel.invokeMethod<bool>(
+            'openBluetoothSettings',
+          ) ??
+          false;
+    } catch (_) {
+      opened = false;
+    }
+
+    if (!mounted || opened) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          _opensBluetoothScreenDirectly
+              ? 'Could not open Bluetooth settings.'
+              : 'Could not open Settings.',
+        ),
+      ),
+    );
+  }
+
   void _showForgetDialog() {
     showPlatformDialog(
       context: context,
       builder: (_) => PlatformAlertDialog(
         title: const Text('Forget device'),
-        content: const Text(
-          'To disconnect this device permanently, remove it from your system Bluetooth settings.',
+        content: Text(
+          _opensBluetoothScreenDirectly
+              ? 'To fully forget this device, remove it in your phone Bluetooth settings. '
+                  'You can open Bluetooth settings directly from here.'
+              : 'To fully forget this device, remove it in your phone Bluetooth settings. '
+                  'You can open Settings from here.',
         ),
         actions: <Widget>[
+          PlatformDialogAction(
+            child: const Text('Cancel'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
           PlatformDialogAction(
             cupertino: (_, __) => CupertinoDialogActionData(
               isDefaultAction: true,
             ),
-            child: const Text('OK'),
-            onPressed: () => Navigator.of(context).pop(),
+            child: Text(
+              _opensBluetoothScreenDirectly
+                  ? 'Open Bluetooth Settings'
+                  : 'Open Settings',
+            ),
+            onPressed: () {
+              Navigator.of(context).pop();
+              _openBluetoothSettings();
+            },
           ),
         ],
       ),
@@ -856,18 +907,18 @@ class _FirmwareTableUpdateHint extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         minimumSize: const Size(0, 34),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        backgroundColor: colorScheme.primaryContainer,
-        foregroundColor: colorScheme.onPrimaryContainer,
+        backgroundColor: colorScheme.primary,
+        foregroundColor: Colors.white,
       ),
       icon: Icon(
         Icons.system_update_alt_rounded,
         size: 15,
-        color: colorScheme.onPrimaryContainer,
+        color: Colors.white,
       ),
       label: Text(
         'Update',
         style: theme.textTheme.labelSmall?.copyWith(
-          color: colorScheme.onPrimaryContainer,
+          color: Colors.white,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -1039,10 +1090,11 @@ class _MetadataBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final defaultForeground = Theme.of(context).colorScheme.primary;
+    final colorScheme = Theme.of(context).colorScheme;
+    final defaultForeground = colorScheme.primary;
     final resolvedForeground = foregroundColor ?? defaultForeground;
-    final backgroundColor = resolvedForeground.withValues(alpha: 0.12);
-    final borderColor = resolvedForeground.withValues(alpha: 0.24);
+    final backgroundColor = colorScheme.surface;
+    final borderColor = resolvedForeground.withValues(alpha: 0.42);
     final displayText =
         isLoading ? '$label ...' : (value == null ? label : '$label $value');
 
