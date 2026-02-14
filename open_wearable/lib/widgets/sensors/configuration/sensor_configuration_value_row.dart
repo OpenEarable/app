@@ -111,19 +111,70 @@ class SensorConfigurationValueRow extends StatelessWidget {
       builder: (modalContext) {
         return ChangeNotifierProvider.value(
           value: sensorConfigNotifier,
-          child: PlatformScaffold(
-            appBar: PlatformAppBar(
-              title: Text(sensorConfiguration.name),
-              trailingActions: [
-                PlatformIconButton(
-                  icon: const Icon(Icons.close_rounded),
-                  padding: EdgeInsets.zero,
-                  onPressed: () => Navigator.of(modalContext).pop(),
+          child: SafeArea(
+            child: SizedBox(
+              height: MediaQuery.of(modalContext).size.height * 0.82,
+              child: Material(
+                color: Theme.of(modalContext).colorScheme.surface,
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  sensorConfiguration.name,
+                                  style: Theme.of(modalContext)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Adjust data targets and sampling rate.',
+                                  style: Theme.of(modalContext)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: Theme.of(modalContext)
+                                            .colorScheme
+                                            .onSurfaceVariant,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            tooltip: 'Close',
+                            onPressed: () => Navigator.of(modalContext).pop(),
+                            icon: const Icon(Icons.close_rounded, size: 20),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Divider(
+                      height: 1,
+                      thickness: 0.6,
+                      color: Theme.of(
+                        modalContext,
+                      ).colorScheme.outlineVariant.withValues(alpha: 0.55),
+                    ),
+                    Expanded(
+                      child: SensorConfigurationDetailView(
+                        sensorConfiguration: sensorConfiguration,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            body: SensorConfigurationDetailView(
-              sensorConfiguration: sensorConfiguration,
+              ),
             ),
           ),
         );

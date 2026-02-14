@@ -557,7 +557,8 @@ class DeviceRow extends StatelessWidget {
           child: Text(
             parts[0],
             maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            softWrap: false,
+            overflow: TextOverflow.fade,
             textAlign: TextAlign.right,
             style: style,
           ),
@@ -567,7 +568,8 @@ class DeviceRow extends StatelessWidget {
           child: Text(
             parts[1],
             maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            softWrap: false,
+            overflow: TextOverflow.fade,
             textAlign: TextAlign.left,
             style: style,
           ),

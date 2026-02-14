@@ -3,8 +3,13 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 
 class BatteryStateView extends StatefulWidget {
   final Wearable device;
+  final bool showBackground;
 
-  const BatteryStateView({super.key, required this.device});
+  const BatteryStateView({
+    super.key,
+    required this.device,
+    this.showBackground = true,
+  });
 
   @override
   State<BatteryStateView> createState() => _BatteryStateViewState();
@@ -64,6 +69,7 @@ class _BatteryStateViewState extends State<BatteryStateView> {
                 batteryLevel: batterySnapshot.data,
                 powerStatus: powerSnapshot.data,
                 isLoading: !batterySnapshot.hasData && !powerSnapshot.hasData,
+                showBackground: widget.showBackground,
               );
             },
           );
@@ -79,6 +85,7 @@ class _BatteryStateViewState extends State<BatteryStateView> {
             batteryLevel: null,
             powerStatus: snapshot.data,
             isLoading: !snapshot.hasData,
+            showBackground: widget.showBackground,
           );
         },
       );
@@ -90,6 +97,7 @@ class _BatteryStateViewState extends State<BatteryStateView> {
         return _BatteryBadge(
           batteryLevel: snapshot.data,
           isLoading: !snapshot.hasData,
+          showBackground: widget.showBackground,
         );
       },
     );
@@ -100,11 +108,13 @@ class _BatteryBadge extends StatelessWidget {
   final int? batteryLevel;
   final BatteryPowerStatus? powerStatus;
   final bool isLoading;
+  final bool showBackground;
 
   const _BatteryBadge({
     required this.batteryLevel,
     this.powerStatus,
     this.isLoading = false,
+    this.showBackground = true,
   });
 
   @override
@@ -116,7 +126,8 @@ class _BatteryBadge extends StatelessWidget {
     final charging = powerStatus?.chargeState == ChargeState.charging;
     final Color foregroundColor = colors.primary;
 
-    final Color backgroundColor = colors.surface;
+    final Color backgroundColor =
+        showBackground ? colors.surface : Colors.transparent;
     final Color borderColor = foregroundColor.withValues(alpha: 0.42);
 
     final IconData icon;

@@ -300,7 +300,8 @@ class _SelectableWearableCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final iconPath = wearable.getWearableIconPath();
+    final iconVariant = _iconVariantForPosition(position);
+    final hasWearableIcon = _hasWearableIcon(iconVariant);
     final cardColor = selected
         ? colorScheme.primaryContainer.withValues(alpha: 0.34)
         : colorScheme.surface;
@@ -316,15 +317,15 @@ class _SelectableWearableCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (iconPath != null) ...[
+              if (hasWearableIcon) ...[
                 Padding(
                   padding: const EdgeInsets.only(top: 2),
                   child: SizedBox(
                     width: 56,
                     height: 56,
-                    child: SvgPicture.asset(
-                      iconPath,
-                      fit: BoxFit.contain,
+                    child: _SelectableWearableIconView(
+                      wearable: wearable,
+                      initialVariant: iconVariant,
                     ),
                   ),
                 ),
@@ -388,6 +389,23 @@ class _SelectableWearableCard extends StatelessWidget {
     );
   }
 
+  WearableIconVariant _iconVariantForPosition(DevicePosition? position) {
+    return switch (position) {
+      DevicePosition.left => WearableIconVariant.left,
+      DevicePosition.right => WearableIconVariant.right,
+      _ => WearableIconVariant.single,
+    };
+  }
+
+  bool _hasWearableIcon(WearableIconVariant initialVariant) {
+    final variantPath = wearable.getWearableIconPath(variant: initialVariant);
+    if (variantPath != null && variantPath.isNotEmpty) {
+      return true;
+    }
+    final fallbackPath = wearable.getWearableIconPath();
+    return fallbackPath != null && fallbackPath.isNotEmpty;
+  }
+
   List<Widget> _buildDeviceStatusPills() {
     final hasBatteryStatus = wearable.hasCapability<BatteryLevelStatus>() ||
         wearable.hasCapability<BatteryLevelStatusService>();
@@ -403,10 +421,14 @@ class _SelectableWearableCard extends StatelessWidget {
 
     return <Widget>[
       if (sideLabel != null)
-        _MetadataBubble(label: sideLabel)
+        _MetadataBubble(label: sideLabel, highlighted: true)
       else if (wearable.hasCapability<StereoDevice>())
         StereoPositionBadge(device: wearable.requireCapability<StereoDevice>()),
-      if (hasBatteryStatus) BatteryStateView(device: wearable),
+      if (hasBatteryStatus)
+        BatteryStateView(
+          device: wearable,
+          showBackground: false,
+        ),
       if (hasFirmwareInfo)
         _FirmwareVersionBubble(
           firmwareVersionFuture: infoCache.firmwareVersionFuture,
@@ -439,6 +461,119 @@ class _SelectableWearableCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _SelectableWearableIconView extends StatefulWidget {
+  final Wearable wearable;
+  final WearableIconVariant initialVariant;
+
+  const _SelectableWearableIconView({
+    required this.wearable,
+    required this.initialVariant,
+  });
+
+  @override
+  State<_SelectableWearableIconView> createState() =>
+      _SelectableWearableIconViewState();
+}
+
+class _SelectableWearableIconViewState
+    extends State<_SelectableWearableIconView> {
+  static final Expando<Future<DevicePosition?>> _positionFutureCache =
+      Expando<Future<DevicePosition?>>();
+
+  Future<DevicePosition?>? _positionFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _configurePositionFuture();
+  }
+
+  @override
+  void didUpdateWidget(covariant _SelectableWearableIconView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.wearable, widget.wearable) ||
+        oldWidget.initialVariant != widget.initialVariant) {
+      _configurePositionFuture();
+    }
+  }
+
+  void _configurePositionFuture() {
+    if (widget.initialVariant != WearableIconVariant.single ||
+        !widget.wearable.hasCapability<StereoDevice>()) {
+      _positionFuture = null;
+      return;
+    }
+
+    final stereoDevice = widget.wearable.requireCapability<StereoDevice>();
+    _positionFuture =
+        _positionFutureCache[stereoDevice] ??= stereoDevice.position;
+  }
+
+  WearableIconVariant _variantForPosition(DevicePosition? position) {
+    return switch (position) {
+      DevicePosition.left => WearableIconVariant.left,
+      DevicePosition.right => WearableIconVariant.right,
+      _ => widget.initialVariant,
+    };
+  }
+
+  String? _resolveIconPath(WearableIconVariant variant) {
+    final variantPath = widget.wearable.getWearableIconPath(variant: variant);
+    if (variantPath != null && variantPath.isNotEmpty) {
+      return variantPath;
+    }
+
+    if (variant != WearableIconVariant.single) {
+      final fallbackPath = widget.wearable.getWearableIconPath();
+      if (fallbackPath != null && fallbackPath.isNotEmpty) {
+        return fallbackPath;
+      }
+    }
+    return null;
+  }
+
+  Widget _buildIcon(WearableIconVariant variant) {
+    final path = _resolveIconPath(variant);
+    if (path == null) {
+      return const SizedBox.shrink();
+    }
+
+    if (path.toLowerCase().endsWith('.svg')) {
+      return SvgPicture.asset(
+        path,
+        fit: BoxFit.contain,
+      );
+    }
+
+    return Image.asset(
+      path,
+      fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => const Icon(Icons.watch_outlined),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_positionFuture == null) {
+      return _buildIcon(widget.initialVariant);
+    }
+
+    return FutureBuilder<DevicePosition?>(
+      future: _positionFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox.shrink();
+        }
+        final variant = _variantForPosition(snapshot.data);
+        if (variant == WearableIconVariant.single) {
+          return const SizedBox.shrink();
+        }
+        return _buildIcon(variant);
+      },
     );
   }
 }
@@ -542,6 +677,7 @@ class _MetadataBubble extends StatelessWidget {
   final String label;
   final String? value;
   final bool isLoading;
+  final bool highlighted;
   final IconData? trailingIcon;
   final Color? foregroundColor;
 
@@ -549,16 +685,24 @@ class _MetadataBubble extends StatelessWidget {
     required this.label,
     this.value,
     this.isLoading = false,
+    this.highlighted = false,
     this.trailingIcon,
     this.foregroundColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    final defaultForeground = Theme.of(context).colorScheme.primary;
+    final colorScheme = Theme.of(context).colorScheme;
+    final defaultForeground = colorScheme.primary;
     final resolvedForeground = foregroundColor ?? defaultForeground;
-    final backgroundColor = resolvedForeground.withValues(alpha: 0.12);
-    final borderColor = resolvedForeground.withValues(alpha: 0.24);
+    final effectiveForeground =
+        highlighted ? colorScheme.primary : resolvedForeground;
+    final backgroundColor = highlighted
+        ? effectiveForeground.withValues(alpha: 0.12)
+        : Colors.transparent;
+    final borderColor = highlighted
+        ? effectiveForeground.withValues(alpha: 0.24)
+        : resolvedForeground.withValues(alpha: 0.42);
     final displayText =
         isLoading ? '$label ...' : (value == null ? label : '$label $value');
 
@@ -576,13 +720,13 @@ class _MetadataBubble extends StatelessWidget {
             Icon(
               trailingIcon,
               size: 14,
-              color: resolvedForeground,
+              color: effectiveForeground,
             ),
           if (!isLoading && trailingIcon != null) const SizedBox(width: 6),
           Text(
             displayText,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: resolvedForeground,
+                  color: effectiveForeground,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.1,
                 ),

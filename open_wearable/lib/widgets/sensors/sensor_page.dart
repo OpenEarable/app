@@ -86,6 +86,9 @@ class _SensorPageState extends State<SensorPage>
     return Consumer<WearablesProvider>(
       builder: (context, wearablesProvider, child) {
         final hasConnectedDevices = wearablesProvider.wearables.isNotEmpty;
+        final noDevicesPrompt = _NoSensorDevicesPromptView(
+          onScanPressed: () => context.push('/connect-devices'),
+        );
 
         return PlatformScaffold(
           body: NestedScrollView(
@@ -127,22 +130,20 @@ class _SensorPageState extends State<SensorPage>
                 ),
               ];
             },
-            body: hasConnectedDevices
-                ? TabBarView(
-                    controller: _tabController,
-                    children: [
-                      SensorConfigurationView(
+            body: TabBarView(
+              controller: _tabController,
+              children: [
+                hasConnectedDevices
+                    ? SensorConfigurationView(
                         onSetConfigPressed: () {
                           _tabController.animateTo(1);
                         },
-                      ),
-                      SensorValuesPage(),
-                      LocalRecorderView(),
-                    ],
-                  )
-                : _NoSensorDevicesPromptView(
-                    onScanPressed: () => context.push('/connect-devices'),
-                  ),
+                      )
+                    : noDevicesPrompt,
+                hasConnectedDevices ? SensorValuesPage() : noDevicesPrompt,
+                hasConnectedDevices ? LocalRecorderView() : noDevicesPrompt,
+              ],
+            ),
           ),
         );
       },

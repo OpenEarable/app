@@ -25,46 +25,62 @@ class SensorConfigurationDetailView extends StatelessWidget {
     final dropdownSelection =
         _resolveSelection(selectableValues, selectedValue);
     final colorScheme = Theme.of(context).colorScheme;
+    final targetOptions = sensorConfiguration is ConfigurableSensorConfiguration
+        ? (sensorConfiguration as ConfigurableSensorConfiguration)
+            .availableOptions
+            .toList(growable: false)
+        : const <SensorConfigurationOption>[];
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
       children: [
-        if (sensorConfiguration is ConfigurableSensorConfiguration) ...[
-          _DetailSectionCard(
-            title: 'Data Targets',
-            subtitle: 'Choose where this sensor stream is routed.',
-            child: Column(
-              children: (sensorConfiguration as ConfigurableSensorConfiguration)
-                  .availableOptions
-                  .map(
-                    (option) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: _OptionToggleTile(
-                        option: option,
-                        selected: sensorConfigNotifier
-                            .getSelectedConfigurationOptions(
-                              sensorConfiguration,
-                            )
-                            .contains(option),
-                        onChanged: (enabled) {
-                          if (enabled) {
-                            sensorConfigNotifier.addSensorConfigurationOption(
-                              sensorConfiguration,
-                              option,
-                            );
-                          } else {
-                            sensorConfigNotifier
-                                .removeSensorConfigurationOption(
-                              sensorConfiguration,
-                              option,
-                            );
-                          }
-                        },
-                      ),
-                    ),
-                  )
-                  .toList(growable: false),
-            ),
+        if (targetOptions.isNotEmpty) ...[
+          Text(
+            'Data Targets',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            'Select where this sensor output is sent.',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Column(
+            children: [
+              for (var i = 0; i < targetOptions.length; i++) ...[
+                _OptionToggleTile(
+                  option: targetOptions[i],
+                  selected: sensorConfigNotifier
+                      .getSelectedConfigurationOptions(
+                        sensorConfiguration,
+                      )
+                      .contains(targetOptions[i]),
+                  onChanged: (enabled) {
+                    if (enabled) {
+                      sensorConfigNotifier.addSensorConfigurationOption(
+                        sensorConfiguration,
+                        targetOptions[i],
+                      );
+                    } else {
+                      sensorConfigNotifier.removeSensorConfigurationOption(
+                        sensorConfiguration,
+                        targetOptions[i],
+                      );
+                    }
+                  },
+                ),
+                if (i < targetOptions.length - 1)
+                  Divider(
+                    height: 10,
+                    thickness: 0.6,
+                    color: colorScheme.outlineVariant.withValues(alpha: 0.4),
+                  ),
+              ],
+            ],
           ),
           const SizedBox(height: 8),
         ],
@@ -254,19 +270,25 @@ class _OptionToggleTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final foreground = selected ? colorScheme.primary : colorScheme.onSurface;
+    final (title, subtitle) = _copyForOption(option);
 
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 160),
+      curve: Curves.easeOut,
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
-        color: colorScheme.surface,
+        color: selected
+            ? colorScheme.primary.withValues(alpha: 0.06)
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: (selected ? colorScheme.primary : colorScheme.outlineVariant)
-              .withValues(alpha: selected ? 0.35 : 0.5),
+              .withValues(alpha: selected ? 0.35 : 0.25),
         ),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
             getSensorConfigurationOptionIcon(option),
@@ -275,13 +297,29 @@ class _OptionToggleTile extends StatelessWidget {
           ),
           const SizedBox(width: 7),
           Expanded(
-            child: Text(
-              option.name,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w600,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: foreground,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 1),
+                  Text(
+                    subtitle,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
                   ),
+                ],
+              ],
             ),
           ),
+          const SizedBox(width: 8),
           Switch.adaptive(
             value: selected,
             onChanged: onChanged,
@@ -289,5 +327,21 @@ class _OptionToggleTile extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  (String, String?) _copyForOption(SensorConfigurationOption option) {
+    if (option is StreamSensorConfigOption) {
+      return (
+        'Live stream to phone',
+        'Send this sensor over Bluetooth for live data view.',
+      );
+    }
+    if (option is RecordSensorConfigOption) {
+      return (
+        'Record to SD card',
+        'Include this sensor in on-device recordings.',
+      );
+    }
+    return (option.name, null);
   }
 }
