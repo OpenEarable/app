@@ -483,6 +483,103 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
   }
 }
 
+class _DeviceHeaderWearableIcon extends StatefulWidget {
+  final Wearable device;
+
+  const _DeviceHeaderWearableIcon({required this.device});
+
+  @override
+  State<_DeviceHeaderWearableIcon> createState() =>
+      _DeviceHeaderWearableIconState();
+}
+
+class _DeviceHeaderWearableIconState extends State<_DeviceHeaderWearableIcon> {
+  static final Expando<Future<DevicePosition?>> _positionFutureCache =
+      Expando<Future<DevicePosition?>>();
+
+  Future<DevicePosition?>? _positionFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _configurePositionFuture();
+  }
+
+  @override
+  void didUpdateWidget(covariant _DeviceHeaderWearableIcon oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.device, widget.device)) {
+      _configurePositionFuture();
+    }
+  }
+
+  void _configurePositionFuture() {
+    if (!widget.device.hasCapability<StereoDevice>()) {
+      _positionFuture = null;
+      return;
+    }
+
+    final stereoDevice = widget.device.requireCapability<StereoDevice>();
+    _positionFuture =
+        _positionFutureCache[stereoDevice] ??= stereoDevice.position;
+  }
+
+  WearableIconVariant _variantForPosition(DevicePosition? position) {
+    return switch (position) {
+      DevicePosition.left => WearableIconVariant.left,
+      DevicePosition.right => WearableIconVariant.right,
+      _ => WearableIconVariant.single,
+    };
+  }
+
+  String? _resolveIconPath(WearableIconVariant variant) {
+    final variantPath = widget.device.getWearableIconPath(variant: variant);
+    if (variantPath != null && variantPath.isNotEmpty) {
+      return variantPath;
+    }
+
+    if (variant != WearableIconVariant.single) {
+      final fallbackPath = widget.device.getWearableIconPath();
+      if (fallbackPath != null && fallbackPath.isNotEmpty) {
+        return fallbackPath;
+      }
+    }
+
+    return null;
+  }
+
+  Widget _buildIcon(WearableIconVariant variant) {
+    final iconPath = _resolveIconPath(variant);
+    if (iconPath == null) {
+      return const SizedBox.shrink();
+    }
+
+    if (iconPath.toLowerCase().endsWith('.svg')) {
+      return SvgPicture.asset(iconPath, fit: BoxFit.contain);
+    }
+
+    return Image.asset(
+      iconPath,
+      fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => const Icon(Icons.watch_outlined),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_positionFuture == null) {
+      return _buildIcon(WearableIconVariant.single);
+    }
+
+    return FutureBuilder<DevicePosition?>(
+      future: _positionFuture,
+      builder: (context, snapshot) {
+        return _buildIcon(_variantForPosition(snapshot.data));
+      },
+    );
+  }
+}
+
 class _SectionCard extends StatelessWidget {
   final String title;
   final String? subtitle;
