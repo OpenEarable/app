@@ -186,13 +186,13 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
     final hasWearableIcon = widget.device.getWearableIconPath() != null;
 
     final statusPills = <Widget>[
-      if (widget.device.hasCapability<BatteryLevelStatus>() ||
-          widget.device.hasCapability<BatteryLevelStatusService>())
-        BatteryStateView(device: widget.device),
       if (widget.device.hasCapability<StereoDevice>())
         StereoPosLabel(
           device: widget.device.requireCapability<StereoDevice>(),
         ),
+      if (widget.device.hasCapability<BatteryLevelStatus>() ||
+          widget.device.hasCapability<BatteryLevelStatusService>())
+        BatteryStateView(device: widget.device),
       if (_firmwareVersionFuture != null)
         _FirmwareMetadataBubble(
           versionFuture: _firmwareVersionFuture!,
@@ -262,30 +262,28 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                 ),
               ],
             ),
-            if (_firmwareVersionFuture != null) ...[
-              const SizedBox(height: 10),
-              _FirmwareUpdateCallout(
-                versionFuture: _firmwareVersionFuture!,
-                supportFuture: _firmwareSupportFuture,
-                onTap: _openFirmwareUpdate,
-              ),
-            ],
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
+            Row(
               children: [
-                if (_canForgetDevice)
-                  OutlinedButton.icon(
-                    onPressed: _showForgetDialog,
-                    icon:
-                        const Icon(Icons.bluetooth_disabled_rounded, size: 18),
-                    label: const Text('Forget'),
+                if (_canForgetDevice) ...[
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _showForgetDialog,
+                      icon: const Icon(
+                        Icons.bluetooth_disabled_rounded,
+                        size: 18,
+                      ),
+                      label: const Text('Forget'),
+                    ),
                   ),
-                FilledButton.icon(
-                  onPressed: _disconnectDevice,
-                  icon: const Icon(Icons.link_off_rounded, size: 18),
-                  label: const Text('Disconnect'),
+                  const SizedBox(width: 8),
+                ],
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: _disconnectDevice,
+                    icon: const Icon(Icons.link_off_rounded, size: 18),
+                    label: const Text('Disconnect'),
+                  ),
                 ),
               ],
             ),
@@ -841,116 +839,6 @@ class _InlineError extends StatelessWidget {
   }
 }
 
-class _FirmwareUpdateCallout extends StatelessWidget {
-  final Future<Object?> versionFuture;
-  final Future<FirmwareSupportStatus>? supportFuture;
-  final VoidCallback onTap;
-
-  const _FirmwareUpdateCallout({
-    required this.versionFuture,
-    required this.supportFuture,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(10, 9, 10, 10),
-      decoration: BoxDecoration(
-        color: colorScheme.primaryContainer.withValues(alpha: 0.24),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: colorScheme.primary.withValues(alpha: 0.35),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.system_update_alt_rounded,
-                size: 16,
-                color: colorScheme.primary,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Firmware updater',
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          FutureBuilder<Object?>(
-            future: versionFuture,
-            builder: (context, versionSnapshot) {
-              final versionText =
-                  versionSnapshot.connectionState == ConnectionState.waiting
-                      ? 'Version ...'
-                      : versionSnapshot.hasError
-                          ? 'Version unavailable'
-                          : 'Version ${versionSnapshot.data ?? '--'}';
-
-              if (supportFuture == null) {
-                return Text(
-                  '$versionText • Open updater to install firmware.',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                );
-              }
-
-              return FutureBuilder<FirmwareSupportStatus>(
-                future: supportFuture,
-                builder: (context, supportSnapshot) {
-                  final statusText = switch (supportSnapshot.data) {
-                    FirmwareSupportStatus.tooOld => 'Update recommended.',
-                    FirmwareSupportStatus.tooNew => 'Newer than app support.',
-                    FirmwareSupportStatus.unsupported =>
-                      'Firmware unsupported.',
-                    _ => 'Open updater to install firmware.',
-                  };
-                  return Text(
-                    '$versionText • $statusText',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-          const SizedBox(height: 10),
-          Align(
-            alignment: Alignment.centerRight,
-            child: FilledButton.icon(
-              onPressed: onTap,
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                minimumSize: const Size(0, 34),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              icon: const Icon(Icons.open_in_new_rounded, size: 16),
-              label: const Text('Open updater'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _FirmwareTableUpdateHint extends StatelessWidget {
   final VoidCallback onTap;
 
@@ -961,26 +849,25 @@ class _FirmwareTableUpdateHint extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return OutlinedButton.icon(
+    return FilledButton.icon(
       onPressed: onTap,
-      style: OutlinedButton.styleFrom(
+      style: FilledButton.styleFrom(
         visualDensity: VisualDensity.compact,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         minimumSize: const Size(0, 34),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        side: BorderSide(
-          color: colorScheme.primary.withValues(alpha: 0.5),
-        ),
+        backgroundColor: colorScheme.primaryContainer,
+        foregroundColor: colorScheme.onPrimaryContainer,
       ),
       icon: Icon(
         Icons.system_update_alt_rounded,
         size: 15,
-        color: colorScheme.primary,
+        color: colorScheme.onPrimaryContainer,
       ),
       label: Text(
         'Update',
         style: theme.textTheme.labelSmall?.copyWith(
-          color: colorScheme.primary,
+          color: colorScheme.onPrimaryContainer,
           fontWeight: FontWeight.w700,
         ),
       ),

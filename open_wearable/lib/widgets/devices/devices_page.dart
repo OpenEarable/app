@@ -371,6 +371,7 @@ class DeviceRow extends StatelessWidget {
     final hasWearableIcon = showWearableIcon &&
         (primary.getWearableIconPath(variant: knownIconVariant)?.isNotEmpty ??
             false);
+    final topRightIdentifierLabel = _buildTopRightIdentifierLabel();
     final statusPills = _buildDeviceStatusPills(
       primary,
       includeSideLabel: false,
@@ -421,13 +422,13 @@ class DeviceRow extends StatelessWidget {
                                     ),
                               ),
                             ),
-                            if (!group.isCombined) ...[
+                            if (topRightIdentifierLabel != null) ...[
                               const SizedBox(width: 8),
                               ConstrainedBox(
                                 constraints:
                                     const BoxConstraints(maxWidth: 170),
                                 child: Text(
-                                  group.identifiersLabel,
+                                  topRightIdentifierLabel,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   textAlign: TextAlign.right,
@@ -508,6 +509,32 @@ class DeviceRow extends StatelessWidget {
       case null:
         return WearableIconVariant.single;
     }
+  }
+
+  String? _buildTopRightIdentifierLabel() {
+    if (!group.isCombined) {
+      final label = group.identifiersLabel.trim();
+      return label.isEmpty ? null : label;
+    }
+
+    final leftId = group.leftDevice?.deviceId;
+    final rightId = group.rightDevice?.deviceId;
+    if (leftId == null ||
+        leftId.isEmpty ||
+        rightId == null ||
+        rightId.isEmpty) {
+      return null;
+    }
+
+    return '${_compactIdentifier(leftId)} / ${_compactIdentifier(rightId)}';
+  }
+
+  String _compactIdentifier(String id) {
+    final normalized = id.trim();
+    if (normalized.length <= 5) {
+      return normalized;
+    }
+    return '${normalized.substring(0, 5)}...';
   }
 
   Widget _buildPairToggleButton(
@@ -801,7 +828,14 @@ class _WearableIconViewState extends State<_WearableIconView> {
     return FutureBuilder<DevicePosition?>(
       future: _positionFuture,
       builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          // Avoid flashing the generic icon before stereo side is known.
+          return const SizedBox.shrink();
+        }
         final variant = _variantForPosition(snapshot.data);
+        if (variant == WearableIconVariant.single) {
+          return const SizedBox.shrink();
+        }
         return _buildIcon(variant);
       },
     );

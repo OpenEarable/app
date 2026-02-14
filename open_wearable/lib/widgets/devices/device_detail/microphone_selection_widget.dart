@@ -108,10 +108,10 @@ class _MicrophoneSelectionWidgetState extends State<MicrophoneSelectionWidget> {
   String _labelForMicrophone(Microphone microphone) {
     final normalized = _normalizedMicrophoneKey(microphone);
     if (normalized.contains('inner') || normalized.contains('internal')) {
-      return 'Inner';
+      return 'Inner (In-Ear Sounds)';
     }
     if (normalized.contains('outer') || normalized.contains('external')) {
-      return 'Outer';
+      return 'Outer (Ambient Sounds)';
     }
     return _toTitleCase(microphone.key);
   }

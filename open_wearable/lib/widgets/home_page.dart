@@ -829,39 +829,43 @@ class _SettingsPage extends StatelessWidget {
           ),
         ],
       ),
-      body: ListView(
-        padding: SensorPageSpacing.pagePadding,
+      body: Stack(
         children: [
-          _QuickActionTile(
-            icon: Icons.hub,
-            title: 'Connectors',
-            subtitle: 'External connector integrations\n(coming soon)',
-            enabled: false,
-          ),
-          _QuickActionTile(
-            icon: Icons.receipt_long,
-            title: 'Log files',
-            subtitle: 'View, share, and remove diagnostic logs',
-            onTap: onLogsRequested,
-          ),
-          _QuickActionTile(
-            icon: Icons.info_outline_rounded,
-            title: 'About',
-            subtitle: 'App information, version, and licenses',
-            onTap: () => Navigator.push(
-              context,
-              platformPageRoute(
-                context: context,
-                builder: (_) => const _AboutPage(),
+          ListView(
+            padding: SensorPageSpacing.pagePadding.add(
+              const EdgeInsets.only(bottom: 120),
+            ),
+            children: [
+              _QuickActionTile(
+                icon: Icons.hub,
+                title: 'Connectors',
+                subtitle: 'External connector integrations\n(coming soon)',
+                enabled: false,
               ),
-            ),
+              _QuickActionTile(
+                icon: Icons.receipt_long,
+                title: 'Log files',
+                subtitle: 'View, share, and remove diagnostic logs',
+                onTap: onLogsRequested,
+              ),
+              _QuickActionTile(
+                icon: Icons.info_outline_rounded,
+                title: 'About',
+                subtitle: 'App information, version, and licenses',
+                onTap: () => Navigator.push(
+                  context,
+                  platformPageRoute(
+                    context: context,
+                    builder: (_) => const _AboutPage(),
+                  ),
+                ),
+              ),
+            ],
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              vertical: SensorPageSpacing.sectionGap,
-            ),
+          SafeArea(
+            minimum: const EdgeInsets.only(right: 12, bottom: 12),
             child: Align(
-              alignment: Alignment.centerRight,
+              alignment: Alignment.bottomRight,
               child: _OpenWearablesFloatingBadge(
                 scale: badgeScale,
                 onTap: () => _openOpenWearables(context),
@@ -1416,7 +1420,7 @@ class _OpenWearablesFloatingBadge extends StatelessWidget {
                 5 * scale,
               ),
               decoration: BoxDecoration(
-                color: const Color.fromRGBO(22, 22, 22, 0.40),
+                color: const Color.fromRGBO(69, 69, 69, 0.40),
                 borderRadius: badgeBorderRadius,
                 border: Border.all(
                   color: Colors.white.withValues(alpha: 0.22),

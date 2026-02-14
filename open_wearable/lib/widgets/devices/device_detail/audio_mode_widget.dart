@@ -29,8 +29,8 @@ class _AudioModeWidgetState extends State<AudioModeWidget> {
   AudioMode? _pairedAudioMode;
   AudioModeManager? _pairedAudioModeManager;
   Wearable? _pairedWearable;
-  String _primarySideLabel = 'This device';
-  String _pairedSideLabel = 'Paired device';
+  String _primarySideBadge = 'L';
+  String _pairedSideBadge = 'R';
   bool _pairModesDiffer = false;
   bool _isLoading = true;
   bool _isApplying = false;
@@ -82,13 +82,13 @@ class _AudioModeWidgetState extends State<AudioModeWidget> {
       final primaryPosition = positions.isNotEmpty ? positions.first : null;
       final pairedPosition = positions.length > 1 ? positions[1] : null;
 
-      final primarySideLabel = _sideLabelForPosition(
+      final primarySideLabel = _sideBadgeForPosition(
         primaryPosition,
-        fallback: 'This device',
+        fallback: 'L',
       );
-      final pairedSideLabel = _sideLabelForPosition(
+      final pairedSideLabel = _sideBadgeForPosition(
         pairedPosition,
-        fallback: 'Paired device',
+        fallback: 'R',
       );
 
       final pairModesDiffer =
@@ -107,8 +107,8 @@ class _AudioModeWidgetState extends State<AudioModeWidget> {
         _pairedAudioMode = pairedMode;
         _pairedWearable = pairedWearable;
         _pairedAudioModeManager = pairedAudioModeManager;
-        _primarySideLabel = primarySideLabel;
-        _pairedSideLabel = pairedSideLabel;
+        _primarySideBadge = primarySideLabel;
+        _pairedSideBadge = pairedSideLabel;
         _pairModesDiffer = pairModesDiffer;
         _applyToStereoPair = switch (widget.applyScope) {
           AudioModeApplyScope.pairOnly => pairedAudioModeManager != null,
@@ -267,26 +267,15 @@ class _AudioModeWidgetState extends State<AudioModeWidget> {
     );
   }
 
-  String _sideLabelForPosition(
+  String _sideBadgeForPosition(
     DevicePosition? position, {
     required String fallback,
   }) {
     return switch (position) {
-      DevicePosition.left => 'Left',
-      DevicePosition.right => 'Right',
+      DevicePosition.left => 'L',
+      DevicePosition.right => 'R',
       _ => fallback,
     };
-  }
-
-  String _buildPairMismatchMessage() {
-    final primary = _primaryAudioMode;
-    final paired = _pairedAudioMode;
-    if (primary == null || paired == null) {
-      return 'Left and right modes differ. Select one mode to sync both.';
-    }
-    return '$_primarySideLabel: ${_labelForMode(primary)}. '
-        '$_pairedSideLabel: ${_labelForMode(paired)}. '
-        'Select one mode to sync both.';
   }
 
   String _labelForMode(AudioMode mode) {
@@ -402,6 +391,19 @@ class _AudioModeWidgetState extends State<AudioModeWidget> {
           children: modes.map((mode) {
             final selected = _selectedAudioMode != null &&
                 _modesEqualByKey(_selectedAudioMode, mode);
+            final showPairSideBadges =
+                widget.applyScope == AudioModeApplyScope.pairOnly &&
+                    _pairModesDiffer;
+            final sideBadges = <String>[
+              if (showPairSideBadges &&
+                  _primaryAudioMode != null &&
+                  _modesEqualByKey(_primaryAudioMode, mode))
+                _primarySideBadge,
+              if (showPairSideBadges &&
+                  _pairedAudioMode != null &&
+                  _modesEqualByKey(_pairedAudioMode, mode))
+                _pairedSideBadge,
+            ];
 
             return SizedBox(
               width: itemWidth,
@@ -411,6 +413,7 @@ class _AudioModeWidgetState extends State<AudioModeWidget> {
                 badgeText: _isNoiseCancellationMode(mode) ? 'BETA' : null,
                 icon: _iconForMode(mode),
                 selected: selected,
+                sideBadges: sideBadges,
                 enabled: !_isApplying && !_isLoading,
                 onTap: () => _onModeSelected(mode),
               ),
@@ -485,57 +488,6 @@ class _AudioModeWidgetState extends State<AudioModeWidget> {
                     : 'Only update this device.',
               ),
             ),
-          ] else if (_pairedAudioModeManager != null &&
-              widget.applyScope == AudioModeApplyScope.pairOnly) ...[
-            const SizedBox(height: 4),
-            Text(
-              'Applied to both paired devices.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            if (_pairModesDiffer &&
-                _primaryAudioMode != null &&
-                _pairedAudioMode != null) ...[
-              const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.errorContainer.withValues(
-                    alpha: 0.35,
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: theme.colorScheme.error.withValues(alpha: 0.45),
-                  ),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.warning_amber_rounded,
-                      size: 18,
-                      color: theme.colorScheme.error,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _buildPairMismatchMessage(),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurface,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
           ],
           const SizedBox(height: 6),
           _buildModeOptions(modes),
@@ -565,6 +517,7 @@ class _AudioModeOptionButton extends StatelessWidget {
   final String? badgeText;
   final IconData icon;
   final bool selected;
+  final List<String> sideBadges;
   final bool enabled;
   final VoidCallback onTap;
 
@@ -574,6 +527,7 @@ class _AudioModeOptionButton extends StatelessWidget {
     this.badgeText,
     required this.icon,
     required this.selected,
+    this.sideBadges = const [],
     required this.enabled,
     required this.onTap,
   });
@@ -658,17 +612,28 @@ class _AudioModeOptionButton extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              SizedBox(
-                width: 18,
-                height: 18,
-                child: selected
-                    ? Icon(
-                        Icons.check_circle_rounded,
-                        size: 18,
-                        color: colorScheme.primary,
-                      )
-                    : null,
-              ),
+              if (sideBadges.isNotEmpty)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (var i = 0; i < sideBadges.length; i++) ...[
+                      if (i > 0) const SizedBox(width: 4),
+                      _ModeSideBadge(label: sideBadges[i]),
+                    ],
+                  ],
+                )
+              else
+                SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: selected
+                      ? Icon(
+                          Icons.check_circle_rounded,
+                          size: 18,
+                          color: colorScheme.primary,
+                        )
+                      : null,
+                ),
             ],
           ),
         ),
@@ -700,6 +665,37 @@ class _ModePillBadge extends StatelessWidget {
         label,
         style: theme.textTheme.labelSmall?.copyWith(
           color: colorScheme.onSecondaryContainer,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.2,
+        ),
+      ),
+    );
+  }
+}
+
+class _ModeSideBadge extends StatelessWidget {
+  final String label;
+
+  const _ModeSideBadge({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+      decoration: BoxDecoration(
+        color: colorScheme.primaryContainer.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: colorScheme.primary.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Text(
+        label,
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: colorScheme.primary,
           fontWeight: FontWeight.w800,
           letterSpacing: 0.2,
         ),

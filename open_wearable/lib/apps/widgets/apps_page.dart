@@ -263,8 +263,8 @@ class _AppsHeroCard extends StatelessWidget {
                 icon: Icons.widgets_outlined,
               ),
               _HeroStatPill(
-                label: '$connectedDevices connected',
-                icon: Icons.dashboard_outlined,
+                label: '$connectedDevices wearables connected',
+                icon: Icons.link_rounded,
               ),
             ],
           ),
