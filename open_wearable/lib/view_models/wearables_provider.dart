@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
+import 'package:open_wearable/models/wearable_display_group.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 
 import '../models/logger.dart';
@@ -83,10 +84,43 @@ class WearablesProvider with ChangeNotifier {
   final List<Wearable> _wearables = [];
   final Map<Wearable, SensorConfigurationProvider>
       _sensorConfigurationProviders = {};
+  final Set<String> _splitStereoPairKeys = {};
 
   List<Wearable> get wearables => _wearables;
   Map<Wearable, SensorConfigurationProvider> get sensorConfigurationProviders =>
       _sensorConfigurationProviders;
+  bool isStereoPairCombined({
+    required Wearable first,
+    required Wearable second,
+  }) {
+    final pairKey = WearableDisplayGroup.stereoPairKeyForDevices(first, second);
+    return !_splitStereoPairKeys.contains(pairKey);
+  }
+
+  bool isStereoPairKeyCombined(String pairKey) {
+    return !_splitStereoPairKeys.contains(pairKey);
+  }
+
+  void setStereoPairCombined({
+    required Wearable first,
+    required Wearable second,
+    required bool combined,
+  }) {
+    final pairKey = WearableDisplayGroup.stereoPairKeyForDevices(first, second);
+    setStereoPairKeyCombined(pairKey: pairKey, combined: combined);
+  }
+
+  void setStereoPairKeyCombined({
+    required String pairKey,
+    required bool combined,
+  }) {
+    final changed = combined
+        ? _splitStereoPairKeys.remove(pairKey)
+        : _splitStereoPairKeys.add(pairKey);
+    if (changed) {
+      notifyListeners();
+    }
+  }
 
   final _unsupportedFirmwareEventsController =
       StreamController<UnsupportedFirmwareEvent>.broadcast();
@@ -132,11 +166,35 @@ class WearablesProvider with ChangeNotifier {
     });
   }
 
+  Future<String> _wearableNameWithSide(Wearable wearable) async {
+    if (!wearable.hasCapability<StereoDevice>()) {
+      return wearable.name;
+    }
+
+    try {
+      final position = await wearable.requireCapability<StereoDevice>().position;
+      return switch (position) {
+        DevicePosition.left => '${wearable.name} (Left)',
+        DevicePosition.right => '${wearable.name} (Right)',
+        _ => wearable.name,
+      };
+    } catch (_) {
+      return wearable.name;
+    }
+  }
+
   Future<void> _syncTimeAndEmit({
     required Wearable wearable,
-    required String successDescription,
-    required String failureDescription,
+    required bool fromCapabilityChange,
   }) async {
+    final wearableLabel = await _wearableNameWithSide(wearable);
+    final successDescription = fromCapabilityChange
+        ? 'Time synchronized for $wearableLabel after capability update'
+        : 'Time synchronized for $wearableLabel';
+    final failureDescription = fromCapabilityChange
+        ? 'Failed to synchronize time for $wearableLabel after capability update'
+        : 'Failed to synchronize time for $wearableLabel';
+
     try {
       logger.d('Synchronizing time for wearable ${wearable.name}');
       await (wearable.requireCapability<TimeSynchronizable>())
@@ -154,7 +212,7 @@ class WearablesProvider with ChangeNotifier {
       );
       _emitWearableError(
         wearable: wearable,
-        errorMessage: 'Failed to synchronize time with ${wearable.name}: $e',
+        errorMessage: 'Failed to synchronize time with $wearableLabel: $e',
         description: failureDescription,
       );
     }
@@ -191,8 +249,7 @@ class WearablesProvider with ChangeNotifier {
       _scheduleMicrotask(
         () => _syncTimeAndEmit(
           wearable: wearable,
-          successDescription: 'Time synchronized for ${wearable.name}',
-          failureDescription: 'Failed to synchronize time for ${wearable.name}',
+          fromCapabilityChange: false,
         ),
       );
     }
@@ -349,6 +406,12 @@ class WearablesProvider with ChangeNotifier {
   }
 
   void removeWearable(Wearable wearable) {
+    _splitStereoPairKeys.removeWhere(
+      (key) => WearableDisplayGroup.stereoPairKeyContainsDevice(
+        key,
+        wearable.deviceId,
+      ),
+    );
     _wearables.remove(wearable);
     _sensorConfigurationProviders.remove(wearable);
     _capabilitySubscriptions.remove(wearable)?.cancel();
@@ -377,10 +440,7 @@ class WearablesProvider with ChangeNotifier {
       _scheduleMicrotask(
         () => _syncTimeAndEmit(
           wearable: wearable,
-          successDescription:
-              'Time synchronized for ${wearable.name} after capability change',
-          failureDescription:
-              'Failed to synchronize time for ${wearable.name} after capability change',
+          fromCapabilityChange: true,
         ),
       );
     }

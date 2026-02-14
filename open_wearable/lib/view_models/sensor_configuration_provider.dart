@@ -5,6 +5,22 @@ import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 
 import '../models/logger.dart';
 
+class SensorConfigurationRestoreResult {
+  final int restoredCount;
+  final int requestedCount;
+  final int skippedCount;
+  final int unknownConfigCount;
+
+  const SensorConfigurationRestoreResult({
+    required this.restoredCount,
+    required this.requestedCount,
+    required this.skippedCount,
+    required this.unknownConfigCount,
+  });
+
+  bool get hasRestoredValues => restoredCount > 0;
+}
+
 class SensorConfigurationProvider with ChangeNotifier {
   final SensorConfigurationManager _sensorConfigurationManager;
 
@@ -201,29 +217,59 @@ class SensorConfigurationProvider with ChangeNotifier {
     );
   }
 
-  Future<bool> restoreFromJson(Map<String, String> jsonMap) async {
-    Map<SensorConfiguration, SensorConfigurationValue> restoredConfigurations =
-        {};
-    for (final config in _sensorConfigurations.keys) {
+  Future<SensorConfigurationRestoreResult> restoreFromJson(
+    Map<String, String> jsonMap,
+  ) async {
+    final restoredConfigurations =
+        <SensorConfiguration, SensorConfigurationValue>{};
+    int requestedCount = 0;
+    int skippedCount = 0;
+
+    final knownConfigurations =
+        _sensorConfigurationManager.sensorConfigurations.toList();
+    final knownConfigNames =
+        knownConfigurations.map((config) => config.name).toSet();
+
+    for (final config in knownConfigurations) {
       final selectedKey = jsonMap[config.name];
       if (selectedKey == null) continue;
 
-      try {
-        final SensorConfigurationValue matchingValue = config.values.firstWhere(
-          (v) => v.key == selectedKey,
+      requestedCount += 1;
+
+      final matchingValue = config.values
+          .where((value) => value.key == selectedKey)
+          .cast<SensorConfigurationValue?>()
+          .firstOrNull;
+
+      if (matchingValue == null) {
+        skippedCount += 1;
+        logger.w(
+          'Skipped restoring "${config.name}" because value "$selectedKey" is no longer available.',
         );
-        restoredConfigurations[config] = matchingValue;
-      } on StateError {
-        logger.e("Failed to restore configuration for ${config.name}");
-        return false;
+        continue;
       }
+
+      restoredConfigurations[config] = matchingValue;
     }
+
     for (final config in restoredConfigurations.keys) {
       _sensorConfigurations[config] = restoredConfigurations[config]!;
       _updateSelectedOptions(config);
     }
-    notifyListeners();
-    return true;
+
+    if (restoredConfigurations.isNotEmpty) {
+      notifyListeners();
+    }
+
+    final unknownConfigCount =
+        jsonMap.keys.where((name) => !knownConfigNames.contains(name)).length;
+
+    return SensorConfigurationRestoreResult(
+      restoredCount: restoredConfigurations.length,
+      requestedCount: requestedCount,
+      skippedCount: skippedCount,
+      unknownConfigCount: unknownConfigCount,
+    );
   }
 
   @override

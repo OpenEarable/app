@@ -21,7 +21,9 @@ class BluetoothAutoConnector {
   StreamSubscription<DiscoveredDevice>? _scanSubscription;
 
   bool _isConnecting = false;
+  bool _isAttemptingConnection = false;
   bool _askedPermissionsThisSession = false;
+  int _sessionToken = 0;
 
   // Names to look for during scanning
   List<String> _targetNames = [];
@@ -35,10 +37,14 @@ class BluetoothAutoConnector {
   });
 
   void start() async {
-    stop();
+    final token = ++_sessionToken;
+    _stopInternal();
 
     // Load the last connected names
     final prefs = await prefsFuture;
+    if (token != _sessionToken) {
+      return;
+    }
     _targetNames = prefs.getStringList(_connectedDeviceNamesKey) ?? [];
 
     // Start listening for successful connections (to save names and set disconnect logic)
@@ -46,21 +52,20 @@ class BluetoothAutoConnector {
         wearableManager.connectStream.listen(_onDeviceConnected);
 
     // Initiate the connection sequence
-    _attemptConnection();
+    _attemptConnection(token: token);
   }
 
   void stop() {
+    _sessionToken++;
+    _stopInternal();
+  }
+
+  void _stopInternal() {
     _connectSubscription?.cancel();
     _connectSubscription = null;
-    _scanSubscription?.cancel();
-    _scanSubscription = null;
-    // Stop any ongoing scan initiated by this class
-    // Use the public WearableManager function to stop the scan
-    wearableManager.setAutoConnect([]);
-
-    // Cancel the local listener to prevent further triggers
-    _scanSubscription?.cancel();
-    _scanSubscription = null;
+    _isAttemptingConnection = false;
+    _isConnecting = false;
+    _stopScanning();
   }
 
   /// Called when the WearableManager successfully connects to a device.
@@ -75,16 +80,7 @@ class BluetoothAutoConnector {
     }
 
     // Stop scanning immediately when a successful connection is made
-    if (_scanSubscription != null) {
-      // stop scan
-      wearableManager.setAutoConnect([]);
-
-      _scanSubscription?.cancel();
-      _scanSubscription = null;
-
-      _scanSubscription?.cancel();
-      _scanSubscription = null;
-    }
+    _stopScanning();
 
     // Set up the disconnect listener to trigger a scan for the saved name.
     wearable.addDisconnectListener(() {
@@ -99,24 +95,47 @@ class BluetoothAutoConnector {
     });
   }
 
-  Future<void> _attemptConnection() async {
+  Future<void> _attemptConnection({int? token}) async {
+    final activeToken = token ?? _sessionToken;
+    if (activeToken != _sessionToken) {
+      return;
+    }
+    if (_isAttemptingConnection) {
+      return;
+    }
+
+    _isAttemptingConnection = true;
     if (!Platform.isIOS) {
       final hasPerm = await wearableManager.hasPermissions();
+      if (activeToken != _sessionToken) {
+        _isAttemptingConnection = false;
+        return;
+      }
       if (!hasPerm) {
         if (!_askedPermissionsThisSession) {
           _askedPermissionsThisSession = true;
           _showPermissionsDialog();
         }
         logger.w('Skipping auto-connect: no permissions granted yet.');
+        _isAttemptingConnection = false;
         return;
       }
     }
 
-    await connector.connectToSystemDevices();
+    try {
+      await connector.connectToSystemDevices();
+      if (activeToken != _sessionToken) {
+        return;
+      }
 
-    if (_targetNames.isNotEmpty) {
-      _setupScanListener();
-      await wearableManager.startScan();
+      if (_targetNames.isNotEmpty) {
+        _setupScanListener();
+        await wearableManager.startScan();
+      }
+    } catch (error, stackTrace) {
+      logger.w('Auto-connect attempt failed: $error\n$stackTrace');
+    } finally {
+      _isAttemptingConnection = false;
     }
   }
 
@@ -128,10 +147,7 @@ class BluetoothAutoConnector {
 
       if (_targetNames.contains(device.name)) {
         _isConnecting = true;
-        // stop scan
-        wearableManager.setAutoConnect([]);
-        _scanSubscription?.cancel();
-        _scanSubscription = null;
+        _stopScanning();
 
         logger.i(
           "Match found for ${device.name}. Connecting using rotating ID: ${device.id}",
@@ -149,6 +165,11 @@ class BluetoothAutoConnector {
         });
       }
     });
+  }
+
+  void _stopScanning() {
+    _scanSubscription?.cancel();
+    _scanSubscription = null;
   }
 
   void _showPermissionsDialog() {

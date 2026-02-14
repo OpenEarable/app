@@ -5,8 +5,10 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 import 'package:open_wearable/models/log_file_manager.dart';
-import 'package:open_wearable/models/wearable_connector.dart';
+import 'package:open_wearable/models/wearable_connector.dart'
+    hide WearableEvent;
 import 'package:open_wearable/router.dart';
+import 'package:open_wearable/theme/app_theme.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
 import 'package:open_wearable/widgets/app_banner.dart';
 import 'package:open_wearable/widgets/global_app_banner_overlay.dart';
@@ -98,7 +100,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       );
     });
 
-    _wearableProvEventSub = wearablesProvider.wearableEventStream.listen((event) {
+    _wearableProvEventSub =
+        wearablesProvider.wearableEventStream.listen((event) {
       if (!mounted) return;
 
       // Handle firmware update available events with a dialog
@@ -127,7 +130,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   child: const Text('Update Now'),
                   onPressed: () {
                     // Set the selected peripheral for firmware update
-                    final updateProvider = Provider.of<FirmwareUpdateRequestProvider>(
+                    final updateProvider =
+                        Provider.of<FirmwareUpdateRequestProvider>(
                       rootNavigatorKey.currentContext!,
                       listen: false,
                     );
@@ -147,32 +151,45 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       final appBannerController = context.read<AppBannerController>();
       appBannerController.showBanner(
         (id) {
-          late final Color backgroundColor;
-          if (event is WearableErrorEvent) {
-            backgroundColor = Theme.of(context).colorScheme.error;
-          } else {
-            backgroundColor = Theme.of(context).colorScheme.primary;
-          }
-
-          late final Color textColor;
-          if (event is WearableErrorEvent) {
-            textColor = Theme.of(context).colorScheme.onError;
-          } else {
-            textColor = Theme.of(context).colorScheme.onPrimary;
-          }
+          final colorScheme = Theme.of(context).colorScheme;
+          final bool isError = event is WearableErrorEvent;
+          final bool isTimeSync = event is WearableTimeSynchronizedEvent;
+          const timeSyncBackground = Color(0xFFEDE4FF);
+          const timeSyncForeground = Color(0xFF5A2EA6);
+          final backgroundColor = isError
+              ? colorScheme.errorContainer
+              : isTimeSync
+                  ? timeSyncBackground
+                  : colorScheme.primaryContainer;
+          final textColor = isError
+              ? colorScheme.onErrorContainer
+              : isTimeSync
+                  ? timeSyncForeground
+                  : colorScheme.onPrimaryContainer;
+          final icon = isError
+              ? Icons.error_outline_rounded
+              : isTimeSync
+                  ? Icons.schedule_rounded
+                  : Icons.info_outline_rounded;
+          final textStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: textColor,
+                fontWeight: FontWeight.w600,
+              );
 
           return AppBanner(
-            content: Text(
-              event.description,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: textColor,
-              ),
+            content: _buildBannerContent(
+              event: event,
+              textColor: textColor,
+              textStyle: textStyle,
+              accentColor: textColor,
             ),
             backgroundColor: backgroundColor,
+            foregroundColor: textColor,
+            leadingIcon: icon,
             key: ValueKey(id),
           );
         },
-        duration: const Duration(seconds: 3),
+        duration: const Duration(seconds: 4),
       );
     });
 
@@ -230,6 +247,49 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     }
   }
 
+  Widget _buildBannerContent({
+    required WearableEvent event,
+    required Color textColor,
+    required Color accentColor,
+    TextStyle? textStyle,
+  }) {
+    final resolvedTextStyle = textStyle ??
+        Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: textColor,
+              fontWeight: FontWeight.w600,
+            ) ??
+        TextStyle(
+          color: textColor,
+          fontWeight: FontWeight.w600,
+        );
+
+    if (event is! WearableTimeSynchronizedEvent) {
+      return Text(event.description, style: resolvedTextStyle);
+    }
+
+    final parsed = _ParsedStereoSyncMessage.tryParse(event.description);
+    if (parsed == null) {
+      return Text(event.description, style: resolvedTextStyle);
+    }
+
+    return Text.rich(
+      TextSpan(
+        style: resolvedTextStyle,
+        children: [
+          if (parsed.prefix.isNotEmpty) TextSpan(text: '${parsed.prefix} '),
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: _ToastStereoSideBadge(
+              sideLabel: parsed.sideLabel,
+              accentColor: accentColor,
+            ),
+          ),
+          if (parsed.suffix.isNotEmpty) TextSpan(text: ' ${parsed.suffix}'),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _unsupportedFirmwareSub.cancel();
@@ -247,14 +307,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         iosUsesMaterialWidgets: true,
       ),
       builder: (context) => PlatformTheme(
-        materialLightTheme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-          cardTheme: const CardThemeData(
-            color: Colors.white,
-            elevation: 0,
-          ),
-        ),
+        materialLightTheme: AppTheme.lightTheme(),
+        materialDarkTheme: AppTheme.darkTheme(),
+        themeMode: ThemeMode.light,
         builder: (context) => GlobalAppBannerOverlay(
           child: PlatformApp.router(
             routerConfig: router,
@@ -266,6 +321,75 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             title: 'Open Wearable',
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _ParsedStereoSyncMessage {
+  final String prefix;
+  final String sideLabel;
+  final String suffix;
+
+  const _ParsedStereoSyncMessage({
+    required this.prefix,
+    required this.sideLabel,
+    required this.suffix,
+  });
+
+  static _ParsedStereoSyncMessage? tryParse(String message) {
+    final match = RegExp(r'\((Left|Right)\)').firstMatch(message);
+    if (match == null) return null;
+
+    final sideWord = match.group(1);
+    final sideLabel = switch (sideWord) {
+      'Left' => 'L',
+      'Right' => 'R',
+      _ => null,
+    };
+    if (sideLabel == null) return null;
+
+    final prefix = message.substring(0, match.start).trimRight();
+    final suffix = message.substring(match.end).trimLeft();
+
+    return _ParsedStereoSyncMessage(
+      prefix: prefix,
+      sideLabel: sideLabel,
+      suffix: suffix,
+    );
+  }
+}
+
+class _ToastStereoSideBadge extends StatelessWidget {
+  final String sideLabel;
+  final Color accentColor;
+
+  const _ToastStereoSideBadge({
+    required this.sideLabel,
+    required this.accentColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = accentColor;
+    final background = foreground.withValues(alpha: 0.16);
+    final border = foreground.withValues(alpha: 0.34);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 1),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: border),
+      ),
+      child: Text(
+        sideLabel,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: foreground,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.1,
+            ),
       ),
     );
   }

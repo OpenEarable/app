@@ -7,21 +7,35 @@ class SensorValueDetail extends StatelessWidget {
   final Sensor sensor;
   final Wearable wearable;
 
-  const SensorValueDetail({super.key, required this.sensor, required this.wearable});
+  const SensorValueDetail({
+    super.key,
+    required this.sensor,
+    required this.wearable,
+  });
 
   @override
   Widget build(BuildContext context) {
     return PlatformScaffold(
       appBar: PlatformAppBar(
-        title: PlatformText(sensor.sensorName, style: Theme.of(context).textTheme.titleMedium),
+        title: PlatformText(
+          sensor.sensorName,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
       ),
-      body: Padding(
-        padding: EdgeInsets.all(10),
+      body: SafeArea(
+        top: false,
+        bottom: true,
+        minimum: const EdgeInsets.all(10),
         child: Column(
           children: [
-            PlatformText(wearable.name, style: Theme.of(context).textTheme.bodyMedium),
+            PlatformText(
+              wearable.name,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
             Expanded(
-              child: SensorChart(allowToggleAxes: true),
+              child: SensorChart(
+                allowToggleAxes: true,
+              ),
             ),
           ],
         ),
