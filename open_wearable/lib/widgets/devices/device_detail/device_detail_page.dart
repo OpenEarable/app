@@ -183,7 +183,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
 
   Widget _buildHeaderCard(BuildContext context) {
     final theme = Theme.of(context);
-    final wearableIconPath = widget.device.getWearableIconPath();
+    final hasWearableIcon = widget.device.getWearableIconPath() != null;
 
     final statusPills = <Widget>[
       if (widget.device.hasCapability<BatteryLevelStatus>() ||
@@ -214,14 +214,13 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (wearableIconPath != null)
+                if (hasWearableIcon)
                   SizedBox(
                     width: 56,
                     height: 56,
-                    child:
-                        SvgPicture.asset(wearableIconPath, fit: BoxFit.contain),
+                    child: _DeviceHeaderWearableIcon(device: widget.device),
                   ),
-                if (wearableIconPath != null) const SizedBox(width: 12),
+                if (hasWearableIcon) const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
