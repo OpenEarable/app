@@ -59,6 +59,18 @@ class _SensorConfigurationDeviceRowState
   }
 
   @override
+  void didUpdateWidget(covariant SensorConfigurationDeviceRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final deviceChanged = oldWidget.device.deviceId != widget.device.deviceId;
+    final pairedDeviceChanged =
+        oldWidget.pairedDevice?.deviceId != widget.pairedDevice?.deviceId;
+    final scopeChanged = oldWidget.storageScope != widget.storageScope;
+    if (deviceChanged || pairedDeviceChanged || scopeChanged) {
+      _updateContent();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final device = widget.device;
     final tabBar = _buildTabBar(context);

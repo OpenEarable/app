@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -29,6 +30,7 @@ class HeartTrackerPage extends StatefulWidget {
 class _HeartTrackerPageState extends State<HeartTrackerPage> {
   PpgFilter? _ppgFilter;
   Stream<(int, double)>? _rawPpgSignalStream;
+  SensorConfigurationProvider? _sensorConfigProvider;
 
   @override
   void initState() {
@@ -37,6 +39,7 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final configProvider =
           Provider.of<SensorConfigurationProvider>(context, listen: false);
+      _sensorConfigProvider = configProvider;
       final ppgSensor = widget.ppgSensor;
       final accelerometerSensor = widget.accelerometerSensor;
 
@@ -101,8 +104,52 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
 
   @override
   void dispose() {
+    final configProvider = _sensorConfigProvider;
+    if (configProvider != null) {
+      _disableSensorStreaming(widget.ppgSensor, configProvider);
+      final accelerometerSensor = widget.accelerometerSensor;
+      if (accelerometerSensor != null) {
+        _disableSensorStreaming(accelerometerSensor, configProvider);
+      }
+    }
     _ppgFilter?.dispose();
     super.dispose();
+  }
+
+  void _disableSensorStreaming(
+    Sensor sensor,
+    SensorConfigurationProvider configProvider,
+  ) {
+    for (final config in sensor.relatedConfigurations) {
+      try {
+        final offValue = config.offValue;
+        if (offValue != null) {
+          configProvider.addSensorConfiguration(
+            config,
+            offValue,
+            markPending: false,
+          );
+          config.setConfiguration(offValue);
+          continue;
+        }
+
+        if (config is ConfigurableSensorConfiguration &&
+            config.availableOptions
+                .any((option) => option is StreamSensorConfigOption)) {
+          configProvider.removeSensorConfigurationOption(
+            config,
+            const StreamSensorConfigOption(),
+            markPending: false,
+          );
+          final selected = configProvider.getSelectedConfigurationValue(config);
+          if (selected is ConfigurableSensorConfigurationValue) {
+            config.setConfiguration(selected);
+          }
+        }
+      } catch (_) {
+        // Best-effort teardown: continue even if one write fails.
+      }
+    }
   }
 
   double _configureSensorForStreaming(

@@ -135,10 +135,18 @@ class SensorConfigurationView extends StatelessWidget {
     final primary = _resolvePrimaryForConfiguration(group);
     final secondary = _resolveMirroredDevice(group, primary);
     final storageScope = _storageScopeForGroup(group);
+    final rowKey = ValueKey(
+      _configurationRowIdentity(
+        group: group,
+        primary: primary,
+        secondary: secondary,
+      ),
+    );
     final supportsConfig = primary.hasCapability<SensorConfigurationManager>();
 
     if (!supportsConfig) {
       return SensorConfigurationDeviceRow(
+        key: rowKey,
         device: primary,
         pairedDevice: secondary,
         displayName: group.displayName,
@@ -149,6 +157,7 @@ class SensorConfigurationView extends StatelessWidget {
     return ChangeNotifierProvider<SensorConfigurationProvider>.value(
       value: wearablesProvider.getSensorConfigurationProvider(primary),
       child: SensorConfigurationDeviceRow(
+        key: rowKey,
         device: primary,
         pairedDevice: secondary,
         displayName: group.displayName,
@@ -164,6 +173,23 @@ class SensorConfigurationView extends StatelessWidget {
 
     final ids = group.members.map((device) => device.deviceId).toList()..sort();
     return 'stereo_${ids.join('_')}';
+  }
+
+  String _configurationRowIdentity({
+    required WearableDisplayGroup group,
+    required Wearable primary,
+    required Wearable? secondary,
+  }) {
+    if (!group.isCombined) {
+      return 'single:${primary.deviceId}';
+    }
+
+    final pairKey = group.stereoPairKey ??
+        WearableDisplayGroup.stereoPairKeyForIds(
+          primary.deviceId,
+          secondary?.deviceId ?? '',
+        );
+    return 'pair:$pairKey:primary:${primary.deviceId}:secondary:${secondary?.deviceId ?? 'none'}';
   }
 
   List<_ConfigApplyTarget> _buildApplyTargets({
