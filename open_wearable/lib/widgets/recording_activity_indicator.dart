@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:provider/provider.dart';
 
 import '../models/connector_settings.dart';
@@ -85,8 +87,8 @@ class RecordingActivityIndicator extends StatelessWidget {
   }
 }
 
-class LslActivityIndicator extends StatelessWidget {
-  const LslActivityIndicator({
+class UdpActivityIndicator extends StatelessWidget {
+  const UdpActivityIndicator({
     super.key,
     this.padding = const EdgeInsets.symmetric(horizontal: 2),
   });
@@ -95,37 +97,55 @@ class LslActivityIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<LslConnectorSettings>(
-      valueListenable: ConnectorSettings.lslSettingsListenable,
+    return ValueListenableBuilder<UdpBridgeConnectorSettings>(
+      valueListenable: ConnectorSettings.udpBridgeSettingsListenable,
       builder: (context, settings, _) {
         final isActive = settings.enabled && settings.isConfigured;
         if (!isActive) {
           return const SizedBox.shrink();
         }
+        return ValueListenableBuilder<SensorForwarderConnectionState>(
+          valueListenable: ConnectorSettings.udpBridgeConnectionStateListenable,
+          builder: (context, connectionState, _) {
+            const udpGreen = Color(0xFF2E7D32);
+            final isUnreachable =
+                connectionState == SensorForwarderConnectionState.unreachable;
+            final colorScheme = Theme.of(context).colorScheme;
+            final foreground = isUnreachable ? colorScheme.error : udpGreen;
+            final background = foreground.withValues(
+              alpha: isUnreachable ? 0.13 : 0.16,
+            );
+            final border = foreground.withValues(
+              alpha: isUnreachable ? 0.4 : 0.32,
+            );
 
-        const foreground = Color(0xFF2E7D32);
-        final background = foreground.withValues(alpha: 0.16);
-        final border = foreground.withValues(alpha: 0.32);
-
-        return Padding(
-          padding: padding,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(999),
-              color: background,
-              border: Border.all(color: border),
-            ),
-            child: Text(
-              'LSL',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: foreground,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.2,
-                    height: 1.0,
+            return Padding(
+              padding: padding,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(999),
+                  onTap: () => context.push('/connectors'),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(999),
+                      color: background,
+                      border: Border.all(color: border),
+                    ),
+                    child: Icon(
+                      isUnreachable
+                          ? Icons.warning_amber_rounded
+                          : Icons.share_rounded,
+                      size: 12,
+                      color: foreground,
+                    ),
                   ),
-            ),
-          ),
+                ),
+              ),
+            );
+          },
         );
       },
     );
@@ -140,11 +160,11 @@ class AppBarRecordingIndicator extends StatelessWidget {
     final isRecording = context.select<SensorRecorderProvider, bool>(
       (provider) => provider.isRecording,
     );
-    return ValueListenableBuilder<LslConnectorSettings>(
-      valueListenable: ConnectorSettings.lslSettingsListenable,
+    return ValueListenableBuilder<UdpBridgeConnectorSettings>(
+      valueListenable: ConnectorSettings.udpBridgeSettingsListenable,
       builder: (context, settings, _) {
-        final isLslActive = settings.enabled && settings.isConfigured;
-        if (!isRecording && !isLslActive) {
+        final isUdpActive = settings.enabled && settings.isConfigured;
+        if (!isRecording && !isUdpActive) {
           return const SizedBox.shrink();
         }
 
@@ -157,8 +177,8 @@ class AppBarRecordingIndicator extends StatelessWidget {
                 showIdleOutline: false,
                 padding: EdgeInsets.only(right: 2),
               ),
-            if (isLslActive)
-              const LslActivityIndicator(
+            if (isUdpActive)
+              const UdpActivityIndicator(
                 padding: EdgeInsets.only(left: 2, right: 6),
               ),
           ],

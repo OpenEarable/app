@@ -1,35 +1,39 @@
+// ignore_for_file: cancel_subscriptions
+
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class LslConnectorSettings {
+class UdpBridgeConnectorSettings {
   final bool enabled;
   final String host;
   final int port;
   final String streamPrefix;
 
-  const LslConnectorSettings({
+  const UdpBridgeConnectorSettings({
     required this.enabled,
     required this.host,
     required this.port,
     required this.streamPrefix,
   });
 
-  const LslConnectorSettings.defaults()
+  const UdpBridgeConnectorSettings.defaults()
       : enabled = false,
         host = '',
-        port = defaultLslBridgePort,
-        streamPrefix = defaultLslStreamPrefix;
+        port = defaultUdpBridgePort,
+        streamPrefix = defaultUdpBridgeStreamPrefix;
 
   bool get isConfigured => host.trim().isNotEmpty;
 
-  LslConnectorSettings copyWith({
+  UdpBridgeConnectorSettings copyWith({
     bool? enabled,
     String? host,
     int? port,
     String? streamPrefix,
   }) {
-    return LslConnectorSettings(
+    return UdpBridgeConnectorSettings(
       enabled: enabled ?? this.enabled,
       host: host ?? this.host,
       port: port ?? this.port,
@@ -39,105 +43,130 @@ class LslConnectorSettings {
 }
 
 class ConnectorSettings {
-  static const String _lslEnabledKey = 'connector_lsl_enabled';
-  static const String _lslHostKey = 'connector_lsl_host';
-  static const String _lslPortKey = 'connector_lsl_port';
-  static const String _lslStreamPrefixKey = 'connector_lsl_stream_prefix';
+  // Keep persisted keys stable to preserve existing user settings.
+  static const String _udpBridgeEnabledKey = 'connector_lsl_enabled';
+  static const String _udpBridgeHostKey = 'connector_lsl_host';
+  static const String _udpBridgePortKey = 'connector_lsl_port';
+  static const String _udpBridgeStreamPrefixKey = 'connector_lsl_stream_prefix';
 
-  static final LslForwarder _lslForwarder = LslForwarder.instance;
-  static final ValueNotifier<LslConnectorSettings> _lslSettingsNotifier =
-      ValueNotifier<LslConnectorSettings>(
-    const LslConnectorSettings.defaults(),
+  static final UdpBridgeForwarder _udpBridgeForwarder =
+      UdpBridgeForwarder.instance;
+  static final ValueNotifier<UdpBridgeConnectorSettings>
+      _udpBridgeSettingsNotifier = ValueNotifier<UdpBridgeConnectorSettings>(
+    const UdpBridgeConnectorSettings.defaults(),
   );
+  static final ValueNotifier<SensorForwarderConnectionState>
+      _udpBridgeConnectionStateNotifier =
+      ValueNotifier<SensorForwarderConnectionState>(
+    SensorForwarderConnectionState.active,
+  );
+  static StreamSubscription<SensorForwarderConnectionState>?
+      _udpBridgeConnectionStateSubscription;
 
-  static ValueListenable<LslConnectorSettings> get lslSettingsListenable =>
-      _lslSettingsNotifier;
+  static ValueListenable<UdpBridgeConnectorSettings>
+      get udpBridgeSettingsListenable => _udpBridgeSettingsNotifier;
+  static ValueListenable<SensorForwarderConnectionState>
+      get udpBridgeConnectionStateListenable =>
+          _udpBridgeConnectionStateNotifier;
 
-  static bool get isLslActive {
-    final settings = _lslSettingsNotifier.value;
+  static bool get isUdpBridgeActive {
+    final settings = _udpBridgeSettingsNotifier.value;
     return settings.enabled && settings.isConfigured;
   }
 
-  static LslConnectorSettings get currentLslSettings =>
-      _lslSettingsNotifier.value;
+  static UdpBridgeConnectorSettings get currentUdpBridgeSettings =>
+      _udpBridgeSettingsNotifier.value;
 
   static Future<void> initialize() async {
-    final settings = await loadLslSettings();
-    _setLslSettings(settings);
-    _ensureLslForwarderRegistered();
-    applyLslSettings(settings);
+    _ensureUdpBridgeConnectionStateSubscription();
+    final settings = await loadUdpBridgeSettings();
+    _setUdpBridgeSettings(settings);
+    _ensureUdpBridgeForwarderRegistered();
+    applyUdpBridgeSettings(settings);
+    _setUdpBridgeConnectionState(_udpBridgeForwarder.connectionState);
   }
 
-  static Future<LslConnectorSettings> loadLslSettings() async {
+  static void dispose() {
+    final subscription = _udpBridgeConnectionStateSubscription;
+    _udpBridgeConnectionStateSubscription = null;
+    if (subscription != null) {
+      unawaited(subscription.cancel());
+    }
+  }
+
+  static Future<UdpBridgeConnectorSettings> loadUdpBridgeSettings() async {
     final prefs = await SharedPreferences.getInstance();
 
-    final rawSettings = LslConnectorSettings(
-      enabled: prefs.getBool(_lslEnabledKey) ?? false,
-      host: prefs.getString(_lslHostKey) ?? '',
-      port: prefs.getInt(_lslPortKey) ?? defaultLslBridgePort,
-      streamPrefix:
-          prefs.getString(_lslStreamPrefixKey) ?? defaultLslStreamPrefix,
+    final rawSettings = UdpBridgeConnectorSettings(
+      enabled: prefs.getBool(_udpBridgeEnabledKey) ?? false,
+      host: prefs.getString(_udpBridgeHostKey) ?? '',
+      port: prefs.getInt(_udpBridgePortKey) ?? defaultUdpBridgePort,
+      streamPrefix: prefs.getString(_udpBridgeStreamPrefixKey) ??
+          defaultUdpBridgeStreamPrefix,
     );
 
-    final normalized = _normalizeLslSettings(rawSettings);
-    _setLslSettings(normalized);
+    final normalized = _normalizeUdpBridgeSettings(rawSettings);
+    _setUdpBridgeSettings(normalized);
     return normalized;
   }
 
-  static Future<LslConnectorSettings> saveLslSettings(
-    LslConnectorSettings settings,
+  static Future<UdpBridgeConnectorSettings> saveUdpBridgeSettings(
+    UdpBridgeConnectorSettings settings,
   ) async {
-    final normalized = _normalizeLslSettings(settings);
+    final normalized = _normalizeUdpBridgeSettings(settings);
     final prefs = await SharedPreferences.getInstance();
 
-    await prefs.setBool(_lslEnabledKey, normalized.enabled);
-    await prefs.setString(_lslHostKey, normalized.host);
-    await prefs.setInt(_lslPortKey, normalized.port);
-    await prefs.setString(_lslStreamPrefixKey, normalized.streamPrefix);
+    await prefs.setBool(_udpBridgeEnabledKey, normalized.enabled);
+    await prefs.setString(_udpBridgeHostKey, normalized.host);
+    await prefs.setInt(_udpBridgePortKey, normalized.port);
+    await prefs.setString(_udpBridgeStreamPrefixKey, normalized.streamPrefix);
 
-    _setLslSettings(normalized);
-    _ensureLslForwarderRegistered();
-    applyLslSettings(normalized);
+    _setUdpBridgeSettings(normalized);
+    _ensureUdpBridgeForwarderRegistered();
+    applyUdpBridgeSettings(normalized);
 
     return normalized;
   }
 
-  static void applyLslSettings(LslConnectorSettings settings) {
-    final normalized = _normalizeLslSettings(settings);
-    _setLslSettings(normalized);
+  static void applyUdpBridgeSettings(UdpBridgeConnectorSettings settings) {
+    final normalized = _normalizeUdpBridgeSettings(settings);
+    _setUdpBridgeSettings(normalized);
+    _ensureUdpBridgeConnectionStateSubscription();
 
     if (!normalized.isConfigured || !normalized.enabled) {
-      _lslForwarder.reset();
+      _udpBridgeForwarder.reset();
+      _setUdpBridgeConnectionState(_udpBridgeForwarder.connectionState);
       return;
     }
 
-    _lslForwarder.configure(
+    _udpBridgeForwarder.configure(
       host: normalized.host,
       port: normalized.port,
       enabled: normalized.enabled,
       streamPrefix: normalized.streamPrefix,
     );
+    _setUdpBridgeConnectionState(_udpBridgeForwarder.connectionState);
   }
 
-  static void _ensureLslForwarderRegistered() {
+  static void _ensureUdpBridgeForwarderRegistered() {
     final manager = WearableManager();
     final alreadyRegistered = manager.sensorForwarders.any(
-      (forwarder) => identical(forwarder, _lslForwarder),
+      (forwarder) => identical(forwarder, _udpBridgeForwarder),
     );
     if (!alreadyRegistered) {
-      manager.addSensorForwarder(_lslForwarder);
+      manager.addSensorForwarder(_udpBridgeForwarder);
     }
   }
 
-  static LslConnectorSettings _normalizeLslSettings(
-    LslConnectorSettings settings,
+  static UdpBridgeConnectorSettings _normalizeUdpBridgeSettings(
+    UdpBridgeConnectorSettings settings,
   ) {
     final normalizedHost = settings.host.trim();
     final normalizedPort = (settings.port > 0 && settings.port <= 65535)
         ? settings.port
-        : defaultLslBridgePort;
+        : defaultUdpBridgePort;
     final normalizedPrefix = settings.streamPrefix.trim().isEmpty
-        ? defaultLslStreamPrefix
+        ? defaultUdpBridgeStreamPrefix
         : settings.streamPrefix.trim();
     final normalizedEnabled = normalizedHost.isNotEmpty && settings.enabled;
 
@@ -149,7 +178,25 @@ class ConnectorSettings {
     );
   }
 
-  static void _setLslSettings(LslConnectorSettings settings) {
-    _lslSettingsNotifier.value = settings;
+  static void _setUdpBridgeSettings(UdpBridgeConnectorSettings settings) {
+    _udpBridgeSettingsNotifier.value = settings;
+  }
+
+  static void _ensureUdpBridgeConnectionStateSubscription() {
+    if (_udpBridgeConnectionStateSubscription != null) {
+      return;
+    }
+    _udpBridgeConnectionStateSubscription = _udpBridgeForwarder
+        .connectionStateStream
+        .listen(_setUdpBridgeConnectionState);
+  }
+
+  static void _setUdpBridgeConnectionState(
+    SensorForwarderConnectionState state,
+  ) {
+    if (_udpBridgeConnectionStateNotifier.value == state) {
+      return;
+    }
+    _udpBridgeConnectionStateNotifier.value = state;
   }
 }

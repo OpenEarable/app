@@ -243,7 +243,10 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
         ),
       if (widget.device.hasCapability<BatteryLevelStatus>() ||
           widget.device.hasCapability<BatteryLevelStatusService>())
-        BatteryStateView(device: widget.device),
+        BatteryStateView(
+          device: widget.device,
+          liveUpdates: true,
+        ),
       if (_firmwareVersionFuture != null)
         _FirmwareMetadataBubble(
           versionFuture: _firmwareVersionFuture!,

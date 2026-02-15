@@ -401,6 +401,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     _unsupportedFirmwareSub.cancel();
     _wearableEventSub.cancel();
     _wearableProvEventSub.cancel();
+    ConnectorSettings.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _autoConnector.stop();
     super.dispose();

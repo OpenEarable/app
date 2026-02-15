@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -247,13 +248,21 @@ class SensorConfigurationView extends StatelessWidget {
         int appliedCount = 0;
         int mirroredCount = 0;
         int mirrorSkippedCount = 0;
+        int pendingCount = 0;
 
         for (final target in targets) {
+          final pendingEntries =
+              target.provider.getSelectedConfigurations(pendingOnly: true);
+          if (pendingEntries.isEmpty) {
+            continue;
+          }
+
+          pendingCount += pendingEntries.length;
           logger.d(
             "Setting sensor configurations for ${target.primaryDevice.name}",
           );
 
-          for (final entry in target.provider.getSelectedConfigurations()) {
+          for (final entry in pendingEntries) {
             final SensorConfiguration config = entry.$1;
             final SensorConfigurationValue value = entry.$2;
             config.setConfiguration(value);
@@ -263,8 +272,8 @@ class SensorConfigurationView extends StatelessWidget {
             if (mirroredDevice != null) {
               final mirrored = _applyConfigurationToDevice(
                 mirroredDevice: mirroredDevice,
-                configName: config.name,
-                valueKey: value.key,
+                sourceConfig: config,
+                sourceValue: value,
               );
               if (mirrored) {
                 mirroredCount += 1;
@@ -273,6 +282,20 @@ class SensorConfigurationView extends StatelessWidget {
               }
             }
           }
+
+          target.provider.clearPendingChanges(
+            onlyFor: pendingEntries.map((entry) => entry.$1),
+          );
+        }
+
+        if (pendingCount == 0) {
+          AppToast.show(
+            context,
+            message: 'No pending sensor settings to apply.',
+            type: AppToastType.info,
+            icon: Icons.info_outline_rounded,
+          );
+          return;
         }
 
         final message = StringBuffer(
@@ -385,8 +408,8 @@ class SensorConfigurationView extends StatelessWidget {
 
   bool _applyConfigurationToDevice({
     required Wearable mirroredDevice,
-    required String configName,
-    required String valueKey,
+    required SensorConfiguration sourceConfig,
+    required SensorConfigurationValue sourceValue,
   }) {
     if (!mirroredDevice.hasCapability<SensorConfigurationManager>()) {
       return false;
@@ -394,24 +417,18 @@ class SensorConfigurationView extends StatelessWidget {
 
     final manager =
         mirroredDevice.requireCapability<SensorConfigurationManager>();
-    SensorConfiguration? mirroredConfig;
-    for (final config in manager.sensorConfigurations) {
-      if (config.name == configName) {
-        mirroredConfig = config;
-        break;
-      }
-    }
+    final mirroredConfig = _findMirroredConfiguration(
+      manager: manager,
+      sourceConfig: sourceConfig,
+    );
     if (mirroredConfig == null) {
       return false;
     }
 
-    SensorConfigurationValue? mirroredValue;
-    for (final value in mirroredConfig.values) {
-      if (value.key == valueKey) {
-        mirroredValue = value;
-        break;
-      }
-    }
+    final mirroredValue = _findMirroredValue(
+      mirroredConfig: mirroredConfig,
+      sourceValue: sourceValue,
+    );
     if (mirroredValue == null) {
       return false;
     }
@@ -419,6 +436,97 @@ class SensorConfigurationView extends StatelessWidget {
     mirroredConfig.setConfiguration(mirroredValue);
     return true;
   }
+
+  SensorConfiguration? _findMirroredConfiguration({
+    required SensorConfigurationManager manager,
+    required SensorConfiguration sourceConfig,
+  }) {
+    for (final candidate in manager.sensorConfigurations) {
+      if (candidate.name == sourceConfig.name) {
+        return candidate;
+      }
+    }
+
+    final normalizedSource = _normalizeName(sourceConfig.name);
+    for (final candidate in manager.sensorConfigurations) {
+      if (_normalizeName(candidate.name) == normalizedSource) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  SensorConfigurationValue? _findMirroredValue({
+    required SensorConfiguration mirroredConfig,
+    required SensorConfigurationValue sourceValue,
+  }) {
+    for (final candidate in mirroredConfig.values) {
+      if (candidate.key == sourceValue.key) {
+        return candidate;
+      }
+    }
+
+    if (sourceValue is SensorFrequencyConfigurationValue) {
+      final sourceOptions = _optionNameSet(sourceValue);
+      final candidates = mirroredConfig.values
+          .whereType<SensorFrequencyConfigurationValue>()
+          .toList(growable: false);
+      if (candidates.isNotEmpty) {
+        final sameOptionCandidates = candidates
+            .where(
+              (candidate) =>
+                  setEquals(_optionNameSet(candidate), sourceOptions),
+            )
+            .toList(growable: false);
+        final scoped =
+            sameOptionCandidates.isNotEmpty ? sameOptionCandidates : candidates;
+        SensorFrequencyConfigurationValue? best;
+        double? bestDistance;
+        for (final candidate in scoped) {
+          final distance =
+              (candidate.frequencyHz - sourceValue.frequencyHz).abs();
+          if (best == null || distance < bestDistance!) {
+            best = candidate;
+            bestDistance = distance;
+          }
+        }
+        if (best != null) {
+          return best;
+        }
+      }
+    }
+
+    if (sourceValue is ConfigurableSensorConfigurationValue) {
+      final sourceWithoutOptions = sourceValue.withoutOptions();
+      final sourceOptions = _optionNameSet(sourceValue);
+      for (final candidate in mirroredConfig.values
+          .whereType<ConfigurableSensorConfigurationValue>()) {
+        if (!setEquals(_optionNameSet(candidate), sourceOptions)) {
+          continue;
+        }
+        if (candidate.withoutOptions().key == sourceWithoutOptions.key) {
+          return candidate;
+        }
+      }
+    }
+
+    final normalizedKey = _normalizeName(sourceValue.key);
+    for (final candidate in mirroredConfig.values) {
+      if (_normalizeName(candidate.key) == normalizedKey) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  Set<String> _optionNameSet(SensorConfigurationValue value) {
+    if (value is! ConfigurableSensorConfigurationValue) {
+      return const <String>{};
+    }
+    return value.options.map((option) => _normalizeName(option.name)).toSet();
+  }
+
+  String _normalizeName(String value) => value.trim().toLowerCase();
 
   // ignore: unused_element
   Widget _buildLargeScreenLayout(

@@ -41,13 +41,9 @@ class AppInfo {
 const Color _appAccentColor = Color(0xFF9A6F6B);
 const List<String> _postureSupportedDevices = [
   "OpenEarable",
-  "eSense",
-  "Cosinuss",
 ];
 const List<String> _heartSupportedDevices = [
   "OpenEarable",
-  "OpenRing",
-  "Cosinuss",
 ];
 const List<String> _selfTestSupportedDevices = [
   "OpenEarable",
@@ -83,15 +79,27 @@ final List<AppInfo> _apps = [
       supportedDevicePrefixes: _heartSupportedDevices,
       startApp: (wearable, _) {
         if (wearable.hasCapability<SensorManager>()) {
-          //TODO: show alert if no ppg sensor is found
-          Sensor ppgSensor =
-              wearable.requireCapability<SensorManager>().sensors.firstWhere(
-                    (s) =>
-                        s.sensorName.toLowerCase() ==
-                        "photoplethysmography".toLowerCase(),
-                  );
+          final sensors = wearable.requireCapability<SensorManager>().sensors;
+          final ppgSensor = sensors.firstWhere(
+            (s) =>
+                s.sensorName.toLowerCase() ==
+                'photoplethysmography'.toLowerCase(),
+          );
 
-          return HeartTrackerPage(ppgSensor: ppgSensor);
+          Sensor? accelerometerSensor;
+          for (final sensor in sensors) {
+            final text =
+                '${sensor.sensorName} ${sensor.chartTitle}'.toLowerCase();
+            if (text.contains('accelerometer') || text.contains('acc')) {
+              accelerometerSensor = sensor;
+              break;
+            }
+          }
+
+          return HeartTrackerPage(
+            ppgSensor: ppgSensor,
+            accelerometerSensor: accelerometerSensor,
+          );
         }
         return PlatformScaffold(
           appBar: PlatformAppBar(

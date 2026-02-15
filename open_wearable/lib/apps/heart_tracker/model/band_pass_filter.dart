@@ -8,6 +8,7 @@ class BandPassFilter {
   late final double a0, a1, a2, b1, b2;
   double x1 = 0, x2 = 0;
   double y1 = 0, y2 = 0;
+  bool _isInitialized = false;
 
   BandPassFilter({
     required this.sampleFreq,
@@ -32,6 +33,15 @@ class BandPassFilter {
   }
 
   double filter(double x) {
+    if (!_isInitialized) {
+      _isInitialized = true;
+      x1 = x;
+      x2 = x;
+      y1 = 0;
+      y2 = 0;
+      return 0;
+    }
+
     final y = a0 * x + a1 * x1 + a2 * x2 - b1 * y1 - b2 * y2;
     x2 = x1;
     x1 = x;

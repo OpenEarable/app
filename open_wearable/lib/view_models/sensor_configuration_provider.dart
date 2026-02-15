@@ -28,6 +28,7 @@ class SensorConfigurationProvider with ChangeNotifier {
       _sensorConfigurations = {};
   final Map<SensorConfiguration, Set<SensorConfigurationOption>>
       _sensorConfigurationOptions = {};
+  final Set<SensorConfiguration> _pendingConfigurations = {};
 
   StreamSubscription<Map<SensorConfiguration, SensorConfigurationValue>>?
       _sensorConfigurationSubscription;
@@ -53,9 +54,13 @@ class SensorConfigurationProvider with ChangeNotifier {
 
   void addSensorConfiguration(
     SensorConfiguration sensorConfiguration,
-    SensorConfigurationValue sensorConfigurationValue,
-  ) {
+    SensorConfigurationValue sensorConfigurationValue, {
+    bool markPending = true,
+  }) {
     _sensorConfigurations[sensorConfiguration] = sensorConfigurationValue;
+    if (markPending) {
+      _pendingConfigurations.add(sensorConfiguration);
+    }
     notifyListeners();
   }
 
@@ -66,10 +71,34 @@ class SensorConfigurationProvider with ChangeNotifier {
   }
 
   List<(SensorConfiguration, SensorConfigurationValue)>
-      getSelectedConfigurations() {
+      getSelectedConfigurations({
+    bool pendingOnly = false,
+  }) {
     return _sensorConfigurations.entries
+        .where(
+          (entry) => !pendingOnly || _pendingConfigurations.contains(entry.key),
+        )
         .map((entry) => (entry.key, entry.value))
         .toList();
+  }
+
+  bool get hasPendingChanges => _pendingConfigurations.isNotEmpty;
+
+  void clearPendingChanges({
+    Iterable<SensorConfiguration>? onlyFor,
+  }) {
+    bool changed = false;
+    if (onlyFor == null) {
+      changed = _pendingConfigurations.isNotEmpty;
+      _pendingConfigurations.clear();
+    } else {
+      for (final config in onlyFor) {
+        changed = _pendingConfigurations.remove(config) || changed;
+      }
+    }
+    if (changed) {
+      notifyListeners();
+    }
   }
 
   Set<SensorConfigurationOption> getSelectedConfigurationOptions(
@@ -84,56 +113,79 @@ class SensorConfigurationProvider with ChangeNotifier {
   /// to the first possible value that matches the selected options.
   void addSensorConfigurationOption(
     SensorConfiguration sensorConfiguration,
-    SensorConfigurationOption option,
-  ) {
+    SensorConfigurationOption option, {
+    bool markPending = true,
+  }) {
     if (_sensorConfigurationOptions[sensorConfiguration] == null) {
       _sensorConfigurationOptions[sensorConfiguration] = {};
     }
     _sensorConfigurationOptions[sensorConfiguration]?.add(option);
-    _updateSelectedValue(sensorConfiguration);
+    _updateSelectedValue(
+      sensorConfiguration,
+      markPending: markPending,
+    );
+    if (markPending) {
+      _pendingConfigurations.add(sensorConfiguration);
+    }
     notifyListeners();
   }
 
   void _updateSelectedValue(
-    SensorConfiguration<SensorConfigurationValue> sensorConfiguration,
-  ) {
+    SensorConfiguration<SensorConfigurationValue> sensorConfiguration, {
+    bool markPending = true,
+  }) {
     List<SensorConfigurationValue> possibleValues =
         getSensorConfigurationValues(sensorConfiguration, distinct: true);
-    SensorConfigurationValue? selectedValue =
-        _sensorConfigurations[sensorConfiguration];
+    if (possibleValues.isEmpty) {
+      return;
+    }
+
+    final selectedValue = _sensorConfigurations[sensorConfiguration];
     if (selectedValue == null) {
       _sensorConfigurations[sensorConfiguration] = possibleValues.first;
+      if (markPending) {
+        _pendingConfigurations.add(sensorConfiguration);
+      }
+      return;
     }
-    if (!possibleValues.contains(selectedValue)) {
-      if (selectedValue is ConfigurableSensorConfigurationValue) {
-        final SensorConfigurationValue? matchingValue =
-            getSensorConfigurationValues(sensorConfiguration)
-                .where((value) {
-                  if (value is ConfigurableSensorConfigurationValue) {
-                    return value.withoutOptions() ==
-                        selectedValue.withoutOptions();
-                  }
-                  return value == selectedValue;
-                })
-                .cast<SensorConfigurationValue?>()
-                .toList()
-                .firstOrNull;
+    if (possibleValues.contains(selectedValue)) {
+      return;
+    }
 
-        if (matchingValue == null) {
-          logger.w(
-            "No matching value found for ${sensorConfiguration.name} with options ${_sensorConfigurationOptions[sensorConfiguration]}",
-          );
-        }
+    if (selectedValue is ConfigurableSensorConfigurationValue) {
+      final SensorConfigurationValue? matchingValue =
+          getSensorConfigurationValues(sensorConfiguration)
+              .where((value) {
+                if (value is ConfigurableSensorConfigurationValue) {
+                  return value.withoutOptions() ==
+                      selectedValue.withoutOptions();
+                }
+                return value == selectedValue;
+              })
+              .cast<SensorConfigurationValue?>()
+              .toList()
+              .firstOrNull;
 
-        addSensorConfiguration(
-          sensorConfiguration,
-          matchingValue ?? possibleValues.last,
-        );
-      } else {
-        logger.e(
-          "Selected value is not a ConfigurableSensorConfigurationValue and we do not know how to handle it",
+      if (matchingValue == null) {
+        logger.w(
+          "No matching value found for ${sensorConfiguration.name} with options ${_sensorConfigurationOptions[sensorConfiguration]}",
         );
       }
+
+      _sensorConfigurations[sensorConfiguration] =
+          matchingValue ?? possibleValues.last;
+      if (markPending) {
+        _pendingConfigurations.add(sensorConfiguration);
+      }
+      return;
+    }
+
+    logger.e(
+      "Selected value is not a ConfigurableSensorConfigurationValue and we do not know how to handle it",
+    );
+    _sensorConfigurations[sensorConfiguration] = possibleValues.first;
+    if (markPending) {
+      _pendingConfigurations.add(sensorConfiguration);
     }
   }
 
@@ -158,15 +210,23 @@ class SensorConfigurationProvider with ChangeNotifier {
 
   void removeSensorConfiguration(SensorConfiguration sensorConfiguration) {
     _sensorConfigurations.remove(sensorConfiguration);
+    _pendingConfigurations.remove(sensorConfiguration);
     notifyListeners();
   }
 
   void removeSensorConfigurationOption(
     SensorConfiguration sensorConfiguration,
-    SensorConfigurationOption option,
-  ) {
+    SensorConfigurationOption option, {
+    bool markPending = true,
+  }) {
     _sensorConfigurationOptions[sensorConfiguration]?.remove(option);
-    _updateSelectedValue(sensorConfiguration);
+    _updateSelectedValue(
+      sensorConfiguration,
+      markPending: markPending,
+    );
+    if (markPending) {
+      _pendingConfigurations.add(sensorConfiguration);
+    }
     notifyListeners();
   }
 
@@ -203,7 +263,7 @@ class SensorConfigurationProvider with ChangeNotifier {
     for (final sensorConfiguration in _sensorConfigurations.keys) {
       final SensorConfigurationValue? value = sensorConfiguration.offValue;
       if (value != null) {
-        addSensorConfiguration(sensorConfiguration, value);
+        addSensorConfiguration(sensorConfiguration, value, markPending: true);
         _updateSelectedOptions(sensorConfiguration);
         sensorConfiguration.setConfiguration(value);
       }
@@ -255,6 +315,7 @@ class SensorConfigurationProvider with ChangeNotifier {
     for (final config in restoredConfigurations.keys) {
       _sensorConfigurations[config] = restoredConfigurations[config]!;
       _updateSelectedOptions(config);
+      _pendingConfigurations.add(config);
     }
 
     if (restoredConfigurations.isNotEmpty) {

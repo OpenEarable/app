@@ -167,7 +167,6 @@ class _SelfTestPageState extends State<SelfTestPage> {
             onStartPressed: connected ? _startCurrentTest : null,
             onNextPressed: _canGoNext() ? _goToNextTest : null,
             onRetryPressed: connected ? _retryCurrentTest : null,
-            onResetLedPressed: connected ? _handleResetLedPressed : null,
             onRunAllAgainPressed: completed == total ? _resetAllTests : null,
           ),
           const SizedBox(height: 12),
@@ -361,6 +360,7 @@ class _SelfTestPageState extends State<SelfTestPage> {
         widget.sensorConfigProvider.addSensorConfigurationOption(
           config,
           const StreamSensorConfigOption(),
+          markPending: false,
         );
       }
 
@@ -374,7 +374,11 @@ class _SelfTestPageState extends State<SelfTestPage> {
         availableValues,
         targetFrequencyHz: targetFrequencyHz,
       );
-      widget.sensorConfigProvider.addSensorConfiguration(config, selected);
+      widget.sensorConfigProvider.addSensorConfiguration(
+        config,
+        selected,
+        markPending: false,
+      );
       config.setConfiguration(selected);
     }
   }
@@ -656,7 +660,11 @@ class _SelfTestPageState extends State<SelfTestPage> {
       try {
         final offValue = config.offValue;
         if (offValue != null) {
-          widget.sensorConfigProvider.addSensorConfiguration(config, offValue);
+          widget.sensorConfigProvider.addSensorConfiguration(
+            config,
+            offValue,
+            markPending: false,
+          );
           config.setConfiguration(offValue);
           continue;
         }
@@ -667,6 +675,7 @@ class _SelfTestPageState extends State<SelfTestPage> {
           widget.sensorConfigProvider.removeSensorConfigurationOption(
             config,
             const StreamSensorConfigOption(),
+            markPending: false,
           );
           final selected =
               widget.sensorConfigProvider.getSelectedConfigurationValue(config);
@@ -812,10 +821,6 @@ class _SelfTestPageState extends State<SelfTestPage> {
     });
   }
 
-  void _handleResetLedPressed() {
-    unawaited(_resetLedColor());
-  }
-
   void _restoreSavedConfigurations() {
     for (final entry in _savedConfigurations.entries) {
       final original = entry.value;
@@ -823,7 +828,11 @@ class _SelfTestPageState extends State<SelfTestPage> {
         continue;
       }
       try {
-        widget.sensorConfigProvider.addSensorConfiguration(entry.key, original);
+        widget.sensorConfigProvider.addSensorConfiguration(
+          entry.key,
+          original,
+          markPending: false,
+        );
         entry.key.setConfiguration(original);
       } catch (_) {
         // Ignore restoration failures during widget teardown.
@@ -858,7 +867,11 @@ class _SelfTestPageState extends State<SelfTestPage> {
         continue;
       }
       try {
-        widget.sensorConfigProvider.addSensorConfiguration(config, offValue);
+        widget.sensorConfigProvider.addSensorConfiguration(
+          config,
+          offValue,
+          markPending: false,
+        );
         config.setConfiguration(offValue);
       } catch (_) {
         // Keep going with remaining configs.
@@ -1651,7 +1664,6 @@ class _OverviewCard extends StatelessWidget {
   final VoidCallback? onStartPressed;
   final VoidCallback? onNextPressed;
   final VoidCallback? onRetryPressed;
-  final VoidCallback? onResetLedPressed;
   final VoidCallback? onRunAllAgainPressed;
 
   const _OverviewCard({
@@ -1670,7 +1682,6 @@ class _OverviewCard extends StatelessWidget {
     required this.onStartPressed,
     required this.onNextPressed,
     required this.onRetryPressed,
-    required this.onResetLedPressed,
     required this.onRunAllAgainPressed,
   });
 
@@ -1805,23 +1816,12 @@ class _OverviewCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             if (onRunAllAgainPressed != null) ...[
-              Row(
-                children: [
-                  Expanded(
-                    child: PlatformElevatedButton(
-                      onPressed: initializing ? null : onResetLedPressed,
-                      color: const Color(0xFF8E8E93),
-                      child: PlatformText('Reset'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: PlatformElevatedButton(
-                      onPressed: initializing ? null : onRunAllAgainPressed,
-                      child: PlatformText('Run All Tests Again'),
-                    ),
-                  ),
-                ],
+              SizedBox(
+                width: double.infinity,
+                child: PlatformElevatedButton(
+                  onPressed: initializing ? null : onRunAllAgainPressed,
+                  child: PlatformText('Run All Tests Again'),
+                ),
               ),
             ] else if (currentResult != null) ...[
               Row(

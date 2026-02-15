@@ -282,15 +282,26 @@ class _OverviewPage extends StatelessWidget {
                 onWearableTap: (wearable) =>
                     _openDeviceFromOverview(context, wearable),
               ),
-              ValueListenableBuilder<LslConnectorSettings>(
-                valueListenable: ConnectorSettings.lslSettingsListenable,
-                builder: (context, lslSettings, _) {
+              ValueListenableBuilder<UdpBridgeConnectorSettings>(
+                valueListenable: ConnectorSettings.udpBridgeSettingsListenable,
+                builder: (context, udpSettings, _) {
                   final isActive =
-                      lslSettings.enabled && lslSettings.isConfigured;
+                      udpSettings.enabled && udpSettings.isConfigured;
                   if (!isActive) {
                     return const SizedBox.shrink();
                   }
-                  return _OverviewLslSummaryCard(settings: lslSettings);
+                  return ValueListenableBuilder<SensorForwarderConnectionState>(
+                    valueListenable:
+                        ConnectorSettings.udpBridgeConnectionStateListenable,
+                    builder: (context, connectionState, __) {
+                      final hasConnectionProblem = connectionState ==
+                          SensorForwarderConnectionState.unreachable;
+                      return _OverviewUdpSummaryCard(
+                        settings: udpSettings,
+                        hasConnectionProblem: hasConnectionProblem,
+                      );
+                    },
+                  );
                 },
               ),
               _OverviewWorkflowIntroCard(
@@ -411,10 +422,9 @@ class _OverviewWorkflowIntroCard extends StatelessWidget {
               onTap: () => onSensorTabRequested(2),
             ),
             _OverviewWorkflowStep(
-              icon: Icons.wifi_tethering,
-              title: 'Configure LSL streaming',
-              detail:
-                  'Stream to other devices like your computer via Lab Streaming Layer.',
+              icon: Icons.share_rounded,
+              title: 'Configure Network Relay',
+              detail: 'Forward sensor data from this app to your computer.',
               sectionLabel: 'Settings › Connectors',
               isLast: true,
               onTap: onConnectorsRequested,
@@ -426,17 +436,29 @@ class _OverviewWorkflowIntroCard extends StatelessWidget {
   }
 }
 
-class _OverviewLslSummaryCard extends StatelessWidget {
-  final LslConnectorSettings settings;
+class _OverviewUdpSummaryCard extends StatelessWidget {
+  final UdpBridgeConnectorSettings settings;
+  final bool hasConnectionProblem;
 
-  const _OverviewLslSummaryCard({required this.settings});
+  const _OverviewUdpSummaryCard({
+    required this.settings,
+    required this.hasConnectionProblem,
+  });
 
   @override
   Widget build(BuildContext context) {
-    const lslGreen = Color(0xFF2E7D32);
+    const udpGreen = Color(0xFF2E7D32);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final endpoint = '${settings.host}:${settings.port}';
+    final accentColor = hasConnectionProblem ? colorScheme.error : udpGreen;
+    final detailTextColor =
+        hasConnectionProblem ? colorScheme.error : colorScheme.onSurfaceVariant;
+    final infoPillBackground = colorScheme.surface;
+    final infoPillBorder = colorScheme.outlineVariant.withValues(alpha: 0.6);
+    final infoPillForeground = colorScheme.onSurfaceVariant;
+    final statusLine = hasConnectionProblem
+        ? 'Data forwarding is currently interrupted.'
+        : 'Data is forwarded via the network in real time.';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -449,14 +471,16 @@ class _OverviewLslSummaryCard extends StatelessWidget {
               width: 30,
               height: 30,
               decoration: BoxDecoration(
-                color: lslGreen.withValues(alpha: 0.18),
+                color: accentColor.withValues(alpha: 0.18),
                 borderRadius: BorderRadius.circular(8),
               ),
               alignment: Alignment.center,
               child: Icon(
-                Icons.wifi_tethering,
+                hasConnectionProblem
+                    ? Icons.warning_amber_rounded
+                    : Icons.share_rounded,
                 size: 18,
-                color: lslGreen,
+                color: accentColor,
               ),
             ),
             const SizedBox(width: 10),
@@ -465,30 +489,90 @@ class _OverviewLslSummaryCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'LSL forwarding is active',
+                    hasConnectionProblem
+                        ? 'Network Relay unreachable'
+                        : 'Network Relay is active',
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
+                      color: hasConnectionProblem ? colorScheme.error : null,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Endpoint: $endpoint',
+                    statusLine,
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
+                      color: detailTextColor,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Stream prefix: ${settings.streamPrefix}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _buildRelayInfoPill(
+                        context,
+                        icon: Icons.dns_rounded,
+                        label: 'Host ${settings.host}',
+                        backgroundColor: infoPillBackground,
+                        borderColor: infoPillBorder,
+                        foregroundColor: infoPillForeground,
+                      ),
+                      _buildRelayInfoPill(
+                        context,
+                        icon: Icons.settings_ethernet_rounded,
+                        label: 'Port ${settings.port}',
+                        backgroundColor: infoPillBackground,
+                        borderColor: infoPillBorder,
+                        foregroundColor: infoPillForeground,
+                      ),
+                    ],
                   ),
+                  if (hasConnectionProblem) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      'Check host and port in Connectors.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.error,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildRelayInfoPill(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required Color backgroundColor,
+    required Color borderColor,
+    required Color foregroundColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: foregroundColor),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: foregroundColor,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ],
       ),
     );
   }
@@ -946,7 +1030,8 @@ class _SettingsPage extends StatelessWidget {
           _QuickActionTile(
             icon: Icons.hub,
             title: 'Connectors',
-            subtitle: 'Forward data to other platforms (e.g., LSL)',
+            subtitle:
+                'Forward sensor data from this app to other platforms, such as your computer.',
             onTap: onConnectorsRequested,
           ),
           _QuickActionTile(

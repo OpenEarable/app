@@ -180,18 +180,7 @@ class _FirmwareUpdateWidgetState extends State<FirmwareUpdateWidget> {
   }
 
   void _showUpdateInProgressToast() {
-    final wearable = provider.selectedWearable;
-    final wearableName = _cachedUpdateWearableName ??
-        (wearable?.name.trim().isNotEmpty == true
-            ? wearable!.name.trim()
-            : 'OpenEarable');
-    final sideLabel =
-        _cachedUpdateSideLabel ?? _resolveSideLabelFromName(wearable?.name);
-
-    _showUpdateInProgressToastWithSide(
-      wearableName: wearableName,
-      sideLabel: sideLabel,
-    );
+    _showUpdateInProgressToastMessage();
   }
 
   Future<void> _captureUpdateTargetMetadataBeforeStart() async {
@@ -246,10 +235,7 @@ class _FirmwareUpdateWidgetState extends State<FirmwareUpdateWidget> {
     }
   }
 
-  void _showUpdateInProgressToastWithSide({
-    required String wearableName,
-    required String? sideLabel,
-  }) {
+  void _showUpdateInProgressToastMessage() {
     final foreground = const Color(0xFF8A4B00);
 
     AppToast.showContent(
@@ -263,18 +249,10 @@ class _FirmwareUpdateWidgetState extends State<FirmwareUpdateWidget> {
                 fontWeight: FontWeight.w700,
               ),
           children: [
-            const TextSpan(text: 'Firmware update in progress on '),
-            TextSpan(text: wearableName),
-            if (sideLabel != null) const TextSpan(text: ' '),
-            if (sideLabel != null)
-              WidgetSpan(
-                alignment: PlaceholderAlignment.middle,
-                child: _UpdateToastSideBadge(
-                  sideLabel: sideLabel,
-                  foreground: foreground,
-                ),
-              ),
-            const TextSpan(text: '. Stay on this page until it completes.'),
+            const TextSpan(
+              text:
+                  'Firmware update in progress. Stay on this page until it completes.',
+            ),
           ],
         ),
       ),
@@ -306,38 +284,6 @@ class _FirmwareUpdateWidgetState extends State<FirmwareUpdateWidget> {
     }
 
     return null;
-  }
-}
-
-class _UpdateToastSideBadge extends StatelessWidget {
-  final String sideLabel;
-  final Color foreground;
-
-  const _UpdateToastSideBadge({
-    required this.sideLabel,
-    required this.foreground,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final background = foreground.withValues(alpha: 0.14);
-    final border = foreground.withValues(alpha: 0.3);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: border),
-      ),
-      child: Text(
-        sideLabel,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: foreground,
-              fontWeight: FontWeight.w800,
-            ),
-      ),
-    );
   }
 }
 

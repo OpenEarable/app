@@ -20,13 +20,17 @@ class SensorConfigurationStorage {
   /// Each file is expected to be a JSON file with a specific configuration.
   static Future<List<File>> _getAllConfigFiles() async {
     final configDir = await _getConfigDirectory();
-    return configDir
-        .list()
-        .where(
-          (file) => file is File && file.path.endsWith('.json'),
-        )
-        .cast<File>()
-        .toList();
+    final files = <File>[];
+    try {
+      await for (final entity in configDir.list(followLinks: false)) {
+        if (entity is File && entity.path.toLowerCase().endsWith('.json')) {
+          files.add(entity);
+        }
+      }
+    } on FileSystemException {
+      return const [];
+    }
+    return files;
   }
 
   /// Returns the file for a specific configuration key.
@@ -49,7 +53,7 @@ class SensorConfigurationStorage {
 
   static Future<List<String>> listConfigurationKeys() async {
     final files = await _getAllConfigFiles();
-    return files.map(_getKeyFromFile).toList();
+    return files.map(_getKeyFromFile).where((key) => key.isNotEmpty).toList();
   }
 
   static String _getKeyFromFile(File file) =>

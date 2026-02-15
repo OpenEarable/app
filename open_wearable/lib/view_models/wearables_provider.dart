@@ -171,8 +171,14 @@ class WearablesProvider with ChangeNotifier {
       return wearable.name;
     }
 
+    if (wearable.hasCapability<SystemDevice>() &&
+        !wearable.requireCapability<SystemDevice>().isConnectedViaSystem) {
+      return wearable.name;
+    }
+
     try {
-      final position = await wearable.requireCapability<StereoDevice>().position;
+      final position =
+          await wearable.requireCapability<StereoDevice>().position;
       return switch (position) {
         DevicePosition.left => '${wearable.name} (Left)',
         DevicePosition.right => '${wearable.name} (Right)',
@@ -241,7 +247,11 @@ class WearablesProvider with ChangeNotifier {
               .sensorConfigurations) {
         if (notifier.getSelectedConfigurationValue(config) == null &&
             config.values.isNotEmpty) {
-          notifier.addSensorConfiguration(config, config.values.first);
+          notifier.addSensorConfiguration(
+            config,
+            config.values.first,
+            markPending: false,
+          );
         }
       }
     }

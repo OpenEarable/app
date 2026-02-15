@@ -106,11 +106,15 @@ class _StereoMetadata {
   final Wearable wearable;
   final DevicePosition? position;
   final String? pairedDeviceId;
+  final String? firmwareVersion;
+  final bool hasFirmwareCapability;
 
   const _StereoMetadata({
     required this.wearable,
     required this.position,
     required this.pairedDeviceId,
+    required this.firmwareVersion,
+    required this.hasFirmwareCapability,
   });
 }
 
@@ -218,8 +222,12 @@ Future<Map<String, _StereoMetadata>> _buildStereoMetadata(
       final stereo = wearable.requireCapability<StereoDevice>();
       final positionFuture = stereo.position;
       final pairedFuture = stereo.pairedDevice;
+      final firmwareFuture = _readFirmwareVersion(wearable);
+      final hasFirmwareCapability =
+          wearable.hasCapability<DeviceFirmwareVersion>();
       final position = await positionFuture;
       final paired = await pairedFuture;
+      final firmwareVersion = await firmwareFuture;
       String? pairedDeviceId;
       if (paired != null) {
         for (final candidate in wearables) {
@@ -242,6 +250,8 @@ Future<Map<String, _StereoMetadata>> _buildStereoMetadata(
           wearable: wearable,
           position: position,
           pairedDeviceId: pairedDeviceId,
+          firmwareVersion: firmwareVersion,
+          hasFirmwareCapability: hasFirmwareCapability,
         ),
       );
     }),
@@ -268,13 +278,17 @@ _StereoMetadata? _findPartner({
     final pairedWearable = wearablesById[pairedId];
     final pairedMetadata =
         pairedWearable == null ? null : metadataById[pairedId];
-    if (pairedMetadata != null &&
-        _canCombine(
-          a: current,
-          b: pairedMetadata,
-          requireMutualPairing: false,
-        )) {
-      return pairedMetadata;
+    if (pairedMetadata != null) {
+      if (_canCombine(
+        a: current,
+        b: pairedMetadata,
+        requireMutualPairing: false,
+      )) {
+        return pairedMetadata;
+      }
+      // A known stereo partner exists but is not combinable (e.g. firmware
+      // mismatch). Do not fall back to other same-name devices.
+      return null;
     }
   }
 
@@ -318,6 +332,10 @@ bool _canCombine({
     return false;
   }
 
+  if (!_firmwareVersionsAreCompatible(a, b)) {
+    return false;
+  }
+
   if (!requireMutualPairing) {
     return true;
   }
@@ -355,4 +373,48 @@ String _normalizedStereoName(String name) {
   );
   value = value.trim();
   return value.isEmpty ? name.trim() : value;
+}
+
+bool _firmwareVersionsAreCompatible(_StereoMetadata a, _StereoMetadata b) {
+  // If both devices expose firmware capabilities, we only allow combining when
+  // both versions are readable and exactly match.
+  if (a.hasFirmwareCapability && b.hasFirmwareCapability) {
+    final normalizedA = _normalizeFirmwareVersion(a.firmwareVersion);
+    final normalizedB = _normalizeFirmwareVersion(b.firmwareVersion);
+    if (normalizedA == null || normalizedB == null) {
+      return false;
+    }
+    return normalizedA == normalizedB;
+  }
+  return true;
+}
+
+String? _normalizeFirmwareVersion(String? version) {
+  if (version == null) {
+    return null;
+  }
+
+  var normalized = version.trim().toLowerCase();
+  if (normalized.isEmpty) {
+    return null;
+  }
+
+  normalized = normalized.replaceFirst(RegExp(r'^v(?=\d)'), '');
+  return normalized.isEmpty ? null : normalized;
+}
+
+final Expando<Future<String?>> _firmwareVersionFutureCache =
+    Expando<Future<String?>>();
+
+Future<String?> _readFirmwareVersion(Wearable wearable) {
+  if (!wearable.hasCapability<DeviceFirmwareVersion>()) {
+    return Future<String?>.value(null);
+  }
+
+  final capability = wearable.requireCapability<DeviceFirmwareVersion>();
+  return _firmwareVersionFutureCache[capability] ??= capability
+      .readDeviceFirmwareVersion()
+      .timeout(const Duration(seconds: 2))
+      .then(_normalizeFirmwareVersion)
+      .catchError((_) => null);
 }

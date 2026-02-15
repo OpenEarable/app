@@ -192,8 +192,44 @@ class _SensorConfigurationDeviceRowState
       _content = const [Center(child: CircularProgressIndicator())];
     });
 
-    final allConfigKeys =
-        await SensorConfigurationStorage.listConfigurationKeys();
+    List<String> allConfigKeys;
+    try {
+      allConfigKeys = await SensorConfigurationStorage.listConfigurationKeys()
+          .timeout(const Duration(seconds: 8));
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Failed to load sensor profiles for $_deviceProfileScope: '
+        '$error\n$stackTrace',
+      );
+      if (!mounted) return;
+      setState(() {
+        _content = [
+          SaveConfigRow(
+            storageScope: _deviceProfileScope,
+            onSaved: _refreshProfiles,
+          ),
+          const Divider(),
+          const Padding(
+            padding: EdgeInsets.all(12),
+            child: Text(
+              'Could not load saved profiles. Please try again.',
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: _refreshProfiles,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Retry'),
+              ),
+            ),
+          ),
+        ];
+      });
+      return;
+    }
     final scopedKeys = allConfigKeys
         .where(
           (key) => SensorConfigurationStorage.keyMatchesScope(

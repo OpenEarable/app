@@ -4,11 +4,13 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 class BatteryStateView extends StatefulWidget {
   final Wearable device;
   final bool showBackground;
+  final bool liveUpdates;
 
   const BatteryStateView({
     super.key,
     required this.device,
     this.showBackground = true,
+    this.liveUpdates = false,
   });
 
   @override
@@ -16,54 +18,124 @@ class BatteryStateView extends StatefulWidget {
 }
 
 class _BatteryStateViewState extends State<BatteryStateView> {
+  static final Map<String, int> _batteryCacheByDeviceId = <String, int>{};
+  static final Map<String, BatteryPowerStatus> _powerCacheByDeviceId =
+      <String, BatteryPowerStatus>{};
+
   bool _hasBatteryLevel = false;
   bool _hasPowerStatus = false;
+  bool _isDisconnected = false;
   Stream<int>? _batteryPercentageStream;
   Stream<BatteryPowerStatus>? _powerStatusStream;
 
   @override
   void initState() {
     super.initState();
+    _attachDisconnectListener();
     _resolveBatteryStreams();
   }
 
   @override
   void didUpdateWidget(covariant BatteryStateView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.device != widget.device) {
+    if (oldWidget.device != widget.device ||
+        oldWidget.liveUpdates != widget.liveUpdates) {
+      _isDisconnected = false;
+      _attachDisconnectListener();
       _resolveBatteryStreams();
     }
   }
 
+  String get _deviceKey => widget.device.deviceId;
+
+  void _attachDisconnectListener() {
+    widget.device.addDisconnectListener(() {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isDisconnected = true;
+        _batteryPercentageStream = null;
+        _powerStatusStream = null;
+      });
+    });
+  }
+
+  int _cacheBatteryLevel(int value) {
+    _batteryCacheByDeviceId[_deviceKey] = value;
+    return value;
+  }
+
+  BatteryPowerStatus _cachePowerStatus(BatteryPowerStatus value) {
+    _powerCacheByDeviceId[_deviceKey] = value;
+    return value;
+  }
+
   void _resolveBatteryStreams() {
+    if (_isDisconnected) {
+      _hasBatteryLevel = false;
+      _hasPowerStatus = false;
+      _batteryPercentageStream = null;
+      _powerStatusStream = null;
+      return;
+    }
+
     _hasBatteryLevel = widget.device.hasCapability<BatteryLevelStatus>();
     _hasPowerStatus = widget.device.hasCapability<BatteryLevelStatusService>();
+
+    if (!widget.liveUpdates) {
+      _batteryPercentageStream = null;
+      _powerStatusStream = null;
+      return;
+    }
 
     _batteryPercentageStream = _hasBatteryLevel
         ? widget.device
             .requireCapability<BatteryLevelStatus>()
             .batteryPercentageStream
+            .map(_cacheBatteryLevel)
         : null;
 
     _powerStatusStream = _hasPowerStatus
         ? widget.device
             .requireCapability<BatteryLevelStatusService>()
             .powerStatusStream
+            .map(_cachePowerStatus)
         : null;
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_hasBatteryLevel && !_hasPowerStatus) {
+    final cachedBattery = _batteryCacheByDeviceId[_deviceKey];
+    final cachedPower = _powerCacheByDeviceId[_deviceKey];
+
+    if (!_hasBatteryLevel &&
+        !_hasPowerStatus &&
+        cachedBattery == null &&
+        cachedPower == null) {
       return const SizedBox.shrink();
+    }
+
+    if (!widget.liveUpdates || _isDisconnected) {
+      if (cachedBattery == null && cachedPower == null) {
+        return const SizedBox.shrink();
+      }
+      return _BatteryBadge(
+        batteryLevel: cachedBattery,
+        powerStatus: cachedPower,
+        isLoading: false,
+        showBackground: widget.showBackground,
+      );
     }
 
     if (_hasBatteryLevel && _hasPowerStatus) {
       return StreamBuilder<int>(
         stream: _batteryPercentageStream,
+        initialData: cachedBattery,
         builder: (context, batterySnapshot) {
           return StreamBuilder<BatteryPowerStatus>(
             stream: _powerStatusStream,
+            initialData: cachedPower,
             builder: (context, powerSnapshot) {
               return _BatteryBadge(
                 batteryLevel: batterySnapshot.data,
@@ -80,6 +152,7 @@ class _BatteryStateViewState extends State<BatteryStateView> {
     if (_hasPowerStatus) {
       return StreamBuilder<BatteryPowerStatus>(
         stream: _powerStatusStream,
+        initialData: cachedPower,
         builder: (context, snapshot) {
           return _BatteryBadge(
             batteryLevel: null,
@@ -93,6 +166,7 @@ class _BatteryStateViewState extends State<BatteryStateView> {
 
     return StreamBuilder<int>(
       stream: _batteryPercentageStream,
+      initialData: cachedBattery,
       builder: (context, snapshot) {
         return _BatteryBadge(
           batteryLevel: snapshot.data,

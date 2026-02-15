@@ -8,12 +8,18 @@ class RollingChart extends StatefulWidget {
   final Stream<(int, double)> dataSteam;
   final int timestampExponent; // e.g., 6 for microseconds to milliseconds
   final int timeWindow; // in seconds
+  final bool showYAxis;
+  final double? fixedMeasureMin;
+  final double? fixedMeasureMax;
 
   const RollingChart({
     super.key,
     required this.dataSteam,
     required this.timestampExponent,
     required this.timeWindow,
+    this.showYAxis = true,
+    this.fixedMeasureMin,
+    this.fixedMeasureMax,
   });
 
   @override
@@ -102,10 +108,12 @@ class _RollingChartState extends State<RollingChart> {
       xValues.isNotEmpty ? xValues.reduce((a, b) => a > b ? a : b) : 0,
     );
 
-    final double? yMin =
+    final double? dynamicYMin =
         yValues.isNotEmpty ? yValues.reduce((a, b) => a < b ? a : b) : null;
-    final double? yMax =
+    final double? dynamicYMax =
         yValues.isNotEmpty ? yValues.reduce((a, b) => a > b ? a : b) : null;
+    final yMin = widget.fixedMeasureMin ?? dynamicYMin;
+    final yMax = widget.fixedMeasureMax ?? dynamicYMax;
 
     return charts.LineChart(
       _seriesList,
@@ -125,6 +133,7 @@ class _RollingChartState extends State<RollingChart> {
         viewport: yMin != null && yMax != null
             ? charts.NumericExtents(yMin, yMax)
             : null,
+        renderSpec: widget.showYAxis ? null : const charts.NoneRenderSpec(),
       ),
     );
   }
