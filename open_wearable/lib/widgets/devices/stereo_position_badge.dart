@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/widgets/devices/device_status_pills.dart';
 
 class StereoPositionBadge extends StatefulWidget {
   final StereoDevice device;
@@ -11,20 +12,27 @@ class StereoPositionBadge extends StatefulWidget {
 }
 
 class _StereoPositionBadgeState extends State<StereoPositionBadge> {
+  static final Expando<Future<DevicePosition?>> _positionFutureCache =
+      Expando<Future<DevicePosition?>>();
+
   late Future<DevicePosition?> _positionFuture;
 
   @override
   void initState() {
     super.initState();
-    _positionFuture = widget.device.position;
+    _positionFuture = _resolvePositionFuture(widget.device);
   }
 
   @override
   void didUpdateWidget(covariant StereoPositionBadge oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.device != widget.device) {
-      _positionFuture = widget.device.position;
+      _positionFuture = _resolvePositionFuture(widget.device);
     }
+  }
+
+  Future<DevicePosition?> _resolvePositionFuture(StereoDevice device) {
+    return _positionFutureCache[device] ??= device.position;
   }
 
   @override
@@ -32,13 +40,7 @@ class _StereoPositionBadgeState extends State<StereoPositionBadge> {
     return FutureBuilder<DevicePosition?>(
       future: _positionFuture,
       builder: (context, snapshot) {
-        final colorScheme = Theme.of(context).colorScheme;
-        final foregroundColor = colorScheme.primary;
-        final backgroundColor = foregroundColor.withValues(alpha: 0.12);
-        final borderColor = foregroundColor.withValues(alpha: 0.24);
-
         final isLoading = snapshot.connectionState == ConnectionState.waiting;
-
         final label = switch (snapshot.data) {
           DevicePosition.left => 'L',
           DevicePosition.right => 'R',
@@ -49,30 +51,9 @@ class _StereoPositionBadgeState extends State<StereoPositionBadge> {
           return const SizedBox.shrink();
         }
 
-        final displayLabel = isLoading ? '...' : (label ?? '--');
-
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: borderColor),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                displayLabel,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: foregroundColor,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.1,
-                    ),
-              ),
-            ],
-          ),
+        return DeviceMetadataBubble(
+          label: isLoading ? '...' : (label ?? '--'),
+          highlighted: true,
         );
       },
     );

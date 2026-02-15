@@ -52,6 +52,9 @@ class _RollingChartState extends State<RollingChart> {
   void _listenToStream() {
     _subscription = widget.dataSteam.listen((event) {
       final (timestamp, value) = event;
+      if (!value.isFinite) {
+        return;
+      }
 
       setState(() {
         _rawData.add(_RawChartPoint(timestamp, value));
@@ -74,10 +77,19 @@ class _RollingChartState extends State<RollingChart> {
       return;
     }
 
-    final firstTimestamp = _rawData.first.timestamp;
+    final finiteRawData = _rawData
+        .where((point) => point.value.isFinite)
+        .toList(growable: false);
+    if (finiteRawData.length < 2) {
+      _normalizedData = [];
+      _seriesList = [];
+      return;
+    }
+
+    final firstTimestamp = finiteRawData.first.timestamp;
     final secondsPerTick = pow(10, widget.timestampExponent).toDouble();
 
-    _normalizedData = _rawData
+    _normalizedData = finiteRawData
         .map(
           (point) => _ChartPoint(
             (point.timestamp - firstTimestamp) * secondsPerTick,
@@ -99,6 +111,17 @@ class _RollingChartState extends State<RollingChart> {
 
   @override
   Widget build(BuildContext context) {
+    if (_seriesList.isEmpty || _normalizedData.length < 2) {
+      return Center(
+        child: Text(
+          'Waiting for signal...',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+        ),
+      );
+    }
+
     final filteredPoints = _normalizedData;
 
     final xValues = filteredPoints.map((e) => e.timeSeconds).toList();
@@ -126,6 +149,8 @@ class _RollingChartState extends State<RollingChart> {
     return charts.LineChart(
       _seriesList,
       animate: false,
+      defaultInteractions: false,
+      behaviors: const [],
       domainAxis: charts.NumericAxisSpec(
         viewport: charts.NumericExtents(xMin, xMax),
         renderSpec: widget.showXAxis ? null : const charts.NoneRenderSpec(),

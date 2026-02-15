@@ -6,11 +6,10 @@ import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/models/wearable_display_group.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
-import 'package:open_wearable/widgets/devices/battery_state.dart';
 import 'package:open_wearable/widgets/devices/connect_devices_page.dart';
 import 'package:open_wearable/widgets/devices/device_detail/audio_mode_widget.dart';
 import 'package:open_wearable/widgets/devices/device_detail/device_detail_page.dart';
-import 'package:open_wearable/widgets/devices/stereo_position_badge.dart';
+import 'package:open_wearable/widgets/devices/device_status_pills.dart';
 import 'package:open_wearable/widgets/recording_activity_indicator.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 import 'package:provider/provider.dart';
@@ -374,7 +373,6 @@ class DeviceRow extends StatelessWidget {
     final topRightIdentifierLabel = _buildTopRightIdentifierLabel();
     final statusPills = _buildDeviceStatusPills(
       primary,
-      includeSideLabel: false,
       showStereoPosition: !group.isCombined,
     );
 
@@ -440,7 +438,7 @@ class DeviceRow extends StatelessWidget {
                           ..._buildCombinedStatusLines(),
                         ] else if (statusPills.isNotEmpty) ...[
                           const SizedBox(height: 8),
-                          _buildStatusPillLine(statusPills),
+                          DevicePillLine(pills: statusPills),
                         ],
                         if (secondary != null)
                           Padding(
@@ -646,10 +644,10 @@ class DeviceRow extends StatelessWidget {
     if (left != null) {
       lines.add(
         _buildStatusPillLine(
-          _buildDeviceStatusPills(
-            left,
-            includeSideLabel: true,
+          buildDeviceStatusPills(
+            wearable: left,
             sideLabel: 'L',
+            batteryLiveUpdates: true,
           ),
         ),
       );
@@ -661,10 +659,10 @@ class DeviceRow extends StatelessWidget {
       }
       lines.add(
         _buildStatusPillLine(
-          _buildDeviceStatusPills(
-            right,
-            includeSideLabel: true,
+          buildDeviceStatusPills(
+            wearable: right,
             sideLabel: 'R',
+            batteryLiveUpdates: true,
           ),
         ),
       );
@@ -676,66 +674,26 @@ class DeviceRow extends StatelessWidget {
 
     return [
       _buildStatusPillLine(
-        const [_MetadataBubble(label: 'L+R', highlighted: true)],
+        const [DeviceMetadataBubble(label: 'L+R', highlighted: true)],
       ),
     ];
   }
 
   List<Widget> _buildDeviceStatusPills(
     Wearable device, {
-    required bool includeSideLabel,
     String? sideLabel,
     bool showStereoPosition = false,
   }) {
-    final hasBatteryStatus = device.hasCapability<BatteryLevelStatus>() ||
-        device.hasCapability<BatteryLevelStatusService>();
-    final hasFirmwareInfo = device.hasCapability<DeviceFirmwareVersion>();
-    final hasHardwareInfo = device.hasCapability<DeviceHardwareVersion>();
-    final hasStereoPositionPill =
-        showStereoPosition && device.hasCapability<StereoDevice>();
-
-    return <Widget>[
-      if (includeSideLabel && sideLabel != null)
-        _MetadataBubble(label: sideLabel, highlighted: true),
-      if (hasStereoPositionPill)
-        StereoPositionBadge(device: device.requireCapability<StereoDevice>()),
-      if (hasBatteryStatus)
-        BatteryStateView(
-          key: ValueKey<String>('battery_${device.deviceId}'),
-          device: device,
-        ),
-      if (hasFirmwareInfo)
-        _FirmwareVersionBubble(
-          firmwareVersion: device.requireCapability<DeviceFirmwareVersion>(),
-        ),
-      if (hasHardwareInfo)
-        _HardwareVersionBubble(
-          hardwareVersion: device.requireCapability<DeviceHardwareVersion>(),
-        ),
-    ];
+    return buildDeviceStatusPills(
+      wearable: device,
+      sideLabel: sideLabel,
+      showStereoPosition: sideLabel == null && showStereoPosition,
+      batteryLiveUpdates: true,
+    );
   }
 
   Widget _buildStatusPillLine(List<Widget> pills) {
-    if (pills.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return LayoutBuilder(
-      builder: (context, constraints) => SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minWidth: constraints.maxWidth),
-          child: Row(
-            children: [
-              for (var i = 0; i < pills.length; i++) ...[
-                if (i > 0) const SizedBox(width: 8),
-                pills[i],
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
+    return DevicePillLine(pills: pills);
   }
 
   Future<void> _openDetails(BuildContext context) async {
@@ -1014,219 +972,6 @@ class _PairedDeviceSheet extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _FirmwareVersionBubble extends StatefulWidget {
-  final DeviceFirmwareVersion firmwareVersion;
-
-  const _FirmwareVersionBubble({required this.firmwareVersion});
-
-  @override
-  State<_FirmwareVersionBubble> createState() => _FirmwareVersionBubbleState();
-}
-
-class _FirmwareVersionBubbleState extends State<_FirmwareVersionBubble> {
-  static final Expando<Future<Object?>> _versionFutureCache =
-      Expando<Future<Object?>>();
-  static final Expando<Future<FirmwareSupportStatus>> _supportFutureCache =
-      Expando<Future<FirmwareSupportStatus>>();
-
-  late Future<Object?> _versionFuture;
-  late Future<FirmwareSupportStatus> _supportFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _versionFuture = _resolveVersionFuture(widget.firmwareVersion);
-    _supportFuture = _resolveSupportFuture(widget.firmwareVersion);
-  }
-
-  @override
-  void didUpdateWidget(covariant _FirmwareVersionBubble oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (!identical(oldWidget.firmwareVersion, widget.firmwareVersion)) {
-      _versionFuture = _resolveVersionFuture(widget.firmwareVersion);
-      _supportFuture = _resolveSupportFuture(widget.firmwareVersion);
-    }
-  }
-
-  Future<Object?> _resolveVersionFuture(DeviceFirmwareVersion firmwareVersion) {
-    return _versionFutureCache[firmwareVersion] ??=
-        firmwareVersion.readDeviceFirmwareVersion();
-  }
-
-  Future<FirmwareSupportStatus> _resolveSupportFuture(
-    DeviceFirmwareVersion firmwareVersion,
-  ) {
-    return _supportFutureCache[firmwareVersion] ??=
-        firmwareVersion.checkFirmwareSupport();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<Object?>(
-      future: _versionFuture,
-      builder: (context, versionSnapshot) {
-        if (versionSnapshot.connectionState == ConnectionState.waiting) {
-          return const _MetadataBubble(label: "FW", isLoading: true);
-        }
-
-        final versionText = versionSnapshot.hasError
-            ? "--"
-            : (versionSnapshot.data?.toString() ?? "--");
-
-        return FutureBuilder<FirmwareSupportStatus>(
-          future: _supportFuture,
-          builder: (context, supportSnapshot) {
-            IconData? statusIcon;
-            Color? statusColor;
-
-            switch (supportSnapshot.data) {
-              case FirmwareSupportStatus.tooOld:
-              case FirmwareSupportStatus.tooNew:
-                statusIcon = Icons.warning_rounded;
-                statusColor = Colors.orange;
-                break;
-              case FirmwareSupportStatus.unknown:
-                statusIcon = Icons.help_rounded;
-                statusColor = Theme.of(context).colorScheme.onSurfaceVariant;
-                break;
-              default:
-                break;
-            }
-
-            return _MetadataBubble(
-              label: "FW",
-              value: versionText,
-              trailingIcon: statusIcon,
-              foregroundColor: statusColor,
-            );
-          },
-        );
-      },
-    );
-  }
-}
-
-class _HardwareVersionBubble extends StatefulWidget {
-  final DeviceHardwareVersion hardwareVersion;
-
-  const _HardwareVersionBubble({required this.hardwareVersion});
-
-  @override
-  State<_HardwareVersionBubble> createState() => _HardwareVersionBubbleState();
-}
-
-class _HardwareVersionBubbleState extends State<_HardwareVersionBubble> {
-  static final Expando<Future<Object?>> _versionFutureCache =
-      Expando<Future<Object?>>();
-
-  late Future<Object?> _versionFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _versionFuture = _resolveVersionFuture(widget.hardwareVersion);
-  }
-
-  @override
-  void didUpdateWidget(covariant _HardwareVersionBubble oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (!identical(oldWidget.hardwareVersion, widget.hardwareVersion)) {
-      _versionFuture = _resolveVersionFuture(widget.hardwareVersion);
-    }
-  }
-
-  Future<Object?> _resolveVersionFuture(DeviceHardwareVersion hardwareVersion) {
-    return _versionFutureCache[hardwareVersion] ??=
-        hardwareVersion.readDeviceHardwareVersion();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<Object?>(
-      future: _versionFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const _MetadataBubble(label: "HW", isLoading: true);
-        }
-
-        final versionText =
-            snapshot.hasError ? "--" : (snapshot.data?.toString() ?? "--");
-
-        return _MetadataBubble(
-          label: "HW",
-          value: versionText,
-        );
-      },
-    );
-  }
-}
-
-class _MetadataBubble extends StatelessWidget {
-  final String label;
-  final String? value;
-  final bool isLoading;
-  final bool highlighted;
-  final IconData? trailingIcon;
-  final Color? foregroundColor;
-
-  const _MetadataBubble({
-    required this.label,
-    this.value,
-    this.isLoading = false,
-    this.highlighted = false,
-    this.trailingIcon,
-    this.foregroundColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final defaultForeground = colorScheme.primary;
-    final resolvedForeground = foregroundColor ?? defaultForeground;
-    final effectiveForeground =
-        highlighted ? colorScheme.primary : resolvedForeground;
-    final backgroundColor = highlighted
-        ? effectiveForeground.withValues(alpha: 0.12)
-        : colorScheme.surface;
-    final borderColor = highlighted
-        ? effectiveForeground.withValues(alpha: 0.24)
-        : resolvedForeground.withValues(alpha: 0.42);
-    final displayText =
-        isLoading ? "$label ..." : (value == null ? label : "$label $value");
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOut,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: borderColor),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (!isLoading && trailingIcon != null)
-            Icon(
-              trailingIcon,
-              size: 14,
-              color: effectiveForeground,
-            ),
-          if (!isLoading && trailingIcon != null) const SizedBox(width: 6),
-          Text(
-            displayText,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: effectiveForeground,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.1,
-                ),
-          ),
-        ],
       ),
     );
   }

@@ -29,7 +29,7 @@ class HeartTrackerPage extends StatefulWidget {
 
 class _HeartTrackerPageState extends State<HeartTrackerPage> {
   PpgFilter? _ppgFilter;
-  Stream<(int, double)>? _rawPpgSignalStream;
+  Stream<(int, double)>? _displayPpgSignalStream;
   SensorConfigurationProvider? _sensorConfigProvider;
 
   @override
@@ -46,13 +46,15 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
       final sampleFreq = _configureSensorForStreaming(
         ppgSensor,
         configProvider,
-        fallbackFrequency: 25.0,
+        fallbackFrequency: 50.0,
+        targetFrequencyHz: 50,
       );
       if (accelerometerSensor != null) {
         _configureSensorForStreaming(
           accelerometerSensor,
           configProvider,
-          fallbackFrequency: 25.0,
+          fallbackFrequency: 50.0,
+          targetFrequencyHz: 50,
         );
       }
 
@@ -61,7 +63,7 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
             if (data is! SensorDoubleValue) {
               return null;
             }
-            return _extractPpgOpticalSample(data);
+            return _extractPpgOpticalSample(ppgSensor, data);
           })
           .where((sample) => sample != null)
           .cast<PpgOpticalSample>()
@@ -88,16 +90,15 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
       if (!mounted) {
         return;
       }
+      final ppgFilter = PpgFilter(
+        inputStream: ppgStream,
+        motionStream: accelerometerMagnitudeStream,
+        sampleFreq: sampleFreq,
+        timestampExponent: ppgSensor.timestampExponent,
+      );
       setState(() {
-        _rawPpgSignalStream = ppgStream
-            .map((sample) => (sample.timestamp, sample.green))
-            .asBroadcastStream();
-        _ppgFilter = PpgFilter(
-          inputStream: ppgStream,
-          motionStream: accelerometerMagnitudeStream,
-          sampleFreq: sampleFreq,
-          timestampExponent: ppgSensor.timestampExponent,
-        );
+        _displayPpgSignalStream = ppgFilter.displaySignalStream;
+        _ppgFilter = ppgFilter;
       });
     });
   }
@@ -156,6 +157,7 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
     Sensor sensor,
     SensorConfigurationProvider configProvider, {
     required double fallbackFrequency,
+    required int targetFrequencyHz,
   }) {
     final configuration = sensor.relatedConfigurations.firstOrNull;
     if (configuration == null) {
@@ -175,16 +177,22 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
       configuration,
       distinct: true,
     );
+    SensorConfigurationValue? appliedValue;
     if (values.isNotEmpty) {
+      appliedValue = _selectBestConfigurationValue(
+        values,
+        targetFrequencyHz: targetFrequencyHz,
+      );
       configProvider.addSensorConfiguration(
         configuration,
-        values.first,
+        appliedValue,
         markPending: false,
       );
     }
 
     final selectedValue =
-        configProvider.getSelectedConfigurationValue(configuration);
+        configProvider.getSelectedConfigurationValue(configuration) ??
+            appliedValue;
     if (selectedValue != null) {
       configuration.setConfiguration(selectedValue);
     }
@@ -196,22 +204,72 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
     return fallbackFrequency;
   }
 
-  PpgOpticalSample? _extractPpgOpticalSample(SensorDoubleValue data) {
+  SensorConfigurationValue _selectBestConfigurationValue(
+    List<SensorConfigurationValue> values, {
+    required int targetFrequencyHz,
+  }) {
+    final frequencyValues =
+        values.whereType<SensorFrequencyConfigurationValue>().toList();
+    if (frequencyValues.isEmpty) {
+      return values.first;
+    }
+
+    SensorFrequencyConfigurationValue? nextBigger;
+    SensorFrequencyConfigurationValue? maxValue;
+    for (final value in frequencyValues) {
+      if (maxValue == null || value.frequencyHz > maxValue.frequencyHz) {
+        maxValue = value;
+      }
+      if (value.frequencyHz >= targetFrequencyHz &&
+          (nextBigger == null || value.frequencyHz < nextBigger.frequencyHz)) {
+        nextBigger = value;
+      }
+    }
+
+    return nextBigger ?? maxValue ?? values.first;
+  }
+
+  PpgOpticalSample? _extractPpgOpticalSample(
+    Sensor sensor,
+    SensorDoubleValue data,
+  ) {
     if (data.values.isEmpty) {
       return null;
     }
 
-    // OpenEarable PPG usually exposes [red, ir, green, ambient].
-    // Fall back safely for firmwares that expose fewer channels.
-    final green = data.values.length > 2 ? data.values[2] : data.values.first;
-    final ambient = data.values.length > 3
-        ? data.values[3]
-        : data.values.length > 1
-            ? data.values[1]
-            : 0.0;
+    int? findAxisIndex(List<String> keywords) {
+      for (var i = 0; i < sensor.axisNames.length; i++) {
+        final axis = sensor.axisNames[i].toLowerCase();
+        if (keywords.any(axis.contains)) {
+          return i;
+        }
+      }
+      return null;
+    }
+
+    double valueAt(int? index, double fallback) {
+      if (index != null && index >= 0 && index < data.values.length) {
+        return data.values[index];
+      }
+      return fallback;
+    }
+
+    final fallbackRed = data.values[0];
+    final fallbackIr = data.values.length > 1 ? data.values[1] : fallbackRed;
+    final fallbackGreen = data.values.length > 2 ? data.values[2] : fallbackRed;
+    final fallbackAmbient = data.values.length > 3 ? data.values[3] : 0.0;
+
+    // Usually channels are [red, ir, green, ambient], but we prefer axis-name
+    // matching when available to avoid firmware-order mismatches.
+    final red = valueAt(findAxisIndex(['red']), fallbackRed);
+    final ir = valueAt(findAxisIndex(['ir', 'infrared']), fallbackIr);
+    final green = valueAt(findAxisIndex(['green']), fallbackGreen);
+    final ambient = valueAt(findAxisIndex(['ambient']), fallbackAmbient);
 
     return PpgOpticalSample(
       timestamp: data.timestamp,
+      red: red,
+      ir: ir,
       green: green,
       ambient: ambient,
     );
@@ -220,27 +278,36 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
   @override
   Widget build(BuildContext context) {
     final ppgFilter = _ppgFilter;
-    final rawPpgSignalStream = _rawPpgSignalStream;
+    final displayPpgSignalStream = _displayPpgSignalStream;
     return PlatformScaffold(
       appBar: PlatformAppBar(
         title: PlatformText('Heart Tracker'),
       ),
-      body: ppgFilter == null || rawPpgSignalStream == null
+      body: ppgFilter == null || displayPpgSignalStream == null
           ? const Center(child: PlatformCircularProgressIndicator())
-          : _buildContent(context, ppgFilter, rawPpgSignalStream),
+          : _buildContent(context, ppgFilter, displayPpgSignalStream),
     );
   }
 
   Widget _buildContent(
     BuildContext context,
     PpgFilter ppgFilter,
-    Stream<(int, double)> rawPpgSignalStream,
+    Stream<(int, double)> displayPpgSignalStream,
   ) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
       children: [
         DeviceRow(
           group: WearableDisplayGroup.single(wearable: widget.wearable),
+        ),
+        const SizedBox(height: 12),
+        StreamBuilder<PpgSignalQuality>(
+          stream: ppgFilter.signalQualityStream,
+          initialData: PpgSignalQuality.unavailable,
+          builder: (context, snapshot) {
+            final quality = snapshot.data ?? PpgSignalQuality.unavailable;
+            return _SignalQualityCard(quality: quality);
+          },
         ),
         const SizedBox(height: 12),
         Row(
@@ -250,12 +317,13 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
                 stream: ppgFilter.heartRateStream,
                 builder: (context, snapshot) {
                   final bpm = snapshot.data;
-                  final hasValue = bpm != null && bpm.isFinite;
                   return _MetricCard(
                     title: 'Heart Rate',
-                    value: hasValue ? bpm.toStringAsFixed(0) : null,
-                    unit: hasValue ? 'BPM' : null,
-                    subtitle: 'Estimated from PPG peaks',
+                    icon: Icons.favorite_rounded,
+                    value: bpm != null && bpm.isFinite
+                        ? bpm.toStringAsFixed(0)
+                        : '--',
+                    unit: 'BPM',
                   );
                 },
               ),
@@ -266,12 +334,13 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
                 stream: ppgFilter.hrvStream,
                 builder: (context, snapshot) {
                   final hrv = snapshot.data;
-                  final hasValue = hrv != null && hrv.isFinite;
                   return _MetricCard(
                     title: 'HRV',
-                    value: hasValue ? hrv.toStringAsFixed(0) : null,
-                    unit: hasValue ? 'ms' : null,
-                    subtitle: 'RMSSD',
+                    icon: Icons.monitor_heart_rounded,
+                    value: hrv != null && hrv.isFinite
+                        ? hrv.toStringAsFixed(0)
+                        : '--',
+                    unit: 'ms',
                   );
                 },
               ),
@@ -285,32 +354,54 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'PPG Raw Signal',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.show_chart_rounded,
+                      size: 18,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'PPG Signal',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Raw optical signal (green channel).',
+                  'Display uses the same filtered signal used for HR/HRV.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                 ),
                 const SizedBox(height: 10),
                 SizedBox(
-                  height: 220,
+                  height: 88,
                   child: RollingChart(
-                    dataSteam: rawPpgSignalStream,
+                    dataSteam: displayPpgSignalStream,
                     timestampExponent: widget.ppgSensor.timestampExponent,
-                    timeWindow: 8,
+                    timeWindow: 10,
                     showXAxis: false,
                     showYAxis: false,
                   ),
                 ),
               ],
             ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Text(
+            'This view is a basic demonstration of real-time heartbeat tracking. '
+            'With advanced algorithms and stronger motion-robust sensor fusion, '
+            'heart-rate extraction can be made substantially more reliable in dynamic conditions.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
           ),
         ),
       ],
@@ -320,15 +411,15 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
 
 class _MetricCard extends StatelessWidget {
   final String title;
-  final String? value;
-  final String? unit;
-  final String subtitle;
+  final IconData icon;
+  final String value;
+  final String unit;
 
   const _MetricCard({
     required this.title,
+    required this.icon,
     required this.value,
     required this.unit,
-    required this.subtitle,
   });
 
   @override
@@ -339,51 +430,149 @@ class _MetricCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+            Row(
+              children: [
+                Icon(
+                  icon,
+                  size: 18,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                if (value != null) ...[
-                  Text(
-                    value!,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                Text(
+                  value,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(width: 4),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 3),
+                  child: Text(
+                    unit,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SignalQualityCard extends StatelessWidget {
+  final PpgSignalQuality quality;
+
+  const _SignalQualityCard({
+    required this.quality,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final (label, hint, icon, color) = _presentQuality(colorScheme);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      icon,
+                      size: 18,
+                      color: color,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Heartbeat Signal',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                  ],
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  child: Text(
+                    label,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: color,
                           fontWeight: FontWeight.w700,
                         ),
                   ),
-                  if (unit != null) ...[
-                    const SizedBox(width: 4),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 3),
-                      child: Text(
-                        unit!,
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
-                            ),
-                      ),
-                    ),
-                  ],
-                ] else
-                  const SizedBox(height: 36),
+                ),
               ],
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 6),
             Text(
-              subtitle,
+              hint,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    color: colorScheme.onSurfaceVariant,
                   ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  (String, String, IconData, Color) _presentQuality(ColorScheme colors) {
+    switch (quality) {
+      case PpgSignalQuality.unavailable:
+        return (
+          'Unavailable',
+          'No stable heartbeat waveform yet. Ensure stable wearable placement.',
+          Icons.portable_wifi_off_rounded,
+          colors.onSurfaceVariant,
+        );
+      case PpgSignalQuality.bad:
+        return (
+          'Bad',
+          'Signal is noisy. Reduce motion and improve wearable contact.',
+          Icons.signal_cellular_connected_no_internet_4_bar_rounded,
+          colors.error,
+        );
+      case PpgSignalQuality.fair:
+        return (
+          'Fair',
+          'Heartbeat is partially visible. Hold still for a clearer reading.',
+          Icons.network_check_rounded,
+          Colors.orange.shade700,
+        );
+      case PpgSignalQuality.good:
+        return (
+          'Good',
+          'Signal quality is good for HR and HRV estimation.',
+          Icons.check_circle_rounded,
+          Colors.green.shade700,
+        );
+    }
   }
 }
