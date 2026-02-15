@@ -699,7 +699,11 @@ class DeviceRow extends StatelessWidget {
         _MetadataBubble(label: sideLabel, highlighted: true),
       if (hasStereoPositionPill)
         StereoPositionBadge(device: device.requireCapability<StereoDevice>()),
-      if (hasBatteryStatus) BatteryStateView(device: device),
+      if (hasBatteryStatus)
+        BatteryStateView(
+          key: ValueKey<String>('battery_${device.deviceId}'),
+          device: device,
+        ),
       if (hasFirmwareInfo)
         _FirmwareVersionBubble(
           firmwareVersion: device.requireCapability<DeviceFirmwareVersion>(),

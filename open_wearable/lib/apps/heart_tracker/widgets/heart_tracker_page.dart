@@ -5,15 +5,19 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/apps/heart_tracker/model/ppg_filter.dart';
 import 'package:open_wearable/apps/heart_tracker/widgets/rowling_chart.dart';
+import 'package:open_wearable/models/wearable_display_group.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
+import 'package:open_wearable/widgets/devices/devices_page.dart';
 import 'package:provider/provider.dart';
 
 class HeartTrackerPage extends StatefulWidget {
+  final Wearable wearable;
   final Sensor ppgSensor;
   final Sensor? accelerometerSensor;
 
   const HeartTrackerPage({
     super.key,
+    required this.wearable,
     required this.ppgSensor,
     this.accelerometerSensor,
   });
@@ -24,6 +28,7 @@ class HeartTrackerPage extends StatefulWidget {
 
 class _HeartTrackerPageState extends State<HeartTrackerPage> {
   PpgFilter? _ppgFilter;
+  Stream<(int, double)>? _rawPpgSignalStream;
 
   @override
   void initState() {
@@ -81,6 +86,9 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
         return;
       }
       setState(() {
+        _rawPpgSignalStream = ppgStream
+            .map((sample) => (sample.timestamp, sample.green))
+            .asBroadcastStream();
         _ppgFilter = PpgFilter(
           inputStream: ppgStream,
           motionStream: accelerometerMagnitudeStream,
@@ -165,20 +173,29 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
   @override
   Widget build(BuildContext context) {
     final ppgFilter = _ppgFilter;
+    final rawPpgSignalStream = _rawPpgSignalStream;
     return PlatformScaffold(
       appBar: PlatformAppBar(
         title: PlatformText('Heart Tracker'),
       ),
-      body: ppgFilter == null
+      body: ppgFilter == null || rawPpgSignalStream == null
           ? const Center(child: PlatformCircularProgressIndicator())
-          : _buildContent(context, ppgFilter),
+          : _buildContent(context, ppgFilter, rawPpgSignalStream),
     );
   }
 
-  Widget _buildContent(BuildContext context, PpgFilter ppgFilter) {
+  Widget _buildContent(
+    BuildContext context,
+    PpgFilter ppgFilter,
+    Stream<(int, double)> rawPpgSignalStream,
+  ) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
       children: [
+        DeviceRow(
+          group: WearableDisplayGroup.single(wearable: widget.wearable),
+        ),
+        const SizedBox(height: 12),
         Row(
           children: [
             Expanded(
@@ -222,14 +239,14 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'PPG Signal',
+                  'PPG Raw Signal',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Beat-stabilized proxy waveform derived from the filtered optical signal.',
+                  'Raw optical signal (green channel).',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
@@ -238,12 +255,11 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
                 SizedBox(
                   height: 220,
                   child: RollingChart(
-                    dataSteam: ppgFilter.displaySignalStream,
+                    dataSteam: rawPpgSignalStream,
                     timestampExponent: widget.ppgSensor.timestampExponent,
                     timeWindow: 8,
+                    showXAxis: false,
                     showYAxis: false,
-                    fixedMeasureMin: -1.4,
-                    fixedMeasureMax: 1.4,
                   ),
                 ),
               ],

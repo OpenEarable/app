@@ -239,22 +239,7 @@ class WearablesProvider with ChangeNotifier {
     });
 
     // Init SensorConfigurationProvider synchronously (no awaits here)
-    if (wearable.hasCapability<SensorConfigurationManager>()) {
-      _ensureSensorConfigProvider(wearable);
-      final notifier = _sensorConfigurationProviders[wearable]!;
-      for (final config
-          in (wearable.requireCapability<SensorConfigurationManager>())
-              .sensorConfigurations) {
-        if (notifier.getSelectedConfigurationValue(config) == null &&
-            config.values.isNotEmpty) {
-          notifier.addSensorConfiguration(
-            config,
-            config.values.first,
-            markPending: false,
-          );
-        }
-      }
-    }
+    _initializeSensorConfigurations(wearable);
     if (wearable.hasCapability<TimeSynchronizable>()) {
       _scheduleMicrotask(
         () => _syncTimeAndEmit(
@@ -310,6 +295,26 @@ class WearablesProvider with ChangeNotifier {
         sensorConfigurationManager:
             wearable.requireCapability<SensorConfigurationManager>(),
       );
+    }
+  }
+
+  void _initializeSensorConfigurations(Wearable wearable) {
+    if (!wearable.hasCapability<SensorConfigurationManager>()) {
+      return;
+    }
+
+    _ensureSensorConfigProvider(wearable);
+    final notifier = _sensorConfigurationProviders[wearable]!;
+    final manager = wearable.requireCapability<SensorConfigurationManager>();
+    for (final config in manager.sensorConfigurations) {
+      if (notifier.getSelectedConfigurationValue(config) == null &&
+          config.values.isNotEmpty) {
+        notifier.addSensorConfiguration(
+          config,
+          config.values.first,
+          markPending: false,
+        );
+      }
     }
   }
 
@@ -444,7 +449,7 @@ class WearablesProvider with ChangeNotifier {
     required List<Type> addedCapabilites,
   }) {
     if (addedCapabilites.contains(SensorConfigurationManager)) {
-      _ensureSensorConfigProvider(wearable);
+      _initializeSensorConfigurations(wearable);
     }
     if (addedCapabilites.contains(TimeSynchronizable)) {
       _scheduleMicrotask(
@@ -453,6 +458,9 @@ class WearablesProvider with ChangeNotifier {
           fromCapabilityChange: true,
         ),
       );
+    }
+    if (addedCapabilites.isNotEmpty) {
+      notifyListeners();
     }
   }
 }

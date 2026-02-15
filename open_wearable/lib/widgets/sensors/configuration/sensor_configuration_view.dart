@@ -182,16 +182,34 @@ class SensorConfigurationView extends StatelessWidget {
           partner != null && partner.hasCapability<SensorConfigurationManager>()
               ? partner
               : null;
+      final mirrorProvider = mirrorTarget == null
+          ? null
+          : _tryGetSensorConfigurationProvider(
+              wearablesProvider: wearablesProvider,
+              wearable: mirrorTarget,
+            );
 
       targets.add(
         _ConfigApplyTarget(
           primaryDevice: primary,
           mirroredDevice: mirrorTarget,
+          mirroredProvider: mirrorProvider,
           provider: wearablesProvider.getSensorConfigurationProvider(primary),
         ),
       );
     }
     return targets;
+  }
+
+  SensorConfigurationProvider? _tryGetSensorConfigurationProvider({
+    required WearablesProvider wearablesProvider,
+    required Wearable wearable,
+  }) {
+    try {
+      return wearablesProvider.getSensorConfigurationProvider(wearable);
+    } catch (_) {
+      return null;
+    }
   }
 
   Wearable _resolvePrimaryForConfiguration(WearableDisplayGroup group) {
@@ -248,23 +266,35 @@ class SensorConfigurationView extends StatelessWidget {
         int appliedCount = 0;
         int mirroredCount = 0;
         int mirrorSkippedCount = 0;
-        int pendingCount = 0;
+        int actionableCount = 0;
 
         for (final target in targets) {
           final pendingEntries =
               target.provider.getSelectedConfigurations(pendingOnly: true);
-          if (pendingEntries.isEmpty) {
+          final missingFromReportEntries =
+              target.provider.getConfigurationsMissingFromLastReport();
+          final pairSyncEntries = _collectPairSyncEntries(target);
+          final entriesToApply = _mergeConfigurationEntries(
+            pendingEntries,
+            _mergeConfigurationEntries(
+              missingFromReportEntries,
+              pairSyncEntries,
+            ),
+          );
+          if (entriesToApply.isEmpty) {
             continue;
           }
 
-          pendingCount += pendingEntries.length;
+          actionableCount += entriesToApply.length;
           logger.d(
             "Setting sensor configurations for ${target.primaryDevice.name}",
           );
 
-          for (final entry in pendingEntries) {
+          for (final entry in entriesToApply) {
             final SensorConfiguration config = entry.$1;
             final SensorConfigurationValue value = entry.$2;
+            // Always push the selected canonical value to the primary device on
+            // apply. This also heals primary-side drift/unknown states.
             config.setConfiguration(value);
             appliedCount += 1;
 
@@ -283,12 +313,14 @@ class SensorConfigurationView extends StatelessWidget {
             }
           }
 
-          target.provider.clearPendingChanges(
-            onlyFor: pendingEntries.map((entry) => entry.$1),
-          );
+          if (pendingEntries.isNotEmpty) {
+            target.provider.clearPendingChanges(
+              onlyFor: pendingEntries.map((entry) => entry.$1),
+            );
+          }
         }
 
-        if (pendingCount == 0) {
+        if (actionableCount == 0) {
           AppToast.show(
             context,
             message: 'No pending sensor settings to apply.',
@@ -437,6 +469,72 @@ class SensorConfigurationView extends StatelessWidget {
     return true;
   }
 
+  List<(SensorConfiguration, SensorConfigurationValue)> _collectPairSyncEntries(
+    _ConfigApplyTarget target,
+  ) {
+    final mirroredDevice = target.mirroredDevice;
+    final mirroredProvider = target.mirroredProvider;
+    if (mirroredDevice == null || mirroredProvider == null) {
+      return const <(SensorConfiguration, SensorConfigurationValue)>[];
+    }
+    if (!mirroredDevice.hasCapability<SensorConfigurationManager>()) {
+      return const <(SensorConfiguration, SensorConfigurationValue)>[];
+    }
+
+    final manager =
+        mirroredDevice.requireCapability<SensorConfigurationManager>();
+    final result = <(SensorConfiguration, SensorConfigurationValue)>[];
+    for (final entry in target.provider.getSelectedConfigurations()) {
+      final sourceConfig = entry.$1;
+      final sourceValue = entry.$2;
+      final mirroredConfig = _findMirroredConfiguration(
+        manager: manager,
+        sourceConfig: sourceConfig,
+      );
+      if (mirroredConfig == null) {
+        continue;
+      }
+
+      final mirroredValue = _findMirroredValue(
+        mirroredConfig: mirroredConfig,
+        sourceValue: sourceValue,
+      );
+      if (mirroredValue == null) {
+        continue;
+      }
+
+      final selectedMirroredValue =
+          mirroredProvider.getSelectedConfigurationValue(mirroredConfig);
+      if (_configurationValuesMatch(selectedMirroredValue, mirroredValue)) {
+        continue;
+      }
+      result.add(entry);
+    }
+
+    return result;
+  }
+
+  List<(SensorConfiguration, SensorConfigurationValue)>
+      _mergeConfigurationEntries(
+    List<(SensorConfiguration, SensorConfigurationValue)> first,
+    List<(SensorConfiguration, SensorConfigurationValue)> second,
+  ) {
+    final merged = <(SensorConfiguration, SensorConfigurationValue)>[];
+    final seen = <String>{};
+
+    for (final entry in first) {
+      if (seen.add(_configurationIdentityKey(entry.$1))) {
+        merged.add(entry);
+      }
+    }
+    for (final entry in second) {
+      if (seen.add(_configurationIdentityKey(entry.$1))) {
+        merged.add(entry);
+      }
+    }
+    return merged;
+  }
+
   SensorConfiguration? _findMirroredConfiguration({
     required SensorConfigurationManager manager,
     required SensorConfiguration sourceConfig,
@@ -528,6 +626,37 @@ class SensorConfigurationView extends StatelessWidget {
 
   String _normalizeName(String value) => value.trim().toLowerCase();
 
+  String _configurationIdentityKey(SensorConfiguration configuration) {
+    final dynamic configDynamic = configuration;
+    try {
+      final sensorId = configDynamic.sensorId;
+      if (sensorId is int) {
+        return 'sensor:$sensorId';
+      }
+    } catch (_) {
+      // Fall through to structural key.
+    }
+
+    final valuesKey = configuration.values
+        .map((value) => value.key)
+        .toList(growable: false)
+      ..sort();
+    return '${configuration.runtimeType}:${configuration.name}:${valuesKey.join('|')}';
+  }
+
+  bool _configurationValuesMatch(
+    SensorConfigurationValue? current,
+    SensorConfigurationValue expected,
+  ) {
+    if (current == null) {
+      return false;
+    }
+    if (current.key == expected.key) {
+      return true;
+    }
+    return _normalizeName(current.key) == _normalizeName(expected.key);
+  }
+
   // ignore: unused_element
   Widget _buildLargeScreenLayout(
     BuildContext context,
@@ -553,6 +682,7 @@ class SensorConfigurationView extends StatelessWidget {
                     (device) => _ConfigApplyTarget(
                       primaryDevice: device,
                       mirroredDevice: null,
+                      mirroredProvider: null,
                       provider: wearablesProvider
                           .getSensorConfigurationProvider(device),
                     ),
@@ -645,11 +775,13 @@ class SensorConfigurationView extends StatelessWidget {
 class _ConfigApplyTarget {
   final Wearable primaryDevice;
   final Wearable? mirroredDevice;
+  final SensorConfigurationProvider? mirroredProvider;
   final SensorConfigurationProvider provider;
 
   const _ConfigApplyTarget({
     required this.primaryDevice,
     required this.mirroredDevice,
+    required this.mirroredProvider,
     required this.provider,
   });
 }

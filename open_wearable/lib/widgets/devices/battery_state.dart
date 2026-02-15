@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 
@@ -21,17 +23,25 @@ class _BatteryStateViewState extends State<BatteryStateView> {
   static final Map<String, int> _batteryCacheByDeviceId = <String, int>{};
   static final Map<String, BatteryPowerStatus> _powerCacheByDeviceId =
       <String, BatteryPowerStatus>{};
+  static final Set<String> _primedDeviceIds = <String>{};
+  static final Map<String, int> _primeAttemptsByDeviceId = <String, int>{};
+  static final Map<String, Future<void>> _primeTasksByDeviceId =
+      <String, Future<void>>{};
+  static const int _maxPrimeAttempts = 3;
 
   bool _hasBatteryLevel = false;
   bool _hasPowerStatus = false;
   bool _isDisconnected = false;
+  bool _isPriming = false;
   Stream<int>? _batteryPercentageStream;
   Stream<BatteryPowerStatus>? _powerStatusStream;
+  StreamSubscription<List<Type>>? _capabilitySubscription;
 
   @override
   void initState() {
     super.initState();
     _attachDisconnectListener();
+    _attachCapabilityListener();
     _resolveBatteryStreams();
   }
 
@@ -42,6 +52,7 @@ class _BatteryStateViewState extends State<BatteryStateView> {
         oldWidget.liveUpdates != widget.liveUpdates) {
       _isDisconnected = false;
       _attachDisconnectListener();
+      _attachCapabilityListener();
       _resolveBatteryStreams();
     }
   }
@@ -49,15 +60,37 @@ class _BatteryStateViewState extends State<BatteryStateView> {
   String get _deviceKey => widget.device.deviceId;
 
   void _attachDisconnectListener() {
+    final keyAtListenerRegistration = _deviceKey;
     widget.device.addDisconnectListener(() {
       if (!mounted) {
         return;
       }
       setState(() {
         _isDisconnected = true;
+        _primeAttemptsByDeviceId.remove(keyAtListenerRegistration);
         _batteryPercentageStream = null;
         _powerStatusStream = null;
       });
+    });
+  }
+
+  void _attachCapabilityListener() {
+    _capabilitySubscription?.cancel();
+    _capabilitySubscription =
+        widget.device.capabilityRegistered.listen((addedCapabilities) {
+      if (!mounted || _isDisconnected) {
+        return;
+      }
+
+      final hasBatteryCapability =
+          addedCapabilities.contains(BatteryLevelStatus) ||
+              addedCapabilities.contains(BatteryLevelStatusService);
+      if (!hasBatteryCapability) {
+        return;
+      }
+
+      _primeAttemptsByDeviceId.remove(_deviceKey);
+      setState(_resolveBatteryStreams);
     });
   }
 
@@ -75,6 +108,7 @@ class _BatteryStateViewState extends State<BatteryStateView> {
     if (_isDisconnected) {
       _hasBatteryLevel = false;
       _hasPowerStatus = false;
+      _isPriming = false;
       _batteryPercentageStream = null;
       _powerStatusStream = null;
       return;
@@ -86,6 +120,7 @@ class _BatteryStateViewState extends State<BatteryStateView> {
     if (!widget.liveUpdates) {
       _batteryPercentageStream = null;
       _powerStatusStream = null;
+      _primeBatteryCacheOnce();
       return;
     }
 
@@ -102,6 +137,112 @@ class _BatteryStateViewState extends State<BatteryStateView> {
             .powerStatusStream
             .map(_cachePowerStatus)
         : null;
+
+    _primeBatteryCacheOnce();
+  }
+
+  void _primeBatteryCacheOnce() {
+    final key = _deviceKey;
+    final device = widget.device;
+    final hasBatteryLevel = _hasBatteryLevel;
+    final hasPowerStatus = _hasPowerStatus;
+    final attempts = _primeAttemptsByDeviceId[key] ?? 0;
+    if (_isDisconnected ||
+        _primedDeviceIds.contains(key) ||
+        _primeTasksByDeviceId.containsKey(key) ||
+        attempts >= _maxPrimeAttempts ||
+        (!hasBatteryLevel && !hasPowerStatus)) {
+      return;
+    }
+
+    _primeAttemptsByDeviceId[key] = attempts + 1;
+    _isPriming = true;
+    if (mounted) {
+      setState(() {});
+    }
+
+    final task = _primeBatteryCache(
+      device: device,
+      hasBatteryLevel: hasBatteryLevel,
+      hasPowerStatus: hasPowerStatus,
+    ).then((loadedAnyValue) {
+      if (loadedAnyValue) {
+        _primedDeviceIds.add(key);
+        _primeAttemptsByDeviceId.remove(key);
+        return;
+      }
+      _schedulePrimeRetry(key);
+    }).whenComplete(() {
+      _primeTasksByDeviceId.remove(key);
+      if (!mounted || _deviceKey != key) {
+        return;
+      }
+      _isPriming = false;
+      setState(() {});
+    });
+
+    _primeTasksByDeviceId[key] = task;
+  }
+
+  void _schedulePrimeRetry(String key) {
+    final attempts = _primeAttemptsByDeviceId[key] ?? 0;
+    if (attempts >= _maxPrimeAttempts ||
+        _primedDeviceIds.contains(key) ||
+        _batteryCacheByDeviceId[key] != null ||
+        _powerCacheByDeviceId[key] != null) {
+      return;
+    }
+
+    final delay = Duration(milliseconds: 500 * attempts);
+    Future<void>.delayed(delay, () {
+      if (!mounted || _isDisconnected || _deviceKey != key) {
+        return;
+      }
+      setState(_resolveBatteryStreams);
+    });
+  }
+
+  Future<bool> _primeBatteryCache({
+    required Wearable device,
+    required bool hasBatteryLevel,
+    required bool hasPowerStatus,
+  }) async {
+    var loadedAnyValue = false;
+
+    if (hasBatteryLevel) {
+      try {
+        final level = await device
+            .requireCapability<BatteryLevelStatus>()
+            .readBatteryPercentage()
+            .timeout(const Duration(seconds: 2));
+        _cacheBatteryLevel(level);
+        loadedAnyValue = true;
+      } catch (_) {
+        // Keep quiet: fallback to stream updates.
+      }
+    }
+
+    if (hasPowerStatus) {
+      try {
+        final status = await device
+            .requireCapability<BatteryLevelStatusService>()
+            .readPowerStatus()
+            .timeout(const Duration(seconds: 2));
+        _cachePowerStatus(status);
+        loadedAnyValue = true;
+      } catch (_) {
+        // Keep quiet: fallback to stream updates.
+      }
+    }
+
+    return loadedAnyValue;
+  }
+
+  @override
+  void dispose() {
+    _capabilitySubscription?.cancel();
+    _capabilitySubscription = null;
+    super.dispose();
   }
 
   @override
@@ -117,13 +258,13 @@ class _BatteryStateViewState extends State<BatteryStateView> {
     }
 
     if (!widget.liveUpdates || _isDisconnected) {
-      if (cachedBattery == null && cachedPower == null) {
+      if (cachedBattery == null && cachedPower == null && !_isPriming) {
         return const SizedBox.shrink();
       }
       return _BatteryBadge(
         batteryLevel: cachedBattery,
         powerStatus: cachedPower,
-        isLoading: false,
+        isLoading: _isPriming && cachedBattery == null && cachedPower == null,
         showBackground: widget.showBackground,
       );
     }

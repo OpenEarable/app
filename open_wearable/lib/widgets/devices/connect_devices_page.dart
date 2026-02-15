@@ -37,6 +37,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
   @override
   void initState() {
     super.initState();
+    unawaited(_pullConnectedSystemDevices());
     _startScanning();
   }
 
@@ -86,7 +87,10 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () => _startScanning(clearPrevious: true),
+        onRefresh: () async {
+          await _pullConnectedSystemDevices();
+          await _startScanning(clearPrevious: true);
+        },
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(12, 10, 12, 16),
@@ -426,9 +430,24 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
           _discoveredDevices.removeWhere((d) => d.id == device.id);
         });
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      if (_isAlreadyConnectedError(e, device)) {
+        logger.i(
+          'Device ${device.id} already connected. Refreshing connected devices.',
+        );
+        await _pullConnectedSystemDevices();
+        if (mounted) {
+          setState(() {
+            _discoveredDevices.removeWhere((d) => d.id == device.id);
+          });
+        }
+        return;
+      }
+
       final message = _wearableManager.deviceErrorMessage(e, device.name);
-      logger.e('Failed to connect to device: ${device.name}, error: $message');
+      logger.e(
+        'Failed to connect to device: ${device.name}, error: $message\n$stackTrace',
+      );
       if (context.mounted) {
         showPlatformDialog(
           context: context,
@@ -450,6 +469,26 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
           _connectingDevices.remove(device.id);
         });
       }
+    }
+  }
+
+  bool _isAlreadyConnectedError(Object error, DiscoveredDevice device) {
+    try {
+      final message = _wearableManager.deviceErrorMessage(error, device.name);
+      return message.toLowerCase().contains('already connected');
+    } catch (_) {
+      return error.toString().toLowerCase().contains('already connected');
+    }
+  }
+
+  Future<void> _pullConnectedSystemDevices() async {
+    if (!mounted) {
+      return;
+    }
+    try {
+      await context.read<WearableConnector>().connectToSystemDevices();
+    } catch (error, stackTrace) {
+      logger.w('Failed to pull connected system devices: $error\n$stackTrace');
     }
   }
 

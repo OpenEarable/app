@@ -29,6 +29,8 @@ class SensorConfigurationProvider with ChangeNotifier {
   final Map<SensorConfiguration, Set<SensorConfigurationOption>>
       _sensorConfigurationOptions = {};
   final Set<SensorConfiguration> _pendingConfigurations = {};
+  final Set<String> _lastReportedConfigurationKeys = {};
+  bool _hasReceivedConfigurationReport = false;
 
   StreamSubscription<Map<SensorConfiguration, SensorConfigurationValue>>?
       _sensorConfigurationSubscription;
@@ -38,6 +40,13 @@ class SensorConfigurationProvider with ChangeNotifier {
   }) : _sensorConfigurationManager = sensorConfigurationManager {
     _sensorConfigurationSubscription =
         _sensorConfigurationManager.sensorConfigurationStream.listen((event) {
+      _hasReceivedConfigurationReport = true;
+      _lastReportedConfigurationKeys
+        ..clear()
+        ..addAll(
+          event.keys.map(_configurationIdentityKey),
+        );
+
       for (final e in event.entries) {
         final sensorConfiguration = e.key;
         final sensorConfigurationValue = e.value;
@@ -80,6 +89,46 @@ class SensorConfigurationProvider with ChangeNotifier {
         )
         .map((entry) => (entry.key, entry.value))
         .toList();
+  }
+
+  List<(SensorConfiguration, SensorConfigurationValue)>
+      getConfigurationsMissingFromLastReport() {
+    if (!_hasReceivedConfigurationReport) {
+      return const <(SensorConfiguration, SensorConfigurationValue)>[];
+    }
+
+    final missing = <(SensorConfiguration, SensorConfigurationValue)>[];
+    for (final config in _sensorConfigurationManager.sensorConfigurations) {
+      final selected = _sensorConfigurations[config];
+      if (selected == null) {
+        continue;
+      }
+      if (_lastReportedConfigurationKeys.contains(
+        _configurationIdentityKey(config),
+      )) {
+        continue;
+      }
+      missing.add((config, selected));
+    }
+    return missing;
+  }
+
+  String _configurationIdentityKey(SensorConfiguration configuration) {
+    final dynamic configDynamic = configuration;
+    try {
+      final sensorId = configDynamic.sensorId;
+      if (sensorId is int) {
+        return 'sensor:$sensorId';
+      }
+    } catch (_) {
+      // Fall through to structural key.
+    }
+
+    final valuesKey = configuration.values
+        .map((value) => value.key)
+        .toList(growable: false)
+      ..sort();
+    return '${configuration.runtimeType}:${configuration.name}:${valuesKey.join('|')}';
   }
 
   bool get hasPendingChanges => _pendingConfigurations.isNotEmpty;

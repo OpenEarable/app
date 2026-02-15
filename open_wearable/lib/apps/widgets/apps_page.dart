@@ -97,6 +97,7 @@ final List<AppInfo> _apps = [
           }
 
           return HeartTrackerPage(
+            wearable: wearable,
             ppgSensor: ppgSensor,
             accelerometerSensor: accelerometerSensor,
           );

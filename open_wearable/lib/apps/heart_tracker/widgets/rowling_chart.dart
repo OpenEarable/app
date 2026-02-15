@@ -8,6 +8,7 @@ class RollingChart extends StatefulWidget {
   final Stream<(int, double)> dataSteam;
   final int timestampExponent; // e.g., 6 for microseconds to milliseconds
   final int timeWindow; // in seconds
+  final bool showXAxis;
   final bool showYAxis;
   final double? fixedMeasureMin;
   final double? fixedMeasureMax;
@@ -17,6 +18,7 @@ class RollingChart extends StatefulWidget {
     required this.dataSteam,
     required this.timestampExponent,
     required this.timeWindow,
+    this.showXAxis = true,
     this.showYAxis = true,
     this.fixedMeasureMin,
     this.fixedMeasureMax,
@@ -112,14 +114,21 @@ class _RollingChartState extends State<RollingChart> {
         yValues.isNotEmpty ? yValues.reduce((a, b) => a < b ? a : b) : null;
     final double? dynamicYMax =
         yValues.isNotEmpty ? yValues.reduce((a, b) => a > b ? a : b) : null;
-    final yMin = widget.fixedMeasureMin ?? dynamicYMin;
-    final yMax = widget.fixedMeasureMax ?? dynamicYMax;
+    var yMin = widget.fixedMeasureMin ?? dynamicYMin;
+    var yMax = widget.fixedMeasureMax ?? dynamicYMax;
+    if (yMin != null && yMax != null && yMin >= yMax) {
+      final center = yMin;
+      final pad = max(center.abs() * 0.05, 1.0);
+      yMin = center - pad;
+      yMax = center + pad;
+    }
 
     return charts.LineChart(
       _seriesList,
       animate: false,
       domainAxis: charts.NumericAxisSpec(
         viewport: charts.NumericExtents(xMin, xMax),
+        renderSpec: widget.showXAxis ? null : const charts.NoneRenderSpec(),
         tickFormatterSpec: charts.BasicNumericTickFormatterSpec((num? value) {
           if (value == null) return '';
           final rounded = value.roundToDouble();
