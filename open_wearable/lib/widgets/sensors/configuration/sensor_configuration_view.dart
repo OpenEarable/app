@@ -5,6 +5,7 @@ import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 import 'package:open_wearable/models/wearable_display_group.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
+import 'package:open_wearable/widgets/app_toast.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 import 'package:open_wearable/widgets/sensors/configuration/sensor_configuration_device_row.dart';
 import 'package:provider/provider.dart';
@@ -274,11 +275,8 @@ class SensorConfigurationView extends StatelessWidget {
           }
         }
 
-        final messenger = ScaffoldMessenger.maybeOf(context);
-        messenger?.hideCurrentSnackBar();
-
         final message = StringBuffer(
-          'Applied $appliedCount sensor settings to ${targets.length} row(s).',
+          'Applied $appliedCount sensor settings.',
         );
         if (mirroredCount > 0) {
           message.write(' Mirrored $mirroredCount settings to paired devices.');
@@ -289,10 +287,15 @@ class SensorConfigurationView extends StatelessWidget {
           );
         }
 
-        messenger?.showSnackBar(
-          SnackBar(
-            content: Text(message.toString()),
-          ),
+        AppToast.show(
+          context,
+          message: message.toString(),
+          type: mirrorSkippedCount > 0
+              ? AppToastType.warning
+              : AppToastType.success,
+          icon: mirrorSkippedCount > 0
+              ? Icons.rule_rounded
+              : Icons.check_circle_outline_rounded,
         );
 
         (onSetConfigPressed ?? () {})();

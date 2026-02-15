@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:open_wearable/widgets/app_toast.dart';
 import 'package:provider/provider.dart';
 
 import '../../../models/logger.dart';
@@ -181,11 +182,11 @@ class _SaveConfigRowState extends State<SaveConfigRow> {
   }
 
   void _showToast(String message) {
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    if (messenger == null) return;
-    messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(
-      SnackBar(content: Text(message)),
+    AppToast.show(
+      context,
+      message: message,
+      type: AppToastType.success,
+      icon: Icons.check_circle_outline_rounded,
     );
   }
 }

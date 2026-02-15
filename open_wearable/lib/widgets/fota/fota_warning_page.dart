@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/widgets/app_toast.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -72,10 +73,11 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Could not open GitHub instructions.'),
-      ),
+    AppToast.show(
+      context,
+      message: 'Could not open GitHub instructions.',
+      type: AppToastType.error,
+      icon: Icons.link_off_rounded,
     );
   }
 

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/widgets/app_toast.dart';
 import 'package:open_wearable/widgets/fota/stepper_view/firmware_select.dart';
 import 'package:open_wearable/widgets/fota/stepper_view/update_view.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
@@ -18,6 +19,8 @@ class _FirmwareUpdateWidgetState extends State<FirmwareUpdateWidget> {
   late FirmwareUpdateRequestProvider provider;
   bool _isUpdateRunning = false;
   bool _hasStartedUpdate = false;
+  String? _cachedUpdateWearableName;
+  String? _cachedUpdateSideLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -33,15 +36,7 @@ class _FirmwareUpdateWidgetState extends State<FirmwareUpdateWidget> {
         }
 
         if (_isUpdateRunning) {
-          final messenger = ScaffoldMessenger.maybeOf(context);
-          messenger?.hideCurrentSnackBar();
-          messenger?.showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Firmware update is running. Please stay on this page until it finishes.',
-              ),
-            ),
-          );
+          _showUpdateInProgressToast();
           return;
         }
 
@@ -70,7 +65,11 @@ class _FirmwareUpdateWidgetState extends State<FirmwareUpdateWidget> {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
-                  onPressed: () {
+                  onPressed: () async {
+                    await _captureUpdateTargetMetadataBeforeStart();
+                    if (!mounted) {
+                      return;
+                    }
                     setState(() {
                       _isUpdateRunning = true;
                       _hasStartedUpdate = true;
@@ -143,6 +142,8 @@ class _FirmwareUpdateWidgetState extends State<FirmwareUpdateWidget> {
               child: UpdateStepView(
                 autoStart: true,
                 onUpdateRunningChanged: _handleUpdateRunningChanged,
+                preResolvedWearableName: _cachedUpdateWearableName,
+                preResolvedSideLabel: _cachedUpdateSideLabel,
               ),
             ),
           ],
@@ -176,6 +177,167 @@ class _FirmwareUpdateWidgetState extends State<FirmwareUpdateWidget> {
     setState(() {
       _isUpdateRunning = running;
     });
+  }
+
+  void _showUpdateInProgressToast() {
+    final wearable = provider.selectedWearable;
+    final wearableName = _cachedUpdateWearableName ??
+        (wearable?.name.trim().isNotEmpty == true
+            ? wearable!.name.trim()
+            : 'OpenEarable');
+    final sideLabel =
+        _cachedUpdateSideLabel ?? _resolveSideLabelFromName(wearable?.name);
+
+    _showUpdateInProgressToastWithSide(
+      wearableName: wearableName,
+      sideLabel: sideLabel,
+    );
+  }
+
+  Future<void> _captureUpdateTargetMetadataBeforeStart() async {
+    final wearable = provider.selectedWearable;
+    if (wearable == null) {
+      _cachedUpdateWearableName = 'OpenEarable';
+      _cachedUpdateSideLabel = null;
+      return;
+    }
+
+    _cachedUpdateWearableName =
+        wearable.name.trim().isNotEmpty ? wearable.name.trim() : 'OpenEarable';
+    _cachedUpdateSideLabel = _resolveSideLabelFromName(wearable.name);
+
+    StereoDevice? stereoDevice = wearable.getCapability<StereoDevice>();
+    if (stereoDevice == null) {
+      for (var attempt = 0; attempt < 4 && stereoDevice == null; attempt++) {
+        try {
+          await wearable
+              .capabilityAvailable<StereoDevice>()
+              .first
+              .timeout(const Duration(seconds: 1));
+        } catch (_) {
+          // Keep fallback from name.
+        }
+        stereoDevice = wearable.getCapability<StereoDevice>();
+        if (stereoDevice == null && attempt < 3) {
+          await Future.delayed(const Duration(milliseconds: 250));
+        }
+      }
+    }
+
+    if (stereoDevice == null) {
+      return;
+    }
+
+    for (var attempt = 0; attempt < 3; attempt++) {
+      try {
+        final position =
+            await stereoDevice.position.timeout(const Duration(seconds: 2));
+        _cachedUpdateSideLabel = switch (position) {
+          DevicePosition.left => 'L',
+          DevicePosition.right => 'R',
+          _ => _cachedUpdateSideLabel,
+        };
+        break;
+      } catch (_) {
+        if (attempt < 2) {
+          await Future.delayed(const Duration(milliseconds: 350));
+        }
+      }
+    }
+  }
+
+  void _showUpdateInProgressToastWithSide({
+    required String wearableName,
+    required String? sideLabel,
+  }) {
+    final foreground = const Color(0xFF8A4B00);
+
+    AppToast.showContent(
+      context,
+      type: AppToastType.warning,
+      icon: Icons.system_update_alt_rounded,
+      content: Text.rich(
+        TextSpan(
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: foreground,
+                fontWeight: FontWeight.w700,
+              ),
+          children: [
+            const TextSpan(text: 'Firmware update in progress on '),
+            TextSpan(text: wearableName),
+            if (sideLabel != null) const TextSpan(text: ' '),
+            if (sideLabel != null)
+              WidgetSpan(
+                alignment: PlaceholderAlignment.middle,
+                child: _UpdateToastSideBadge(
+                  sideLabel: sideLabel,
+                  foreground: foreground,
+                ),
+              ),
+            const TextSpan(text: '. Stay on this page until it completes.'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String? _resolveSideLabelFromName(String? name) {
+    final value = name?.trim().toLowerCase();
+    if (value == null || value.isEmpty) {
+      return null;
+    }
+
+    if (value.endsWith('-l') ||
+        value.endsWith('_l') ||
+        value.endsWith('(l)') ||
+        value.endsWith('(left)') ||
+        value.endsWith(' left') ||
+        value.endsWith(' l')) {
+      return 'L';
+    }
+
+    if (value.endsWith('-r') ||
+        value.endsWith('_r') ||
+        value.endsWith('(r)') ||
+        value.endsWith('(right)') ||
+        value.endsWith(' right') ||
+        value.endsWith(' r')) {
+      return 'R';
+    }
+
+    return null;
+  }
+}
+
+class _UpdateToastSideBadge extends StatelessWidget {
+  final String sideLabel;
+  final Color foreground;
+
+  const _UpdateToastSideBadge({
+    required this.sideLabel,
+    required this.foreground,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final background = foreground.withValues(alpha: 0.14);
+    final border = foreground.withValues(alpha: 0.3);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: border),
+      ),
+      child: Text(
+        sideLabel,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: foreground,
+              fontWeight: FontWeight.w800,
+            ),
+      ),
+    );
   }
 }
 
@@ -226,15 +388,22 @@ class _StepPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final foreground = isActive || isComplete
-        ? colorScheme.primary
-        : colorScheme.onSurfaceVariant;
-    final background = isActive
-        ? colorScheme.primaryContainer.withValues(alpha: 0.8)
-        : colorScheme.surfaceContainerHighest.withValues(alpha: 0.45);
-    final border = isActive || isComplete
-        ? colorScheme.primary.withValues(alpha: 0.45)
-        : colorScheme.outlineVariant.withValues(alpha: 0.6);
+    const completeGreen = Color(0xFF2E7D32);
+    final foreground = isComplete
+        ? completeGreen
+        : isActive
+            ? colorScheme.primary
+            : colorScheme.onSurfaceVariant;
+    final background = isComplete
+        ? completeGreen.withValues(alpha: 0.14)
+        : isActive
+            ? colorScheme.primaryContainer.withValues(alpha: 0.8)
+            : colorScheme.surfaceContainerHighest.withValues(alpha: 0.45);
+    final border = isComplete
+        ? completeGreen.withValues(alpha: 0.36)
+        : isActive
+            ? colorScheme.primary.withValues(alpha: 0.45)
+            : colorScheme.outlineVariant.withValues(alpha: 0.6);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),

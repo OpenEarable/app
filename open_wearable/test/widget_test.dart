@@ -29,6 +29,6 @@ void main() {
     expect(find.text('Devices'), findsWidgets);
     expect(find.text('Sensors'), findsWidgets);
     expect(find.text('Apps'), findsWidgets);
-    expect(find.text('Utilities'), findsWidgets);
+    expect(find.text('Settings'), findsWidgets);
   });
 }

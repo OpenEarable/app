@@ -6,8 +6,10 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/apps/widgets/apps_page.dart';
+import 'package:open_wearable/models/connector_settings.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
+import 'package:open_wearable/widgets/app_toast.dart';
 import 'package:open_wearable/widgets/devices/devices_page.dart';
 import 'package:open_wearable/widgets/devices/device_detail/device_detail_page.dart';
 import 'package:open_wearable/widgets/recording_activity_indicator.dart';
@@ -88,6 +90,7 @@ class _HomePageState extends State<HomePage> {
         onSectionRequested: _jumpToSection,
         onConnectRequested: _openConnectDevices,
         onSensorTabRequested: _openSensorsTab,
+        onConnectorsRequested: _openConnectors,
       ),
       const DevicesPage(),
       SensorPage(controller: _sensorPageController),
@@ -95,6 +98,7 @@ class _HomePageState extends State<HomePage> {
       _SettingsPage(
         onLogsRequested: _openLogFiles,
         onConnectRequested: _openConnectDevices,
+        onConnectorsRequested: _openConnectors,
       ),
     ];
   }
@@ -225,17 +229,24 @@ class _HomePageState extends State<HomePage> {
     if (!mounted) return;
     context.push('/log-files');
   }
+
+  void _openConnectors() {
+    if (!mounted) return;
+    context.push('/connectors');
+  }
 }
 
 class _OverviewPage extends StatelessWidget {
   final void Function(int index) onSectionRequested;
   final VoidCallback onConnectRequested;
   final void Function(int tabIndex) onSensorTabRequested;
+  final VoidCallback onConnectorsRequested;
 
   const _OverviewPage({
     required this.onSectionRequested,
     required this.onConnectRequested,
     required this.onSensorTabRequested,
+    required this.onConnectorsRequested,
   });
 
   @override
@@ -271,10 +282,21 @@ class _OverviewPage extends StatelessWidget {
                 onWearableTap: (wearable) =>
                     _openDeviceFromOverview(context, wearable),
               ),
-              const SizedBox(height: SensorPageSpacing.sectionGap),
+              ValueListenableBuilder<LslConnectorSettings>(
+                valueListenable: ConnectorSettings.lslSettingsListenable,
+                builder: (context, lslSettings, _) {
+                  final isActive =
+                      lslSettings.enabled && lslSettings.isConfigured;
+                  if (!isActive) {
+                    return const SizedBox.shrink();
+                  }
+                  return _OverviewLslSummaryCard(settings: lslSettings);
+                },
+              ),
               _OverviewWorkflowIntroCard(
                 onConnectRequested: onConnectRequested,
                 onSensorTabRequested: onSensorTabRequested,
+                onConnectorsRequested: onConnectorsRequested,
               ),
             ],
           );
@@ -322,10 +344,12 @@ class _OverviewPage extends StatelessWidget {
 class _OverviewWorkflowIntroCard extends StatelessWidget {
   final VoidCallback onConnectRequested;
   final void Function(int tabIndex) onSensorTabRequested;
+  final VoidCallback onConnectorsRequested;
 
   const _OverviewWorkflowIntroCard({
     required this.onConnectRequested,
     required this.onSensorTabRequested,
+    required this.onConnectorsRequested,
   });
 
   @override
@@ -334,6 +358,7 @@ class _OverviewWorkflowIntroCard extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     return Card(
+      margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
@@ -382,8 +407,85 @@ class _OverviewWorkflowIntroCard extends StatelessWidget {
               title: 'Record',
               detail: 'Start and monitor recording.',
               sectionLabel: 'Sensors › Recorder',
-              isLast: true,
+              isLast: false,
               onTap: () => onSensorTabRequested(2),
+            ),
+            _OverviewWorkflowStep(
+              icon: Icons.wifi_tethering,
+              title: 'Configure LSL streaming',
+              detail:
+                  'Stream to other devices like your computer via Lab Streaming Layer.',
+              sectionLabel: 'Settings › Connectors',
+              isLast: true,
+              onTap: onConnectorsRequested,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OverviewLslSummaryCard extends StatelessWidget {
+  final LslConnectorSettings settings;
+
+  const _OverviewLslSummaryCard({required this.settings});
+
+  @override
+  Widget build(BuildContext context) {
+    const lslGreen = Color(0xFF2E7D32);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final endpoint = '${settings.host}:${settings.port}';
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: lslGreen.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              alignment: Alignment.center,
+              child: Icon(
+                Icons.wifi_tethering,
+                size: 18,
+                color: lslGreen,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'LSL forwarding is active',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Endpoint: $endpoint',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Stream prefix: ${settings.streamPrefix}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -588,6 +690,7 @@ class _OverviewHeroCard extends StatelessWidget {
     final hiddenWearablesCount = wearables.length - visibleWearables.length;
 
     return Card(
+      margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -816,10 +919,12 @@ class _ConnectedWearablePillState extends State<_ConnectedWearablePill> {
 class _SettingsPage extends StatelessWidget {
   final VoidCallback onLogsRequested;
   final VoidCallback onConnectRequested;
+  final VoidCallback onConnectorsRequested;
 
   const _SettingsPage({
     required this.onLogsRequested,
     required this.onConnectRequested,
+    required this.onConnectorsRequested,
   });
 
   @override
@@ -841,8 +946,8 @@ class _SettingsPage extends StatelessWidget {
           _QuickActionTile(
             icon: Icons.hub,
             title: 'Connectors',
-            subtitle: 'External connector integrations\n(coming soon)',
-            enabled: false,
+            subtitle: 'Forward data to other platforms (e.g., LSL)',
+            onTap: onConnectorsRequested,
           ),
           _QuickActionTile(
             icon: Icons.receipt_long,
@@ -890,10 +995,11 @@ class _AboutPage extends StatelessWidget {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Could not open $label.'),
-      ),
+    AppToast.show(
+      context,
+      message: 'Could not open $label.',
+      type: AppToastType.error,
+      icon: Icons.link_off_rounded,
     );
   }
 
@@ -1484,38 +1590,24 @@ class _QuickActionTile extends StatelessWidget {
   final String title;
   final String subtitle;
   final VoidCallback? onTap;
-  final bool enabled;
 
   const _QuickActionTile({
     required this.icon,
     required this.title,
     required this.subtitle,
     this.onTap,
-    this.enabled = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    final iconColor = enabled ? null : Theme.of(context).disabledColor;
-    final textColor = enabled ? null : Theme.of(context).disabledColor;
-
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        enabled: enabled,
-        leading: Icon(icon, color: iconColor),
-        title: Text(
-          title,
-          style: textColor == null ? null : TextStyle(color: textColor),
-        ),
-        subtitle: Text(
-          subtitle,
-          style: textColor == null ? null : TextStyle(color: textColor),
-        ),
-        trailing: enabled
-            ? const Icon(Icons.chevron_right)
-            : Icon(Icons.schedule, color: iconColor),
-        onTap: enabled ? onTap : null,
+        leading: Icon(icon),
+        title: Text(title),
+        subtitle: Text(subtitle),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: onTap,
       ),
     );
   }

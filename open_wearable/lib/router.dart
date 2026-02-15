@@ -7,6 +7,7 @@ import 'package:open_wearable/widgets/fota/firmware_update.dart';
 import 'package:open_wearable/widgets/fota/fota_warning_page.dart';
 import 'package:open_wearable/widgets/home_page.dart';
 import 'package:open_wearable/widgets/logging/log_files_screen.dart';
+import 'package:open_wearable/widgets/settings/connectors_page.dart';
 import 'dart:io' show Platform;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -81,6 +82,11 @@ final GoRouter router = GoRouter(
       builder: (context, state) => const LogFilesScreen(),
     ),
     GoRoute(
+      path: '/connectors',
+      name: 'connectors',
+      builder: (context, state) => const ConnectorsPage(),
+    ),
+    GoRoute(
       path: '/fota',
       name: 'fota',
       redirect: (context, state) {
@@ -123,7 +129,28 @@ final GoRouter router = GoRouter(
     GoRoute(
       path: '/fota/update',
       name: 'fota/update',
-      builder: (context, state) => const FirmwareUpdateWidget(),
+      pageBuilder: (context, state) => CustomTransitionPage<void>(
+        key: state.pageKey,
+        transitionDuration: const Duration(milliseconds: 220),
+        reverseTransitionDuration: const Duration(milliseconds: 180),
+        child: const FirmwareUpdateWidget(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+            reverseCurve: Curves.easeInCubic,
+          );
+          final slideAnimation = Tween<Offset>(
+            begin: const Offset(0.06, 0),
+            end: Offset.zero,
+          ).animate(curved);
+
+          return FadeTransition(
+            opacity: curved,
+            child: SlideTransition(position: slideAnimation, child: child),
+          );
+        },
+      ),
     ),
   ],
 );

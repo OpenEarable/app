@@ -48,6 +48,7 @@ class AppTheme {
     required ColorScheme colorScheme,
     required Color scaffoldBackgroundColor,
   }) {
+    const switchGreen = Color(0xFF2E7D32);
     final base = ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
@@ -270,16 +271,25 @@ class AppTheme {
       switchTheme: SwitchThemeData(
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return colorScheme.primary.withValues(alpha: 0.4);
+            return switchGreen;
           }
           return colorScheme.outline.withValues(alpha: 0.28);
         }),
         thumbColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return colorScheme.primary;
+            return colorScheme.surface;
           }
           return colorScheme.surface;
         }),
+        trackOutlineColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return switchGreen.withValues(alpha: 0.36);
+          }
+          return colorScheme.outline.withValues(alpha: 0.28);
+        }),
+        overlayColor: WidgetStateProperty.all(
+          switchGreen.withValues(alpha: 0.12),
+        ),
       ),
     );
   }

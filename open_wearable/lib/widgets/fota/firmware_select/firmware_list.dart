@@ -296,7 +296,32 @@ class _FirmwareListState extends State<FirmwareList> {
       if (currentEntry != null && currentEntry != latestEntry) currentEntry,
     ];
     final visibleEntries = _expanded ? orderedEntries : collapsedEntries;
+    final visibleStableEntries =
+        visibleEntries.where((e) => e.isStable).toList();
+    final visibleBetaEntries = visibleEntries.where((e) => e.isBeta).toList();
     final canToggleExpanded = orderedEntries.length > collapsedEntries.length;
+
+    final firmwareRows = <Widget>[
+      ...visibleStableEntries.map(
+        (entry) => Padding(
+          padding: const EdgeInsets.only(bottom: SensorPageSpacing.sectionGap),
+          child: _firmwareListItem(entry, latestStable),
+        ),
+      ),
+      if (visibleBetaEntries.isNotEmpty) ...[
+        if (visibleStableEntries.isNotEmpty)
+          const SizedBox(height: SensorPageSpacing.sectionGap),
+        _betaWarningBanner(),
+        const SizedBox(height: SensorPageSpacing.sectionGap),
+        ...visibleBetaEntries.map(
+          (entry) => Padding(
+            padding:
+                const EdgeInsets.only(bottom: SensorPageSpacing.sectionGap),
+            child: _firmwareListItem(entry, latestStable),
+          ),
+        ),
+      ],
+    ];
 
     return ListView(
       padding: SensorPageSpacing.pagePadding,
@@ -306,21 +331,10 @@ class _FirmwareListState extends State<FirmwareList> {
           stableCount: stableEntries.length,
           betaCount: betaEntries.length,
         ),
-        if (betaEntries.isNotEmpty) ...[
+        if (firmwareRows.isNotEmpty) ...[
           const SizedBox(height: SensorPageSpacing.sectionGap),
-          _betaWarningBanner(),
+          ...firmwareRows,
         ],
-        const SizedBox(height: SensorPageSpacing.sectionGap),
-        ...visibleEntries.map(
-          (entry) => Padding(
-            padding:
-                const EdgeInsets.only(bottom: SensorPageSpacing.sectionGap),
-            child: _firmwareListItem(
-              entry,
-              latestStable,
-            ),
-          ),
-        ),
         if (canToggleExpanded || _expanded)
           SizedBox(
             width: double.infinity,

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/widgets/app_toast.dart';
 import 'package:open_wearable/widgets/devices/battery_state.dart';
 import 'package:open_wearable/widgets/devices/device_detail/audio_mode_widget.dart';
 import 'package:provider/provider.dart';
@@ -98,14 +99,13 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _opensBluetoothScreenDirectly
-              ? 'Could not open Bluetooth settings.'
-              : 'Could not open Settings.',
-        ),
-      ),
+    AppToast.show(
+      context,
+      message: _opensBluetoothScreenDirectly
+          ? 'Could not open Bluetooth settings.'
+          : 'Could not open Settings.',
+      type: AppToastType.error,
+      icon: Icons.bluetooth_disabled_rounded,
     );
   }
 

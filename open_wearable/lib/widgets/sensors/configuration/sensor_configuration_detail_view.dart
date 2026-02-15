@@ -214,8 +214,9 @@ class _OptionToggleTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const sensorOnGreen = Color(0xFF2E7D32);
     final colorScheme = Theme.of(context).colorScheme;
-    final foreground = selected ? colorScheme.primary : colorScheme.onSurface;
+    final foreground = selected ? sensorOnGreen : colorScheme.onSurface;
     final (title, subtitle) = _copyForOption(option);
 
     return AnimatedContainer(
@@ -225,11 +226,11 @@ class _OptionToggleTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: selected
-            ? colorScheme.primary.withValues(alpha: 0.06)
+            ? sensorOnGreen.withValues(alpha: 0.06)
             : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: (selected ? colorScheme.primary : colorScheme.outlineVariant)
+          color: (selected ? sensorOnGreen : colorScheme.outlineVariant)
               .withValues(alpha: selected ? 0.35 : 0.25),
         ),
       ),
@@ -271,6 +272,9 @@ class _OptionToggleTile extends StatelessWidget {
           const SizedBox(width: 8),
           Switch.adaptive(
             value: selected,
+            activeThumbColor: colorScheme.surface,
+            activeTrackColor: sensorOnGreen,
+            inactiveThumbColor: colorScheme.surface,
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             onChanged: onChanged,
           ),

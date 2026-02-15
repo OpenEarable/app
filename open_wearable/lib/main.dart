@@ -5,6 +5,8 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 import 'package:open_wearable/models/log_file_manager.dart';
+import 'package:open_wearable/models/connector_settings.dart';
+import 'package:open_wearable/models/fota_post_update_verification.dart';
 import 'package:open_wearable/models/wearable_connector.dart'
     hide WearableEvent;
 import 'package:open_wearable/router.dart';
@@ -12,6 +14,8 @@ import 'package:open_wearable/theme/app_theme.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
 import 'package:open_wearable/widgets/app_banner.dart';
 import 'package:open_wearable/widgets/global_app_banner_overlay.dart';
+import 'package:open_wearable/widgets/app_toast.dart';
+import 'package:open_wearable/widgets/fota/fota_verification_banner.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -25,6 +29,7 @@ void main() async {
   LogFileManager logFileManager = await LogFileManager.create();
   initOpenWearableLogger(logFileManager.libLogger);
   initLogger(logFileManager.logger);
+  await ConnectorSettings.initialize();
 
   runApp(
     MultiProvider(
@@ -61,6 +66,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   late final BluetoothAutoConnector _autoConnector;
   late final Future<SharedPreferences> _prefsFuture;
   late final StreamSubscription _wearableProvEventSub;
+  late final WearablesProvider _wearablesProvider;
+  late final SensorRecorderProvider _sensorRecorderProvider;
 
   @override
   void initState() {
@@ -69,10 +76,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
 
     // Read provider without listening, allowed in initState with Provider
-    final wearablesProvider = context.read<WearablesProvider>();
+    _wearablesProvider = context.read<WearablesProvider>();
+    _sensorRecorderProvider = context.read<SensorRecorderProvider>();
 
     _unsupportedFirmwareSub =
-        wearablesProvider.unsupportedFirmwareStream.listen((evt) {
+        _wearablesProvider.unsupportedFirmwareStream.listen((evt) {
       // No async/await here. No widget context usage either.
       final nav = rootNavigatorKey.currentState;
       if (nav == null || !mounted) return;
@@ -101,7 +109,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     });
 
     _wearableProvEventSub =
-        wearablesProvider.wearableEventStream.listen((event) {
+        _wearablesProvider.wearableEventStream.listen((event) {
       if (!mounted) return;
 
       // Handle firmware update available events with a dialog
@@ -195,27 +203,53 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
     final WearableConnector connector = context.read<WearableConnector>();
 
-    final SensorRecorderProvider sensorRecorderProvider =
-        context.read<SensorRecorderProvider>();
     _autoConnector = BluetoothAutoConnector(
       navStateGetter: () => rootNavigatorKey.currentState,
       wearableManager: WearableManager(),
       connector: connector,
       prefsFuture: _prefsFuture,
-      onWearableConnected: (wearable) {
-        wearablesProvider.addWearable(wearable);
-        sensorRecorderProvider.addWearable(wearable);
-      },
+      onWearableConnected: _handleWearableConnected,
     );
 
     _wearableEventSub = connector.events.listen((event) {
       if (event is WearableConnectEvent) {
-        wearablesProvider.addWearable(event.wearable);
-        sensorRecorderProvider.addWearable(event.wearable);
+        _handleWearableConnected(event.wearable);
       }
     });
 
     _autoConnector.start();
+  }
+
+  void _handleWearableConnected(Wearable wearable) {
+    _wearablesProvider.addWearable(wearable);
+    _sensorRecorderProvider.addWearable(wearable);
+    _maybeFinalizePostUpdateVerification(wearable);
+  }
+
+  Future<void> _maybeFinalizePostUpdateVerification(Wearable wearable) async {
+    final result = await FotaPostUpdateVerificationCoordinator.instance
+        .verifyOnWearableConnected(wearable);
+    if (!mounted || result == null) {
+      return;
+    }
+
+    dismissFotaVerificationBannerById(context, result.verificationId);
+    final accentColor = result.success
+        ? const Color(0xFF1E6A3A)
+        : Theme.of(context).colorScheme.onErrorContainer;
+    AppToast.showContent(
+      context,
+      content: _buildPostUpdateVerificationToastContent(
+        result: result,
+        accentColor: accentColor,
+      ),
+      type: result.success ? AppToastType.success : AppToastType.error,
+      icon:
+          result.success ? Icons.verified_rounded : Icons.error_outline_rounded,
+      duration: result.success
+          ? const Duration(seconds: 6)
+          : const Duration(seconds: 8),
+    );
   }
 
   @override
@@ -245,6 +279,78 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         'Please update the app and Firmware to the newest version to ensure all features are working as expected.',
       );
     }
+  }
+
+  Widget _buildPostUpdateVerificationToastContent({
+    required FotaPostUpdateVerificationResult result,
+    required Color accentColor,
+  }) {
+    final baseStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: accentColor,
+          fontWeight: FontWeight.w700,
+        );
+    final detailStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: accentColor,
+          fontWeight: FontWeight.w600,
+        );
+
+    final detailText = _verificationToastDetail(result);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text.rich(
+          TextSpan(
+            style: baseStyle,
+            children: [
+              TextSpan(text: result.wearableName),
+              if (result.sideLabel != null) const TextSpan(text: ' '),
+              if (result.sideLabel != null)
+                WidgetSpan(
+                  alignment: PlaceholderAlignment.middle,
+                  child: _ToastStereoSideBadge(
+                    sideLabel: result.sideLabel!,
+                    accentColor: accentColor,
+                  ),
+                ),
+              TextSpan(
+                text: result.success
+                    ? ' updated successfully.'
+                    : ' verification failed.',
+              ),
+            ],
+          ),
+        ),
+        if (detailText != null) ...[
+          const SizedBox(height: 4),
+          Text(detailText, style: detailStyle),
+        ],
+      ],
+    );
+  }
+
+  String? _verificationToastDetail(FotaPostUpdateVerificationResult result) {
+    if (result.success) {
+      final version = result.detectedFirmwareVersion;
+      if (version == null) {
+        return null;
+      }
+      return 'Firmware version: $version';
+    }
+
+    final detected = result.detectedFirmwareVersion;
+    final expected = result.expectedFirmwareVersion;
+
+    if (detected == null) {
+      return 'Could not read firmware version. Keep the earable powered on and do not reset.';
+    }
+
+    if (expected == null) {
+      return 'Expected firmware version is unknown (detected $detected). Do not reset or power off.';
+    }
+
+    return 'Expected $expected, detected $detected. Do not reset or power off.';
   }
 
   Widget _buildBannerContent({

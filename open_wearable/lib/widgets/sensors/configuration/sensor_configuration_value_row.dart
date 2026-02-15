@@ -22,6 +22,7 @@ class SensorConfigurationValueRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const sensorOnGreen = Color(0xFF2E7D32);
     final sensorConfigNotifier = context.watch<SensorConfigurationProvider>();
     final colorScheme = Theme.of(context).colorScheme;
     final isOn = _isOn(sensorConfigNotifier, sensorConfiguration);
@@ -52,9 +53,7 @@ class SensorConfigurationValueRow extends StatelessWidget {
                   width: isOn ? 3 : 2,
                   height: 26,
                   decoration: BoxDecoration(
-                    color: (isOn
-                            ? colorScheme.primary
-                            : colorScheme.outlineVariant)
+                    color: (isOn ? sensorOnGreen : colorScheme.outlineVariant)
                         .withValues(alpha: isOn ? 0.7 : 0.6),
                     borderRadius: BorderRadius.circular(999),
                   ),
@@ -63,7 +62,7 @@ class SensorConfigurationValueRow extends StatelessWidget {
                 Icon(
                   isOn ? Icons.sensors_rounded : Icons.sensors_off_rounded,
                   size: 14,
-                  color: isOn ? colorScheme.primary : colorScheme.outline,
+                  color: isOn ? sensorOnGreen : colorScheme.outline,
                 ),
                 const SizedBox(width: 7),
                 Expanded(
@@ -224,6 +223,7 @@ class _OptionsCompactBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const sensorOnGreen = Color(0xFF2E7D32);
     final colorScheme = Theme.of(context).colorScheme;
     final visibleCount = options.length > 2 ? 2 : options.length;
     final remainingCount = options.length - visibleCount;
@@ -236,7 +236,7 @@ class _OptionsCompactBadge extends StatelessWidget {
           color: colorScheme.surface,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+            color: sensorOnGreen.withValues(alpha: 0.38),
           ),
         ),
         child: Row(
@@ -247,7 +247,7 @@ class _OptionsCompactBadge extends StatelessWidget {
                 getSensorConfigurationOptionIcon(options[i]) ??
                     Icons.tune_rounded,
                 size: 10,
-                color: colorScheme.onSurfaceVariant,
+                color: sensorOnGreen,
               ),
               if (i < visibleCount - 1) const SizedBox(width: 3),
             ],
@@ -256,7 +256,7 @@ class _OptionsCompactBadge extends StatelessWidget {
               Text(
                 '+$remainingCount',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
+                      color: sensorOnGreen,
                       fontWeight: FontWeight.w600,
                     ),
               ),
@@ -279,9 +279,9 @@ class _SamplingRatePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const sensorOnGreen = Color(0xFF2E7D32);
     final colorScheme = Theme.of(context).colorScheme;
-    final foreground =
-        enabled ? colorScheme.primary : colorScheme.onSurfaceVariant;
+    final foreground = enabled ? sensorOnGreen : colorScheme.onSurfaceVariant;
 
     return SizedBox(
       height: _kSensorStatusPillHeight,

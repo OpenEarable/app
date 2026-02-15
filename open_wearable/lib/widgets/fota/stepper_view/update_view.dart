@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/models/fota_post_update_verification.dart';
 import 'package:open_wearable/widgets/fota/fota_verification_banner.dart';
 
 import '../logger_screen/logger_screen.dart';
@@ -10,11 +11,15 @@ import '../logger_screen/logger_screen.dart';
 class UpdateStepView extends StatefulWidget {
   final bool autoStart;
   final ValueChanged<bool>? onUpdateRunningChanged;
+  final String? preResolvedWearableName;
+  final String? preResolvedSideLabel;
 
   const UpdateStepView({
     super.key,
     this.autoStart = true,
     this.onUpdateRunningChanged,
+    this.preResolvedWearableName,
+    this.preResolvedSideLabel,
   });
 
   @override
@@ -26,6 +31,7 @@ class _UpdateStepViewState extends State<UpdateStepView> {
 
   bool _lastReportedRunning = false;
   bool _startRequested = false;
+  bool _verificationBannerShown = false;
 
   @override
   void initState() {
@@ -75,13 +81,34 @@ class _UpdateStepViewState extends State<UpdateStepView> {
     final request = provider.updateParameters;
 
     return BlocConsumer<UpdateBloc, UpdateState>(
-      listener: (context, state) {
+      listener: (context, state) async {
         _reportRunningState(_isUpdateInProgress(state));
         if (state is UpdateFirmwareStateHistory &&
             state.isComplete &&
             state.history.isNotEmpty &&
             state.history.last is UpdateCompleteSuccess) {
-          showFotaVerificationBanner(context);
+          if (_verificationBannerShown) {
+            return;
+          }
+          _verificationBannerShown = true;
+          final updateProvider = context.read<FirmwareUpdateRequestProvider>();
+          final armedVerification = await FotaPostUpdateVerificationCoordinator
+              .instance
+              .armFromUpdateRequest(
+            request: updateProvider.updateParameters,
+            selectedWearable: updateProvider.selectedWearable,
+            preResolvedWearableName: widget.preResolvedWearableName,
+            preResolvedSideLabel: widget.preResolvedSideLabel,
+          );
+          if (!mounted || armedVerification == null) {
+            return;
+          }
+          showFotaVerificationBanner(
+            this.context,
+            verificationId: armedVerification.verificationId,
+            wearableName: armedVerification.wearableName,
+            sideLabel: armedVerification.sideLabel,
+          );
         }
       },
       builder: (context, state) {
@@ -325,6 +352,10 @@ class _UpdateStepViewState extends State<UpdateStepView> {
 
   Widget _successPanel(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final warningBackground =
+        colorScheme.errorContainer.withValues(alpha: 0.42);
+    final warningBorder = colorScheme.error.withValues(alpha: 0.42);
+    final warningForeground = colorScheme.onErrorContainer;
 
     return Container(
       width: double.infinity,
@@ -336,13 +367,57 @@ class _UpdateStepViewState extends State<UpdateStepView> {
           color: _successGreen.withValues(alpha: 0.34),
         ),
       ),
-      child: Text(
-        'Firmware upload complete. The device now verifies the image and '
-        'restarts automatically. This can take up to 3 minutes.',
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurface,
-              fontWeight: FontWeight.w600,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Firmware upload completed successfully. The device now verifies '
+            'the image and restarts automatically.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurface,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: warningBackground,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: warningBorder),
             ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.warning_amber_rounded,
+                  size: 18,
+                  color: warningForeground,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Do not reset or power off your OpenEarable during '
+                    'verification.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: warningForeground,
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Verification can take up to 3 minutes.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ],
       ),
     );
   }
