@@ -73,84 +73,80 @@ class SensorConfigurationDetailView extends StatelessWidget {
                     }
                   },
                 ),
-                if (i < targetOptions.length - 1)
-                  Divider(
-                    height: 10,
-                    thickness: 0.6,
-                    color: colorScheme.outlineVariant.withValues(alpha: 0.4),
-                  ),
+                if (i < targetOptions.length - 1) const SizedBox(height: 8),
               ],
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
         ],
-        _DetailSectionCard(
-          title: 'Sampling Rate',
-          subtitle: 'Set how often this sensor is sampled.',
-          child: selectableValues.isEmpty
-              ? Text(
-                  'No sampling rates are available for this sensor.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                )
-              : DropdownButtonFormField<SensorConfigurationValue>(
-                  initialValue: dropdownSelection,
-                  isExpanded: true,
-                  decoration: InputDecoration(
-                    isDense: true,
-                    filled: false,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color:
-                            colorScheme.outlineVariant.withValues(alpha: 0.55),
-                      ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color:
-                            colorScheme.outlineVariant.withValues(alpha: 0.55),
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: colorScheme.primary.withValues(alpha: 0.6),
-                      ),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 7,
-                    ),
-                  ),
-                  items: selectableValues
-                      .map(
-                        (value) => DropdownMenuItem<SensorConfigurationValue>(
-                          value: value,
-                          child: Text(_samplingRateLabel(value)),
-                        ),
-                      )
-                      .toList(growable: false),
-                  onChanged: (value) {
-                    if (value == null) {
-                      return;
-                    }
-                    sensorConfigNotifier.addSensorConfiguration(
-                      sensorConfiguration,
-                      value,
-                    );
-                  },
-                ),
-        ),
-        const SizedBox(height: 8),
         Text(
-          'Changes are staged locally. Use "Apply Profiles" to push them to the device.',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          'Sampling Rate',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          'Set how often this sensor is sampled.',
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
         ),
+        const SizedBox(height: 8),
+        selectableValues.isEmpty
+            ? Text(
+                'No sampling rates are available for this sensor.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+              )
+            : DropdownButtonFormField<SensorConfigurationValue>(
+                initialValue: dropdownSelection,
+                isExpanded: true,
+                decoration: InputDecoration(
+                  isDense: true,
+                  filled: false,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: colorScheme.outlineVariant.withValues(alpha: 0.55),
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: colorScheme.outlineVariant.withValues(alpha: 0.55),
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: colorScheme.primary.withValues(alpha: 0.6),
+                    ),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 7,
+                  ),
+                ),
+                items: selectableValues
+                    .map(
+                      (value) => DropdownMenuItem<SensorConfigurationValue>(
+                        value: value,
+                        child: Text(_samplingRateLabel(value)),
+                      ),
+                    )
+                    .toList(growable: false),
+                onChanged: (value) {
+                  if (value == null) {
+                    return;
+                  }
+                  sensorConfigNotifier.addSensorConfiguration(
+                    sensorConfiguration,
+                    value,
+                  );
+                },
+              ),
       ],
     );
   }
@@ -205,56 +201,6 @@ class SensorConfigurationDetailView extends StatelessWidget {
   }
 }
 
-class _DetailSectionCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final Widget child;
-
-  const _DetailSectionCard({
-    required this.title,
-    required this.subtitle,
-    required this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(10, 8, 10, 9),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            subtitle,
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 10),
-          child,
-        ],
-      ),
-    );
-  }
-}
-
 class _OptionToggleTile extends StatelessWidget {
   final SensorConfigurationOption option;
   final bool selected;
@@ -276,7 +222,7 @@ class _OptionToggleTile extends StatelessWidget {
       duration: const Duration(milliseconds: 160),
       curve: Curves.easeOut,
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: selected
             ? colorScheme.primary.withValues(alpha: 0.06)
@@ -288,7 +234,7 @@ class _OptionToggleTile extends StatelessWidget {
         ),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Icon(
             getSensorConfigurationOptionIcon(option),
@@ -298,6 +244,8 @@ class _OptionToggleTile extends StatelessWidget {
           const SizedBox(width: 7),
           Expanded(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
@@ -311,8 +259,9 @@ class _OptionToggleTile extends StatelessWidget {
                   const SizedBox(height: 1),
                   Text(
                     subtitle,
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
+                          height: 1.15,
                         ),
                   ),
                 ],
@@ -322,6 +271,7 @@ class _OptionToggleTile extends StatelessWidget {
           const SizedBox(width: 8),
           Switch.adaptive(
             value: selected,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             onChanged: onChanged,
           ),
         ],
@@ -333,7 +283,7 @@ class _OptionToggleTile extends StatelessWidget {
     if (option is StreamSensorConfigOption) {
       return (
         'Live stream to phone',
-        'Send this sensor over Bluetooth for live data view.',
+        'Send to app via Bluetooth.',
       );
     }
     if (option is RecordSensorConfigOption) {

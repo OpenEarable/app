@@ -160,13 +160,6 @@ class SensorConfigurationValueRow extends StatelessWidget {
                         ],
                       ),
                     ),
-                    Divider(
-                      height: 1,
-                      thickness: 0.6,
-                      color: Theme.of(
-                        modalContext,
-                      ).colorScheme.outlineVariant.withValues(alpha: 0.55),
-                    ),
                     Expanded(
                       child: SensorConfigurationDetailView(
                         sensorConfiguration: sensorConfiguration,
