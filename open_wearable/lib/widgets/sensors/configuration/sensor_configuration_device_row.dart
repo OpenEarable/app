@@ -184,11 +184,23 @@ class _SensorConfigurationDeviceRowState
   void _buildSettingsTabContent(Wearable device) {
     final sensorManager =
         device.requireCapability<SensorConfigurationManager>();
+    final pairedManager = widget.pairedDevice != null &&
+            widget.pairedProvider != null &&
+            widget.pairedDevice!.hasCapability<SensorConfigurationManager>()
+        ? widget.pairedDevice!.requireCapability<SensorConfigurationManager>()
+        : null;
 
     final content = <Widget>[
       ...sensorManager.sensorConfigurations.map(
         (config) => SensorConfigurationValueRow(
           sensorConfiguration: config,
+          pairedSensorConfiguration: pairedManager == null
+              ? null
+              : _findMirroredConfiguration(
+                  manager: pairedManager,
+                  sourceConfig: config,
+                ),
+          pairedProvider: widget.pairedProvider,
         ),
       ),
     ];

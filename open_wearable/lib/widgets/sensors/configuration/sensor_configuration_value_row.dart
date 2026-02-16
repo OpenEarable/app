@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
@@ -14,32 +15,83 @@ const double _kSensorStatusPillHeight = 22;
 /// The selected value is added to the [SensorConfigurationProvider].
 class SensorConfigurationValueRow extends StatelessWidget {
   final SensorConfiguration sensorConfiguration;
+  final SensorConfiguration? pairedSensorConfiguration;
+  final SensorConfigurationProvider? pairedProvider;
 
   const SensorConfigurationValueRow({
     super.key,
     required this.sensorConfiguration,
+    this.pairedSensorConfiguration,
+    this.pairedProvider,
   });
 
   @override
   Widget build(BuildContext context) {
-    const sensorOnGreen = Color(0xFF2E7D32);
-    final sensorConfigNotifier = context.watch<SensorConfigurationProvider>();
-    final colorScheme = Theme.of(context).colorScheme;
-    final isOn = _isOn(sensorConfigNotifier, sensorConfiguration);
-    final isApplied = sensorConfigNotifier.isConfigurationApplied(
-      sensorConfiguration,
+    final primaryProvider = context.watch<SensorConfigurationProvider>();
+    final secondaryProvider = pairedProvider;
+    if (secondaryProvider == null) {
+      return _buildRow(
+        context,
+        primaryProvider: primaryProvider,
+      );
+    }
+
+    return ListenableBuilder(
+      listenable: secondaryProvider,
+      builder: (context, _) => _buildRow(
+        context,
+        primaryProvider: primaryProvider,
+        secondaryProvider: secondaryProvider,
+      ),
     );
-    final accentColor = isApplied ? sensorOnGreen : colorScheme.primary;
+  }
+
+  Widget _buildRow(
+    BuildContext context, {
+    required SensorConfigurationProvider primaryProvider,
+    SensorConfigurationProvider? secondaryProvider,
+  }) {
+    const sensorOnGreen = Color(0xFF2E7D32);
+    final colorScheme = Theme.of(context).colorScheme;
     final selectedValue =
-        sensorConfigNotifier.getSelectedConfigurationValue(sensorConfiguration);
+        primaryProvider.getSelectedConfigurationValue(sensorConfiguration);
     final selectedOptions =
         sensorConfiguration is ConfigurableSensorConfiguration
-            ? sensorConfigNotifier
+            ? primaryProvider
                 .getSelectedConfigurationOptions(
                   sensorConfiguration,
                 )
                 .toList(growable: false)
             : const <SensorConfigurationOption>[];
+
+    bool isApplied = primaryProvider.isConfigurationApplied(
+      sensorConfiguration,
+    );
+    bool isMixed = false;
+    if (secondaryProvider != null) {
+      final mirroredConfig = pairedSensorConfiguration;
+      if (mirroredConfig == null) {
+        isMixed = true;
+      } else {
+        final mirroredValue =
+            secondaryProvider.getSelectedConfigurationValue(mirroredConfig);
+        final mirroredApplied =
+            secondaryProvider.isConfigurationApplied(mirroredConfig);
+        final valuesMatch =
+            _configurationValuesMatchNullable(selectedValue, mirroredValue);
+        final applyStateMatches = isApplied == mirroredApplied;
+        if (!valuesMatch || !applyStateMatches) {
+          isMixed = true;
+        } else {
+          isApplied = isApplied && mirroredApplied;
+        }
+      }
+    }
+
+    final isOn = isMixed ? true : _isOn(primaryProvider, sensorConfiguration);
+    final accentColor = isMixed
+        ? colorScheme.error
+        : (isApplied ? sensorOnGreen : colorScheme.primary);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 2, 12, 2),
@@ -47,7 +99,7 @@ class SensorConfigurationValueRow extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(8),
-          onTap: () => _openConfigurationSheet(context, sensorConfigNotifier),
+          onTap: () => _openConfigurationSheet(context, primaryProvider),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(2, 8, 2, 8),
             child: Row(
@@ -68,7 +120,11 @@ class SensorConfigurationValueRow extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 Icon(
-                  isOn ? Icons.sensors_rounded : Icons.sensors_off_rounded,
+                  isMixed
+                      ? Icons.sync_problem_rounded
+                      : (isOn
+                          ? Icons.sensors_rounded
+                          : Icons.sensors_off_rounded),
                   size: 14,
                   color: isOn
                       ? accentColor
@@ -82,27 +138,32 @@ class SensorConfigurationValueRow extends StatelessWidget {
                     softWrap: false,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: isOn ? accentColor : null,
+                          color: (isOn || isMixed) ? accentColor : null,
                           fontWeight: FontWeight.w700,
                         ),
                   ),
                 ),
-                if (selectedOptions.isNotEmpty) ...[
+                if (isMixed) ...[
+                  const SizedBox(width: 6),
+                  const _MixedStatePill(),
+                ] else if (selectedOptions.isNotEmpty) ...[
                   const SizedBox(width: 6),
                   _OptionsCompactBadge(
                     options: selectedOptions,
                     accentColor: accentColor,
                   ),
                 ],
-                const SizedBox(width: 6),
-                _SamplingRatePill(
-                  label: _statusPillLabel(selectedValue, isOn: isOn),
-                  foreground: isOn
-                      ? accentColor
-                      : (isApplied
-                          ? colorScheme.onSurfaceVariant
-                          : colorScheme.primary),
-                ),
+                if (!isMixed) ...[
+                  const SizedBox(width: 6),
+                  _SamplingRatePill(
+                    label: _statusPillLabel(selectedValue, isOn: isOn),
+                    foreground: isOn
+                        ? accentColor
+                        : (isApplied
+                            ? colorScheme.onSurfaceVariant
+                            : colorScheme.primary),
+                  ),
+                ],
                 const SizedBox(width: 2),
                 Icon(
                   Icons.chevron_right_rounded,
@@ -178,6 +239,8 @@ class SensorConfigurationValueRow extends StatelessWidget {
                     Expanded(
                       child: SensorConfigurationDetailView(
                         sensorConfiguration: sensorConfiguration,
+                        pairedSensorConfiguration: pairedSensorConfiguration,
+                        pairedProvider: pairedProvider,
                       ),
                     ),
                   ],
@@ -228,6 +291,45 @@ class SensorConfigurationValueRow extends StatelessWidget {
 
     return isOn;
   }
+
+  bool _configurationValuesMatchNullable(
+    SensorConfigurationValue? left,
+    SensorConfigurationValue? right,
+  ) {
+    if (left == null || right == null) {
+      return left == null && right == null;
+    }
+    return _configurationValuesMatch(left, right);
+  }
+
+  bool _configurationValuesMatch(
+    SensorConfigurationValue left,
+    SensorConfigurationValue right,
+  ) {
+    if (left is SensorFrequencyConfigurationValue &&
+        right is SensorFrequencyConfigurationValue) {
+      return left.frequencyHz == right.frequencyHz &&
+          setEquals(_optionNameSet(left), _optionNameSet(right));
+    }
+
+    if (left is ConfigurableSensorConfigurationValue &&
+        right is ConfigurableSensorConfigurationValue) {
+      return _normalizeName(left.withoutOptions().key) ==
+              _normalizeName(right.withoutOptions().key) &&
+          setEquals(_optionNameSet(left), _optionNameSet(right));
+    }
+
+    return _normalizeName(left.key) == _normalizeName(right.key);
+  }
+
+  Set<String> _optionNameSet(SensorConfigurationValue value) {
+    if (value is! ConfigurableSensorConfigurationValue) {
+      return const <String>{};
+    }
+    return value.options.map((option) => _normalizeName(option.name)).toSet();
+  }
+
+  String _normalizeName(String value) => value.trim().toLowerCase();
 }
 
 class _OptionsCompactBadge extends StatelessWidget {
@@ -320,6 +422,36 @@ class _SamplingRatePill extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MixedStatePill extends StatelessWidget {
+  const _MixedStatePill();
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return SizedBox(
+      height: _kSensorStatusPillHeight,
+      child: Container(
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: colorScheme.error.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: colorScheme.error.withValues(alpha: 0.38),
+          ),
+        ),
+        child: Text(
+          'Mixed',
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: colorScheme.error,
+                fontWeight: FontWeight.w700,
+              ),
         ),
       ),
     );

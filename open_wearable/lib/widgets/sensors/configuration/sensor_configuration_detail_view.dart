@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
@@ -7,10 +8,14 @@ import 'sensor_config_option_icon_factory.dart';
 
 class SensorConfigurationDetailView extends StatelessWidget {
   final SensorConfiguration sensorConfiguration;
+  final SensorConfiguration? pairedSensorConfiguration;
+  final SensorConfigurationProvider? pairedProvider;
 
   const SensorConfigurationDetailView({
     super.key,
     required this.sensorConfiguration,
+    this.pairedSensorConfiguration,
+    this.pairedProvider,
   });
 
   @override
@@ -66,17 +71,22 @@ class SensorConfigurationDetailView extends StatelessWidget {
                       )
                       .contains(targetOptions[i]),
                   onChanged: (enabled) {
-                    if (enabled) {
-                      sensorConfigNotifier.addSensorConfigurationOption(
-                        sensorConfiguration,
-                        targetOptions[i],
-                      );
-                    } else {
-                      sensorConfigNotifier.removeSensorConfigurationOption(
-                        sensorConfiguration,
-                        targetOptions[i],
-                      );
-                    }
+                    _updatePrimaryAndPair(
+                      primaryProvider: sensorConfigNotifier,
+                      updatePrimary: () {
+                        if (enabled) {
+                          sensorConfigNotifier.addSensorConfigurationOption(
+                            sensorConfiguration,
+                            targetOptions[i],
+                          );
+                        } else {
+                          sensorConfigNotifier.removeSensorConfigurationOption(
+                            sensorConfiguration,
+                            targetOptions[i],
+                          );
+                        }
+                      },
+                    );
                   },
                 ),
                 if (i < targetOptions.length - 1) const SizedBox(height: 8),
@@ -147,13 +157,54 @@ class SensorConfigurationDetailView extends StatelessWidget {
                   if (value == null) {
                     return;
                   }
-                  sensorConfigNotifier.addSensorConfiguration(
-                    sensorConfiguration,
-                    value,
+                  _updatePrimaryAndPair(
+                    primaryProvider: sensorConfigNotifier,
+                    updatePrimary: () {
+                      sensorConfigNotifier.addSensorConfiguration(
+                        sensorConfiguration,
+                        value,
+                      );
+                    },
                   );
                 },
               ),
       ],
+    );
+  }
+
+  void _updatePrimaryAndPair({
+    required SensorConfigurationProvider primaryProvider,
+    required VoidCallback updatePrimary,
+  }) {
+    updatePrimary();
+    _syncPairedSelection(primaryProvider);
+  }
+
+  void _syncPairedSelection(SensorConfigurationProvider primaryProvider) {
+    final pairedNotifier = pairedProvider;
+    final mirroredConfig = pairedSensorConfiguration;
+    if (pairedNotifier == null || mirroredConfig == null) {
+      return;
+    }
+
+    final selectedPrimaryValue =
+        primaryProvider.getSelectedConfigurationValue(sensorConfiguration);
+    if (selectedPrimaryValue == null) {
+      return;
+    }
+
+    final mirroredValue = _findMirroredValue(
+      mirroredConfig: mirroredConfig,
+      sourceValue: selectedPrimaryValue,
+    );
+    if (mirroredValue == null) {
+      return;
+    }
+
+    pairedNotifier.addSensorConfiguration(
+      mirroredConfig,
+      mirroredValue,
+      markPending: true,
     );
   }
 
@@ -205,6 +256,73 @@ class SensorConfigurationDetailView extends StatelessWidget {
     }
     return value.key;
   }
+
+  SensorConfigurationValue? _findMirroredValue({
+    required SensorConfiguration mirroredConfig,
+    required SensorConfigurationValue sourceValue,
+  }) {
+    for (final candidate in mirroredConfig.values) {
+      if (_normalizeName(candidate.key) == _normalizeName(sourceValue.key)) {
+        return candidate;
+      }
+    }
+
+    if (sourceValue is SensorFrequencyConfigurationValue) {
+      final sourceOptions = _optionNameSet(sourceValue);
+      final candidates = mirroredConfig.values
+          .whereType<SensorFrequencyConfigurationValue>()
+          .toList(growable: false);
+      if (candidates.isNotEmpty) {
+        final sameOptionCandidates = candidates
+            .where(
+              (candidate) =>
+                  setEquals(_optionNameSet(candidate), sourceOptions),
+            )
+            .toList(growable: false);
+        final scoped =
+            sameOptionCandidates.isNotEmpty ? sameOptionCandidates : candidates;
+        SensorFrequencyConfigurationValue? best;
+        double? bestDistance;
+        for (final candidate in scoped) {
+          final distance =
+              (candidate.frequencyHz - sourceValue.frequencyHz).abs();
+          if (best == null || distance < bestDistance!) {
+            best = candidate;
+            bestDistance = distance;
+          }
+        }
+        if (best != null) {
+          return best;
+        }
+      }
+    }
+
+    if (sourceValue is ConfigurableSensorConfigurationValue) {
+      final sourceWithoutOptions = sourceValue.withoutOptions();
+      final sourceOptions = _optionNameSet(sourceValue);
+      for (final candidate in mirroredConfig.values
+          .whereType<ConfigurableSensorConfigurationValue>()) {
+        if (!setEquals(_optionNameSet(candidate), sourceOptions)) {
+          continue;
+        }
+        if (_normalizeName(candidate.withoutOptions().key) ==
+            _normalizeName(sourceWithoutOptions.key)) {
+          return candidate;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  Set<String> _optionNameSet(SensorConfigurationValue value) {
+    if (value is! ConfigurableSensorConfigurationValue) {
+      return const <String>{};
+    }
+    return value.options.map((option) => _normalizeName(option.name)).toSet();
+  }
+
+  String _normalizeName(String value) => value.trim().toLowerCase();
 }
 
 class _OptionToggleTile extends StatelessWidget {
