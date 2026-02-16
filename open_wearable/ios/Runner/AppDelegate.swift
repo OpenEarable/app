@@ -27,10 +27,6 @@ import UIKit
     sensorShutdownBackgroundTask = .invalid
   }
 
-  private func notifyAppTerminating(source: String) {
-    lifecycleChannel?.invokeMethod("appTerminating", arguments: ["source": source])
-  }
-
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -95,11 +91,5 @@ import UIKit
 
     GeneratedPluginRegistrant.register(with: self)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
-  }
-
-  override func applicationWillTerminate(_ application: UIApplication) {
-    notifyAppTerminating(source: "ios_applicationWillTerminate")
-    endSensorShutdownBackgroundTask()
-    super.applicationWillTerminate(application)
   }
 }

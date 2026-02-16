@@ -82,14 +82,18 @@ class SensorValuesPage extends StatelessWidget {
   }
 
   void _cleanupProviders(List<Wearable> orderedWearables) {
-    _sensorDataProvider.removeWhere(
-      (key, _) => !orderedWearables.any(
+    _sensorDataProvider.removeWhere((key, provider) {
+      final keepProvider = orderedWearables.any(
         (device) =>
             device.hasCapability<SensorManager>() &&
             device == key.$1 &&
             device.requireCapability<SensorManager>().sensors.contains(key.$2),
-      ),
-    );
+      );
+      if (!keepProvider) {
+        provider.dispose();
+      }
+      return !keepProvider;
+    });
   }
 
   List<WearableDisplayGroup> _orderGroupsForLiveData(

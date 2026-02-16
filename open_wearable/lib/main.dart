@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart'
-    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
@@ -220,14 +218,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     _autoConnector = BluetoothAutoConnector(
       navStateGetter: () => rootNavigatorKey.currentState,
       wearableManager: WearableManager(),
-      connector: connector,
       prefsFuture: _prefsFuture,
       onWearableConnected: _handleWearableConnected,
     );
-
-    AppBackgroundExecutionBridge.setAppTerminatingHandler((source) {
-      return _handleNativeAppTerminationSignal(source: source);
-    });
 
     _wearableEventSub = connector.events.listen((event) {
       if (event is WearableConnectEvent) {
@@ -236,21 +229,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     });
 
     _autoConnector.start();
-  }
-
-  Future<void> _handleNativeAppTerminationSignal({
-    required String source,
-  }) async {
-    logger.i('Received native app termination signal from $source');
-    _backgroundEnteredAt = null;
-    _pendingCloseShutdownTimer?.cancel();
-    _pendingCloseShutdownTimer = null;
-    _autoConnector.stop();
-    try {
-      await _maybeTurnOffAllSensorsOnAppClose();
-    } finally {
-      unawaited(AppBackgroundExecutionBridge.endSensorShutdownWindow());
-    }
   }
 
   void _handleWearableConnected(Wearable wearable) {
@@ -285,12 +263,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     );
   }
 
-  bool get _useAndroidImmediateBackgroundShutdown =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
-
-  Future<void> _maybeTurnOffAllSensorsOnAppClose({
-    bool closeOpenScreensOnResume = true,
-  }) async {
+  Future<void> _maybeTurnOffAllSensorsOnAppClose() async {
     if (_closingSensorShutdownInProgress ||
         !AppShutdownSettings.shutOffAllSensorsOnAppClose) {
       return;
@@ -299,9 +272,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     _closingSensorShutdownInProgress = true;
     try {
       await _wearablesProvider.turnOffSensorsForAllDevices();
-      if (closeOpenScreensOnResume) {
-        _shouldCloseOpenScreensOnResume = true;
-      }
+      _shouldCloseOpenScreensOnResume = true;
     } catch (e, st) {
       logger.w('Failed to shut off sensors on app close: $e\n$st');
     } finally {
@@ -384,19 +355,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     } else if (state == AppLifecycleState.paused) {
       _autoConnector.stop();
       _backgroundEnteredAt ??= DateTime.now();
-      if (_useAndroidImmediateBackgroundShutdown) {
-        _pendingCloseShutdownTimer?.cancel();
-        _pendingCloseShutdownTimer = null;
-        unawaited(
-          _maybeTurnOffAllSensorsOnAppClose(closeOpenScreensOnResume: false),
-        );
-      } else {
-        _scheduleCloseShutdownIfNeeded();
-      }
+      _scheduleCloseShutdownIfNeeded();
     } else if (state == AppLifecycleState.detached) {
-      unawaited(
-        _handleNativeAppTerminationSignal(source: 'flutter_lifecycle_detached'),
-      );
+      _backgroundEnteredAt = null;
+      _pendingCloseShutdownTimer?.cancel();
+      _pendingCloseShutdownTimer = null;
+      unawaited(AppBackgroundExecutionBridge.endSensorShutdownWindow());
+      _autoConnector.stop();
     }
   }
 
@@ -474,7 +439,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       if (version == null) {
         return null;
       }
-      return 'Firmware version: $version';
+      return _ensureSentenceEndsWithPeriod('Firmware version: $version');
     }
 
     final detected = result.detectedFirmwareVersion;
@@ -497,6 +462,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     required Color accentColor,
     TextStyle? textStyle,
   }) {
+    final normalizedDescription = _ensureSentenceEndsWithPeriod(
+      event.description,
+    );
     final resolvedTextStyle = textStyle ??
         Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: textColor,
@@ -508,12 +476,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         );
 
     if (event is! WearableTimeSynchronizedEvent) {
-      return Text(event.description, style: resolvedTextStyle);
+      return Text(normalizedDescription, style: resolvedTextStyle);
     }
 
-    final parsed = _ParsedStereoSyncMessage.tryParse(event.description);
+    final parsed = _ParsedStereoSyncMessage.tryParse(normalizedDescription);
     if (parsed == null) {
-      return Text(event.description, style: resolvedTextStyle);
+      return Text(normalizedDescription, style: resolvedTextStyle);
     }
 
     return Text.rich(
@@ -534,9 +502,33 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     );
   }
 
+  String _ensureSentenceEndsWithPeriod(String text) {
+    final trimmed = text.trimRight();
+    if (trimmed.isEmpty) {
+      return trimmed;
+    }
+
+    final lastChar = trimmed[trimmed.length - 1];
+    if (lastChar == '.' || lastChar == '!' || lastChar == '?') {
+      return trimmed;
+    }
+
+    if (trimmed.length > 1 &&
+        (lastChar == '"' ||
+            lastChar == '\'' ||
+            lastChar == ')' ||
+            lastChar == ']')) {
+      final previousChar = trimmed[trimmed.length - 2];
+      if (previousChar == '.' || previousChar == '!' || previousChar == '?') {
+        return trimmed;
+      }
+    }
+
+    return '$trimmed.';
+  }
+
   @override
   void dispose() {
-    AppBackgroundExecutionBridge.setAppTerminatingHandler(null);
     _unsupportedFirmwareSub.cancel();
     _wearableEventSub.cancel();
     _wearableProvEventSub.cancel();
@@ -546,7 +538,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     _backgroundEnteredAt = null;
     unawaited(AppBackgroundExecutionBridge.endSensorShutdownWindow());
     _autoConnector.stop();
-    unawaited(_maybeTurnOffAllSensorsOnAppClose());
     super.dispose();
   }
 

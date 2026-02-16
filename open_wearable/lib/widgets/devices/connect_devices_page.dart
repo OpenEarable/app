@@ -38,7 +38,6 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
   @override
   void initState() {
     super.initState();
-    unawaited(_pullConnectedSystemDevices());
     _startScanning();
   }
 
@@ -89,7 +88,6 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          await _pullConnectedSystemDevices();
           await _startScanning(clearPrevious: true);
         },
         child: ListView(

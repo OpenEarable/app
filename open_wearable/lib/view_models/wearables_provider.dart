@@ -176,11 +176,6 @@ class WearablesProvider with ChangeNotifier {
       return displayName;
     }
 
-    if (wearable.hasCapability<SystemDevice>() &&
-        !wearable.requireCapability<SystemDevice>().isConnectedViaSystem) {
-      return displayName;
-    }
-
     try {
       final position =
           await wearable.requireCapability<StereoDevice>().position;

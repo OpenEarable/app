@@ -149,7 +149,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
       // Disconnect should continue even if preference cleanup fails.
     }
 
-    device.disconnect();
+    await device.disconnect();
     if (shouldPop) {
       navigator.pop();
     }

@@ -20,9 +20,10 @@ class AppToast {
     IconData? icon,
     Duration duration = const Duration(seconds: 4),
   }) {
+    final normalizedMessage = _ensureTrailingPeriod(message);
     _showInternal(
       context,
-      content: Text(message),
+      content: Text(normalizedMessage),
       type: type,
       icon: icon,
       duration: duration,
@@ -97,6 +98,31 @@ class AppToast {
           ),
         ),
       );
+  }
+
+  static String _ensureTrailingPeriod(String message) {
+    final trimmed = message.trimRight();
+    if (trimmed.isEmpty) {
+      return trimmed;
+    }
+
+    final lastChar = trimmed[trimmed.length - 1];
+    if (lastChar == '.' || lastChar == '!' || lastChar == '?') {
+      return trimmed;
+    }
+
+    if (trimmed.length > 1 &&
+        (lastChar == '"' ||
+            lastChar == '\'' ||
+            lastChar == ')' ||
+            lastChar == ']')) {
+      final previousChar = trimmed[trimmed.length - 2];
+      if (previousChar == '.' || previousChar == '!' || previousChar == '?') {
+        return trimmed;
+      }
+    }
+
+    return '$trimmed.';
   }
 }
 

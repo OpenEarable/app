@@ -89,18 +89,6 @@ Sensor? _findOpticalTemperatureSensor(List<Sensor> sensors) {
   return null;
 }
 
-Sensor? _findPpgSensor(List<Sensor> sensors) {
-  for (final sensor in sensors) {
-    final text = '${sensor.sensorName} ${sensor.chartTitle}'.toLowerCase();
-    if (text.contains('photoplethysmography') ||
-        text.contains('ppg') ||
-        text.contains('pulse')) {
-      return sensor;
-    }
-  }
-  return null;
-}
-
 final List<AppInfo> _apps = [
   AppInfo(
     logoPath: "lib/apps/posture_tracker/assets/logo.png",
@@ -147,11 +135,14 @@ final List<AppInfo> _apps = [
               break;
             }
           }
+          final opticalTemperatureSensor =
+              _findOpticalTemperatureSensor(sensors);
 
           return HeartTrackerPage(
             wearable: wearable,
             ppgSensor: ppgSensor,
             accelerometerSensor: accelerometerSensor,
+            opticalTemperatureSensor: opticalTemperatureSensor,
           );
         }
         return PlatformScaffold(
@@ -177,17 +168,14 @@ final List<AppInfo> _apps = [
       supportedDevicePrefixes: _feverSupportedDevices,
       startApp: (wearable, sensorConfigProvider) {
         Sensor? opticalTemperatureSensor;
-        Sensor? ppgSensor;
         if (wearable.hasCapability<SensorManager>()) {
           final sensors = wearable.requireCapability<SensorManager>().sensors;
           opticalTemperatureSensor = _findOpticalTemperatureSensor(sensors);
-          ppgSensor = _findPpgSensor(sensors);
         }
 
         return FeverThermometerPage(
           wearable: wearable,
           opticalTemperatureSensor: opticalTemperatureSensor,
-          ppgSensor: ppgSensor,
           sensorConfigProvider: sensorConfigProvider,
         );
       },

@@ -513,7 +513,7 @@ class DeviceRow extends StatelessWidget {
       return null;
     }
 
-    return '${_compactIdentifier(leftId)} / ${_compactIdentifier(rightId)}';
+    return '${leftId.trim()} / ${rightId.trim()}';
   }
 
   Widget _buildIdentifierLabel(BuildContext context, String label) {
@@ -574,23 +574,6 @@ class DeviceRow extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  String _compactIdentifier(String id) {
-    final normalized = id.trim();
-    const maxChars = 14;
-    if (normalized.length <= maxChars) {
-      return normalized;
-    }
-
-    const ellipsis = '...';
-    final keep = maxChars - ellipsis.length;
-    final prefixLength = (keep / 2).ceil();
-    final suffixLength = keep - prefixLength;
-
-    return '${normalized.substring(0, prefixLength)}'
-        '$ellipsis'
-        '${normalized.substring(normalized.length - suffixLength)}';
   }
 
   Widget _buildPairToggleButton(

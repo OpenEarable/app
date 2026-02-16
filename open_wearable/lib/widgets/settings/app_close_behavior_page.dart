@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_wearable/models/app_shutdown_settings.dart';
+import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 
 class AppCloseBehaviorPage extends StatefulWidget {
   const AppCloseBehaviorPage({super.key});
@@ -67,9 +68,10 @@ class _AppCloseBehaviorPageState extends State<AppCloseBehaviorPage> {
                 AppShutdownSettings.disableLiveDataGraphsListenable,
             builder: (context, disableLiveGraphsEnabled, __) {
               return ListView(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
                 children: [
                   Card(
+                    margin: const EdgeInsets.only(bottom: 8),
                     child: SwitchListTile.adaptive(
                       value: shutOffOnCloseEnabled,
                       onChanged: _isSaving ? null : _setShutOffSensorsOnClose,
@@ -79,12 +81,12 @@ class _AppCloseBehaviorPageState extends State<AppCloseBehaviorPage> {
                       ),
                       title: const Text('Disable all sensors on app close'),
                       subtitle: const Text(
-                        'Turns configurable sensors off after 10s in background when possible (Android applies this as soon as the app is backgrounded for reliability).',
+                        'Turns configurable sensors off after 10s in background when possible.',
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
                   Card(
+                    margin: const EdgeInsets.only(bottom: 8),
                     child: SwitchListTile.adaptive(
                       value: disableLiveGraphsEnabled,
                       onChanged: _isSaving ? null : _setDisableLiveDataGraphs,

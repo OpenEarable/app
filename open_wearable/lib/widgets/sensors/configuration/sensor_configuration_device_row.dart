@@ -607,15 +607,32 @@ class _SensorConfigurationDeviceRowState
 
     final provider = context.read<SensorConfigurationProvider>();
     final result = await provider.restoreFromJson(config);
+    SensorConfigurationRestoreResult? pairedResult;
+    final pairedProvider = widget.pairedProvider;
+    final pairedDevice = widget.pairedDevice;
+    if (pairedProvider != null && pairedDevice != null) {
+      final mirroredConfig = _buildMirroredProfileConfig(
+        sourceDevice: widget.device,
+        targetDevice: pairedDevice,
+        sourceProfileConfig: config,
+      );
+      if (mirroredConfig != null && mirroredConfig.isNotEmpty) {
+        pairedResult = await pairedProvider.restoreFromJson(mirroredConfig);
+      }
+    }
     if (!mounted) return;
 
-    if (!result.hasRestoredValues) {
+    final hasPrimaryValues = result.hasRestoredValues;
+    final hasPairedValues = pairedResult == null || pairedResult.hasRestoredValues;
+    if (!hasPrimaryValues || !hasPairedValues) {
       await showPlatformDialog<void>(
         context: context,
         builder: (dialogContext) => PlatformAlertDialog(
           title: const Text('Profile error'),
           content: Text(
-            'No compatible values from "$title" could be restored for this device.',
+            pairedResult == null
+                ? 'No compatible values from "$title" could be restored for this device.'
+                : 'Profile "$title" could not be restored on both paired devices.',
           ),
           actions: [
             PlatformDialogAction(
@@ -628,9 +645,15 @@ class _SensorConfigurationDeviceRowState
       return;
     }
 
-    if (result.skippedCount > 0 || result.unknownConfigCount > 0) {
+    final pairedSkipped =
+        (pairedResult?.skippedCount ?? 0) + (pairedResult?.unknownConfigCount ?? 0);
+    if (result.skippedCount > 0 ||
+        result.unknownConfigCount > 0 ||
+        pairedSkipped > 0) {
+      final skippedTotal =
+          result.skippedCount + result.unknownConfigCount + pairedSkipped;
       _showSnackBar(
-        'Loaded "$title" (${result.restoredCount} restored, ${result.skippedCount + result.unknownConfigCount} skipped). Tap "Apply Profiles" to push.',
+        'Loaded "$title" (${result.restoredCount + (pairedResult?.restoredCount ?? 0)} restored, $skippedTotal skipped). Tap "Apply Profiles" to push.',
         type: AppToastType.warning,
         icon: Icons.rule_rounded,
       );

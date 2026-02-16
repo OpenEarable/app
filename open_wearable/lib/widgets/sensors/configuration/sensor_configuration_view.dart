@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -306,59 +305,34 @@ class SensorConfigurationView extends StatelessWidget {
       return;
     }
 
-    int appliedCount = 0;
-    int mirroredCount = 0;
-    int mirrorSkippedCount = 0;
     int actionableCount = 0;
 
     for (final target in targets) {
-      final pendingEntries =
-          target.provider.getSelectedConfigurations(pendingOnly: true);
-      final missingFromReportEntries =
-          target.provider.getConfigurationsMissingFromLastReport();
-      final pairSyncEntries = _collectPairSyncEntries(target);
-      final entriesToApply = _mergeConfigurationEntries(
-        pendingEntries,
-        _mergeConfigurationEntries(
-          missingFromReportEntries,
-          pairSyncEntries,
-        ),
-      );
-      if (entriesToApply.isEmpty) {
+      final primaryEntriesToApply = _entriesToApplyForProvider(target.provider);
+      final mirroredEntriesToApply = _entriesToApplyForMirroredTarget(target);
+      if (primaryEntriesToApply.isEmpty && mirroredEntriesToApply.isEmpty) {
         continue;
       }
 
-      actionableCount += entriesToApply.length;
-      logger.d(
-        "Setting sensor configurations for ${target.primaryDevice.name}",
-      );
-
-      for (final entry in entriesToApply) {
+      actionableCount +=
+          primaryEntriesToApply.length + mirroredEntriesToApply.length;
+      for (final entry in primaryEntriesToApply) {
         final SensorConfiguration config = entry.$1;
         final SensorConfigurationValue value = entry.$2;
         // Always push the selected canonical value to the primary device on
         // apply. This also heals primary-side drift/unknown states.
         config.setConfiguration(value);
-        appliedCount += 1;
-
-        final mirroredDevice = target.mirroredDevice;
-        if (mirroredDevice != null) {
-          final mirrored = _applyConfigurationToDevice(
-            mirroredDevice: mirroredDevice,
-            sourceConfig: config,
-            sourceValue: value,
-          );
-          if (mirrored) {
-            mirroredCount += 1;
-          } else {
-            mirrorSkippedCount += 1;
-          }
-        }
       }
 
-      // Pending entries are cleared by SensorConfigurationProvider once the
-      // device reports back the applied value. Keeping them pending here
-      // avoids transient drift while paired devices settle.
+      for (final entry in mirroredEntriesToApply) {
+        final SensorConfiguration config = entry.$1;
+        final SensorConfigurationValue value = entry.$2;
+        config.setConfiguration(value);
+      }
+
+      logger.d(
+        "Applied ${primaryEntriesToApply.length} primary and ${mirroredEntriesToApply.length} mirrored sensor settings for ${target.primaryDevice.name}",
+      );
     }
 
     if (actionableCount == 0) {
@@ -371,26 +345,11 @@ class SensorConfigurationView extends StatelessWidget {
       return;
     }
 
-    final message = StringBuffer(
-      'Applied $appliedCount sensor settings.',
-    );
-    if (mirroredCount > 0) {
-      message.write(' Mirrored $mirroredCount settings to paired devices.');
-    }
-    if (mirrorSkippedCount > 0) {
-      message.write(
-        ' $mirrorSkippedCount mirrored settings were unavailable on partner firmware.',
-      );
-    }
-
     AppToast.show(
       context,
-      message: message.toString(),
-      type:
-          mirrorSkippedCount > 0 ? AppToastType.warning : AppToastType.success,
-      icon: mirrorSkippedCount > 0
-          ? Icons.rule_rounded
-          : Icons.check_circle_outline_rounded,
+      message: 'Sensor settings applied.',
+      type: AppToastType.success,
+      icon: Icons.check_circle_outline_rounded,
     );
 
     (onSetConfigPressed ?? () {})();
@@ -475,38 +434,8 @@ class SensorConfigurationView extends StatelessWidget {
     );
   }
 
-  bool _applyConfigurationToDevice({
-    required Wearable mirroredDevice,
-    required SensorConfiguration sourceConfig,
-    required SensorConfigurationValue sourceValue,
-  }) {
-    if (!mirroredDevice.hasCapability<SensorConfigurationManager>()) {
-      return false;
-    }
-
-    final manager =
-        mirroredDevice.requireCapability<SensorConfigurationManager>();
-    final mirroredConfig = _findMirroredConfiguration(
-      manager: manager,
-      sourceConfig: sourceConfig,
-    );
-    if (mirroredConfig == null) {
-      return false;
-    }
-
-    final mirroredValue = _findMirroredValue(
-      mirroredConfig: mirroredConfig,
-      sourceValue: sourceValue,
-    );
-    if (mirroredValue == null) {
-      return false;
-    }
-
-    mirroredConfig.setConfiguration(mirroredValue);
-    return true;
-  }
-
-  List<(SensorConfiguration, SensorConfigurationValue)> _collectPairSyncEntries(
+  List<(SensorConfiguration, SensorConfigurationValue)>
+      _entriesToApplyForMirroredTarget(
     _ConfigApplyTarget target,
   ) {
     final mirroredDevice = target.mirroredDevice;
@@ -517,38 +446,16 @@ class SensorConfigurationView extends StatelessWidget {
     if (!mirroredDevice.hasCapability<SensorConfigurationManager>()) {
       return const <(SensorConfiguration, SensorConfigurationValue)>[];
     }
+    return _entriesToApplyForProvider(mirroredProvider);
+  }
 
-    final manager =
-        mirroredDevice.requireCapability<SensorConfigurationManager>();
-    final result = <(SensorConfiguration, SensorConfigurationValue)>[];
-    for (final entry in target.provider.getSelectedConfigurations()) {
-      final sourceConfig = entry.$1;
-      final sourceValue = entry.$2;
-      final mirroredConfig = _findMirroredConfiguration(
-        manager: manager,
-        sourceConfig: sourceConfig,
-      );
-      if (mirroredConfig == null) {
-        continue;
-      }
-
-      final mirroredValue = _findMirroredValue(
-        mirroredConfig: mirroredConfig,
-        sourceValue: sourceValue,
-      );
-      if (mirroredValue == null) {
-        continue;
-      }
-
-      final selectedMirroredValue =
-          mirroredProvider.getSelectedConfigurationValue(mirroredConfig);
-      if (_configurationValuesMatch(selectedMirroredValue, mirroredValue)) {
-        continue;
-      }
-      result.add(entry);
-    }
-
-    return result;
+  List<(SensorConfiguration, SensorConfigurationValue)> _entriesToApplyForProvider(
+    SensorConfigurationProvider provider,
+  ) {
+    return _mergeConfigurationEntries(
+      provider.getSelectedConfigurations(pendingOnly: true),
+      provider.getConfigurationsMissingFromLastReport(),
+    );
   }
 
   List<(SensorConfiguration, SensorConfigurationValue)>
@@ -572,97 +479,6 @@ class SensorConfigurationView extends StatelessWidget {
     return merged;
   }
 
-  SensorConfiguration? _findMirroredConfiguration({
-    required SensorConfigurationManager manager,
-    required SensorConfiguration sourceConfig,
-  }) {
-    for (final candidate in manager.sensorConfigurations) {
-      if (candidate.name == sourceConfig.name) {
-        return candidate;
-      }
-    }
-
-    final normalizedSource = _normalizeName(sourceConfig.name);
-    for (final candidate in manager.sensorConfigurations) {
-      if (_normalizeName(candidate.name) == normalizedSource) {
-        return candidate;
-      }
-    }
-    return null;
-  }
-
-  SensorConfigurationValue? _findMirroredValue({
-    required SensorConfiguration mirroredConfig,
-    required SensorConfigurationValue sourceValue,
-  }) {
-    for (final candidate in mirroredConfig.values) {
-      if (candidate.key == sourceValue.key) {
-        return candidate;
-      }
-    }
-
-    if (sourceValue is SensorFrequencyConfigurationValue) {
-      final sourceOptions = _optionNameSet(sourceValue);
-      final candidates = mirroredConfig.values
-          .whereType<SensorFrequencyConfigurationValue>()
-          .toList(growable: false);
-      if (candidates.isNotEmpty) {
-        final sameOptionCandidates = candidates
-            .where(
-              (candidate) =>
-                  setEquals(_optionNameSet(candidate), sourceOptions),
-            )
-            .toList(growable: false);
-        final scoped =
-            sameOptionCandidates.isNotEmpty ? sameOptionCandidates : candidates;
-        SensorFrequencyConfigurationValue? best;
-        double? bestDistance;
-        for (final candidate in scoped) {
-          final distance =
-              (candidate.frequencyHz - sourceValue.frequencyHz).abs();
-          if (best == null || distance < bestDistance!) {
-            best = candidate;
-            bestDistance = distance;
-          }
-        }
-        if (best != null) {
-          return best;
-        }
-      }
-    }
-
-    if (sourceValue is ConfigurableSensorConfigurationValue) {
-      final sourceWithoutOptions = sourceValue.withoutOptions();
-      final sourceOptions = _optionNameSet(sourceValue);
-      for (final candidate in mirroredConfig.values
-          .whereType<ConfigurableSensorConfigurationValue>()) {
-        if (!setEquals(_optionNameSet(candidate), sourceOptions)) {
-          continue;
-        }
-        if (candidate.withoutOptions().key == sourceWithoutOptions.key) {
-          return candidate;
-        }
-      }
-    }
-
-    final normalizedKey = _normalizeName(sourceValue.key);
-    for (final candidate in mirroredConfig.values) {
-      if (_normalizeName(candidate.key) == normalizedKey) {
-        return candidate;
-      }
-    }
-    return null;
-  }
-
-  Set<String> _optionNameSet(SensorConfigurationValue value) {
-    if (value is! ConfigurableSensorConfigurationValue) {
-      return const <String>{};
-    }
-    return value.options.map((option) => _normalizeName(option.name)).toSet();
-  }
-
-  String _normalizeName(String value) => value.trim().toLowerCase();
-
   String _configurationIdentityKey(SensorConfiguration configuration) {
     final dynamic configDynamic = configuration;
     try {
@@ -679,33 +495,6 @@ class SensorConfigurationView extends StatelessWidget {
         .toList(growable: false)
       ..sort();
     return '${configuration.runtimeType}:${configuration.name}:${valuesKey.join('|')}';
-  }
-
-  bool _configurationValuesMatch(
-    SensorConfigurationValue? current,
-    SensorConfigurationValue expected,
-  ) {
-    if (current == null) {
-      return false;
-    }
-
-    if (current is SensorFrequencyConfigurationValue &&
-        expected is SensorFrequencyConfigurationValue) {
-      return current.frequencyHz == expected.frequencyHz &&
-          setEquals(_optionNameSet(current), _optionNameSet(expected));
-    }
-
-    if (current is ConfigurableSensorConfigurationValue &&
-        expected is ConfigurableSensorConfigurationValue) {
-      return _normalizeName(current.withoutOptions().key) ==
-              _normalizeName(expected.withoutOptions().key) &&
-          setEquals(_optionNameSet(current), _optionNameSet(expected));
-    }
-
-    if (current.key == expected.key) {
-      return true;
-    }
-    return _normalizeName(current.key) == _normalizeName(expected.key);
   }
 
   // ignore: unused_element

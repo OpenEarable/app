@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
@@ -15,12 +14,14 @@ class HeartTrackerPage extends StatefulWidget {
   final Wearable wearable;
   final Sensor ppgSensor;
   final Sensor? accelerometerSensor;
+  final Sensor? opticalTemperatureSensor;
 
   const HeartTrackerPage({
     super.key,
     required this.wearable,
     required this.ppgSensor,
     this.accelerometerSensor,
+    this.opticalTemperatureSensor,
   });
 
   @override
@@ -42,6 +43,7 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
       _sensorConfigProvider = configProvider;
       final ppgSensor = widget.ppgSensor;
       final accelerometerSensor = widget.accelerometerSensor;
+      final opticalTemperatureSensor = widget.opticalTemperatureSensor;
 
       final sampleFreq = _configureSensorForStreaming(
         ppgSensor,
@@ -57,6 +59,14 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
           targetFrequencyHz: 50,
         );
       }
+      if (opticalTemperatureSensor != null) {
+        _configureSensorForStreaming(
+          opticalTemperatureSensor,
+          configProvider,
+          fallbackFrequency: 5.0,
+          targetFrequencyHz: 5,
+        );
+      }
 
       final ppgStream = ppgSensor.sensorStream
           .map<PpgOpticalSample?>((data) {
@@ -69,21 +79,34 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
           .cast<PpgOpticalSample>()
           .asBroadcastStream();
 
-      Stream<(int, double)>? accelerometerMagnitudeStream;
+      Stream<PpgMotionSample>? accelerometerMotionStream;
       if (accelerometerSensor != null) {
-        accelerometerMagnitudeStream = accelerometerSensor.sensorStream
-            .map<(int, double)?>((data) {
+        accelerometerMotionStream = accelerometerSensor.sensorStream
+            .map<PpgMotionSample?>((data) {
               if (data is! SensorDoubleValue) {
                 return null;
               }
-              final x = data.values.isNotEmpty ? data.values[0] : 0.0;
-              final y = data.values.length > 1 ? data.values[1] : 0.0;
-              final z = data.values.length > 2 ? data.values[2] : 0.0;
-              final magnitude = sqrt((x * x) + (y * y) + (z * z));
-              return (data.timestamp, magnitude);
+              return _extractImuMotionSample(accelerometerSensor, data);
             })
             .where((sample) => sample != null)
-            .cast<(int, double)>()
+            .cast<PpgMotionSample>()
+            .asBroadcastStream();
+      }
+
+      Stream<PpgTemperatureSample>? opticalTemperatureStream;
+      if (opticalTemperatureSensor != null) {
+        opticalTemperatureStream = opticalTemperatureSensor.sensorStream
+            .map<PpgTemperatureSample?>((data) {
+              if (data is! SensorDoubleValue) {
+                return null;
+              }
+              return _extractOpticalTemperatureSample(
+                opticalTemperatureSensor,
+                data,
+              );
+            })
+            .where((sample) => sample != null)
+            .cast<PpgTemperatureSample>()
             .asBroadcastStream();
       }
 
@@ -92,7 +115,8 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
       }
       final ppgFilter = PpgFilter(
         inputStream: ppgStream,
-        motionStream: accelerometerMagnitudeStream,
+        motionStream: accelerometerMotionStream,
+        opticalTemperatureStream: opticalTemperatureStream,
         sampleFreq: sampleFreq,
         timestampExponent: ppgSensor.timestampExponent,
       );
@@ -111,6 +135,10 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
       final accelerometerSensor = widget.accelerometerSensor;
       if (accelerometerSensor != null) {
         _disableSensorStreaming(accelerometerSensor, configProvider);
+      }
+      final opticalTemperatureSensor = widget.opticalTemperatureSensor;
+      if (opticalTemperatureSensor != null) {
+        _disableSensorStreaming(opticalTemperatureSensor, configProvider);
       }
     }
     _ppgFilter?.dispose();
@@ -275,6 +303,75 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
     );
   }
 
+  PpgMotionSample _extractImuMotionSample(
+    Sensor sensor,
+    SensorDoubleValue data,
+  ) {
+    int? findAxisIndex(List<String> keywords) {
+      for (var i = 0; i < sensor.axisNames.length; i++) {
+        final axis = sensor.axisNames[i].toLowerCase();
+        if (keywords.any(axis.contains)) {
+          return i;
+        }
+      }
+      return null;
+    }
+
+    double valueAt(int? index, double fallback) {
+      if (index != null && index >= 0 && index < data.values.length) {
+        return data.values[index];
+      }
+      return fallback;
+    }
+
+    final fallbackX = data.values.isNotEmpty ? data.values[0] : 0.0;
+    final fallbackY = data.values.length > 1 ? data.values[1] : 0.0;
+    final fallbackZ = data.values.length > 2 ? data.values[2] : 0.0;
+
+    final x = valueAt(findAxisIndex(['x']), fallbackX);
+    final y = valueAt(findAxisIndex(['y']), fallbackY);
+    final z = valueAt(findAxisIndex(['z']), fallbackZ);
+
+    return PpgMotionSample(
+      timestamp: data.timestamp,
+      x: x,
+      y: y,
+      z: z,
+    );
+  }
+
+  PpgTemperatureSample? _extractOpticalTemperatureSample(
+    Sensor sensor,
+    SensorDoubleValue data,
+  ) {
+    if (data.values.isEmpty) {
+      return null;
+    }
+
+    int? findAxisIndex(List<String> keywords) {
+      for (var i = 0; i < sensor.axisNames.length; i++) {
+        final axis = sensor.axisNames[i].toLowerCase();
+        if (keywords.any(axis.contains)) {
+          return i;
+        }
+      }
+      return null;
+    }
+
+    final axisIndex = findAxisIndex(['temp', 'temperature']) ?? 0;
+    if (axisIndex < 0 || axisIndex >= data.values.length) {
+      return null;
+    }
+    final celsius = data.values[axisIndex];
+    if (!celsius.isFinite) {
+      return null;
+    }
+    return PpgTemperatureSample(
+      timestamp: data.timestamp,
+      celsius: celsius,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final ppgFilter = _ppgFilter;
@@ -285,7 +382,11 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
       ),
       body: ppgFilter == null || displayPpgSignalStream == null
           ? const Center(child: PlatformCircularProgressIndicator())
-          : _buildContent(context, ppgFilter, displayPpgSignalStream),
+          : _buildContent(
+              context,
+              ppgFilter,
+              displayPpgSignalStream,
+            ),
     );
   }
 
@@ -348,6 +449,16 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
           ],
         ),
         const SizedBox(height: 12),
+        _SignalPanelCard(
+          title: 'Filtered PPG (IMU-fused)',
+          subtitle: 'Noise-suppressed PPG signal via NLMS Motion-ANC.',
+          icon: Icons.show_chart_rounded,
+          chartStream: displayPpgSignalStream,
+          timestampExponent: widget.ppgSensor.timestampExponent,
+          fixedMeasureMin: -1.6,
+          fixedMeasureMax: 1.6,
+        ),
+        const SizedBox(height: 12),
         Card(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
@@ -357,36 +468,40 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
                 Row(
                   children: [
                     Icon(
-                      Icons.show_chart_rounded,
+                      Icons.menu_book_rounded,
                       size: 18,
                       color: Theme.of(context).colorScheme.primary,
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      'PPG Signal',
+                      'Algorithm Citation',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 6),
+                Text(
+                  'Beat detection: MSPTDfast v2 '
+                  '(Charlton et al., 2025). '
+                  'DOI: 10.1088/1361-6579/adb89e',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
                 const SizedBox(height: 4),
                 Text(
-                  'Display uses the same filtered signal used for HR/HRV.',
+                  'Motion artifact suppression: multi-reference NLMS Motion-ANC '
+                  'adapted from padasip (MIT, Cejnek & Vrba, 2022). '
+                  'DOI: 10.1016/j.jocs.2022.101887',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Implementation optimized for real-time, smartphone-class '
+                  'compute using streaming filters and bounded state.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  height: 88,
-                  child: RollingChart(
-                    dataSteam: displayPpgSignalStream,
-                    timestampExponent: widget.ppgSensor.timestampExponent,
-                    timeWindow: 10,
-                    showXAxis: false,
-                    showYAxis: false,
-                  ),
                 ),
               ],
             ),
@@ -478,6 +593,76 @@ class _MetricCard extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SignalPanelCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Stream<(int, double)> chartStream;
+  final int timestampExponent;
+  final double? fixedMeasureMin;
+  final double? fixedMeasureMax;
+
+  const _SignalPanelCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.chartStream,
+    required this.timestampExponent,
+    this.fixedMeasureMin,
+    this.fixedMeasureMax,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  icon,
+                  size: 18,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 88,
+              child: RollingChart(
+                dataSteam: chartStream,
+                timestampExponent: timestampExponent,
+                timeWindow: 10,
+                showXAxis: false,
+                showYAxis: false,
+                fixedMeasureMin: fixedMeasureMin,
+                fixedMeasureMax: fixedMeasureMax,
+              ),
             ),
           ],
         ),

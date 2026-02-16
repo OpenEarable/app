@@ -14,14 +14,12 @@ import 'package:provider/provider.dart';
 class FeverThermometerPage extends StatefulWidget {
   final Wearable wearable;
   final Sensor? opticalTemperatureSensor;
-  final Sensor? ppgSensor;
   final SensorConfigurationProvider sensorConfigProvider;
 
   const FeverThermometerPage({
     super.key,
     required this.wearable,
     required this.opticalTemperatureSensor,
-    required this.ppgSensor,
     required this.sensorConfigProvider,
   });
 
@@ -32,17 +30,15 @@ class FeverThermometerPage extends StatefulWidget {
 class _FeverThermometerPageState extends State<FeverThermometerPage> {
   static const double _coreOffsetCelsius = 0.4;
   static const int _temperatureTargetFrequencyHz = 10;
-  static const int _ppgTargetFrequencyHz = 25;
   static const int _maxTrendPoints = 140;
   static const double _smoothingFactor = 0.24;
   static const Duration _minimumStabilizationDuration = Duration(minutes: 5);
-  static const double _inEarAmbientThreshold = 180.0;
+  static const double _inEarTemperatureThresholdCelsius = 32.0;
 
   final Map<SensorConfiguration, SensorConfigurationValue?>
       _savedConfigurations = {};
 
   StreamSubscription<SensorValue>? _temperatureSubscription;
-  StreamSubscription<SensorValue>? _ppgSubscription;
   int _temperatureAxisIndex = 0;
   double? _smoothedCoreTempCelsius;
   bool _inEarDetected = false;
@@ -50,7 +46,6 @@ class _FeverThermometerPageState extends State<FeverThermometerPage> {
   DateTime? _stabilizationStartedAt;
   int _sampleCount = 0;
   String? _temperatureStreamError;
-  String? _ppgStreamError;
 
   @override
   void initState() {
@@ -64,14 +59,9 @@ class _FeverThermometerPageState extends State<FeverThermometerPage> {
   @override
   void dispose() {
     _temperatureSubscription?.cancel();
-    _ppgSubscription?.cancel();
     final temperatureSensor = widget.opticalTemperatureSensor;
     if (temperatureSensor != null) {
       unawaited(_restoreSensorConfiguration(temperatureSensor));
-    }
-    final ppgSensor = widget.ppgSensor;
-    if (ppgSensor != null) {
-      unawaited(_restoreSensorConfiguration(ppgSensor));
     }
     super.dispose();
   }
@@ -111,48 +101,6 @@ class _FeverThermometerPageState extends State<FeverThermometerPage> {
         });
       },
     );
-
-    final ppgSensor = widget.ppgSensor;
-    if (ppgSensor == null) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _ppgStreamError =
-            'In-ear placement check unavailable. Temperature result stays hidden.';
-      });
-      return;
-    }
-
-    try {
-      await _prepareSensorForStreaming(
-        ppgSensor,
-        targetFrequencyHz: _ppgTargetFrequencyHz,
-      );
-    } catch (_) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _ppgStreamError = 'Could not start the in-ear placement check.';
-      });
-      return;
-    }
-
-    await _ppgSubscription?.cancel();
-    _ppgSubscription = SensorStreams.shared(ppgSensor).listen(
-      (value) => _onPpgValue(ppgSensor, value),
-      onError: (_) {
-        if (!mounted) {
-          return;
-        }
-        setState(() {
-          _inEarDetected = false;
-          _ppgStreamError = 'In-ear placement check failed.';
-          _resetStabilizationState();
-        });
-      },
-    );
   }
 
   void _onSensorValue(SensorValue sensorValue) {
@@ -168,6 +116,7 @@ class _FeverThermometerPageState extends State<FeverThermometerPage> {
       return;
     }
 
+    final inEarNow = opticalTemp > _inEarTemperatureThresholdCelsius;
     final now = DateTime.now();
 
     if (!mounted) {
@@ -175,6 +124,11 @@ class _FeverThermometerPageState extends State<FeverThermometerPage> {
     }
     setState(() {
       _temperatureStreamError = null;
+      final wasInEar = _inEarDetected;
+      _inEarDetected = inEarNow;
+      if (wasInEar && !inEarNow) {
+        _resetStabilizationState();
+      }
 
       if (_inEarDetected) {
         final estimatedCoreTemp = opticalTemp + _coreOffsetCelsius;
@@ -192,51 +146,6 @@ class _FeverThermometerPageState extends State<FeverThermometerPage> {
         _stabilizationStartedAt ??= now;
       }
     });
-  }
-
-  void _onPpgValue(Sensor ppgSensor, SensorValue sensorValue) {
-    final ambient = _extractPpgAmbient(ppgSensor, sensorValue);
-    if (ambient == null || !ambient.isFinite) {
-      return;
-    }
-
-    final inEarNow = ambient < _inEarAmbientThreshold;
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      final wasInEar = _inEarDetected;
-      _inEarDetected = inEarNow;
-      _ppgStreamError = null;
-      if (wasInEar && !inEarNow) {
-        _resetStabilizationState();
-      }
-    });
-  }
-
-  double? _extractPpgAmbient(Sensor ppgSensor, SensorValue sensorValue) {
-    final values = _valuesFromSensorValue(sensorValue);
-    if (values.isEmpty) {
-      return null;
-    }
-
-    int? ambientAxisIndex;
-    for (var i = 0; i < ppgSensor.axisNames.length; i++) {
-      final axis = ppgSensor.axisNames[i].toLowerCase();
-      if (axis.contains('ambient')) {
-        ambientAxisIndex = i;
-        break;
-      }
-    }
-
-    if (ambientAxisIndex != null && ambientAxisIndex < values.length) {
-      return values[ambientAxisIndex];
-    }
-    if (values.length > 3) {
-      return values[3];
-    }
-    return values.last;
   }
 
   int _resolveTemperatureAxis(Sensor sensor) {
@@ -418,13 +327,11 @@ class _FeverThermometerPageState extends State<FeverThermometerPage> {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final hasPpgSensor = widget.ppgSensor != null;
-    final canStabilize = hasPpgSensor && _inEarDetected;
+    final canStabilize = _inEarDetected;
     final isStabilized = canStabilize && _isStabilized(now);
     final stabilizationRemaining = _stabilizationRemaining(now);
     final stabilizationProgress = _stabilizationProgress(now);
-    final hasStabilizationStarted =
-        canStabilize && _stabilizationStartedAt != null;
+    final hasStabilizationStarted = _stabilizationStartedAt != null;
     final connected = context.watch<WearablesProvider>().wearables.any(
           (wearable) => wearable.deviceId == widget.wearable.deviceId,
         );
@@ -432,10 +339,9 @@ class _FeverThermometerPageState extends State<FeverThermometerPage> {
     final visibleCoreTemperature =
         isStabilized ? _smoothedCoreTempCelsius : null;
     final visibleTrend = isStabilized ? _coreTrend : const <double>[];
-    final feverState = switch ((isStabilized, hasPpgSensor, _inEarDetected)) {
-      (true, _, _) => _feverStateFor(visibleCoreTemperature, theme),
-      (false, false, _) => _ppgRequiredStateFor(theme),
-      (false, true, false) => _outOfEarStateFor(theme),
+    final feverState = switch ((isStabilized, _inEarDetected)) {
+      (true, _) => _feverStateFor(visibleCoreTemperature, theme),
+      (false, false) => _outOfEarStateFor(theme),
       _ => _stabilizingStateFor(
           theme,
           hasSamples: hasStabilizationStarted,
@@ -456,8 +362,6 @@ class _FeverThermometerPageState extends State<FeverThermometerPage> {
             state: feverState,
             coreTempCelsius: visibleCoreTemperature,
             streamError: _temperatureStreamError,
-            ppgError: _ppgStreamError,
-            hasPpgSensor: hasPpgSensor,
             inEarDetected: _inEarDetected,
             sampleCount: _sampleCount,
             isStabilized: isStabilized,
@@ -492,8 +396,6 @@ class _HeroFeverCard extends StatelessWidget {
   final _FeverState state;
   final double? coreTempCelsius;
   final String? streamError;
-  final String? ppgError;
-  final bool hasPpgSensor;
   final bool inEarDetected;
   final int sampleCount;
   final bool isStabilized;
@@ -508,8 +410,6 @@ class _HeroFeverCard extends StatelessWidget {
     required this.state,
     required this.coreTempCelsius,
     required this.streamError,
-    required this.ppgError,
-    required this.hasPpgSensor,
     required this.inEarDetected,
     required this.sampleCount,
     required this.isStabilized,
@@ -526,7 +426,6 @@ class _HeroFeverCard extends StatelessWidget {
         ? '${coreTempCelsius!.toStringAsFixed(1)} °C'
         : '--.- °C';
     final statusMessage = _statusMessage(
-      hasPpgSensor: hasPpgSensor,
       inEarDetected: inEarDetected,
       isStabilized: isStabilized,
       hasStabilizationStarted: hasStabilizationStarted,
@@ -534,10 +433,9 @@ class _HeroFeverCard extends StatelessWidget {
       minimumStabilizationDuration: minimumStabilizationDuration,
       stateDetail: state.detail,
     );
-    final canShowProgress = !isStabilized && hasPpgSensor && inEarDetected;
+    final canShowProgress = !isStabilized && inEarDetected;
     final combinedStatusPillLabel = _combinedStatusPillLabel(
       stateLabel: state.label,
-      hasPpgSensor: hasPpgSensor,
       inEarDetected: inEarDetected,
     );
 
@@ -663,16 +561,6 @@ class _HeroFeverCard extends StatelessWidget {
                 ),
               ),
             ],
-            if (ppgError != null) ...[
-              const SizedBox(height: 6),
-              Text(
-                ppgError!,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.errorContainer,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
           ],
         ),
       ),
@@ -687,7 +575,6 @@ class _HeroFeverCard extends StatelessWidget {
   }
 
   static String _statusMessage({
-    required bool hasPpgSensor,
     required bool inEarDetected,
     required bool isStabilized,
     required bool hasStabilizationStarted,
@@ -697,10 +584,6 @@ class _HeroFeverCard extends StatelessWidget {
   }) {
     if (isStabilized) {
       return stateDetail;
-    }
-
-    if (!hasPpgSensor) {
-      return 'In-ear placement check is required. Result stays hidden.';
     }
 
     if (!inEarDetected) {
@@ -716,12 +599,8 @@ class _HeroFeverCard extends StatelessWidget {
 
   static String _combinedStatusPillLabel({
     required String stateLabel,
-    required bool hasPpgSensor,
     required bool inEarDetected,
   }) {
-    if (!hasPpgSensor) {
-      return '$stateLabel • In-ear check missing';
-    }
     return '$stateLabel • ${inEarDetected ? 'In ear' : 'Out of ear'}';
   }
 
@@ -1163,17 +1042,6 @@ _FeverState _stabilizingStateFor(
     statusColor: theme.colorScheme.primary,
     gradientStart: const Color(0xFF7A6552),
     gradientEnd: const Color(0xFF9C826D),
-  );
-}
-
-_FeverState _ppgRequiredStateFor(ThemeData theme) {
-  return _FeverState(
-    label: 'In-ear check required',
-    detail:
-        'This demo needs an in-ear placement check to verify the device is inserted.',
-    statusColor: theme.colorScheme.error,
-    gradientStart: const Color(0xFF8A5D54),
-    gradientEnd: const Color(0xFFB0766A),
   );
 }
 

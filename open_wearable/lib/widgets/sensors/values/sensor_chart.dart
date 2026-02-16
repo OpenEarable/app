@@ -53,11 +53,13 @@ class _SensorChartState extends State<SensorChart> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final compactMode = !widget.allowToggleAxes;
+    final referenceTimestamp = dataProvider.displayTimestamp;
 
     final axisData = _buildAxisData(
       sensor,
       sensorValues,
       windowSeconds: dataProvider.timeWindow.toDouble(),
+      referenceTimestamp: referenceTimestamp,
     );
     final enabledSeries = <_AxisSeries>[
       for (int i = 0; i < sensor.axisNames.length; i++)
@@ -75,6 +77,7 @@ class _SensorChartState extends State<SensorChart> {
     final windowSeconds = dataProvider.timeWindow.toDouble();
     const maxX = 0.0;
     final minX = -windowSeconds;
+    final yAxisBounds = _computeYAxisBounds(enabledSeries);
 
     final axisChipTextStyle = theme.textTheme.labelMedium;
     const disabledChipLabelColor = Color(0xFF8A8A8A);
@@ -87,6 +90,8 @@ class _SensorChartState extends State<SensorChart> {
     final chartData = LineChartData(
       minX: minX,
       maxX: maxX,
+      minY: yAxisBounds.min,
+      maxY: yAxisBounds.max,
       lineTouchData: LineTouchData(
         enabled: !compactMode,
         handleBuiltInTouches: !compactMode,
@@ -117,8 +122,8 @@ class _SensorChartState extends State<SensorChart> {
           sideTitles: SideTitles(
             showTitles: true,
             reservedSize: compactMode ? 34 : 46,
-            minIncluded: false,
-            maxIncluded: false,
+            minIncluded: true,
+            maxIncluded: true,
             getTitlesWidget: (value, meta) => SideTitleWidget(
               meta: meta,
               space: 6,
@@ -339,19 +344,18 @@ class _SensorChartState extends State<SensorChart> {
     Sensor sensor,
     Queue<SensorValue> buffer, {
     required double windowSeconds,
+    required int referenceTimestamp,
   }) {
     final data = <String, List<FlSpot>>{
       for (var axis in sensor.axisNames) axis: <FlSpot>[],
     };
     if (buffer.isEmpty) return data;
 
-    final latestTimestamp = buffer.last.timestamp;
-
     for (final sensorValue in buffer) {
       final x = _toRelativeSeconds(
         sensor,
         sensorValue.timestamp,
-        referenceTimestamp: latestTimestamp,
+        referenceTimestamp: referenceTimestamp,
       ).clamp(-windowSeconds, 0.0);
       if (sensorValue is SensorDoubleValue) {
         for (int i = 0; i < sensor.axisCount; i++) {
@@ -366,6 +370,37 @@ class _SensorChartState extends State<SensorChart> {
     }
 
     return data;
+  }
+
+  _YAxisBounds _computeYAxisBounds(List<_AxisSeries> seriesList) {
+    var minY = double.infinity;
+    var maxY = double.negativeInfinity;
+
+    for (final series in seriesList) {
+      for (final spot in series.spots) {
+        minY = min(minY, spot.y);
+        maxY = max(maxY, spot.y);
+      }
+    }
+
+    if (!minY.isFinite || !maxY.isFinite) {
+      return const _YAxisBounds(min: -1, max: 1);
+    }
+
+    final range = maxY - minY;
+    if (range.abs() < 1e-9) {
+      final pad = max(minY.abs() * 0.05, 1e-3);
+      return _YAxisBounds(
+        min: minY - pad,
+        max: maxY + pad,
+      );
+    }
+
+    final pad = max(range * 0.1, 1e-6);
+    return _YAxisBounds(
+      min: minY - pad,
+      max: maxY + pad,
+    );
   }
 
   String _formatXAxisTick(double value) {
@@ -433,5 +468,15 @@ class _AxisSeries {
   const _AxisSeries({
     required this.spots,
     required this.color,
+  });
+}
+
+class _YAxisBounds {
+  final double min;
+  final double max;
+
+  const _YAxisBounds({
+    required this.min,
+    required this.max,
   });
 }

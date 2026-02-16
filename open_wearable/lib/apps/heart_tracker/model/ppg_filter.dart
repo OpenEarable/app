@@ -5,6 +5,7 @@ import 'dart:collection';
 import 'dart:math';
 
 import 'package:open_wearable/apps/heart_tracker/model/band_pass_filter.dart';
+import 'package:open_wearable/apps/heart_tracker/model/msptd_fast_v2_detector.dart';
 
 enum PpgSignalQuality {
   unavailable,
@@ -46,13 +47,40 @@ class PpgVitals {
         hrvRmssdMs = null;
 }
 
+class PpgMotionSample {
+  final int timestamp;
+  final double x;
+  final double y;
+  final double z;
+
+  const PpgMotionSample({
+    required this.timestamp,
+    required this.x,
+    required this.y,
+    required this.z,
+  });
+
+  double get magnitude => sqrt((x * x) + (y * y) + (z * z));
+}
+
+class PpgTemperatureSample {
+  final int timestamp;
+  final double celsius;
+
+  const PpgTemperatureSample({
+    required this.timestamp,
+    required this.celsius,
+  });
+}
+
 class PpgFilter {
   final Stream<PpgOpticalSample> inputStream;
-  final Stream<(int, double)>? motionStream;
+  final Stream<PpgMotionSample>? motionStream;
+  final Stream<PpgTemperatureSample>? opticalTemperatureStream;
   final double sampleFreq;
   final int timestampExponent;
 
-  late final double _minPeakDistanceTicks;
+  final MsptdFastV2Detector _msptdDetector = const MsptdFastV2Detector();
 
   double _hrEstimate = 75.0;
   double _hrCovariance = 1.0;
@@ -62,20 +90,26 @@ class PpgFilter {
   double _hrvEstimateMs = 35.0;
   final double _hrvSmoothingAlpha = 0.18;
 
-  StreamSubscription<(int, double)>? _motionSubscription;
+  StreamSubscription<PpgMotionSample>? _motionSubscription;
+  StreamSubscription<PpgTemperatureSample>? _temperatureSubscription;
   Stream<_MotionAwareSample>? _processedStream;
+  Stream<(int, double)>? _rawSignalStream;
   Stream<(int, double)>? _displaySignalStream;
   Stream<PpgVitals>? _vitalsStream;
+
+  double? _latestOpticalTemperatureCelsius;
+  int? _latestOpticalTemperatureTimestamp;
+
+  static const double _reasonableInEarTemperatureCelsius = 32.0;
+  static const double _maxTemperatureSampleAgeSec = 20.0;
 
   PpgFilter({
     required this.inputStream,
     required this.sampleFreq,
     required this.timestampExponent,
     this.motionStream,
-  }) {
-    final ticksPerSecond = pow(10, -timestampExponent).toDouble();
-    _minPeakDistanceTicks = max(1.0, 0.30 * ticksPerSecond);
-  }
+    this.opticalTemperatureStream,
+  });
 
   Stream<(int, double)> get displaySignalStream {
     if (_displaySignalStream != null) {
@@ -85,6 +119,16 @@ class PpgFilter {
         .map((sample) => (sample.timestamp, sample.signal))
         .asBroadcastStream();
     return _displaySignalStream!;
+  }
+
+  Stream<(int, double)> get rawSignalStream {
+    if (_rawSignalStream != null) {
+      return _rawSignalStream!;
+    }
+    _rawSignalStream = _sampleStream
+        .map((sample) => (sample.timestamp, sample.rawGreen))
+        .asBroadcastStream();
+    return _rawSignalStream!;
   }
 
   Stream<double?> get heartRateStream =>
@@ -97,10 +141,16 @@ class PpgFilter {
       _metricsStream.map((vitals) => vitals.signalQuality).distinct();
 
   void dispose() {
-    final subscription = _motionSubscription;
+    final motionSubscription = _motionSubscription;
     _motionSubscription = null;
-    if (subscription != null) {
-      unawaited(subscription.cancel());
+    if (motionSubscription != null) {
+      unawaited(motionSubscription.cancel());
+    }
+
+    final temperatureSubscription = _temperatureSubscription;
+    _temperatureSubscription = null;
+    if (temperatureSubscription != null) {
+      unawaited(temperatureSubscription.cancel());
     }
   }
 
@@ -123,6 +173,7 @@ class PpgFilter {
   Stream<_MotionAwareSample> _createProcessedStream() {
     final ambientCanceler = _AmbientLightCanceler();
     final motionSuppressor = _MotionNoiseSuppressor();
+    final imuCanceler = _MultiReferenceMotionCanceler();
     final bandPassFilter = BandPassFilter(
       sampleFreq: sampleFreq,
       lowCut: 0.7,
@@ -132,7 +183,14 @@ class PpgFilter {
 
     if (motionStream != null) {
       _motionSubscription = motionStream!.listen((event) {
-        motionSuppressor.updateMotionMagnitude(event.$2);
+        motionSuppressor.updateMotionMagnitude(event.magnitude);
+        imuCanceler.updateMotion(event);
+      });
+    }
+    if (opticalTemperatureStream != null) {
+      _temperatureSubscription = opticalTemperatureStream!.listen((sample) {
+        _latestOpticalTemperatureCelsius = sample.celsius;
+        _latestOpticalTemperatureTimestamp = sample.timestamp;
       });
     }
 
@@ -141,7 +199,11 @@ class PpgFilter {
         green: sample.green,
         ambient: sample.ambient,
       );
-      final motionSuppressed = motionSuppressor.filter(ambientCanceled);
+      final imuCleaned = imuCanceler.filter(
+        ambientCanceled,
+        motionLevel: motionSuppressor.motionLevel,
+      );
+      final motionSuppressed = motionSuppressor.filter(imuCleaned);
       final bandPassed = bandPassFilter.filter(motionSuppressed);
       final bounded = normalizer.filter(
         bandPassed,
@@ -178,100 +240,43 @@ class PpgFilter {
     return _hrvEstimateMs;
   }
 
-  List<_MotionAwareSample> _smoothBuffer(
-    List<_MotionAwareSample> raw, {
-    int radius = 2,
-  }) {
-    final smoothed = <_MotionAwareSample>[];
-    for (var i = 0; i < raw.length; i++) {
-      final start = max(0, i - radius);
-      final end = min(raw.length - 1, i + radius);
-      final average = raw
-              .sublist(start, end + 1)
-              .map((sample) => sample.signal)
-              .reduce((a, b) => a + b) /
-          (end - start + 1);
-      smoothed.add(
-        _MotionAwareSample(
-          timestamp: raw[i].timestamp,
-          rawGreen: raw[i].rawGreen,
-          rawAmbient: raw[i].rawAmbient,
-          signal: average,
-          motionLevel: raw[i].motionLevel,
-        ),
-      );
-    }
-    return smoothed;
-  }
-
-  List<int> _detectPeaksOpenRing(
-    List<_MotionAwareSample> samples, {
-    required double thresholdRatio,
-    required double minIntervalSec,
-  }) {
-    final buffer = _smoothBuffer(samples, radius: 2);
-    if (buffer.length < 3) {
-      return const [];
-    }
-    var minValue = double.infinity;
-    var maxValue = -double.infinity;
-    var sum = 0.0;
-    for (final sample in buffer) {
-      minValue = min(minValue, sample.signal);
-      maxValue = max(maxValue, sample.signal);
-      sum += sample.signal;
-    }
-    if (!minValue.isFinite || !maxValue.isFinite) {
-      return const [];
-    }
-    final mean = sum / buffer.length;
-    final dynamicThreshold = mean + ((maxValue - mean) * thresholdRatio);
-
-    final ticksPerSecond = pow(10, -timestampExponent).toDouble();
-    final minDistanceTicks = max(
-      _minPeakDistanceTicks,
-      minIntervalSec * ticksPerSecond,
-    );
-    final peakTimestamps = <int>[];
-    var i = 0;
-
-    while (i < buffer.length) {
-      if (buffer[i].signal >= dynamicThreshold) {
-        var regionMaxIdx = i;
-        var regionMaxVal = buffer[i].signal;
-        var j = i + 1;
-        while (j < buffer.length && buffer[j].signal >= dynamicThreshold) {
-          if (buffer[j].signal > regionMaxVal) {
-            regionMaxVal = buffer[j].signal;
-            regionMaxIdx = j;
-          }
-          j += 1;
-        }
-        final candidateTimestamp = buffer[regionMaxIdx].timestamp;
-        final canAdd = peakTimestamps.isEmpty ||
-            (candidateTimestamp - peakTimestamps.last).toDouble() >=
-                minDistanceTicks;
-        if (canAdd) {
-          peakTimestamps.add(candidateTimestamp);
-        }
-        i = j;
-      } else {
-        i += 1;
-      }
-    }
-
-    return peakTimestamps;
-  }
-
   ({double? heartRateBpm, List<int> peakTimestamps}) _estimateHeartRateByPeak(
     List<_MotionAwareSample> samples, {
     required double ticksPerSecond,
+    required double estimatedSampleFreqHz,
   }) {
-    final peaks = _detectPeaksOpenRing(
-      samples,
-      thresholdRatio: 0.0,
-      minIntervalSec: 0.4,
+    if (samples.length < 8) {
+      return (heartRateBpm: null, peakTimestamps: const []);
+    }
+
+    // Match MSPTDfast-v2 usage: run beat detection on the raw PPG waveform
+    // (lightly centered only) and let the detector handle detrending/scales.
+    final signal =
+        samples.map((sample) => sample.rawGreen).toList(growable: false);
+    final mean = signal.reduce((a, b) => a + b) / signal.length;
+    final centered =
+        signal.map((value) => value - mean).toList(growable: false);
+    final msptdIndices = _msptdDetector.detectPeakIndices(
+      centered,
+      sampleFreqHz: estimatedSampleFreqHz,
     );
+
+    final peaks = msptdIndices
+        .where((index) => index >= 0 && index < samples.length)
+        .map((index) => samples[index].timestamp)
+        .toList(growable: false);
+
+    return _estimateHeartRateFromPeakTimestamps(
+      peaks,
+      ticksPerSecond: ticksPerSecond,
+    );
+  }
+
+  ({double? heartRateBpm, List<int> peakTimestamps})
+      _estimateHeartRateFromPeakTimestamps(
+    List<int> peaks, {
+    required double ticksPerSecond,
+  }) {
     if (peaks.length < 2) {
       return (heartRateBpm: null, peakTimestamps: peaks);
     }
@@ -297,62 +302,6 @@ class PpgFilter {
     }
 
     return (heartRateBpm: heartRate, peakTimestamps: peaks);
-  }
-
-  double? _estimateHeartRateByFft(
-    List<_MotionAwareSample> samples, {
-    required double estimatedSampleFreqHz,
-  }) {
-    if (samples.length < 32 || estimatedSampleFreqHz <= 1.0) {
-      return null;
-    }
-
-    final values =
-        samples.map((sample) => sample.signal).toList(growable: false);
-    final mean = values.reduce((a, b) => a + b) / values.length;
-    final centered =
-        values.map((value) => value - mean).toList(growable: false);
-
-    var fftSize = 1;
-    while (fftSize < centered.length) {
-      fftSize <<= 1;
-    }
-    final minHz = 35.0 / 60.0;
-    final maxHz = 210.0 / 60.0;
-    var minBin = (minHz * fftSize / estimatedSampleFreqHz).floor();
-    var maxBin = (maxHz * fftSize / estimatedSampleFreqHz).ceil();
-    minBin = min(max(minBin, 1), fftSize ~/ 2);
-    maxBin = min(max(maxBin, minBin), fftSize ~/ 2);
-    if (maxBin <= minBin) {
-      return null;
-    }
-
-    var bestBin = -1;
-    var bestPower = -double.infinity;
-    for (var k = minBin; k <= maxBin; k++) {
-      var real = 0.0;
-      var imag = 0.0;
-      for (var n = 0; n < centered.length; n++) {
-        final angle = 2 * pi * k * n / fftSize;
-        real += centered[n] * cos(angle);
-        imag -= centered[n] * sin(angle);
-      }
-      final power = (real * real) + (imag * imag);
-      if (power > bestPower) {
-        bestPower = power;
-        bestBin = k;
-      }
-    }
-    if (bestBin < 0 || !bestPower.isFinite || bestPower <= 1e-9) {
-      return null;
-    }
-
-    final dominantFrequencyHz = bestBin * estimatedSampleFreqHz / fftSize;
-    final heartRate = dominantFrequencyHz * 60.0;
-    if (!heartRate.isFinite || heartRate < 35 || heartRate > 210) {
-      return null;
-    }
-    return heartRate;
   }
 
   double _estimateEffectiveSampleFreqHz(
@@ -435,8 +384,7 @@ class PpgFilter {
     return PpgSignalQuality.good;
   }
 
-  ({double score, double averageMotion, double averageAmbient})
-      _estimateRecentRawQualityScore(
+  ({double score, double averageMotion}) _estimateRecentWaveformQualityScore(
     List<_MotionAwareSample> samples, {
     required int latestTimestamp,
     required double ticksPerSecond,
@@ -449,53 +397,75 @@ class PpgFilter {
         .toList(growable: false);
     final minimumSamples = max(8, (sampleFreq * 1.2).round());
     if (recent.length < minimumSamples) {
-      return (score: 0.0, averageMotion: 0.0, averageAmbient: 0.0);
+      return (score: 0.0, averageMotion: 0.0);
     }
 
-    final rawValues =
-        recent.map((sample) => sample.rawGreen).toList(growable: false);
-    final meanRawAbs =
-        rawValues.map((value) => value.abs()).reduce((a, b) => a + b) /
-            rawValues.length;
-    if (!meanRawAbs.isFinite || meanRawAbs <= 1e-6) {
-      return (score: 0.0, averageMotion: 0.0, averageAmbient: 0.0);
+    // Score waveform quality from the filtered signal that is displayed.
+    final filteredValues =
+        recent.map((sample) => sample.signal).toList(growable: false);
+    final meanFilteredAbs =
+        filteredValues.map((value) => value.abs()).reduce((a, b) => a + b) /
+            filteredValues.length;
+    if (!meanFilteredAbs.isFinite || meanFilteredAbs <= 1e-6) {
+      return (score: 0.0, averageMotion: 0.0);
     }
 
-    final minRaw = rawValues.reduce(min);
-    final maxRaw = rawValues.reduce(max);
-    final rangeRaw = maxRaw - minRaw;
-    final stdRaw = _standardDeviation(rawValues);
-    final normalizedRange = rangeRaw / meanRawAbs;
-    final normalizedStd = stdRaw / meanRawAbs;
+    final minFiltered = filteredValues.reduce(min);
+    final maxFiltered = filteredValues.reduce(max);
+    final rangeFiltered = maxFiltered - minFiltered;
+    final stdFiltered = _standardDeviation(filteredValues);
 
     final averageMotion =
         recent.map((sample) => sample.motionLevel).reduce((a, b) => a + b) /
             recent.length;
-    final averageAmbient =
-        recent.map((sample) => sample.rawAmbient).reduce((a, b) => a + b) /
-            recent.length;
-
-    final rangeScore = ((normalizedRange - 0.004) / 0.045).clamp(0.0, 1.0);
-    final stdScore = ((normalizedStd - 0.0015) / 0.015).clamp(0.0, 1.0);
-    final motionScore = (1.0 - (averageMotion / 2.4)).clamp(0.0, 1.0);
+    // Filtered signal is normalized/bounded, so fixed thresholds are stable.
+    final rangeScore = ((rangeFiltered - 0.08) / 0.95).clamp(0.0, 1.0);
+    final stdScore = ((stdFiltered - 0.025) / 0.30).clamp(0.0, 1.0);
+    final motionScore = (1.0 - (averageMotion / 2.2)).clamp(0.0, 1.0);
 
     var score = ((0.45 * rangeScore) + (0.35 * stdScore) + (0.20 * motionScore))
         .clamp(0.0, 1.0);
 
     // Make accelerometer motion a strong quality prior:
     // heavy movement should almost always mark PPG quality as bad.
-    if (averageMotion >= 1.55) {
+    if (averageMotion >= 1.45) {
       score = min(score, 0.10);
-    } else if (averageMotion >= 1.20) {
+    } else if (averageMotion >= 1.12) {
       score = min(score, 0.24);
-    } else if (averageMotion >= 0.95) {
+    } else if (averageMotion >= 0.88) {
       score = min(score, 0.45);
     }
 
     return (
       score: score,
       averageMotion: averageMotion,
-      averageAmbient: averageAmbient,
+    );
+  }
+
+  ({bool hasFreshTemperatureSample, bool inEarByTemperature})
+      _estimateInEarByOpticalTemperature({
+    required int latestTimestamp,
+    required double ticksPerSecond,
+  }) {
+    if (opticalTemperatureStream == null) {
+      return (hasFreshTemperatureSample: false, inEarByTemperature: true);
+    }
+
+    final latestTemperature = _latestOpticalTemperatureCelsius;
+    final latestTemperatureTimestamp = _latestOpticalTemperatureTimestamp;
+    if (latestTemperature == null || latestTemperatureTimestamp == null) {
+      return (hasFreshTemperatureSample: false, inEarByTemperature: false);
+    }
+
+    final maxAgeTicks = _maxTemperatureSampleAgeSec * ticksPerSecond;
+    if (latestTimestamp - latestTemperatureTimestamp > maxAgeTicks) {
+      return (hasFreshTemperatureSample: false, inEarByTemperature: false);
+    }
+
+    return (
+      hasFreshTemperatureSample: true,
+      inEarByTemperature:
+          latestTemperature >= _reasonableInEarTemperatureCelsius,
     );
   }
 
@@ -527,64 +497,55 @@ class PpgFilter {
         );
         continue;
       }
-      final recentQuality = _estimateRecentRawQualityScore(
+      final recentQuality = _estimateRecentWaveformQualityScore(
         buffer,
         latestTimestamp: sample.timestamp,
         ticksPerSecond: ticksPerSecond,
       );
       var qualityScore = recentQuality.score;
       final recentMotion = recentQuality.averageMotion;
-      final recentAmbient = recentQuality.averageAmbient;
 
-      if (recentMotion >= 1.55) {
-        yield const PpgVitals.invalid(
-          signalQuality: PpgSignalQuality.bad,
-        );
-        continue;
-      }
-      if (recentAmbient > 180.0) {
+      if (recentMotion >= 1.45) {
         yield const PpgVitals.invalid(
           signalQuality: PpgSignalQuality.bad,
         );
         continue;
       }
 
-      final peakEstimate = _estimateHeartRateByPeak(
-        buffer,
+      final inEarTemperature = _estimateInEarByOpticalTemperature(
+        latestTimestamp: sample.timestamp,
         ticksPerSecond: ticksPerSecond,
       );
-      final peaks = peakEstimate.peakTimestamps;
-      final peakHeartRate = peakEstimate.heartRateBpm;
+      if (opticalTemperatureStream != null) {
+        if (!inEarTemperature.hasFreshTemperatureSample) {
+          yield const PpgVitals.invalid(
+            signalQuality: PpgSignalQuality.unavailable,
+          );
+          continue;
+        }
+        if (!inEarTemperature.inEarByTemperature) {
+          yield const PpgVitals.invalid(
+            signalQuality: PpgSignalQuality.bad,
+          );
+          continue;
+        }
+      }
+
       final effectiveSampleFreqHz = _estimateEffectiveSampleFreqHz(
         buffer,
         ticksPerSecond: ticksPerSecond,
       );
-      final fftHeartRate = _estimateHeartRateByFft(
+      final peakEstimate = _estimateHeartRateByPeak(
         buffer,
+        ticksPerSecond: ticksPerSecond,
         estimatedSampleFreqHz: effectiveSampleFreqHz,
       );
+      final peaks = peakEstimate.peakTimestamps;
+      final peakHeartRate = peakEstimate.heartRateBpm;
 
       final peakScore = (peaks.length / 8.0).clamp(0.0, 1.0);
       qualityScore =
-          ((0.72 * qualityScore) + (0.28 * peakScore)).clamp(0.0, 1.0);
-
-      double? heartRate;
-      if (peakHeartRate != null && fftHeartRate != null) {
-        if ((peakHeartRate - fftHeartRate).abs() <= 15.0) {
-          heartRate = (peakHeartRate + fftHeartRate) / 2.0;
-          qualityScore = min(1.0, qualityScore + 0.12);
-        } else {
-          heartRate = peakHeartRate;
-        }
-      } else {
-        heartRate = peakHeartRate ?? fftHeartRate;
-      }
-      if (peakHeartRate != null) {
-        qualityScore = min(1.0, qualityScore + 0.05);
-      }
-      if (fftHeartRate != null) {
-        qualityScore = min(1.0, qualityScore + 0.03);
-      }
+          ((0.78 * qualityScore) + (0.22 * peakScore)).clamp(0.0, 1.0);
 
       final ibiTicks = <double>[];
       for (var i = 1; i < peaks.length; i++) {
@@ -620,13 +581,13 @@ class PpgFilter {
         continue;
       }
 
-      if (heartRate == null) {
+      if (peakHeartRate == null) {
         yield PpgVitals.invalid(
           signalQuality: classifiedQuality,
         );
         continue;
       }
-      final smoothedHeartRate = _kalmanUpdateHeartRate(heartRate);
+      final smoothedHeartRate = _kalmanUpdateHeartRate(peakHeartRate);
 
       double? smoothedHrvMs;
       if (ibiTicks.length >= 2) {
@@ -708,6 +669,186 @@ class _AmbientLightCanceler {
 
     final cleaned = centeredGreen - (_ambientGain * centeredAmbient);
     return -cleaned;
+  }
+}
+
+class _MultiReferenceMotionCanceler {
+  final _PadasipStyleMultiInputNlmsCanceler _canceler =
+      _PadasipStyleMultiInputNlmsCanceler(
+    tapsPerAxis: 8,
+  );
+
+  bool _isInitialized = false;
+  double _gravityX = 0;
+  double _gravityY = 0;
+  double _gravityZ = 0;
+  double _dynamicX = 0;
+  double _dynamicY = 0;
+  double _dynamicZ = 0;
+  double _referenceScaleX = 0.2;
+  double _referenceScaleY = 0.2;
+  double _referenceScaleZ = 0.2;
+
+  void updateMotion(PpgMotionSample sample) {
+    if (!_isInitialized) {
+      _isInitialized = true;
+      _gravityX = sample.x;
+      _gravityY = sample.y;
+      _gravityZ = sample.z;
+      _dynamicX = 0;
+      _dynamicY = 0;
+      _dynamicZ = 0;
+      _referenceScaleX = 0.2;
+      _referenceScaleY = 0.2;
+      _referenceScaleZ = 0.2;
+      return;
+    }
+
+    const gravityAlpha = 0.04;
+    const dynamicAlpha = 0.18;
+    const scaleAlpha = 0.06;
+
+    _gravityX = (_gravityX * (1.0 - gravityAlpha)) + (sample.x * gravityAlpha);
+    _gravityY = (_gravityY * (1.0 - gravityAlpha)) + (sample.y * gravityAlpha);
+    _gravityZ = (_gravityZ * (1.0 - gravityAlpha)) + (sample.z * gravityAlpha);
+
+    final hpX = sample.x - _gravityX;
+    final hpY = sample.y - _gravityY;
+    final hpZ = sample.z - _gravityZ;
+    _referenceScaleX =
+        (_referenceScaleX * (1.0 - scaleAlpha)) + (hpX.abs() * scaleAlpha);
+    _referenceScaleY =
+        (_referenceScaleY * (1.0 - scaleAlpha)) + (hpY.abs() * scaleAlpha);
+    _referenceScaleZ =
+        (_referenceScaleZ * (1.0 - scaleAlpha)) + (hpZ.abs() * scaleAlpha);
+
+    final normalizedHpX = hpX / max(0.08, _referenceScaleX);
+    final normalizedHpY = hpY / max(0.08, _referenceScaleY);
+    final normalizedHpZ = hpZ / max(0.08, _referenceScaleZ);
+    _dynamicX =
+        (_dynamicX * (1.0 - dynamicAlpha)) + (normalizedHpX * dynamicAlpha);
+    _dynamicY =
+        (_dynamicY * (1.0 - dynamicAlpha)) + (normalizedHpY * dynamicAlpha);
+    _dynamicZ =
+        (_dynamicZ * (1.0 - dynamicAlpha)) + (normalizedHpZ * dynamicAlpha);
+  }
+
+  double filter(
+    double value, {
+    required double motionLevel,
+  }) {
+    if (!_isInitialized) {
+      return value;
+    }
+    return _canceler.filter(
+      signal: value,
+      referenceX: _dynamicX,
+      referenceY: _dynamicY,
+      referenceZ: _dynamicZ,
+      motionLevel: motionLevel,
+    );
+  }
+}
+
+/// Multi-input normalized LMS adaptive canceller adapted from the update rule
+/// used in the open-source `padasip` NLMS implementation (MIT):
+/// https://github.com/matousc89/padasip
+class _PadasipStyleMultiInputNlmsCanceler {
+  static const double _baseMu = 0.08;
+  static const double _maxMu = 1.0;
+  static const double _epsilon = 1e-6;
+  static const double _leakage = 0.00025;
+
+  final int tapsPerAxis;
+  late final List<double> _weights;
+  late final List<double> _historyX;
+  late final List<double> _historyY;
+  late final List<double> _historyZ;
+  late final List<double> _featureVector;
+
+  bool _isInitialized = false;
+  double _smoothedError = 0;
+
+  _PadasipStyleMultiInputNlmsCanceler({
+    required this.tapsPerAxis,
+  }) {
+    final length = max(3, tapsPerAxis * 3);
+    _weights = List<double>.filled(length, 0, growable: false);
+    _historyX = List<double>.filled(tapsPerAxis, 0, growable: false);
+    _historyY = List<double>.filled(tapsPerAxis, 0, growable: false);
+    _historyZ = List<double>.filled(tapsPerAxis, 0, growable: false);
+    _featureVector = List<double>.filled(length, 0, growable: false);
+  }
+
+  double filter({
+    required double signal,
+    required double referenceX,
+    required double referenceY,
+    required double referenceZ,
+    required double motionLevel,
+  }) {
+    if (!signal.isFinite ||
+        !referenceX.isFinite ||
+        !referenceY.isFinite ||
+        !referenceZ.isFinite) {
+      return signal;
+    }
+    if (!_isInitialized) {
+      _isInitialized = true;
+      _smoothedError = signal;
+    }
+
+    _push(_historyX, referenceX);
+    _push(_historyY, referenceY);
+    _push(_historyZ, referenceZ);
+    _composeFeatureVector();
+
+    final predictedNoise = _dot(_weights, _featureVector);
+    final error = signal - predictedNoise;
+    final norm = _epsilon + _dot(_featureVector, _featureVector);
+
+    final motionScale = (motionLevel / 1.6).clamp(0.0, 1.0);
+    final mu = _baseMu + ((_maxMu - _baseMu) * motionScale);
+    final step = (mu * error) / norm;
+
+    for (var i = 0; i < _weights.length; i++) {
+      final updatedWeight =
+          ((1.0 - _leakage) * _weights[i]) + (step * _featureVector[i]);
+      _weights[i] = updatedWeight.clamp(-4.0, 4.0);
+    }
+
+    final smoothAlpha = motionLevel > 1.0 ? 0.22 : 0.11;
+    _smoothedError =
+        (_smoothedError * (1.0 - smoothAlpha)) + (error * smoothAlpha);
+    return _smoothedError;
+  }
+
+  void _push(List<double> history, double sample) {
+    for (var i = history.length - 1; i > 0; i--) {
+      history[i] = history[i - 1];
+    }
+    history[0] = sample;
+  }
+
+  void _composeFeatureVector() {
+    var index = 0;
+    for (var i = 0; i < tapsPerAxis; i++) {
+      _featureVector[index++] = _historyX[i];
+    }
+    for (var i = 0; i < tapsPerAxis; i++) {
+      _featureVector[index++] = _historyY[i];
+    }
+    for (var i = 0; i < tapsPerAxis; i++) {
+      _featureVector[index++] = _historyZ[i];
+    }
+  }
+
+  double _dot(List<double> a, List<double> b) {
+    var sum = 0.0;
+    for (var i = 0; i < a.length; i++) {
+      sum += a[i] * b[i];
+    }
+    return sum;
   }
 }
 
