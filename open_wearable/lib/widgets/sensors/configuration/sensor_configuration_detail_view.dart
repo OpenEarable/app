@@ -15,9 +15,13 @@ class SensorConfigurationDetailView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const sensorOnGreen = Color(0xFF2E7D32);
     final sensorConfigNotifier = context.watch<SensorConfigurationProvider>();
     final selectedValue =
         sensorConfigNotifier.getSelectedConfigurationValue(sensorConfiguration);
+    final isApplied = sensorConfigNotifier.isConfigurationApplied(
+      sensorConfiguration,
+    );
     final selectableValues = sensorConfigNotifier
         .getSensorConfigurationValues(sensorConfiguration, distinct: true)
         .where((value) => _isVisibleValue(value, selectedValue))
@@ -25,6 +29,7 @@ class SensorConfigurationDetailView extends StatelessWidget {
     final dropdownSelection =
         _resolveSelection(selectableValues, selectedValue);
     final colorScheme = Theme.of(context).colorScheme;
+    final accentColor = isApplied ? sensorOnGreen : colorScheme.primary;
     final targetOptions = sensorConfiguration is ConfigurableSensorConfiguration
         ? (sensorConfiguration as ConfigurableSensorConfiguration)
             .availableOptions
@@ -54,6 +59,7 @@ class SensorConfigurationDetailView extends StatelessWidget {
               for (var i = 0; i < targetOptions.length; i++) ...[
                 _OptionToggleTile(
                   option: targetOptions[i],
+                  accentColor: accentColor,
                   selected: sensorConfigNotifier
                       .getSelectedConfigurationOptions(
                         sensorConfiguration,
@@ -203,20 +209,21 @@ class SensorConfigurationDetailView extends StatelessWidget {
 
 class _OptionToggleTile extends StatelessWidget {
   final SensorConfigurationOption option;
+  final Color accentColor;
   final bool selected;
   final ValueChanged<bool> onChanged;
 
   const _OptionToggleTile({
     required this.option,
+    required this.accentColor,
     required this.selected,
     required this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    const sensorOnGreen = Color(0xFF2E7D32);
     final colorScheme = Theme.of(context).colorScheme;
-    final foreground = selected ? sensorOnGreen : colorScheme.onSurface;
+    final foreground = selected ? accentColor : colorScheme.onSurface;
     final (title, subtitle) = _copyForOption(option);
 
     return AnimatedContainer(
@@ -226,11 +233,11 @@ class _OptionToggleTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: selected
-            ? sensorOnGreen.withValues(alpha: 0.06)
+            ? accentColor.withValues(alpha: 0.06)
             : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: (selected ? sensorOnGreen : colorScheme.outlineVariant)
+          color: (selected ? accentColor : colorScheme.outlineVariant)
               .withValues(alpha: selected ? 0.35 : 0.25),
         ),
       ),
@@ -273,7 +280,7 @@ class _OptionToggleTile extends StatelessWidget {
           Switch.adaptive(
             value: selected,
             activeThumbColor: colorScheme.surface,
-            activeTrackColor: sensorOnGreen,
+            activeTrackColor: accentColor,
             inactiveThumbColor: colorScheme.surface,
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             onChanged: onChanged,
@@ -293,7 +300,7 @@ class _OptionToggleTile extends StatelessWidget {
     if (option is RecordSensorConfigOption) {
       return (
         'Record to SD card',
-        'Include this sensor in on-device recordings.',
+        'Include this sensor in on-device recordings. Turn this data target off to complete recording and close the file.',
       );
     }
     return (option.name, null);

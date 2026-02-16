@@ -3,12 +3,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
-import 'package:shared_preferences/shared_preferences.dart'; // New dependency for persistence
+import 'package:shared_preferences/shared_preferences.dart';
 
+import 'auto_connect_preferences.dart';
 import 'logger.dart';
 import 'wearable_connector.dart';
-
-const String _connectedDeviceNamesKey = "connectedDeviceNames";
 
 class BluetoothAutoConnector {
   static const Duration _scanRetryInterval = Duration(seconds: 3);
@@ -54,7 +53,7 @@ class BluetoothAutoConnector {
     if (token != _sessionToken) {
       return;
     }
-    _targetNames = prefs.getStringList(_connectedDeviceNamesKey) ?? [];
+    _targetNames = AutoConnectPreferences.readRememberedDeviceNames(prefs);
 
     // Start listening for successful connections (to save names and set disconnect logic)
     _connectSubscription =
@@ -160,28 +159,24 @@ class BluetoothAutoConnector {
     _markConnected(deviceId: wearable.deviceId, deviceName: wearable.name);
 
     final prefs = await prefsFuture;
-
-    List<String> deviceNames =
-        prefs.getStringList(_connectedDeviceNamesKey) ?? [];
-    if (!deviceNames.contains(wearable.name)) {
-      deviceNames.add(wearable.name);
-      await prefs.setStringList(_connectedDeviceNamesKey, deviceNames);
-    }
+    await AutoConnectPreferences.rememberDeviceName(prefs, wearable.name);
 
     // Stop scanning immediately when a successful connection is made
     _stopScanning();
 
     // Set up the disconnect listener to trigger a scan for the saved name.
-    wearable.addDisconnectListener(() {
+    wearable.addDisconnectListener(() async {
       logger.i(
         "Device ${wearable.name} disconnected. Initiating reconnection scan.",
       );
       _markDisconnected(deviceId: wearable.deviceId, deviceName: wearable.name);
 
-      prefs.reload();
-      _targetNames = prefs.getStringList(_connectedDeviceNamesKey) ?? [];
+      await prefs.reload();
+      _targetNames = AutoConnectPreferences.readRememberedDeviceNames(prefs);
 
-      _attemptConnection();
+      if (_hasUnconnectedTargets()) {
+        _attemptConnection();
+      }
     });
   }
 

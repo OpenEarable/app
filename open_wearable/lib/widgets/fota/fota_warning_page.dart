@@ -193,7 +193,8 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
         title: const Text('Update Instructions'),
       ),
       body: ListView(
-        padding: SensorPageSpacing.pagePadding,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
         children: [
           _SectionCard(
             title: 'Before You Update',

@@ -251,7 +251,7 @@ class AppsPage extends StatelessWidget {
         ],
       ),
       body: ListView(
-        padding: SensorPageSpacing.pagePadding,
+        padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
         children: [
           _AppsHeroCard(
             totalApps: _apps.length,

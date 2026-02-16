@@ -50,7 +50,7 @@ class _FirmwareUpdateWidgetState extends State<FirmwareUpdateWidget> {
           title: const Text('Firmware Update'),
         ),
         body: ListView(
-          padding: SensorPageSpacing.pagePadding,
+          padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
           children: [
             _UpdateStepHeader(currentStep: provider.currentStep),
             const SizedBox(height: SensorPageSpacing.sectionGap),

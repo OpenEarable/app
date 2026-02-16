@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
@@ -18,6 +19,7 @@ import '../../../view_models/sensor_configuration_provider.dart';
 class SensorConfigurationDeviceRow extends StatefulWidget {
   final Wearable device;
   final Wearable? pairedDevice;
+  final SensorConfigurationProvider? pairedProvider;
   final String? displayName;
   final String? storageScope;
 
@@ -25,6 +27,7 @@ class SensorConfigurationDeviceRow extends StatefulWidget {
     super.key,
     required this.device,
     this.pairedDevice,
+    this.pairedProvider,
     this.displayName,
     this.storageScope,
   });
@@ -38,7 +41,8 @@ class _SensorConfigurationDeviceRowState
     extends State<SensorConfigurationDeviceRow>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
-  List<Widget> _content = [];
+  List<Widget> _content = const [];
+  final Map<String, Future<Map<String, String>>> _profileConfigFutures = {};
 
   String get _deviceProfileScope =>
       widget.storageScope ?? 'device_${widget.device.deviceId}';
@@ -65,8 +69,13 @@ class _SensorConfigurationDeviceRowState
     final deviceChanged = oldWidget.device.deviceId != widget.device.deviceId;
     final pairedDeviceChanged =
         oldWidget.pairedDevice?.deviceId != widget.pairedDevice?.deviceId;
+    final pairedProviderChanged =
+        oldWidget.pairedProvider != widget.pairedProvider;
     final scopeChanged = oldWidget.storageScope != widget.storageScope;
-    if (deviceChanged || pairedDeviceChanged || scopeChanged) {
+    if (deviceChanged ||
+        pairedDeviceChanged ||
+        pairedProviderChanged ||
+        scopeChanged) {
       _updateContent();
     }
   }
@@ -76,8 +85,7 @@ class _SensorConfigurationDeviceRowState
     final device = widget.device;
     final tabBar = _buildTabBar(context);
     final isCombinedPair = widget.pairedDevice != null;
-    final title =
-        widget.displayName ?? formatWearableDisplayName(device.name);
+    final title = widget.displayName ?? formatWearableDisplayName(device.name);
 
     return Card(
       child: Column(
@@ -300,23 +308,265 @@ class _SensorConfigurationDeviceRowState
           )
         : key;
 
-    return PlatformListTile(
-      leading: Icon(
-        isDeviceScoped ? Icons.tune_outlined : Icons.tune,
-      ),
-      title: PlatformText(title),
-      subtitle: PlatformText(
-        isDeviceScoped ? 'Tap to load as current' : 'Legacy shared profile',
-      ),
-      onTap: () => _loadProfile(key: key, title: title),
-      trailing: PlatformIconButton(
-        icon: const Icon(Icons.more_horiz),
-        onPressed: () => _showProfileActions(
-          key: key,
-          title: title,
-        ),
-      ),
+    return Consumer<SensorConfigurationProvider>(
+      builder: (context, provider, _) {
+        return FutureBuilder<Map<String, String>>(
+          future: _profileConfigFutures.putIfAbsent(
+            key,
+            () => SensorConfigurationStorage.loadConfiguration(key),
+          ),
+          builder: (context, snapshot) {
+            final profileConfig = snapshot.data;
+            final state = _resolveProfileApplicationState(
+              provider: provider,
+              pairedProvider: widget.pairedProvider,
+              profileConfig: profileConfig,
+            );
+            final colorScheme = Theme.of(context).colorScheme;
+            const appliedGreen = Color(0xFF2E7D32);
+            final stateColor = switch (state) {
+              _ProfileApplicationState.none => colorScheme.onSurface,
+              _ProfileApplicationState.selected => colorScheme.primary,
+              _ProfileApplicationState.applied => appliedGreen,
+              _ProfileApplicationState.mixed => colorScheme.error,
+            };
+            final titleStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: state == _ProfileApplicationState.none
+                      ? FontWeight.w500
+                      : FontWeight.w700,
+                  color: state == _ProfileApplicationState.none
+                      ? null
+                      : stateColor,
+                );
+            final tileDecoration = switch (state) {
+              _ProfileApplicationState.selected => BoxDecoration(
+                  color: colorScheme.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: colorScheme.primary.withValues(alpha: 0.28),
+                  ),
+                ),
+              _ProfileApplicationState.applied => BoxDecoration(
+                  color: appliedGreen.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: appliedGreen.withValues(alpha: 0.34),
+                  ),
+                ),
+              _ProfileApplicationState.mixed => BoxDecoration(
+                  color: colorScheme.error.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: colorScheme.error.withValues(alpha: 0.30),
+                  ),
+                ),
+              _ProfileApplicationState.none => null,
+            };
+
+            final subtitle = switch (state) {
+              _ProfileApplicationState.selected =>
+                'Selected in app, not applied yet',
+              _ProfileApplicationState.applied => widget.pairedProvider == null
+                  ? 'Applied on device'
+                  : 'Applied on both paired devices',
+              _ProfileApplicationState.mixed =>
+                'Mixed state across paired devices',
+              _ProfileApplicationState.none => isDeviceScoped
+                  ? 'Tap to load as current'
+                  : 'Legacy shared profile',
+            };
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: DecoratedBox(
+                decoration: tileDecoration ?? const BoxDecoration(),
+                child: PlatformListTile(
+                  leading: Icon(
+                    isDeviceScoped
+                        ? Icons.bookmark_border_rounded
+                        : Icons.collections_bookmark_rounded,
+                    color: state == _ProfileApplicationState.none
+                        ? colorScheme.onSurfaceVariant
+                        : stateColor,
+                  ),
+                  title: PlatformText(
+                    title,
+                    style: titleStyle,
+                  ),
+                  subtitle: PlatformText(subtitle),
+                  onTap: () => _loadProfile(key: key, title: title),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (state != _ProfileApplicationState.none)
+                        _ProfileApplicationBadge(state: state),
+                      PlatformIconButton(
+                        icon: const Icon(Icons.more_horiz),
+                        onPressed: () => _showProfileActions(
+                          key: key,
+                          title: title,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
+  }
+
+  _ProfileApplicationState _resolveProfileApplicationState({
+    required SensorConfigurationProvider provider,
+    required SensorConfigurationProvider? pairedProvider,
+    required Map<String, String>? profileConfig,
+  }) {
+    if (profileConfig == null || profileConfig.isEmpty) {
+      return _ProfileApplicationState.none;
+    }
+
+    final primaryState = _resolveSingleDeviceProfileState(
+      device: widget.device,
+      provider: provider,
+      expectedConfig: profileConfig,
+    );
+
+    final pairedDevice = widget.pairedDevice;
+    if (pairedDevice == null || pairedProvider == null) {
+      return primaryState;
+    }
+
+    final mirroredProfile = _buildMirroredProfileConfig(
+      sourceDevice: widget.device,
+      targetDevice: pairedDevice,
+      sourceProfileConfig: profileConfig,
+    );
+    if (mirroredProfile == null || mirroredProfile.isEmpty) {
+      return _ProfileApplicationState.mixed;
+    }
+
+    final secondaryState = _resolveSingleDeviceProfileState(
+      device: pairedDevice,
+      provider: pairedProvider,
+      expectedConfig: mirroredProfile,
+    );
+
+    if (primaryState == _ProfileApplicationState.none &&
+        secondaryState == _ProfileApplicationState.none) {
+      return _ProfileApplicationState.none;
+    }
+    if (primaryState == secondaryState) {
+      return primaryState;
+    }
+    return _ProfileApplicationState.mixed;
+  }
+
+  _ProfileApplicationState _resolveSingleDeviceProfileState({
+    required Wearable device,
+    required SensorConfigurationProvider provider,
+    required Map<String, String> expectedConfig,
+  }) {
+    final currentConfig = provider.toJson();
+    if (!_mapsEqual(currentConfig, expectedConfig)) {
+      return _ProfileApplicationState.none;
+    }
+    if (!device.hasCapability<SensorConfigurationManager>()) {
+      return _ProfileApplicationState.none;
+    }
+
+    final manager = device.requireCapability<SensorConfigurationManager>();
+    bool allApplied = true;
+    for (final config in manager.sensorConfigurations) {
+      final expectedValueKey = expectedConfig[config.name];
+      if (expectedValueKey == null) {
+        continue;
+      }
+      final expectedValue = _findConfigurationValueByKey(
+        config: config,
+        valueKey: expectedValueKey,
+      );
+      if (expectedValue == null) {
+        return _ProfileApplicationState.none;
+      }
+      if (!provider.selectedMatchesConfigurationValue(config, expectedValue)) {
+        return _ProfileApplicationState.none;
+      }
+      if (!provider.isConfigurationApplied(config)) {
+        allApplied = false;
+      }
+    }
+
+    return allApplied
+        ? _ProfileApplicationState.applied
+        : _ProfileApplicationState.selected;
+  }
+
+  Map<String, String>? _buildMirroredProfileConfig({
+    required Wearable sourceDevice,
+    required Wearable targetDevice,
+    required Map<String, String> sourceProfileConfig,
+  }) {
+    if (!sourceDevice.hasCapability<SensorConfigurationManager>() ||
+        !targetDevice.hasCapability<SensorConfigurationManager>()) {
+      return null;
+    }
+
+    final sourceManager = sourceDevice.requireCapability<SensorConfigurationManager>();
+    final targetManager = targetDevice.requireCapability<SensorConfigurationManager>();
+    final mirrored = <String, String>{};
+
+    for (final entry in sourceProfileConfig.entries) {
+      final sourceConfig = _findConfigurationByName(
+        manager: sourceManager,
+        configName: entry.key,
+      );
+      if (sourceConfig == null) {
+        continue;
+      }
+      final sourceValue = _findConfigurationValueByKey(
+        config: sourceConfig,
+        valueKey: entry.value,
+      );
+      if (sourceValue == null) {
+        continue;
+      }
+
+      final mirroredConfig = _findMirroredConfiguration(
+        manager: targetManager,
+        sourceConfig: sourceConfig,
+      );
+      if (mirroredConfig == null) {
+        continue;
+      }
+      final mirroredValue = _findMirroredValue(
+        mirroredConfig: mirroredConfig,
+        sourceValue: sourceValue,
+      );
+      if (mirroredValue == null) {
+        continue;
+      }
+      mirrored[mirroredConfig.name] = mirroredValue.key;
+    }
+
+    return mirrored;
+  }
+
+  bool _mapsEqual(
+    Map<String, String> left,
+    Map<String, String> right,
+  ) {
+    if (left.length != right.length) {
+      return false;
+    }
+
+    for (final entry in left.entries) {
+      if (right[entry.key] != entry.value) {
+        return false;
+      }
+    }
+    return true;
   }
 
   Widget? _buildTabBar(BuildContext context) {
@@ -395,6 +645,7 @@ class _SensorConfigurationDeviceRowState
     final provider = context.read<SensorConfigurationProvider>();
     await SensorConfigurationStorage.saveConfiguration(key, provider.toJson());
     if (!mounted) return;
+    _profileConfigFutures.remove(key);
     _showSnackBar(
       'Updated profile "$title" with current settings.',
       type: AppToastType.success,
@@ -412,6 +663,7 @@ class _SensorConfigurationDeviceRowState
 
     await SensorConfigurationStorage.deleteConfiguration(key);
     if (!mounted) return;
+    _profileConfigFutures.remove(key);
     _showSnackBar(
       'Deleted profile "$title".',
       type: AppToastType.success,
@@ -511,7 +763,7 @@ class _SensorConfigurationDeviceRowState
     required String key,
     required String title,
   }) async {
-    final config = await SensorConfigurationStorage.loadConfiguration(key);
+    final profileConfig = await SensorConfigurationStorage.loadConfiguration(key);
     if (!mounted) return;
 
     if (!widget.device.hasCapability<SensorConfigurationManager>()) {
@@ -523,43 +775,57 @@ class _SensorConfigurationDeviceRowState
       return;
     }
 
+    final primaryProvider = context.read<SensorConfigurationProvider>();
     final sensorManager =
         widget.device.requireCapability<SensorConfigurationManager>();
-    final knownConfigs = <String, SensorConfiguration>{
-      for (final sensorConfig in sensorManager.sensorConfigurations)
-        sensorConfig.name: sensorConfig,
-    };
+    final pairedDevice = widget.pairedDevice;
+    final pairedProvider = widget.pairedProvider;
+    final pairedManager = pairedDevice != null &&
+            pairedDevice.hasCapability<SensorConfigurationManager>()
+        ? pairedDevice.requireCapability<SensorConfigurationManager>()
+        : null;
 
-    final details = config.entries.map((entry) {
-      final sensorConfig = knownConfigs[entry.key];
-      if (sensorConfig == null) {
+    final details = profileConfig.entries.map((entry) {
+      final sourceConfig = _findConfigurationByName(
+        manager: sensorManager,
+        configName: entry.key,
+      );
+      if (sourceConfig == null) {
         return _ProfileDetailEntry(
           configName: entry.key,
-          status: _ProfileDetailStatus.unknownConfiguration,
+          status: _ProfileDetailStatus.unavailable,
           detailText: 'Configuration not available on this device.',
         );
       }
 
-      final matchedValue = sensorConfig.values
-          .where((value) => value.key == entry.value)
-          .firstOrNull;
-      if (matchedValue == null) {
+      final sourceValue = _findConfigurationValueByKey(
+        config: sourceConfig,
+        valueKey: entry.value,
+      );
+      if (sourceValue == null) {
         return _ProfileDetailEntry(
           configName: entry.key,
-          status: _ProfileDetailStatus.missingValue,
+          status: _ProfileDetailStatus.unavailable,
           detailText: 'Saved value is not available on this firmware.',
         );
       }
 
-      final resolved = _describeSensorConfigurationValue(matchedValue);
-      return _ProfileDetailEntry(
+      if (pairedManager != null && pairedProvider != null) {
+        return _buildPairedProfileDetailEntry(
+          configName: entry.key,
+          primaryConfig: sourceConfig,
+          primaryProfileValue: sourceValue,
+          primaryProvider: primaryProvider,
+          pairedManager: pairedManager,
+          pairedProvider: pairedProvider,
+        );
+      }
+
+      return _buildSingleProfileDetailEntry(
         configName: entry.key,
-        samplingLabel: resolved.samplingLabel,
-        dataTargetOptions: resolved.dataTargetOptions,
-        detailText: resolved.detailText,
-        status: resolved.missingDataTarget
-            ? _ProfileDetailStatus.inactiveNoTarget
-            : _ProfileDetailStatus.compatible,
+        sensorConfig: sourceConfig,
+        profileValue: sourceValue,
+        provider: primaryProvider,
       );
     }).toList()
       ..sort((a, b) => a.configName.compareTo(b.configName));
@@ -628,37 +894,337 @@ class _SensorConfigurationDeviceRowState
     );
   }
 
+  _ProfileDetailEntry _buildSingleProfileDetailEntry({
+    required String configName,
+    required SensorConfiguration sensorConfig,
+    required SensorConfigurationValue profileValue,
+    required SensorConfigurationProvider provider,
+  }) {
+    final resolved = _describeSensorConfigurationValue(profileValue);
+    final selectedMatches =
+        provider.selectedMatchesConfigurationValue(sensorConfig, profileValue);
+    final applied = selectedMatches && provider.isConfigurationApplied(sensorConfig);
+    final status = switch ((selectedMatches, applied)) {
+      (true, true) => _ProfileDetailStatus.applied,
+      (true, false) => _ProfileDetailStatus.selected,
+      _ => _ProfileDetailStatus.notSelected,
+    };
+
+    return _ProfileDetailEntry(
+      configName: configName,
+      status: status,
+      samplingLabel: resolved.samplingLabel,
+      dataTargetOptions: resolved.dataTargetOptions,
+      detailText: status == _ProfileDetailStatus.notSelected
+          ? 'Current setting differs from this profile.'
+          : null,
+    );
+  }
+
+  _ProfileDetailEntry _buildPairedProfileDetailEntry({
+    required String configName,
+    required SensorConfiguration primaryConfig,
+    required SensorConfigurationValue primaryProfileValue,
+    required SensorConfigurationProvider primaryProvider,
+    required SensorConfigurationManager pairedManager,
+    required SensorConfigurationProvider pairedProvider,
+  }) {
+    final resolved = _describeSensorConfigurationValue(primaryProfileValue);
+    final mirroredConfig = _findMirroredConfiguration(
+      manager: pairedManager,
+      sourceConfig: primaryConfig,
+    );
+    if (mirroredConfig == null) {
+      return _ProfileDetailEntry(
+        configName: configName,
+        status: _ProfileDetailStatus.mixed,
+        detailText: 'Configuration is unavailable on the paired device.',
+      );
+    }
+
+    final mirroredProfileValue = _findMirroredValue(
+      mirroredConfig: mirroredConfig,
+      sourceValue: primaryProfileValue,
+    );
+    if (mirroredProfileValue == null) {
+      return _ProfileDetailEntry(
+        configName: configName,
+        status: _ProfileDetailStatus.mixed,
+        detailText: 'Saved value is unavailable on the paired device.',
+      );
+    }
+
+    final primarySnapshot = _buildDeviceConfigSnapshot(
+      provider: primaryProvider,
+      config: primaryConfig,
+      expectedValue: primaryProfileValue,
+    );
+    final secondarySnapshot = _buildDeviceConfigSnapshot(
+      provider: pairedProvider,
+      config: mirroredConfig,
+      expectedValue: mirroredProfileValue,
+    );
+
+    final statesMatch = primarySnapshot.state == secondarySnapshot.state;
+    final selectedValuesMatch = _configurationValuesMatchNullable(
+      primarySnapshot.selectedValue,
+      secondarySnapshot.selectedValue,
+    );
+
+    if (!statesMatch || !selectedValuesMatch) {
+      return _ProfileDetailEntry(
+        configName: configName,
+        status: _ProfileDetailStatus.mixed,
+        detailText:
+            'Paired devices differ in selected/apply state, sampling rate, or data targets.',
+      );
+    }
+
+    final status = switch (primarySnapshot.state) {
+      _DeviceProfileConfigState.applied => _ProfileDetailStatus.applied,
+      _DeviceProfileConfigState.selected => _ProfileDetailStatus.selected,
+      _DeviceProfileConfigState.notSelected => _ProfileDetailStatus.notSelected,
+      _DeviceProfileConfigState.unavailable => _ProfileDetailStatus.unavailable,
+    };
+
+    return _ProfileDetailEntry(
+      configName: configName,
+      status: status,
+      samplingLabel: resolved.samplingLabel,
+      dataTargetOptions: resolved.dataTargetOptions,
+      detailText: status == _ProfileDetailStatus.notSelected
+          ? 'Current paired setting differs from this profile.'
+          : null,
+    );
+  }
+
+  _DeviceConfigSnapshot _buildDeviceConfigSnapshot({
+    required SensorConfigurationProvider provider,
+    required SensorConfiguration config,
+    required SensorConfigurationValue expectedValue,
+  }) {
+    final selectedValue = provider.getSelectedConfigurationValue(config);
+    if (selectedValue == null) {
+      return const _DeviceConfigSnapshot(
+        state: _DeviceProfileConfigState.notSelected,
+        selectedValue: null,
+      );
+    }
+
+    if (!provider.selectedMatchesConfigurationValue(config, expectedValue)) {
+      return _DeviceConfigSnapshot(
+        state: _DeviceProfileConfigState.notSelected,
+        selectedValue: selectedValue,
+      );
+    }
+
+    if (provider.isConfigurationApplied(config)) {
+      return _DeviceConfigSnapshot(
+        state: _DeviceProfileConfigState.applied,
+        selectedValue: selectedValue,
+      );
+    }
+
+    return _DeviceConfigSnapshot(
+      state: _DeviceProfileConfigState.selected,
+      selectedValue: selectedValue,
+    );
+  }
+
   _ResolvedProfileValue _describeSensorConfigurationValue(
     SensorConfigurationValue value,
   ) {
     final baseValue = value is SensorFrequencyConfigurationValue
-        ? '${value.frequencyHz.toStringAsFixed(2)} Hz'
+        ? _formatFrequency(value.frequencyHz)
         : value.key;
 
     if (value is! ConfigurableSensorConfigurationValue) {
       return _ResolvedProfileValue(
         samplingLabel: baseValue,
         dataTargetOptions: const [],
-        missingDataTarget: false,
-        detailText: null,
       );
     }
 
-    final dataTargets =
-        value.options.where(_isDataTargetOption).toSet().toList();
+    final dataTargets = value.options
+        .where(_isDataTargetOption)
+        .toSet()
+        .toList(growable: false)
+      ..sort((a, b) => _normalizeName(a.name).compareTo(_normalizeName(b.name)));
 
     return _ResolvedProfileValue(
-      samplingLabel: baseValue,
+      samplingLabel: dataTargets.isEmpty ? 'Off' : baseValue,
       dataTargetOptions: dataTargets,
-      missingDataTarget: dataTargets.isEmpty,
-      detailText: null,
     );
+  }
+
+  String _formatFrequency(double hz) {
+    if ((hz - hz.roundToDouble()).abs() < 0.01) {
+      return '${hz.round()} Hz';
+    }
+    if (hz >= 10) {
+      return '${hz.toStringAsFixed(1)} Hz';
+    }
+    return '${hz.toStringAsFixed(2)} Hz';
   }
 
   bool _isDataTargetOption(SensorConfigurationOption option) {
     return option is StreamSensorConfigOption ||
         option is RecordSensorConfigOption;
   }
+
+  SensorConfiguration? _findConfigurationByName({
+    required SensorConfigurationManager manager,
+    required String configName,
+  }) {
+    for (final config in manager.sensorConfigurations) {
+      if (config.name == configName) {
+        return config;
+      }
+    }
+
+    final normalized = _normalizeName(configName);
+    for (final config in manager.sensorConfigurations) {
+      if (_normalizeName(config.name) == normalized) {
+        return config;
+      }
+    }
+    return null;
+  }
+
+  SensorConfigurationValue? _findConfigurationValueByKey({
+    required SensorConfiguration config,
+    required String valueKey,
+  }) {
+    for (final value in config.values) {
+      if (value.key == valueKey) {
+        return value;
+      }
+    }
+
+    final normalized = _normalizeName(valueKey);
+    for (final value in config.values) {
+      if (_normalizeName(value.key) == normalized) {
+        return value;
+      }
+    }
+    return null;
+  }
+
+  SensorConfiguration? _findMirroredConfiguration({
+    required SensorConfigurationManager manager,
+    required SensorConfiguration sourceConfig,
+  }) {
+    for (final candidate in manager.sensorConfigurations) {
+      if (candidate.name == sourceConfig.name) {
+        return candidate;
+      }
+    }
+
+    final normalizedSource = _normalizeName(sourceConfig.name);
+    for (final candidate in manager.sensorConfigurations) {
+      if (_normalizeName(candidate.name) == normalizedSource) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  SensorConfigurationValue? _findMirroredValue({
+    required SensorConfiguration mirroredConfig,
+    required SensorConfigurationValue sourceValue,
+  }) {
+    for (final candidate in mirroredConfig.values) {
+      if (_normalizeName(candidate.key) == _normalizeName(sourceValue.key)) {
+        return candidate;
+      }
+    }
+
+    if (sourceValue is SensorFrequencyConfigurationValue) {
+      final sourceOptions = _optionNameSet(sourceValue);
+      final candidates = mirroredConfig.values
+          .whereType<SensorFrequencyConfigurationValue>()
+          .toList(growable: false);
+      if (candidates.isNotEmpty) {
+        final sameOptionCandidates = candidates
+            .where(
+              (candidate) =>
+                  setEquals(_optionNameSet(candidate), sourceOptions),
+            )
+            .toList(growable: false);
+        final scoped =
+            sameOptionCandidates.isNotEmpty ? sameOptionCandidates : candidates;
+        SensorFrequencyConfigurationValue? best;
+        double? bestDistance;
+        for (final candidate in scoped) {
+          final distance =
+              (candidate.frequencyHz - sourceValue.frequencyHz).abs();
+          if (best == null || distance < bestDistance!) {
+            best = candidate;
+            bestDistance = distance;
+          }
+        }
+        if (best != null) {
+          return best;
+        }
+      }
+    }
+
+    if (sourceValue is ConfigurableSensorConfigurationValue) {
+      final sourceWithoutOptions = sourceValue.withoutOptions();
+      final sourceOptions = _optionNameSet(sourceValue);
+      for (final candidate in mirroredConfig.values
+          .whereType<ConfigurableSensorConfigurationValue>()) {
+        if (!setEquals(_optionNameSet(candidate), sourceOptions)) {
+          continue;
+        }
+        if (_normalizeName(candidate.withoutOptions().key) ==
+            _normalizeName(sourceWithoutOptions.key)) {
+          return candidate;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  bool _configurationValuesMatchNullable(
+    SensorConfigurationValue? left,
+    SensorConfigurationValue? right,
+  ) {
+    if (left == null || right == null) {
+      return left == null && right == null;
+    }
+    return _configurationValuesMatch(left, right);
+  }
+
+  bool _configurationValuesMatch(
+    SensorConfigurationValue left,
+    SensorConfigurationValue right,
+  ) {
+    if (left is SensorFrequencyConfigurationValue &&
+        right is SensorFrequencyConfigurationValue) {
+      return left.frequencyHz == right.frequencyHz &&
+          setEquals(_optionNameSet(left), _optionNameSet(right));
+    }
+
+    if (left is ConfigurableSensorConfigurationValue &&
+        right is ConfigurableSensorConfigurationValue) {
+      return _normalizeName(left.withoutOptions().key) ==
+              _normalizeName(right.withoutOptions().key) &&
+          setEquals(_optionNameSet(left), _optionNameSet(right));
+    }
+
+    return _normalizeName(left.key) == _normalizeName(right.key);
+  }
+
+  Set<String> _optionNameSet(SensorConfigurationValue value) {
+    if (value is! ConfigurableSensorConfigurationValue) {
+      return const <String>{};
+    }
+    return value.options.map((option) => _normalizeName(option.name)).toSet();
+  }
+
+  String _normalizeName(String value) => value.trim().toLowerCase();
 
   Future<bool> _confirmDelete(String title) async {
     final bool? confirmed = await showPlatformDialog<bool>(
@@ -705,6 +1271,7 @@ class _SensorConfigurationDeviceRowState
   }
 
   void _refreshProfiles() {
+    _profileConfigFutures.clear();
     _updateContent();
   }
 
@@ -722,11 +1289,97 @@ class _SensorConfigurationDeviceRowState
   }
 }
 
+enum _ProfileApplicationState {
+  none,
+  selected,
+  applied,
+  mixed,
+}
+
+class _ProfileApplicationBadge extends StatelessWidget {
+  final _ProfileApplicationState state;
+
+  const _ProfileApplicationBadge({
+    required this.state,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const appliedGreen = Color(0xFF2E7D32);
+    final colorScheme = Theme.of(context).colorScheme;
+    final (label, foreground, background, border) = switch (state) {
+      _ProfileApplicationState.selected => (
+          'Selected',
+          colorScheme.primary,
+          colorScheme.primary.withValues(alpha: 0.10),
+          colorScheme.primary.withValues(alpha: 0.30),
+        ),
+      _ProfileApplicationState.applied => (
+          'Applied',
+          appliedGreen,
+          appliedGreen.withValues(alpha: 0.12),
+          appliedGreen.withValues(alpha: 0.34),
+        ),
+      _ProfileApplicationState.mixed => (
+          'Mixed',
+          colorScheme.error,
+          colorScheme.error.withValues(alpha: 0.12),
+          colorScheme.error.withValues(alpha: 0.34),
+        ),
+      _ProfileApplicationState.none => (
+          '',
+          colorScheme.onSurfaceVariant,
+          Colors.transparent,
+          Colors.transparent,
+        ),
+    };
+
+    if (state == _ProfileApplicationState.none) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(right: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: border),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: foreground,
+              fontWeight: FontWeight.w700,
+            ),
+      ),
+    );
+  }
+}
+
 enum _ProfileDetailStatus {
-  compatible,
-  inactiveNoTarget,
-  missingValue,
-  unknownConfiguration,
+  notSelected,
+  selected,
+  applied,
+  mixed,
+  unavailable,
+}
+
+enum _DeviceProfileConfigState {
+  notSelected,
+  selected,
+  applied,
+  unavailable,
+}
+
+class _DeviceConfigSnapshot {
+  final _DeviceProfileConfigState state;
+  final SensorConfigurationValue? selectedValue;
+
+  const _DeviceConfigSnapshot({
+    required this.state,
+    required this.selectedValue,
+  });
 }
 
 class _ProfileDetailEntry {
@@ -748,14 +1401,10 @@ class _ProfileDetailEntry {
 class _ResolvedProfileValue {
   final String samplingLabel;
   final List<SensorConfigurationOption> dataTargetOptions;
-  final bool missingDataTarget;
-  final String? detailText;
 
   const _ResolvedProfileValue({
     required this.samplingLabel,
     required this.dataTargetOptions,
-    required this.missingDataTarget,
-    required this.detailText,
   });
 }
 
@@ -768,34 +1417,33 @@ class _ProfileDetailCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const sensorOnGreen = Color(0xFF2E7D32);
+    const appliedGreen = Color(0xFF2E7D32);
     final colorScheme = Theme.of(context).colorScheme;
-    final isOn = entry.status == _ProfileDetailStatus.compatible;
-    final isOff = entry.status == _ProfileDetailStatus.inactiveNoTarget;
-    final isUnavailable = entry.status == _ProfileDetailStatus.missingValue ||
-        entry.status == _ProfileDetailStatus.unknownConfiguration;
-
-    final indicatorColor = isOn
-        ? sensorOnGreen.withValues(alpha: 0.72)
-        : isUnavailable
-            ? colorScheme.error.withValues(alpha: 0.62)
-            : colorScheme.outlineVariant.withValues(alpha: 0.65);
-
-    final icon = switch (entry.status) {
-      _ProfileDetailStatus.compatible => Icons.sensors_rounded,
-      _ProfileDetailStatus.inactiveNoTarget => Icons.sensors_off_rounded,
-      _ProfileDetailStatus.missingValue => Icons.warning_amber_outlined,
-      _ProfileDetailStatus.unknownConfiguration => Icons.help_outline_rounded,
+    final accentColor = switch (entry.status) {
+      _ProfileDetailStatus.notSelected => colorScheme.onSurfaceVariant,
+      _ProfileDetailStatus.selected => colorScheme.primary,
+      _ProfileDetailStatus.applied => appliedGreen,
+      _ProfileDetailStatus.mixed => colorScheme.error,
+      _ProfileDetailStatus.unavailable => colorScheme.error,
     };
-    final iconColor = isOn
-        ? sensorOnGreen
-        : isUnavailable
-            ? colorScheme.error
-            : colorScheme.onSurfaceVariant;
-
-    final pillLabel =
-        isUnavailable ? null : (isOff ? 'Off' : (entry.samplingLabel ?? 'On'));
-    final pillEnabled = isOn;
+    final indicatorColor = accentColor.withValues(
+      alpha: entry.status == _ProfileDetailStatus.notSelected ? 0.65 : 0.78,
+    );
+    final icon = switch (entry.status) {
+      _ProfileDetailStatus.mixed => Icons.sync_problem_rounded,
+      _ProfileDetailStatus.unavailable => Icons.warning_amber_outlined,
+      _ => Icons.sensors_rounded,
+    };
+    final showMixedBubble = entry.status == _ProfileDetailStatus.mixed;
+    final showValueBubbles =
+        !showMixedBubble && entry.status != _ProfileDetailStatus.unavailable;
+    final showHelperText = entry.detailText != null &&
+        (entry.status == _ProfileDetailStatus.notSelected ||
+            entry.status == _ProfileDetailStatus.mixed ||
+            entry.status == _ProfileDetailStatus.unavailable);
+    final titleColor = entry.status == _ProfileDetailStatus.notSelected
+        ? colorScheme.onSurface
+        : accentColor;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
@@ -805,7 +1453,7 @@ class _ProfileDetailCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
-              width: isOn ? 3 : 2,
+              width: entry.status == _ProfileDetailStatus.notSelected ? 2 : 3,
               height: 30,
               decoration: BoxDecoration(
                 color: indicatorColor,
@@ -816,7 +1464,7 @@ class _ProfileDetailCard extends StatelessWidget {
             Icon(
               icon,
               size: 15,
-              color: iconColor,
+              color: accentColor,
             ),
             const SizedBox(width: 7),
             Expanded(
@@ -835,33 +1483,40 @@ class _ProfileDetailCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style:
                               Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: titleColor,
                                     fontWeight: FontWeight.w700,
                                   ),
                         ),
                       ),
-                      if (entry.dataTargetOptions.isNotEmpty) ...[
+                      if (showMixedBubble) ...[
+                        const SizedBox(width: 8),
+                        const _ProfileMixedStateBubble(),
+                      ] else if (showValueBubbles &&
+                          entry.dataTargetOptions.isNotEmpty) ...[
                         const SizedBox(width: 6),
                         _ProfileOptionsCompactBadge(
                           options: entry.dataTargetOptions,
+                          accentColor: accentColor,
                         ),
                       ],
-                      if (pillLabel != null) ...[
+                      if (showValueBubbles && entry.samplingLabel != null) ...[
                         const SizedBox(width: 8),
                         _ProfileSamplingRatePill(
-                          label: pillLabel,
-                          enabled: pillEnabled,
+                          label: entry.samplingLabel!,
+                          foreground: accentColor,
                         ),
                       ],
                     ],
                   ),
-                  if (isUnavailable && entry.detailText != null) ...[
+                  if (showHelperText) ...[
                     const SizedBox(height: 2),
                     Text(
                       entry.detailText!,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: isUnavailable
-                                ? colorScheme.error
-                                : colorScheme.onSurfaceVariant,
+                            color:
+                                entry.status == _ProfileDetailStatus.notSelected
+                                    ? colorScheme.onSurfaceVariant
+                                    : colorScheme.error,
                             fontWeight: FontWeight.w600,
                           ),
                     ),
@@ -878,14 +1533,15 @@ class _ProfileDetailCard extends StatelessWidget {
 
 class _ProfileOptionsCompactBadge extends StatelessWidget {
   final List<SensorConfigurationOption> options;
+  final Color accentColor;
 
   const _ProfileOptionsCompactBadge({
     required this.options,
+    required this.accentColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    const sensorOnGreen = Color(0xFF2E7D32);
     final colorScheme = Theme.of(context).colorScheme;
     final visibleCount = options.length > 2 ? 2 : options.length;
     final remainingCount = options.length - visibleCount;
@@ -898,7 +1554,7 @@ class _ProfileOptionsCompactBadge extends StatelessWidget {
           color: colorScheme.surface,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-            color: sensorOnGreen.withValues(alpha: 0.38),
+            color: accentColor.withValues(alpha: 0.38),
           ),
         ),
         child: Row(
@@ -909,7 +1565,7 @@ class _ProfileOptionsCompactBadge extends StatelessWidget {
                 getSensorConfigurationOptionIcon(options[i]) ??
                     Icons.tune_rounded,
                 size: 10,
-                color: sensorOnGreen,
+                color: accentColor,
               ),
               if (i < visibleCount - 1) const SizedBox(width: 3),
             ],
@@ -918,7 +1574,7 @@ class _ProfileOptionsCompactBadge extends StatelessWidget {
               Text(
                 '+$remainingCount',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: sensorOnGreen,
+                      color: accentColor,
                       fontWeight: FontWeight.w600,
                     ),
               ),
@@ -932,18 +1588,16 @@ class _ProfileOptionsCompactBadge extends StatelessWidget {
 
 class _ProfileSamplingRatePill extends StatelessWidget {
   final String label;
-  final bool enabled;
+  final Color foreground;
 
   const _ProfileSamplingRatePill({
     required this.label,
-    required this.enabled,
+    required this.foreground,
   });
 
   @override
   Widget build(BuildContext context) {
-    const sensorOnGreen = Color(0xFF2E7D32);
     final colorScheme = Theme.of(context).colorScheme;
-    final foreground = enabled ? sensorOnGreen : colorScheme.onSurfaceVariant;
 
     return SizedBox(
       height: 22,
@@ -967,6 +1621,36 @@ class _ProfileSamplingRatePill extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileMixedStateBubble extends StatelessWidget {
+  const _ProfileMixedStateBubble();
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return SizedBox(
+      height: 22,
+      child: Container(
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: colorScheme.error.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: colorScheme.error.withValues(alpha: 0.38),
+          ),
+        ),
+        child: Text(
+          'Mixed',
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: colorScheme.error,
+                fontWeight: FontWeight.w700,
+              ),
         ),
       ),
     );

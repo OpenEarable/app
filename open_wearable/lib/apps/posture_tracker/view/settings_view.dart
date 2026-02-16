@@ -71,7 +71,7 @@ class _SettingsViewState extends State<SettingsView> {
             : 'Unavailable';
 
     return ListView(
-      padding: SensorPageSpacing.pagePadding,
+      padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
       children: [
         Card(
           child: Padding(

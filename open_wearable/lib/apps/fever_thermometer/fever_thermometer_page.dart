@@ -448,7 +448,7 @@ class _FeverThermometerPageState extends State<FeverThermometerPage> {
         title: PlatformText('Fever Thermometer'),
       ),
       body: ListView(
-        padding: SensorPageSpacing.pagePadding,
+        padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
         children: [
           _HeroFeverCard(
             wearableName: formatWearableDisplayName(widget.wearable.name),

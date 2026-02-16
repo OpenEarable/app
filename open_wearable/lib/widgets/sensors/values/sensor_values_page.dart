@@ -160,14 +160,14 @@ class SensorValuesPage extends StatelessWidget {
     }
 
     return ListView(
-      padding: SensorPageSpacing.pagePadding,
+      padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
       children: charts,
     );
   }
 
   Widget _buildLargeScreenLayout(BuildContext context, List<Widget> charts) {
     return GridView.builder(
-      padding: SensorPageSpacing.pagePadding,
+      padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
       gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 500,
         childAspectRatio: 1.5,

@@ -75,7 +75,7 @@ class _DevicesPageState extends State<DevicesPage> {
         },
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: SensorPageSpacing.pagePadding,
+          padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
           children: [
             SizedBox(
               height: MediaQuery.of(context).size.height * 0.62,

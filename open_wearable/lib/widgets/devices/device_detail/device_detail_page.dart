@@ -5,12 +5,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/models/auto_connect_preferences.dart';
 import 'package:open_wearable/models/device_name_formatter.dart';
 import 'package:open_wearable/models/wearable_status_cache.dart';
 import 'package:open_wearable/widgets/app_toast.dart';
 import 'package:open_wearable/widgets/devices/device_detail/audio_mode_widget.dart';
 import 'package:open_wearable/widgets/devices/device_status_pills.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'rgb_control.dart';
 import 'microphone_selection_widget.dart';
@@ -135,10 +137,21 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
     );
   }
 
-  void _disconnectDevice() {
-    widget.device.disconnect();
-    if (Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
+  Future<void> _disconnectDevice() async {
+    final navigator = Navigator.of(context);
+    final shouldPop = navigator.canPop();
+    final device = widget.device;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await AutoConnectPreferences.forgetDeviceName(prefs, device.name);
+    } catch (_) {
+      // Disconnect should continue even if preference cleanup fails.
+    }
+
+    device.disconnect();
+    if (shouldPop) {
+      navigator.pop();
     }
   }
 

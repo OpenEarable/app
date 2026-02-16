@@ -84,7 +84,7 @@ class SensorConfigurationView extends StatelessWidget {
         ];
 
         return ListView(
-          padding: SensorPageSpacing.pagePadding,
+          padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
           children: sections,
         );
       },
@@ -134,6 +134,13 @@ class SensorConfigurationView extends StatelessWidget {
   }) {
     final primary = _resolvePrimaryForConfiguration(group);
     final secondary = _resolveMirroredDevice(group, primary);
+    final pairedProvider =
+        secondary != null && secondary.hasCapability<SensorConfigurationManager>()
+            ? _tryGetSensorConfigurationProvider(
+                wearablesProvider: wearablesProvider,
+                wearable: secondary,
+              )
+            : null;
     final storageScope = _storageScopeForGroup(group);
     final rowKey = ValueKey(
       _configurationRowIdentity(
@@ -149,6 +156,7 @@ class SensorConfigurationView extends StatelessWidget {
         key: rowKey,
         device: primary,
         pairedDevice: secondary,
+        pairedProvider: pairedProvider,
         displayName: group.displayName,
         storageScope: storageScope,
       );
@@ -160,6 +168,7 @@ class SensorConfigurationView extends StatelessWidget {
         key: rowKey,
         device: primary,
         pairedDevice: secondary,
+        pairedProvider: pairedProvider,
         displayName: group.displayName,
         storageScope: storageScope,
       ),
@@ -269,120 +278,122 @@ class SensorConfigurationView extends StatelessWidget {
     required List<_ConfigApplyTarget> targets,
   }) {
     return PlatformElevatedButton(
-      onPressed: () async {
-        if (targets.isEmpty) {
-          await showPlatformDialog<void>(
-            context: context,
-            builder: (dialogContext) => PlatformAlertDialog(
-              title: PlatformText('No configurable devices'),
-              content: PlatformText(
-                'Connect a wearable with configurable sensors to apply settings.',
-              ),
-              actions: [
-                PlatformDialogAction(
-                  child: PlatformText('OK'),
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                ),
-              ],
-            ),
-          );
-          return;
-        }
-
-        int appliedCount = 0;
-        int mirroredCount = 0;
-        int mirrorSkippedCount = 0;
-        int actionableCount = 0;
-
-        for (final target in targets) {
-          final pendingEntries =
-              target.provider.getSelectedConfigurations(pendingOnly: true);
-          final missingFromReportEntries =
-              target.provider.getConfigurationsMissingFromLastReport();
-          final pairSyncEntries = _collectPairSyncEntries(target);
-          final entriesToApply = _mergeConfigurationEntries(
-            pendingEntries,
-            _mergeConfigurationEntries(
-              missingFromReportEntries,
-              pairSyncEntries,
-            ),
-          );
-          if (entriesToApply.isEmpty) {
-            continue;
-          }
-
-          actionableCount += entriesToApply.length;
-          logger.d(
-            "Setting sensor configurations for ${target.primaryDevice.name}",
-          );
-
-          for (final entry in entriesToApply) {
-            final SensorConfiguration config = entry.$1;
-            final SensorConfigurationValue value = entry.$2;
-            // Always push the selected canonical value to the primary device on
-            // apply. This also heals primary-side drift/unknown states.
-            config.setConfiguration(value);
-            appliedCount += 1;
-
-            final mirroredDevice = target.mirroredDevice;
-            if (mirroredDevice != null) {
-              final mirrored = _applyConfigurationToDevice(
-                mirroredDevice: mirroredDevice,
-                sourceConfig: config,
-                sourceValue: value,
-              );
-              if (mirrored) {
-                mirroredCount += 1;
-              } else {
-                mirrorSkippedCount += 1;
-              }
-            }
-          }
-
-          if (pendingEntries.isNotEmpty) {
-            target.provider.clearPendingChanges(
-              onlyFor: pendingEntries.map((entry) => entry.$1),
-            );
-          }
-        }
-
-        if (actionableCount == 0) {
-          AppToast.show(
-            context,
-            message: 'No pending sensor settings to apply.',
-            type: AppToastType.info,
-            icon: Icons.info_outline_rounded,
-          );
-          return;
-        }
-
-        final message = StringBuffer(
-          'Applied $appliedCount sensor settings.',
-        );
-        if (mirroredCount > 0) {
-          message.write(' Mirrored $mirroredCount settings to paired devices.');
-        }
-        if (mirrorSkippedCount > 0) {
-          message.write(
-            ' $mirrorSkippedCount mirrored settings were unavailable on partner firmware.',
-          );
-        }
-
-        AppToast.show(
-          context,
-          message: message.toString(),
-          type: mirrorSkippedCount > 0
-              ? AppToastType.warning
-              : AppToastType.success,
-          icon: mirrorSkippedCount > 0
-              ? Icons.rule_rounded
-              : Icons.check_circle_outline_rounded,
-        );
-
-        (onSetConfigPressed ?? () {})();
-      },
+      onPressed: () => _applyConfigurations(context, targets: targets),
       child: PlatformText('Apply Profiles'),
     );
+  }
+
+  Future<void> _applyConfigurations(
+    BuildContext context, {
+    required List<_ConfigApplyTarget> targets,
+  }) async {
+    if (targets.isEmpty) {
+      await showPlatformDialog<void>(
+        context: context,
+        builder: (dialogContext) => PlatformAlertDialog(
+          title: PlatformText('No configurable devices'),
+          content: PlatformText(
+            'Connect a wearable with configurable sensors to apply settings.',
+          ),
+          actions: [
+            PlatformDialogAction(
+              child: PlatformText('OK'),
+              onPressed: () => Navigator.of(dialogContext).pop(),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    int appliedCount = 0;
+    int mirroredCount = 0;
+    int mirrorSkippedCount = 0;
+    int actionableCount = 0;
+
+    for (final target in targets) {
+      final pendingEntries =
+          target.provider.getSelectedConfigurations(pendingOnly: true);
+      final missingFromReportEntries =
+          target.provider.getConfigurationsMissingFromLastReport();
+      final pairSyncEntries = _collectPairSyncEntries(target);
+      final entriesToApply = _mergeConfigurationEntries(
+        pendingEntries,
+        _mergeConfigurationEntries(
+          missingFromReportEntries,
+          pairSyncEntries,
+        ),
+      );
+      if (entriesToApply.isEmpty) {
+        continue;
+      }
+
+      actionableCount += entriesToApply.length;
+      logger.d(
+        "Setting sensor configurations for ${target.primaryDevice.name}",
+      );
+
+      for (final entry in entriesToApply) {
+        final SensorConfiguration config = entry.$1;
+        final SensorConfigurationValue value = entry.$2;
+        // Always push the selected canonical value to the primary device on
+        // apply. This also heals primary-side drift/unknown states.
+        config.setConfiguration(value);
+        appliedCount += 1;
+
+        final mirroredDevice = target.mirroredDevice;
+        if (mirroredDevice != null) {
+          final mirrored = _applyConfigurationToDevice(
+            mirroredDevice: mirroredDevice,
+            sourceConfig: config,
+            sourceValue: value,
+          );
+          if (mirrored) {
+            mirroredCount += 1;
+          } else {
+            mirrorSkippedCount += 1;
+          }
+        }
+      }
+
+      // Pending entries are cleared by SensorConfigurationProvider once the
+      // device reports back the applied value. Keeping them pending here
+      // avoids transient drift while paired devices settle.
+    }
+
+    if (actionableCount == 0) {
+      AppToast.show(
+        context,
+        message: 'No pending sensor settings to apply.',
+        type: AppToastType.info,
+        icon: Icons.info_outline_rounded,
+      );
+      return;
+    }
+
+    final message = StringBuffer(
+      'Applied $appliedCount sensor settings.',
+    );
+    if (mirroredCount > 0) {
+      message.write(' Mirrored $mirroredCount settings to paired devices.');
+    }
+    if (mirrorSkippedCount > 0) {
+      message.write(
+        ' $mirrorSkippedCount mirrored settings were unavailable on partner firmware.',
+      );
+    }
+
+    AppToast.show(
+      context,
+      message: message.toString(),
+      type:
+          mirrorSkippedCount > 0 ? AppToastType.warning : AppToastType.success,
+      icon: mirrorSkippedCount > 0
+          ? Icons.rule_rounded
+          : Icons.check_circle_outline_rounded,
+    );
+
+    (onSetConfigPressed ?? () {})();
   }
 
   Widget _buildThroughputWarningBanner(BuildContext context) {
@@ -677,6 +688,20 @@ class SensorConfigurationView extends StatelessWidget {
     if (current == null) {
       return false;
     }
+
+    if (current is SensorFrequencyConfigurationValue &&
+        expected is SensorFrequencyConfigurationValue) {
+      return current.frequencyHz == expected.frequencyHz &&
+          setEquals(_optionNameSet(current), _optionNameSet(expected));
+    }
+
+    if (current is ConfigurableSensorConfigurationValue &&
+        expected is ConfigurableSensorConfigurationValue) {
+      return _normalizeName(current.withoutOptions().key) ==
+              _normalizeName(expected.withoutOptions().key) &&
+          setEquals(_optionNameSet(current), _optionNameSet(expected));
+    }
+
     if (current.key == expected.key) {
       return true;
     }

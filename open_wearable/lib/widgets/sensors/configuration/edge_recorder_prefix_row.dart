@@ -16,11 +16,19 @@ class EdgeRecorderPrefixRow extends StatefulWidget {
 
 class _RecorderPrefixRowState extends State<EdgeRecorderPrefixRow> {
   late Future<String> _prefixFuture;
+  late final TextEditingController _editPrefixController;
 
   @override
   void initState() {
     super.initState();
+    _editPrefixController = TextEditingController();
     _loadPrefix();
+  }
+
+  @override
+  void dispose() {
+    _editPrefixController.dispose();
+    super.dispose();
   }
 
   void _loadPrefix() {
@@ -28,7 +36,10 @@ class _RecorderPrefixRowState extends State<EdgeRecorderPrefixRow> {
   }
 
   Future<void> _showEditDialog(String current) async {
-    final controller = TextEditingController(text: current);
+    _editPrefixController.value = TextEditingValue(
+      text: current,
+      selection: TextSelection.collapsed(offset: current.length),
+    );
     final result = await showPlatformDialog<bool>(
       context: context,
       builder: (context) => PlatformAlertDialog(
@@ -50,7 +61,7 @@ class _RecorderPrefixRowState extends State<EdgeRecorderPrefixRow> {
             ),
             const SizedBox(height: 10),
             PlatformTextField(
-              controller: controller,
+              controller: _editPrefixController,
               autofocus: true,
               material: (_, __) => MaterialTextFieldData(
                 decoration: const InputDecoration(hintText: 'Prefix'),
@@ -70,10 +81,9 @@ class _RecorderPrefixRowState extends State<EdgeRecorderPrefixRow> {
         ],
       ),
     );
-    controller.dispose();
 
     if (result == true) {
-      await widget.manager.setFilePrefix(controller.text.trim());
+      await widget.manager.setFilePrefix(_editPrefixController.text.trim());
       if (!mounted) {
         return;
       }

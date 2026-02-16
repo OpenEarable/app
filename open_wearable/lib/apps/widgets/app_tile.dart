@@ -3,6 +3,7 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:open_wearable/apps/widgets/app_compatibility.dart';
 import 'package:open_wearable/apps/widgets/apps_page.dart';
+import 'package:open_wearable/models/app_launch_session.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:provider/provider.dart';
 
@@ -27,13 +28,14 @@ class AppTile extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () {
+          AppLaunchSession.markAppFlowOpened();
           Navigator.push(
             context,
             platformPageRoute(
               context: context,
               builder: (context) => app.widget,
             ),
-          );
+          ).whenComplete(AppLaunchSession.markAppFlowClosed);
         },
         child: Padding(
           padding: const EdgeInsets.all(12),

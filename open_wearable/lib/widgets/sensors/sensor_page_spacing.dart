@@ -6,6 +6,10 @@ class SensorPageSpacing {
   static const double gridGap = 10;
 
   static const EdgeInsets pagePadding = EdgeInsets.all(10);
+  static EdgeInsets pagePaddingWithBottomInset(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    return EdgeInsets.fromLTRB(10, 10, 10, 10 + bottomInset);
+  }
 
   static const EdgeInsets pageHeaderPadding =
       EdgeInsets.fromLTRB(10, 10, 10, 0);

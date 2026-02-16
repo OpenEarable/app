@@ -100,6 +100,7 @@ class _HomePageState extends State<HomePage> {
         onLogsRequested: _openLogFiles,
         onConnectRequested: _openConnectDevices,
         onConnectorsRequested: _openConnectors,
+        onAppCloseBehaviorRequested: _openAppCloseBehavior,
       ),
     ];
   }
@@ -235,6 +236,11 @@ class _HomePageState extends State<HomePage> {
     if (!mounted) return;
     context.push('/connectors');
   }
+
+  void _openAppCloseBehavior() {
+    if (!mounted) return;
+    context.push('/settings/app-close');
+  }
 }
 
 class _OverviewPage extends StatelessWidget {
@@ -272,7 +278,7 @@ class _OverviewPage extends StatelessWidget {
           final recordingStart = recorderProvider.recordingStart;
 
           return ListView(
-            padding: SensorPageSpacing.pagePadding,
+            padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
             children: [
               _OverviewHeroCard(
                 wearables: wearables,
@@ -645,70 +651,59 @@ class _OverviewWorkflowStep extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: Material(
-                color: colorScheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: onTap,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color:
-                            colorScheme.outlineVariant.withValues(alpha: 0.5),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: onTap,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            Text(
+                              detail,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              sectionLabel,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                title,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              Text(
-                                detail,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                sectionLabel,
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: colorScheme.primary,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
+                      Container(
+                        margin: const EdgeInsets.only(left: 8),
+                        height: 30,
+                        width: 30,
+                        decoration: BoxDecoration(
+                          color: colorScheme.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(999),
                         ),
-                        Container(
-                          margin: const EdgeInsets.only(left: 8),
-                          height: 30,
-                          width: 30,
-                          decoration: BoxDecoration(
-                            color: colorScheme.primary.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Icon(
-                            Icons.arrow_forward_rounded,
-                            size: 18,
-                            color: colorScheme.primary.withValues(alpha: 0.9),
-                          ),
+                        child: Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 18,
+                          color: colorScheme.primary.withValues(alpha: 0.9),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -1011,11 +1006,13 @@ class _SettingsPage extends StatelessWidget {
   final VoidCallback onLogsRequested;
   final VoidCallback onConnectRequested;
   final VoidCallback onConnectorsRequested;
+  final VoidCallback onAppCloseBehaviorRequested;
 
   const _SettingsPage({
     required this.onLogsRequested,
     required this.onConnectRequested,
     required this.onConnectorsRequested,
+    required this.onAppCloseBehaviorRequested,
   });
 
   @override
@@ -1032,7 +1029,7 @@ class _SettingsPage extends StatelessWidget {
         ],
       ),
       body: ListView(
-        padding: SensorPageSpacing.pagePadding,
+        padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
         children: [
           _QuickActionTile(
             icon: Icons.hub,
@@ -1040,6 +1037,12 @@ class _SettingsPage extends StatelessWidget {
             subtitle:
                 'Forward sensor data from this app to other platforms, such as your computer.',
             onTap: onConnectorsRequested,
+          ),
+          _QuickActionTile(
+            icon: Icons.tune_rounded,
+            title: 'General settings',
+            subtitle: 'Manage app-wide behavior.',
+            onTap: onAppCloseBehaviorRequested,
           ),
           _QuickActionTile(
             icon: Icons.receipt_long,
@@ -1105,7 +1108,7 @@ class _AboutPage extends StatelessWidget {
         title: const Text('About'),
       ),
       body: ListView(
-        padding: SensorPageSpacing.pagePadding,
+        padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
         children: [
           Card(
             child: Padding(
@@ -1380,7 +1383,7 @@ class _OpenSourceLicensesPageState extends State<_OpenSourceLicensesPage> {
           final licenses = snapshot.data ?? const <_PackageLicenseEntry>[];
 
           return ListView(
-            padding: SensorPageSpacing.pagePadding,
+            padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
             children: [
               Card(
                 child: Padding(

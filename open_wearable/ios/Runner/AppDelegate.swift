@@ -3,6 +3,34 @@ import UIKit
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
+  private var sensorShutdownBackgroundTask: UIBackgroundTaskIdentifier = .invalid
+  private var lifecycleChannel: FlutterMethodChannel?
+
+  private func beginSensorShutdownBackgroundTask() {
+    guard sensorShutdownBackgroundTask == .invalid else {
+      return
+    }
+
+    sensorShutdownBackgroundTask = UIApplication.shared.beginBackgroundTask(
+      withName: "SensorShutdown"
+    ) { [weak self] in
+      self?.endSensorShutdownBackgroundTask()
+    }
+  }
+
+  private func endSensorShutdownBackgroundTask() {
+    guard sensorShutdownBackgroundTask != .invalid else {
+      return
+    }
+
+    UIApplication.shared.endBackgroundTask(sensorShutdownBackgroundTask)
+    sensorShutdownBackgroundTask = .invalid
+  }
+
+  private func notifyAppTerminating(source: String) {
+    lifecycleChannel?.invokeMethod("appTerminating", arguments: ["source": source])
+  }
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -10,6 +38,7 @@ import UIKit
     let controller: FlutterViewController = window?.rootViewController as! FlutterViewController
     let openFolderChannel = FlutterMethodChannel(name: "edu.teco.open_folder", binaryMessenger: controller.binaryMessenger)
     let systemSettingsChannel = FlutterMethodChannel(name: "edu.kit.teco.open_wearable/system_settings", binaryMessenger: controller.binaryMessenger)
+    lifecycleChannel = FlutterMethodChannel(name: "edu.kit.teco.open_wearable/lifecycle", binaryMessenger: controller.binaryMessenger)
     
     openFolderChannel.setMethodCallHandler { (call: FlutterMethodCall, result: @escaping FlutterResult) in
       if call.method == "openFolder", let args = call.arguments as? [String: Any], let path = args["path"] as? String {
@@ -47,7 +76,30 @@ import UIKit
       }
     }
 
+    lifecycleChannel?.setMethodCallHandler { [weak self] (call: FlutterMethodCall, result: @escaping FlutterResult) in
+      guard let self = self else {
+        result(false)
+        return
+      }
+
+      if call.method == "beginBackgroundExecution" {
+        self.beginSensorShutdownBackgroundTask()
+        result(true)
+      } else if call.method == "endBackgroundExecution" {
+        self.endSensorShutdownBackgroundTask()
+        result(true)
+      } else {
+        result(FlutterMethodNotImplemented)
+      }
+    }
+
     GeneratedPluginRegistrant.register(with: self)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  override func applicationWillTerminate(_ application: UIApplication) {
+    notifyAppTerminating(source: "ios_applicationWillTerminate")
+    endSensorShutdownBackgroundTask()
+    super.applicationWillTerminate(application)
   }
 }

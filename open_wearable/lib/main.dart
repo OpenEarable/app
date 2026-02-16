@@ -1,9 +1,14 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
+import 'package:open_wearable/models/app_background_execution_bridge.dart';
+import 'package:open_wearable/models/app_launch_session.dart';
+import 'package:open_wearable/models/app_shutdown_settings.dart';
 import 'package:open_wearable/models/log_file_manager.dart';
 import 'package:open_wearable/models/connector_settings.dart';
 import 'package:open_wearable/models/fota_post_update_verification.dart';
@@ -30,6 +35,7 @@ void main() async {
   initOpenWearableLogger(logFileManager.libLogger);
   initLogger(logFileManager.logger);
   await ConnectorSettings.initialize();
+  await AppShutdownSettings.initialize();
 
   runApp(
     MultiProvider(
@@ -68,6 +74,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   late final StreamSubscription _wearableProvEventSub;
   late final WearablesProvider _wearablesProvider;
   late final SensorRecorderProvider _sensorRecorderProvider;
+  bool _closingSensorShutdownInProgress = false;
+  bool _shouldCloseOpenScreensOnResume = false;
+  Timer? _pendingCloseShutdownTimer;
+  DateTime? _backgroundEnteredAt;
+
+  static const Duration _closeShutdownGracePeriod = Duration(
+    seconds: 10,
+  );
 
   @override
   void initState() {
@@ -211,6 +225,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       onWearableConnected: _handleWearableConnected,
     );
 
+    AppBackgroundExecutionBridge.setAppTerminatingHandler((source) {
+      return _handleNativeAppTerminationSignal(source: source);
+    });
+
     _wearableEventSub = connector.events.listen((event) {
       if (event is WearableConnectEvent) {
         _handleWearableConnected(event.wearable);
@@ -218,6 +236,21 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     });
 
     _autoConnector.start();
+  }
+
+  Future<void> _handleNativeAppTerminationSignal({
+    required String source,
+  }) async {
+    logger.i('Received native app termination signal from $source');
+    _backgroundEnteredAt = null;
+    _pendingCloseShutdownTimer?.cancel();
+    _pendingCloseShutdownTimer = null;
+    _autoConnector.stop();
+    try {
+      await _maybeTurnOffAllSensorsOnAppClose();
+    } finally {
+      unawaited(AppBackgroundExecutionBridge.endSensorShutdownWindow());
+    }
   }
 
   void _handleWearableConnected(Wearable wearable) {
@@ -252,13 +285,118 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     );
   }
 
+  bool get _useAndroidImmediateBackgroundShutdown =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+  Future<void> _maybeTurnOffAllSensorsOnAppClose({
+    bool closeOpenScreensOnResume = true,
+  }) async {
+    if (_closingSensorShutdownInProgress ||
+        !AppShutdownSettings.shutOffAllSensorsOnAppClose) {
+      return;
+    }
+
+    _closingSensorShutdownInProgress = true;
+    try {
+      await _wearablesProvider.turnOffSensorsForAllDevices();
+      if (closeOpenScreensOnResume) {
+        _shouldCloseOpenScreensOnResume = true;
+      }
+    } catch (e, st) {
+      logger.w('Failed to shut off sensors on app close: $e\n$st');
+    } finally {
+      unawaited(AppBackgroundExecutionBridge.endSensorShutdownWindow());
+    }
+  }
+
+  void _closeOpenScreensAfterSensorShutdownIfNeeded() {
+    if (!_shouldCloseOpenScreensOnResume) {
+      return;
+    }
+
+    _shouldCloseOpenScreensOnResume = false;
+    if (!AppLaunchSession.hasOpenAppFlow) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final nav = rootNavigatorKey.currentState;
+      if (nav == null || !nav.canPop() || !AppLaunchSession.hasOpenAppFlow) {
+        return;
+      }
+      nav.popUntil((route) => route.isFirst);
+      AppLaunchSession.reset();
+    });
+  }
+
+  void _scheduleCloseShutdownIfNeeded() {
+    _pendingCloseShutdownTimer?.cancel();
+    if (!AppShutdownSettings.shutOffAllSensorsOnAppClose) {
+      unawaited(AppBackgroundExecutionBridge.endSensorShutdownWindow());
+      return;
+    }
+
+    unawaited(AppBackgroundExecutionBridge.beginSensorShutdownWindow());
+    _pendingCloseShutdownTimer = Timer(_closeShutdownGracePeriod, () {
+      _pendingCloseShutdownTimer = null;
+      unawaited(_maybeTurnOffAllSensorsOnAppClose());
+    });
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed) {
+      final backgroundEnteredAt = _backgroundEnteredAt;
+      _backgroundEnteredAt = null;
+
+      _pendingCloseShutdownTimer?.cancel();
+      unawaited(AppBackgroundExecutionBridge.endSensorShutdownWindow());
+
+      final shouldCatchUpShutdown =
+          AppShutdownSettings.shutOffAllSensorsOnAppClose &&
+              !_shouldCloseOpenScreensOnResume &&
+              !_closingSensorShutdownInProgress &&
+              backgroundEnteredAt != null &&
+              DateTime.now().difference(backgroundEnteredAt) >=
+                  _closeShutdownGracePeriod;
+      if (shouldCatchUpShutdown) {
+        unawaited(
+          () async {
+            await _maybeTurnOffAllSensorsOnAppClose();
+            if (!mounted) {
+              return;
+            }
+            _closeOpenScreensAfterSensorShutdownIfNeeded();
+            _closingSensorShutdownInProgress = false;
+            _autoConnector.start();
+          }(),
+        );
+        return;
+      }
+
+      _closingSensorShutdownInProgress = false;
+      _closeOpenScreensAfterSensorShutdownIfNeeded();
       _autoConnector.start();
+    } else if (state == AppLifecycleState.inactive) {
+      _backgroundEnteredAt ??= DateTime.now();
+      _scheduleCloseShutdownIfNeeded();
     } else if (state == AppLifecycleState.paused) {
       _autoConnector.stop();
+      _backgroundEnteredAt ??= DateTime.now();
+      if (_useAndroidImmediateBackgroundShutdown) {
+        _pendingCloseShutdownTimer?.cancel();
+        _pendingCloseShutdownTimer = null;
+        unawaited(
+          _maybeTurnOffAllSensorsOnAppClose(closeOpenScreensOnResume: false),
+        );
+      } else {
+        _scheduleCloseShutdownIfNeeded();
+      }
+    } else if (state == AppLifecycleState.detached) {
+      unawaited(
+        _handleNativeAppTerminationSignal(source: 'flutter_lifecycle_detached'),
+      );
     }
   }
 
@@ -398,12 +536,17 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    AppBackgroundExecutionBridge.setAppTerminatingHandler(null);
     _unsupportedFirmwareSub.cancel();
     _wearableEventSub.cancel();
     _wearableProvEventSub.cancel();
     ConnectorSettings.dispose();
     WidgetsBinding.instance.removeObserver(this);
+    _pendingCloseShutdownTimer?.cancel();
+    _backgroundEnteredAt = null;
+    unawaited(AppBackgroundExecutionBridge.endSensorShutdownWindow());
     _autoConnector.stop();
+    unawaited(_maybeTurnOffAllSensorsOnAppClose());
     super.dispose();
   }
 

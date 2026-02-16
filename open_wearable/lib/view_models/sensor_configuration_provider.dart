@@ -30,6 +30,7 @@ class SensorConfigurationProvider with ChangeNotifier {
       _sensorConfigurationOptions = {};
   final Set<SensorConfiguration> _pendingConfigurations = {};
   final Set<String> _lastReportedConfigurationKeys = {};
+  final Map<String, SensorConfigurationValue> _lastReportedConfigurations = {};
   bool _hasReceivedConfigurationReport = false;
 
   StreamSubscription<Map<SensorConfiguration, SensorConfigurationValue>>?
@@ -41,23 +42,58 @@ class SensorConfigurationProvider with ChangeNotifier {
     _sensorConfigurationSubscription =
         _sensorConfigurationManager.sensorConfigurationStream.listen((event) {
       _hasReceivedConfigurationReport = true;
+      _lastReportedConfigurations
+        ..clear()
+        ..addEntries(
+          event.entries.map(
+            (entry) => MapEntry(
+              _configurationIdentityKey(entry.key),
+              entry.value,
+            ),
+          ),
+        );
       _lastReportedConfigurationKeys
         ..clear()
-        ..addAll(
-          event.keys.map(_configurationIdentityKey),
-        );
+        ..addAll(_lastReportedConfigurations.keys);
 
+      var hasStateChange = false;
       for (final e in event.entries) {
         final sensorConfiguration = e.key;
         final sensorConfigurationValue = e.value;
+        final currentValue = _sensorConfigurations[sensorConfiguration];
+        final isPending = _pendingConfigurations.contains(sensorConfiguration);
 
-        // Update the selected configuration value
-        _sensorConfigurations[sensorConfiguration] = sensorConfigurationValue;
+        if (isPending) {
+          // Keep optimistic local edits stable until the hardware reports the
+          // same value; this avoids transient drift in the UI.
+          if (currentValue != null &&
+              _configurationValuesMatch(
+                currentValue,
+                sensorConfigurationValue,
+              )) {
+            hasStateChange =
+                _pendingConfigurations.remove(sensorConfiguration) ||
+                    hasStateChange;
+          } else {
+            continue;
+          }
+        }
+
+        if (currentValue == null ||
+            !_configurationValuesMatch(
+              currentValue,
+              sensorConfigurationValue,
+            )) {
+          _sensorConfigurations[sensorConfiguration] = sensorConfigurationValue;
+          hasStateChange = true;
+        }
 
         // Update the selected options for configurable sensor configurations
         _updateSelectedOptions(sensorConfiguration);
       }
-      notifyListeners();
+      if (hasStateChange) {
+        notifyListeners();
+      }
     });
   }
 
@@ -67,6 +103,7 @@ class SensorConfigurationProvider with ChangeNotifier {
     bool markPending = true,
   }) {
     _sensorConfigurations[sensorConfiguration] = sensorConfigurationValue;
+    _updateSelectedOptions(sensorConfiguration);
     if (markPending) {
       _pendingConfigurations.add(sensorConfiguration);
     }
@@ -113,6 +150,46 @@ class SensorConfigurationProvider with ChangeNotifier {
     return missing;
   }
 
+  bool get hasReceivedConfigurationReport => _hasReceivedConfigurationReport;
+
+  SensorConfigurationValue? getLastReportedConfigurationValue(
+    SensorConfiguration sensorConfiguration,
+  ) {
+    final key = _configurationIdentityKey(sensorConfiguration);
+    return _lastReportedConfigurations[key];
+  }
+
+  bool selectedMatchesConfigurationValue(
+    SensorConfiguration sensorConfiguration,
+    SensorConfigurationValue expected,
+  ) {
+    final selected = _sensorConfigurations[sensorConfiguration];
+    if (selected == null) {
+      return false;
+    }
+    return _configurationValuesMatch(selected, expected);
+  }
+
+  bool isConfigurationApplied(SensorConfiguration sensorConfiguration) {
+    if (_pendingConfigurations.contains(sensorConfiguration)) {
+      return false;
+    }
+    if (!_hasReceivedConfigurationReport) {
+      return false;
+    }
+
+    final selected = _sensorConfigurations[sensorConfiguration];
+    if (selected == null) {
+      return false;
+    }
+
+    final reported = getLastReportedConfigurationValue(sensorConfiguration);
+    if (reported == null) {
+      return false;
+    }
+    return _configurationValuesMatch(selected, reported);
+  }
+
   String _configurationIdentityKey(SensorConfiguration configuration) {
     final dynamic configDynamic = configuration;
     try {
@@ -131,7 +208,40 @@ class SensorConfigurationProvider with ChangeNotifier {
     return '${configuration.runtimeType}:${configuration.name}:${valuesKey.join('|')}';
   }
 
+  bool _configurationValuesMatch(
+    SensorConfigurationValue current,
+    SensorConfigurationValue expected,
+  ) {
+    if (current is SensorFrequencyConfigurationValue &&
+        expected is SensorFrequencyConfigurationValue) {
+      return current.frequencyHz == expected.frequencyHz &&
+          setEquals(_optionNameSet(current), _optionNameSet(expected));
+    }
+
+    if (current is ConfigurableSensorConfigurationValue &&
+        expected is ConfigurableSensorConfigurationValue) {
+      return _normalizeName(current.withoutOptions().key) ==
+              _normalizeName(expected.withoutOptions().key) &&
+          setEquals(_optionNameSet(current), _optionNameSet(expected));
+    }
+
+    return _normalizeName(current.key) == _normalizeName(expected.key);
+  }
+
+  Set<String> _optionNameSet(SensorConfigurationValue value) {
+    if (value is! ConfigurableSensorConfigurationValue) {
+      return const <String>{};
+    }
+    return value.options.map((option) => _normalizeName(option.name)).toSet();
+  }
+
+  String _normalizeName(String value) => value.trim().toLowerCase();
+
   bool get hasPendingChanges => _pendingConfigurations.isNotEmpty;
+
+  bool isConfigurationPending(SensorConfiguration configuration) {
+    return _pendingConfigurations.contains(configuration);
+  }
 
   void clearPendingChanges({
     Iterable<SensorConfiguration>? onlyFor,

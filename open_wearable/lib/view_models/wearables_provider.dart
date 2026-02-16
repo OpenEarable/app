@@ -56,8 +56,7 @@ class WearableTimeSynchronizedEvent extends WearableEvent {
     required super.wearable,
     String? description,
   }) : super(
-          description:
-              description ??
+          description: description ??
               'Time synchronized for ${formatWearableDisplayName(wearable.name)}',
         );
 
@@ -73,8 +72,7 @@ class WearableErrorEvent extends WearableEvent {
     required this.errorMessage,
     String? description,
   }) : super(
-          description:
-              description ??
+          description: description ??
               'Error for ${formatWearableDisplayName(wearable.name)}: $errorMessage',
         );
 
@@ -424,6 +422,24 @@ class WearablesProvider with ChangeNotifier {
       logger.w(
         'Firmware version check failed for ${(dev as Wearable).name}: $e\n$st',
       );
+    }
+  }
+
+  Future<void> turnOffSensorsForAllDevices() async {
+    final providersByWearable = Map<Wearable, SensorConfigurationProvider>.from(
+      _sensorConfigurationProviders,
+    );
+
+    for (final entry in providersByWearable.entries) {
+      final wearable = entry.key;
+      final provider = entry.value;
+      try {
+        await provider.turnOffAllSensors();
+      } catch (e, st) {
+        logger.w(
+          'Failed to turn off sensors for ${formatWearableDisplayName(wearable.name)}: $e\n$st',
+        );
+      }
     }
   }
 

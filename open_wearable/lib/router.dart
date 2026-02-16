@@ -7,6 +7,7 @@ import 'package:open_wearable/widgets/fota/firmware_update.dart';
 import 'package:open_wearable/widgets/fota/fota_warning_page.dart';
 import 'package:open_wearable/widgets/home_page.dart';
 import 'package:open_wearable/widgets/logging/log_files_screen.dart';
+import 'package:open_wearable/widgets/settings/app_close_behavior_page.dart';
 import 'package:open_wearable/widgets/settings/connectors_page.dart';
 import 'dart:io' show Platform;
 import 'package:flutter/cupertino.dart';
@@ -85,6 +86,11 @@ final GoRouter router = GoRouter(
       path: '/connectors',
       name: 'connectors',
       builder: (context, state) => const ConnectorsPage(),
+    ),
+    GoRoute(
+      path: '/settings/app-close',
+      name: 'settings/app-close',
+      builder: (context, state) => const AppCloseBehaviorPage(),
     ),
     GoRoute(
       path: '/fota',

@@ -183,7 +183,7 @@ class _FirmwareListState extends State<FirmwareList> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return ListView(
-      padding: SensorPageSpacing.pagePadding,
+      padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
       children: [
         Card(
           margin: EdgeInsets.zero,
@@ -219,7 +219,7 @@ class _FirmwareListState extends State<FirmwareList> {
   Widget _emptyState() {
     final colorScheme = Theme.of(context).colorScheme;
     return ListView(
-      padding: SensorPageSpacing.pagePadding,
+      padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
       children: [
         Card(
           margin: EdgeInsets.zero,
@@ -241,7 +241,7 @@ class _FirmwareListState extends State<FirmwareList> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return ListView(
-      padding: SensorPageSpacing.pagePadding,
+      padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
       children: [
         Card(
           margin: EdgeInsets.zero,
@@ -324,7 +324,7 @@ class _FirmwareListState extends State<FirmwareList> {
     ];
 
     return ListView(
-      padding: SensorPageSpacing.pagePadding,
+      padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
       children: [
         _summaryCard(
           totalCount: entries.length,
