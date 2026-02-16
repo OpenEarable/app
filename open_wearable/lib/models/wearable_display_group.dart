@@ -1,4 +1,5 @@
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/models/device_name_formatter.dart';
 
 class WearableDisplayGroup {
   final Wearable primary;
@@ -31,7 +32,7 @@ class WearableDisplayGroup {
       pairCandidate: pairCandidate,
       primaryPosition: position,
       secondaryPosition: null,
-      displayName: wearable.name,
+      displayName: formatWearableDisplayName(wearable.name),
       stereoPairKey: stereoPairKey,
     );
   }
@@ -172,7 +173,9 @@ Future<List<WearableDisplayGroup>> buildWearableDisplayGroups(
           WearableDisplayGroup.combined(
             left: left,
             right: right,
-            displayName: _combinedDisplayName(left.name, right.name),
+            displayName: formatWearableDisplayName(
+              _combinedDisplayName(left.name, right.name),
+            ),
             stereoPairKey: pairKey,
           ),
         );

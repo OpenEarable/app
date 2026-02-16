@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
+import 'package:open_wearable/models/device_name_formatter.dart';
 import 'package:open_wearable/models/wearable_display_group.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 
@@ -18,12 +19,12 @@ class NewFirmwareAvailableEvent extends WearableEvent {
     required this.latestVersion,
   }) : super(
           description:
-              'Firmware update available for ${wearable.name}: $currentVersion -> $latestVersion',
+              'Firmware update available for ${formatWearableDisplayName(wearable.name)}: $currentVersion -> $latestVersion',
         );
 
   @override
   String toString() =>
-      'NewFirmwareAvailableEvent for ${wearable.name}: $currentVersion -> $latestVersion';
+      'NewFirmwareAvailableEvent for ${formatWearableDisplayName(wearable.name)}: $currentVersion -> $latestVersion';
 }
 
 abstract class UnsupportedFirmwareEvent {
@@ -55,11 +56,14 @@ class WearableTimeSynchronizedEvent extends WearableEvent {
     required super.wearable,
     String? description,
   }) : super(
-          description: description ?? 'Time synchronized for ${wearable.name}',
+          description:
+              description ??
+              'Time synchronized for ${formatWearableDisplayName(wearable.name)}',
         );
 
   @override
-  String toString() => 'WearableTimeSynchronizedEvent for ${wearable.name}';
+  String toString() =>
+      'WearableTimeSynchronizedEvent for ${formatWearableDisplayName(wearable.name)}';
 }
 
 class WearableErrorEvent extends WearableEvent {
@@ -70,12 +74,13 @@ class WearableErrorEvent extends WearableEvent {
     String? description,
   }) : super(
           description:
-              description ?? 'Error for ${wearable.name}: $errorMessage',
+              description ??
+              'Error for ${formatWearableDisplayName(wearable.name)}: $errorMessage',
         );
 
   @override
   String toString() =>
-      'WearableErrorEvent for ${wearable.name}: $errorMessage, description: $description';
+      'WearableErrorEvent for ${formatWearableDisplayName(wearable.name)}: $errorMessage, description: $description';
 }
 
 // MARK: WearablesProvider
@@ -167,25 +172,27 @@ class WearablesProvider with ChangeNotifier {
   }
 
   Future<String> _wearableNameWithSide(Wearable wearable) async {
+    final displayName = formatWearableDisplayName(wearable.name);
+
     if (!wearable.hasCapability<StereoDevice>()) {
-      return wearable.name;
+      return displayName;
     }
 
     if (wearable.hasCapability<SystemDevice>() &&
         !wearable.requireCapability<SystemDevice>().isConnectedViaSystem) {
-      return wearable.name;
+      return displayName;
     }
 
     try {
       final position =
           await wearable.requireCapability<StereoDevice>().position;
       return switch (position) {
-        DevicePosition.left => '${wearable.name} (Left)',
-        DevicePosition.right => '${wearable.name} (Right)',
-        _ => wearable.name,
+        DevicePosition.left => '$displayName (Left)',
+        DevicePosition.right => '$displayName (Right)',
+        _ => displayName,
       };
     } catch (_) {
-      return wearable.name;
+      return displayName;
     }
   }
 

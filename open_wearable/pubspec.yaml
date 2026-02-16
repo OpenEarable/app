@@ -83,6 +83,7 @@ flutter:
   assets:
     - lib/apps/posture_tracker/assets/
     - lib/apps/heart_tracker/assets/
+    - lib/apps/fever_thermometer/assets/
     - lib/apps/self_test/assets/
     - android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
 

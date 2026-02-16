@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/models/device_name_formatter.dart';
 import 'package:open_wearable/view_models/sensor_configuration_storage.dart';
 import 'package:open_wearable/widgets/app_toast.dart';
 import 'package:open_wearable/widgets/devices/stereo_position_badge.dart';
@@ -75,7 +76,8 @@ class _SensorConfigurationDeviceRowState
     final device = widget.device;
     final tabBar = _buildTabBar(context);
     final isCombinedPair = widget.pairedDevice != null;
-    final title = widget.displayName ?? device.name;
+    final title =
+        widget.displayName ?? formatWearableDisplayName(device.name);
 
     return Card(
       child: Column(

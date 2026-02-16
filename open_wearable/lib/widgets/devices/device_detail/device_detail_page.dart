@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/models/device_name_formatter.dart';
 import 'package:open_wearable/models/wearable_status_cache.dart';
 import 'package:open_wearable/widgets/app_toast.dart';
 import 'package:open_wearable/widgets/devices/device_detail/audio_mode_widget.dart';
@@ -256,7 +257,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                         children: [
                           Expanded(
                             child: Text(
-                              widget.device.name,
+                              formatWearableDisplayName(widget.device.name),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: theme.textTheme.bodyLarge?.copyWith(

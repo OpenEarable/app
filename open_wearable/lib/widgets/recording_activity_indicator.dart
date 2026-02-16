@@ -136,8 +136,8 @@ class UdpActivityIndicator extends StatelessWidget {
                     ),
                     child: Icon(
                       isUnreachable
-                          ? Icons.warning_amber_rounded
-                          : Icons.share_rounded,
+                          ? Icons.cloud_off_rounded
+                          : Icons.cloud_done_rounded,
                       size: 12,
                       color: foreground,
                     ),

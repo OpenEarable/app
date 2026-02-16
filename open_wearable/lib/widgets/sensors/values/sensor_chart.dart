@@ -31,8 +31,6 @@ class _SensorChartState extends State<SensorChart> {
   ];
 
   late Map<String, bool> _axisEnabled;
-  int? _xOriginTimestamp;
-  int? _originSensorHash;
 
   @override
   void initState() {
@@ -56,13 +54,11 @@ class _SensorChartState extends State<SensorChart> {
     final colorScheme = theme.colorScheme;
     final compactMode = !widget.allowToggleAxes;
 
-    final currentSensorHash = identityHashCode(sensor);
-    if (_originSensorHash != currentSensorHash) {
-      _originSensorHash = currentSensorHash;
-      _xOriginTimestamp = null;
-    }
-
-    final axisData = _buildAxisData(sensor, sensorValues);
+    final axisData = _buildAxisData(
+      sensor,
+      sensorValues,
+      windowSeconds: dataProvider.timeWindow.toDouble(),
+    );
     final enabledSeries = <_AxisSeries>[
       for (int i = 0; i < sensor.axisNames.length; i++)
         if (_axisEnabled[sensor.axisNames[i]] ?? false)
@@ -77,8 +73,8 @@ class _SensorChartState extends State<SensorChart> {
     ];
 
     final windowSeconds = dataProvider.timeWindow.toDouble();
-    final maxX = _calculateMaxX(sensor, sensorValues, fallback: windowSeconds);
-    final minX = max(0.0, maxX - windowSeconds);
+    const maxX = 0.0;
+    final minX = -windowSeconds;
 
     final axisChipTextStyle = theme.textTheme.labelMedium;
     const disabledChipLabelColor = Color(0xFF8A8A8A);
@@ -153,9 +149,9 @@ class _SensorChartState extends State<SensorChart> {
           sideTitles: SideTitles(
             showTitles: true,
             reservedSize: compactMode ? 20 : 24,
-            interval: compactMode ? 2 : 1,
-            minIncluded: false,
-            maxIncluded: false,
+            interval: 1,
+            minIncluded: true,
+            maxIncluded: true,
             getTitlesWidget: (value, meta) => SideTitleWidget(
               meta: meta,
               child: Text(
@@ -330,37 +326,33 @@ class _SensorChartState extends State<SensorChart> {
     );
   }
 
-  double _calculateMaxX(
+  double _toRelativeSeconds(
     Sensor sensor,
-    Queue<SensorValue> buffer, {
-    required double fallback,
+    int timestamp, {
+    required int referenceTimestamp,
   }) {
-    if (buffer.isEmpty) return fallback;
-    return _toElapsedSeconds(sensor, buffer.last.timestamp);
-  }
-
-  double _toElapsedSeconds(Sensor sensor, int timestamp) {
     final scale = pow(10, -sensor.timestampExponent).toDouble();
-    _xOriginTimestamp ??= timestamp;
-
-    if (timestamp < _xOriginTimestamp!) {
-      _xOriginTimestamp = timestamp;
-    }
-
-    return (timestamp - _xOriginTimestamp!).toDouble() / scale;
+    return (timestamp - referenceTimestamp).toDouble() / scale;
   }
 
   Map<String, List<FlSpot>> _buildAxisData(
     Sensor sensor,
-    Queue<SensorValue> buffer,
-  ) {
+    Queue<SensorValue> buffer, {
+    required double windowSeconds,
+  }) {
     final data = <String, List<FlSpot>>{
       for (var axis in sensor.axisNames) axis: <FlSpot>[],
     };
     if (buffer.isEmpty) return data;
 
+    final latestTimestamp = buffer.last.timestamp;
+
     for (final sensorValue in buffer) {
-      final x = _toElapsedSeconds(sensor, sensorValue.timestamp);
+      final x = _toRelativeSeconds(
+        sensor,
+        sensorValue.timestamp,
+        referenceTimestamp: latestTimestamp,
+      ).clamp(-windowSeconds, 0.0);
       if (sensorValue is SensorDoubleValue) {
         for (int i = 0; i < sensor.axisCount; i++) {
           data[sensor.axisNames[i]]!.add(FlSpot(x, sensorValue.values[i]));

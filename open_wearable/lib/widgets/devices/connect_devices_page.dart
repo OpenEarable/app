@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
+import 'package:open_wearable/models/device_name_formatter.dart';
 import 'package:open_wearable/models/wearable_display_group.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/devices/devices_page.dart';
@@ -289,7 +290,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
   String _deviceName(DiscoveredDevice device) {
     final name = device.name.trim();
     if (name.isEmpty) return 'Unnamed device';
-    return name;
+    return formatWearableDisplayName(name);
   }
 
   List<WearableDisplayGroup> _orderGroupsForOverview(

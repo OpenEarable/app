@@ -395,13 +395,24 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
         const SizedBox(height: 12),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Text(
-            'This view is a basic demonstration of real-time heartbeat tracking. '
-            'With advanced algorithms and stronger motion-robust sensor fusion, '
-            'heart-rate extraction can be made substantially more reliable in dynamic conditions.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.warning_amber_rounded,
+                size: 13,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text(
+                  'This view is for demonstration purposes only. It is not a medical device and must not be used for diagnosis, treatment, or emergency decisions.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                 ),
+              ),
+            ],
           ),
         ),
       ],

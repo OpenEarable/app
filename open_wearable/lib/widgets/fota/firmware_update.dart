@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/models/device_name_formatter.dart';
 import 'package:open_wearable/widgets/app_toast.dart';
 import 'package:open_wearable/widgets/fota/stepper_view/firmware_select.dart';
 import 'package:open_wearable/widgets/fota/stepper_view/update_view.dart';
@@ -191,8 +192,9 @@ class _FirmwareUpdateWidgetState extends State<FirmwareUpdateWidget> {
       return;
     }
 
+    final displayName = formatWearableDisplayName(wearable.name).trim();
     _cachedUpdateWearableName =
-        wearable.name.trim().isNotEmpty ? wearable.name.trim() : 'OpenEarable';
+        displayName.isNotEmpty ? displayName : 'OpenEarable';
     _cachedUpdateSideLabel = _resolveSideLabelFromName(wearable.name);
 
     StereoDevice? stereoDevice = wearable.getCapability<StereoDevice>();

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/models/device_name_formatter.dart';
 
 class ArmedFotaPostUpdateVerification {
   final String verificationId;
@@ -53,13 +54,12 @@ class FotaPostUpdateVerificationCoordinator {
   }) async {
     _cleanupExpired();
 
-    final displayName = _displayName(
-      preResolvedWearableName ??
-          selectedWearable?.name ??
-          request.peripheral?.name,
-    );
+    final rawName = selectedWearable?.name ??
+        request.peripheral?.name ??
+        preResolvedWearableName;
+    final displayName = _displayName(preResolvedWearableName ?? rawName);
     final expectedName = _normalizeName(
-      displayName,
+      rawName,
     );
     final expectedDeviceId = _normalizeId(
       selectedWearable?.deviceId ?? request.peripheral?.identifier,
@@ -141,7 +141,8 @@ class FotaPostUpdateVerificationCoordinator {
 
     _pendingById.remove(pending.verificationId);
 
-    final displayName = pending.displayWearableName ?? wearable.name;
+    final displayName =
+        pending.displayWearableName ?? _displayName(wearable.name) ?? wearable.name;
     final sideLabel = pending.expectedSideLabel ?? connectedSideLabel;
 
     return FotaPostUpdateVerificationResult(
@@ -469,7 +470,7 @@ class FotaPostUpdateVerificationCoordinator {
     if (trimmed == null || trimmed.isEmpty) {
       return null;
     }
-    return trimmed;
+    return formatWearableDisplayName(trimmed);
   }
 
   String? _normalizeId(String? value) {

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/apps/widgets/apps_page.dart';
 import 'package:open_wearable/models/connector_settings.dart';
+import 'package:open_wearable/models/device_name_formatter.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/app_toast.dart';
@@ -477,8 +478,8 @@ class _OverviewUdpSummaryCard extends StatelessWidget {
               alignment: Alignment.center,
               child: Icon(
                 hasConnectionProblem
-                    ? Icons.warning_amber_rounded
-                    : Icons.share_rounded,
+                    ? Icons.cloud_off_rounded
+                    : Icons.cloud_done_rounded,
                 size: 18,
                 color: accentColor,
               ),
@@ -890,7 +891,13 @@ class _ConnectedWearablePill extends StatefulWidget {
   })  : wearable = null,
         onWearableTap = null;
 
-  String get label => wearable?.name ?? summaryLabel ?? '';
+  String get label {
+    final name = wearable?.name;
+    if (name != null) {
+      return formatWearableDisplayName(name);
+    }
+    return summaryLabel ?? '';
+  }
 
   @override
   State<_ConnectedWearablePill> createState() => _ConnectedWearablePillState();

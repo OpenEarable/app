@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/models/device_name_formatter.dart';
 import 'package:open_wearable/widgets/sensors/values/sensor_chart.dart';
 
 class SensorValueDetail extends StatelessWidget {
@@ -29,7 +30,7 @@ class SensorValueDetail extends StatelessWidget {
         child: Column(
           children: [
             PlatformText(
-              wearable.name,
+              formatWearableDisplayName(wearable.name),
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             Expanded(

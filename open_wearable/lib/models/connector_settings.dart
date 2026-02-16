@@ -62,6 +62,9 @@ class ConnectorSettings {
   );
   static StreamSubscription<SensorForwarderConnectionState>?
       _udpBridgeConnectionStateSubscription;
+  static const Duration _udpBridgeRecoveryStabilization = Duration(seconds: 3);
+  static DateTime? _lastUdpBridgeUnreachableAt;
+  static Timer? _udpBridgeRecoveryTimer;
 
   static ValueListenable<UdpBridgeConnectorSettings>
       get udpBridgeSettingsListenable => _udpBridgeSettingsNotifier;
@@ -87,6 +90,7 @@ class ConnectorSettings {
   }
 
   static void dispose() {
+    _resetUdpBridgeConnectionStateStabilization();
     final subscription = _udpBridgeConnectionStateSubscription;
     _udpBridgeConnectionStateSubscription = null;
     if (subscription != null) {
@@ -132,6 +136,7 @@ class ConnectorSettings {
     final normalized = _normalizeUdpBridgeSettings(settings);
     _setUdpBridgeSettings(normalized);
     _ensureUdpBridgeConnectionStateSubscription();
+    _resetUdpBridgeConnectionStateStabilization();
 
     if (!normalized.isConfigured || !normalized.enabled) {
       _udpBridgeForwarder.reset();
@@ -194,9 +199,63 @@ class ConnectorSettings {
   static void _setUdpBridgeConnectionState(
     SensorForwarderConnectionState state,
   ) {
+    if (state == SensorForwarderConnectionState.unreachable) {
+      _lastUdpBridgeUnreachableAt = DateTime.now();
+      _udpBridgeRecoveryTimer?.cancel();
+      _udpBridgeRecoveryTimer = null;
+      _emitUdpBridgeConnectionState(state);
+      return;
+    }
+
+    final lastUnreachableAt = _lastUdpBridgeUnreachableAt;
+    if (lastUnreachableAt == null) {
+      _emitUdpBridgeConnectionState(state);
+      return;
+    }
+
+    final elapsedSinceLastFailure =
+        DateTime.now().difference(lastUnreachableAt);
+    final remainingRecoveryWindow =
+        _udpBridgeRecoveryStabilization - elapsedSinceLastFailure;
+    if (remainingRecoveryWindow <= Duration.zero) {
+      _lastUdpBridgeUnreachableAt = null;
+      _udpBridgeRecoveryTimer?.cancel();
+      _udpBridgeRecoveryTimer = null;
+      _emitUdpBridgeConnectionState(state);
+      return;
+    }
+
+    _udpBridgeRecoveryTimer?.cancel();
+    _udpBridgeRecoveryTimer = Timer(remainingRecoveryWindow, () {
+      _udpBridgeRecoveryTimer = null;
+
+      final latestFailureAt = _lastUdpBridgeUnreachableAt;
+      if (latestFailureAt == null) {
+        return;
+      }
+
+      final recoveredFor = DateTime.now().difference(latestFailureAt);
+      if (recoveredFor < _udpBridgeRecoveryStabilization) {
+        return;
+      }
+
+      _lastUdpBridgeUnreachableAt = null;
+      _emitUdpBridgeConnectionState(SensorForwarderConnectionState.active);
+    });
+  }
+
+  static void _emitUdpBridgeConnectionState(
+    SensorForwarderConnectionState state,
+  ) {
     if (_udpBridgeConnectionStateNotifier.value == state) {
       return;
     }
     _udpBridgeConnectionStateNotifier.value = state;
+  }
+
+  static void _resetUdpBridgeConnectionStateStabilization() {
+    _lastUdpBridgeUnreachableAt = null;
+    _udpBridgeRecoveryTimer?.cancel();
+    _udpBridgeRecoveryTimer = null;
   }
 }

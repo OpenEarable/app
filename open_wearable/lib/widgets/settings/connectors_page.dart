@@ -14,7 +14,7 @@ class ConnectorsPage extends StatefulWidget {
 
 class _ConnectorsPageState extends State<ConnectorsPage> {
   static final Uri _udpBridgeGuideUri = Uri.parse(
-    'https://github.com/OpenEarable/open_earable_flutter/blob/main/doc/LSL.md',
+    'https://github.com/OpenEarable/open_earable_flutter/blob/main/tools/README.md#quick-setup-from-openwearables-app',
   );
 
   late final TextEditingController _hostController;
@@ -328,8 +328,8 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
                           alignment: Alignment.center,
                           child: Icon(
                             hasConnectionProblem
-                                ? Icons.warning_amber_rounded
-                                : Icons.share_rounded,
+                                ? Icons.cloud_off_rounded
+                                : Icons.cloud_done_rounded,
                             color: udpIconColor,
                             size: 18,
                           ),
@@ -525,8 +525,8 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
         children: [
           Icon(
             hasConnectionProblem
-                ? Icons.warning_amber_rounded
-                : Icons.check_circle_outline_rounded,
+                ? Icons.cloud_off_rounded
+                : Icons.cloud_done_rounded,
             size: 17,
             color: foreground,
           ),

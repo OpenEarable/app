@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
+import 'package:open_wearable/apps/fever_thermometer/fever_thermometer_page.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/apps/heart_tracker/widgets/heart_tracker_page.dart';
 import 'package:open_wearable/apps/posture_tracker/model/earable_attitude_tracker.dart';
@@ -45,9 +46,60 @@ const List<String> _postureSupportedDevices = [
 const List<String> _heartSupportedDevices = [
   "OpenEarable",
 ];
+const List<String> _feverSupportedDevices = [
+  "OpenEarable",
+];
 const List<String> _selfTestSupportedDevices = [
   "OpenEarable",
 ];
+
+Sensor? _findOpticalTemperatureSensor(List<Sensor> sensors) {
+  String normalizeToken(String input) {
+    return input
+        .trim()
+        .toUpperCase()
+        .replaceAll(RegExp(r'[^A-Z0-9]+'), '_')
+        .replaceAll(RegExp(r'_+'), '_')
+        .replaceAll(RegExp(r'^_|_$'), '');
+  }
+
+  const preferredNames = {
+    'OPTICAL_TEMPERATURE_SENSOR',
+    'TEMPERATURE_OPTICAL_SENSOR',
+  };
+  for (final sensor in sensors) {
+    final sensorName = normalizeToken(sensor.sensorName);
+    final chartName = normalizeToken(sensor.chartTitle);
+    if (preferredNames.contains(sensorName) ||
+        preferredNames.contains(chartName)) {
+      return sensor;
+    }
+  }
+
+  for (final sensor in sensors) {
+    final text = '${sensor.sensorName} ${sensor.chartTitle}'.toLowerCase();
+    final hasOptical = text.contains('optical');
+    final hasTemperature =
+        text.contains('temperature') || text.contains('temp');
+    if (hasOptical && hasTemperature) {
+      return sensor;
+    }
+  }
+
+  return null;
+}
+
+Sensor? _findPpgSensor(List<Sensor> sensors) {
+  for (final sensor in sensors) {
+    final text = '${sensor.sensorName} ${sensor.chartTitle}'.toLowerCase();
+    if (text.contains('photoplethysmography') ||
+        text.contains('ppg') ||
+        text.contains('pulse')) {
+      return sensor;
+    }
+  }
+  return null;
+}
 
 final List<AppInfo> _apps = [
   AppInfo(
@@ -72,7 +124,7 @@ final List<AppInfo> _apps = [
   AppInfo(
     logoPath: "lib/apps/heart_tracker/assets/logo.png",
     title: "Heart Tracker",
-    description: "Track your heart rate and other vitals",
+    description: "Demo-only heart rate and HRV visualization",
     supportedDevices: _heartSupportedDevices,
     accentColor: _appAccentColor,
     widget: SelectEarableView(
@@ -109,6 +161,34 @@ final List<AppInfo> _apps = [
           body: Center(
             child: PlatformText("No PPG Sensor Found"),
           ),
+        );
+      },
+    ),
+  ),
+  AppInfo(
+    logoPath: "lib/apps/fever_thermometer/assets/fever_thermometer_icon.svg",
+    title: "Fever Thermometer",
+    description: "Demo-only temperature estimate from the optical sensor",
+    supportedDevices: _feverSupportedDevices,
+    accentColor: const Color(0xFFB75E53),
+    svgIconInset: 0,
+    svgIconScale: 1.14,
+    widget: SelectEarableView(
+      supportedDevicePrefixes: _feverSupportedDevices,
+      startApp: (wearable, sensorConfigProvider) {
+        Sensor? opticalTemperatureSensor;
+        Sensor? ppgSensor;
+        if (wearable.hasCapability<SensorManager>()) {
+          final sensors = wearable.requireCapability<SensorManager>().sensors;
+          opticalTemperatureSensor = _findOpticalTemperatureSensor(sensors);
+          ppgSensor = _findPpgSensor(sensors);
+        }
+
+        return FeverThermometerPage(
+          wearable: wearable,
+          opticalTemperatureSensor: opticalTemperatureSensor,
+          ppgSensor: ppgSensor,
+          sensorConfigProvider: sensorConfigProvider,
         );
       },
     ),
