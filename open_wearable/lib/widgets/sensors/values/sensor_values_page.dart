@@ -193,8 +193,13 @@ class _SensorValuesPageState extends State<SensorValuesPage>
         if (hideCardsWithoutLiveData && provider.sensorValues.isEmpty) {
           continue;
         }
+        final chartIdentity = _sensorChartIdentity(
+          wearable: wearable,
+          sensor: sensor,
+        );
         charts.add(
           ChangeNotifierProvider.value(
+            key: ValueKey(chartIdentity),
             value: provider,
             child: SensorValueCard(
               sensor: sensor,
@@ -205,6 +210,15 @@ class _SensorValuesPageState extends State<SensorValuesPage>
       }
     }
     return charts;
+  }
+
+  String _sensorChartIdentity({
+    required Wearable wearable,
+    required Sensor sensor,
+  }) {
+    final axisNames = sensor.axisNames.join(',');
+    final axisUnits = sensor.axisUnits.join(',');
+    return '${wearable.deviceId}|${sensor.runtimeType}|${sensor.sensorName}|$axisNames|$axisUnits';
   }
 
   void _cleanupProviders(List<Wearable> orderedWearables) {

@@ -35,12 +35,20 @@ class _SensorChartState extends State<SensorChart> {
   ];
 
   late Map<String, bool> _axisEnabled;
+  late String _sensorIdentity;
 
   @override
   void initState() {
     super.initState();
     final sensor = context.read<SensorDataProvider>().sensor;
-    _axisEnabled = {for (var axis in sensor.axisNames) axis: true};
+    _initializeAxisState(sensor);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final sensor = context.read<SensorDataProvider>().sensor;
+    _syncAxisState(sensor);
   }
 
   void _toggleAxis(String axisName, bool value) {
@@ -55,6 +63,7 @@ class _SensorChartState extends State<SensorChart> {
         ? context.watch<SensorDataProvider>()
         : context.read<SensorDataProvider>();
     final sensor = dataProvider.sensor;
+    _syncAxisState(sensor);
     final sensorValues = widget.liveUpdatesEnabled
         ? dataProvider.sensorValues
         : Queue<SensorValue>();
@@ -459,6 +468,32 @@ class _SensorChartState extends State<SensorChart> {
       max: maxY + pad,
     );
   }
+
+  void _initializeAxisState(Sensor sensor) {
+    _sensorIdentity = _sensorKey(sensor);
+    _axisEnabled = {for (final axis in sensor.axisNames) axis: true};
+  }
+
+  void _syncAxisState(Sensor sensor) {
+    final sensorIdentity = _sensorKey(sensor);
+    if (sensorIdentity != _sensorIdentity) {
+      _initializeAxisState(sensor);
+      return;
+    }
+
+    final hasSameAxes = _axisEnabled.length == sensor.axisNames.length &&
+        sensor.axisNames.every((axis) => _axisEnabled.containsKey(axis));
+    if (hasSameAxes) {
+      return;
+    }
+
+    _axisEnabled = {
+      for (final axis in sensor.axisNames) axis: _axisEnabled[axis] ?? true,
+    };
+  }
+
+  String _sensorKey(Sensor sensor) =>
+      '${sensor.runtimeType}|${sensor.sensorName}|${sensor.axisNames.join(',')}|${sensor.axisUnits.join(',')}';
 
   String _formatXAxisTick(double value) {
     final rounded = value.roundToDouble();
