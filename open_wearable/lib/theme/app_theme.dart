@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 class AppTheme {
   static const Color _brand = Color(0xFF9A6F6B);
   static const Color _onBrand = Color(0xFFFFFFFF);
-  static const Color _brandInk = Color(0xFF5A3D3A);
   static const Color _lightBackground = Color(0xFFF4F7FB);
   static const Color _darkBackground = Color(0xFF0B1117);
 

@@ -200,15 +200,15 @@ class _DevicesPageState extends State<DevicesPage> {
                 child: Card(
                   color: Theme.of(context)
                       .colorScheme
-                      .surfaceTint
-                      .withValues(alpha: 0.2),
+                      .primaryContainer
+                      .withValues(alpha: 0.45),
                   child: Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
                           PlatformIcons(context).add,
-                          color: Theme.of(context).colorScheme.surfaceTint,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                         PlatformText(
                           "Connect Device",
@@ -216,8 +216,7 @@ class _DevicesPageState extends State<DevicesPage> {
                               .textTheme
                               .bodyLarge
                               ?.copyWith(
-                                color:
-                                    Theme.of(context).colorScheme.surfaceTint,
+                                color: Theme.of(context).colorScheme.primary,
                               ),
                         ),
                       ],
