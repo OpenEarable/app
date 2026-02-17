@@ -132,8 +132,8 @@ class _SensorPageState extends State<SensorPage>
                     ),
                   ],
                   pinned: true,
-                  floating: true,
-                  snap: true,
+                  floating: false,
+                  snap: false,
                   forceElevated: innerBoxIsScrolled,
                   bottom: TabBar(
                     controller: _tabController,

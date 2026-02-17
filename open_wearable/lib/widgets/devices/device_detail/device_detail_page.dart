@@ -234,7 +234,12 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
         title: const Text('Device details'),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
+        padding: EdgeInsets.fromLTRB(
+          12,
+          10,
+          12,
+          14 + MediaQuery.paddingOf(context).bottom,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

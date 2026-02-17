@@ -75,7 +75,12 @@ class _LogFileDetailScreenState extends State<LogFileDetailScreen> {
             thumbVisibility: true,
             child: SingleChildScrollView(
               controller: _verticalController,
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.fromLTRB(
+                12,
+                12,
+                12,
+                12 + MediaQuery.paddingOf(context).bottom,
+              ),
               child: Scrollbar(
                 controller: _horizontalController,
                 thumbVisibility: true,

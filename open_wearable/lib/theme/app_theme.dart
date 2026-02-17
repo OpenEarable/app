@@ -14,6 +14,7 @@ class AppTheme {
     ).copyWith(
       primary: _brand,
       onPrimary: _onBrand,
+      surfaceTint: _brand,
       secondary: const Color(0xFFAA807C),
       onSecondary: _onBrand,
       tertiary: const Color(0xFFBB938F),
@@ -33,6 +34,7 @@ class AppTheme {
       brightness: Brightness.dark,
     ).copyWith(
       primary: const Color(0xFFC79F9B),
+      surfaceTint: const Color(0xFFC79F9B),
       secondary: const Color(0xFFD1ACA8),
       tertiary: const Color(0xFFE0C1BE),
       surface: const Color(0xFF111A22),
@@ -222,7 +224,7 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: _brandInk,
+          foregroundColor: colorScheme.primary,
           minimumSize: const Size(0, 46),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           shape: shapeSmall,
@@ -232,11 +234,16 @@ class AppTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: _brandInk,
+          foregroundColor: colorScheme.primary,
           shape: shapeSmall,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           textStyle: buttonTextStyle,
         ),
+      ),
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: colorScheme.primary,
+        selectionHandleColor: colorScheme.primary,
+        selectionColor: colorScheme.primary.withValues(alpha: 0.28),
       ),
       chipTheme: base.chipTheme.copyWith(
         backgroundColor: colorScheme.secondaryContainer.withValues(alpha: 0.5),

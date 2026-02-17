@@ -626,7 +626,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return PlatformProvider(
       settings: PlatformSettingsData(
-        iosUsesMaterialWidgets: true,
+        platformStyle: const PlatformStyleData(
+          ios: PlatformStyle.Material,
+          macos: PlatformStyle.Material,
+        ),
       ),
       builder: (context) => PlatformTheme(
         materialLightTheme: AppTheme.lightTheme(),

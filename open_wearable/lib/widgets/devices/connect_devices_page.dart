@@ -92,7 +92,12 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
         },
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 16),
+          padding: EdgeInsets.fromLTRB(
+            12,
+            10,
+            12,
+            16 + MediaQuery.paddingOf(context).bottom,
+          ),
           children: [
             _buildScanStatusCard(
               context,

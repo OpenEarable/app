@@ -287,7 +287,12 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+              padding: EdgeInsets.fromLTRB(
+                16,
+                12,
+                16,
+                20 + MediaQuery.paddingOf(context).bottom,
+              ),
               children: [
                 Text(
                   'Available connectors',
