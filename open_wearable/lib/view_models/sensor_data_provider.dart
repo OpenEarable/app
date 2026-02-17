@@ -9,7 +9,6 @@ import 'package:open_wearable/models/sensor_streams.dart';
 class SensorDataProvider with ChangeNotifier {
   final Sensor sensor;
   final int timeWindow; // seconds
-  static const int _samplingRateWindowSamples = 24;
 
   late final int _timestampUnitsPerSecond;
   late final int _timestampCutoff;
@@ -50,29 +49,6 @@ class SensorDataProvider with ChangeNotifier {
         (elapsedMicroseconds * _timestampUnitsPerSecond) ~/
             Duration.microsecondsPerSecond;
     return lastTimestamp + elapsedTimestampUnits;
-  }
-
-  double? get currentSamplingRateHz {
-    if (sensorValues.length < 2) {
-      return null;
-    }
-
-    final values = sensorValues.toList(growable: false);
-    final endIndex = values.length - 1;
-    final startIndex = max(0, endIndex - _samplingRateWindowSamples);
-    final deltaTimestamp =
-        values[endIndex].timestamp - values[startIndex].timestamp;
-    if (deltaTimestamp <= 0) {
-      return null;
-    }
-
-    final deltaSeconds = deltaTimestamp / _timestampUnitsPerSecond;
-    if (deltaSeconds <= 0) {
-      return null;
-    }
-
-    final sampleCount = endIndex - startIndex;
-    return sampleCount / deltaSeconds;
   }
 
   void _listenToStream() {

@@ -5,6 +5,7 @@ import 'dart:collection';
 import 'dart:math';
 
 import 'package:open_wearable/apps/heart_tracker/model/band_pass_filter.dart';
+import 'package:open_wearable/apps/heart_tracker/model/high_pass_filter.dart';
 import 'package:open_wearable/apps/heart_tracker/model/msptd_fast_v2_detector.dart';
 
 enum PpgSignalQuality {
@@ -102,6 +103,8 @@ class PpgFilter {
 
   static const double _reasonableInEarTemperatureCelsius = 32.0;
   static const double _maxTemperatureSampleAgeSec = 20.0;
+  static const double _minBeatIntervalSec = 0.25;
+  static const double _maxBeatIntervalSec = 2.0;
 
   PpgFilter({
     required this.inputStream,
@@ -116,7 +119,7 @@ class PpgFilter {
       return _displaySignalStream!;
     }
     _displaySignalStream = _sampleStream
-        .map((sample) => (sample.timestamp, sample.signal))
+        .map((sample) => (sample.timestamp, sample.displaySignal))
         .asBroadcastStream();
     return _displaySignalStream!;
   }
@@ -171,15 +174,26 @@ class PpgFilter {
   }
 
   Stream<_MotionAwareSample> _createProcessedStream() {
+    final safeSampleFreq =
+        sampleFreq.isFinite && sampleFreq > 0 ? sampleFreq : 50.0;
     final ambientCanceler = _AmbientLightCanceler();
     final motionSuppressor = _MotionNoiseSuppressor();
     final imuCanceler = _MultiReferenceMotionCanceler();
+    final opticalChannelSelector = _AdaptiveOpticalChannelSelector();
+    final dcBlockFilter = HighPassFilter(
+      cutoffFreq: 0.12,
+      sampleFreq: safeSampleFreq,
+    );
     final bandPassFilter = BandPassFilter(
-      sampleFreq: sampleFreq,
-      lowCut: 0.7,
-      highCut: 4.0,
+      sampleFreq: safeSampleFreq,
+      lowCut: 0.45,
+      highCut: 5.5,
     );
     final normalizer = _BoundedSignalNormalizer();
+    final displayDetrender = _DisplayBaselineDetrender(
+      sampleFreqHz: safeSampleFreq,
+      timeConstantSeconds: 3.2,
+    );
 
     if (motionStream != null) {
       _motionSubscription = motionStream!.listen((event) {
@@ -195,8 +209,9 @@ class PpgFilter {
     }
 
     return inputStream.map((sample) {
+      final selectedOpticalSignal = opticalChannelSelector.select(sample);
       final ambientCanceled = ambientCanceler.filter(
-        green: sample.green,
+        green: selectedOpticalSignal,
         ambient: sample.ambient,
       );
       final imuCleaned = imuCanceler.filter(
@@ -204,16 +219,19 @@ class PpgFilter {
         motionLevel: motionSuppressor.motionLevel,
       );
       final motionSuppressed = motionSuppressor.filter(imuCleaned);
-      final bandPassed = bandPassFilter.filter(motionSuppressed);
+      final dcBlocked = dcBlockFilter.filter(motionSuppressed);
+      final bandPassed = bandPassFilter.filter(dcBlocked);
       final bounded = normalizer.filter(
         bandPassed,
         motionLevel: motionSuppressor.motionLevel,
       );
+      final displaySignal = displayDetrender.filter(bounded);
       return _MotionAwareSample(
         timestamp: sample.timestamp,
-        rawGreen: sample.green,
+        rawGreen: selectedOpticalSignal,
         rawAmbient: sample.ambient,
         signal: bounded,
+        displaySignal: displaySignal,
         motionLevel: motionSuppressor.motionLevel,
       );
     });
@@ -285,7 +303,8 @@ class PpgFilter {
     for (var i = 1; i < peaks.length; i++) {
       final intervalSeconds =
           (peaks[i] - peaks[i - 1]).toDouble() / max(1.0, ticksPerSecond);
-      if (intervalSeconds >= 0.30 && intervalSeconds <= 1.50) {
+      if (intervalSeconds >= _minBeatIntervalSec &&
+          intervalSeconds <= _maxBeatIntervalSec) {
         intervalsSeconds.add(intervalSeconds);
       }
     }
@@ -297,7 +316,7 @@ class PpgFilter {
     final medianIntervalSeconds =
         intervalsSeconds[intervalsSeconds.length ~/ 2];
     final heartRate = 60.0 / medianIntervalSeconds;
-    if (!heartRate.isFinite || heartRate < 35 || heartRate > 210) {
+    if (!heartRate.isFinite || heartRate < 30 || heartRate > 240) {
       return (heartRateBpm: null, peakTimestamps: peaks);
     }
 
@@ -552,8 +571,8 @@ class PpgFilter {
         final interval = (peaks[i] - peaks[i - 1]).toDouble();
         final intervalSeconds = interval / ticksPerSecond;
         if (interval > 0 &&
-            intervalSeconds >= 0.30 &&
-            intervalSeconds <= 1.50) {
+            intervalSeconds >= _minBeatIntervalSec &&
+            intervalSeconds <= _maxBeatIntervalSec) {
           ibiTicks.add(interval);
         }
       }
@@ -610,11 +629,70 @@ class PpgFilter {
   }
 }
 
+class _AdaptiveOpticalChannelSelector {
+  bool _isInitialized = false;
+  double _meanGreen = 0;
+  double _meanRed = 0;
+  double _meanIr = 0;
+  double _energyGreen = 0;
+  double _energyRed = 0;
+  double _energyIr = 0;
+
+  double select(PpgOpticalSample sample) {
+    if (!_isInitialized) {
+      _isInitialized = true;
+      _meanGreen = sample.green;
+      _meanRed = sample.red;
+      _meanIr = sample.ir;
+    } else {
+      _meanGreen = _ema(_meanGreen, sample.green, 0.02);
+      _meanRed = _ema(_meanRed, sample.red, 0.02);
+      _meanIr = _ema(_meanIr, sample.ir, 0.02);
+    }
+
+    _energyGreen = _ema(_energyGreen, (sample.green - _meanGreen).abs(), 0.08);
+    _energyRed = _ema(_energyRed, (sample.red - _meanRed).abs(), 0.08);
+    _energyIr = _ema(_energyIr, (sample.ir - _meanIr).abs(), 0.08);
+
+    final strongestAltEnergy = max(_energyRed, _energyIr);
+    final greenLikelyMissing = sample.green.abs() < 1e-6 &&
+        (sample.red.abs() > 1e-3 || sample.ir.abs() > 1e-3);
+    final greenWeakComparedToAlternatives =
+        strongestAltEnergy > 1e-6 && _energyGreen < (strongestAltEnergy * 0.35);
+    if (greenLikelyMissing || greenWeakComparedToAlternatives) {
+      final preferRed = _energyRed >= _energyIr;
+      final fallback = preferRed ? sample.red : sample.ir;
+      if (fallback.isFinite) {
+        return fallback;
+      }
+    }
+
+    if (sample.green.isFinite) {
+      return sample.green;
+    }
+    if (sample.red.isFinite && sample.ir.isFinite) {
+      return sample.red.abs() >= sample.ir.abs() ? sample.red : sample.ir;
+    }
+    if (sample.red.isFinite) {
+      return sample.red;
+    }
+    if (sample.ir.isFinite) {
+      return sample.ir;
+    }
+    return 0;
+  }
+
+  double _ema(double state, double value, double alpha) {
+    return (state * (1.0 - alpha)) + (value * alpha);
+  }
+}
+
 class _MotionAwareSample {
   final int timestamp;
   final double rawGreen;
   final double rawAmbient;
   final double signal;
+  final double displaySignal;
   final double motionLevel;
 
   const _MotionAwareSample({
@@ -622,8 +700,51 @@ class _MotionAwareSample {
     required this.rawGreen,
     required this.rawAmbient,
     required this.signal,
+    required this.displaySignal,
     required this.motionLevel,
   });
+}
+
+class _DisplayBaselineDetrender {
+  final double _alpha;
+  bool _isInitialized = false;
+  double _baseline = 0;
+  double _lastOutput = 0;
+
+  _DisplayBaselineDetrender({
+    required double sampleFreqHz,
+    double timeConstantSeconds = 3.0,
+  }) : _alpha = _computeAlpha(
+          sampleFreqHz: sampleFreqHz,
+          timeConstantSeconds: timeConstantSeconds,
+        );
+
+  double filter(double value) {
+    if (!_isInitialized) {
+      _isInitialized = true;
+      _baseline = value;
+      _lastOutput = 0;
+      return 0;
+    }
+
+    _baseline = _baseline + (_alpha * (value - _baseline));
+    final detrended = value - _baseline;
+    _lastOutput = (_lastOutput * 0.82) + (detrended * 0.18);
+    return _lastOutput;
+  }
+
+  static double _computeAlpha({
+    required double sampleFreqHz,
+    required double timeConstantSeconds,
+  }) {
+    final safeSampleFreq =
+        sampleFreqHz.isFinite && sampleFreqHz > 0 ? sampleFreqHz : 50.0;
+    final safeTau = timeConstantSeconds.isFinite && timeConstantSeconds > 0
+        ? timeConstantSeconds
+        : 3.0;
+    final alpha = 1 - exp(-1 / (safeTau * safeSampleFreq));
+    return alpha.clamp(0.001, 0.2);
+  }
 }
 
 class _AmbientLightCanceler {
@@ -876,7 +997,13 @@ class _MotionNoiseSuppressor {
 
     _gravityMagnitude = (_gravityMagnitude * 0.96) + (magnitude * 0.04);
     final dynamicMagnitude = (magnitude - _gravityMagnitude).abs();
-    _motionLevel = (_motionLevel * 0.85) + (dynamicMagnitude * 0.15);
+    final dynamicScale = max(0.08, _gravityMagnitude.abs() * 0.02);
+    final normalizedDynamicMagnitude = dynamicMagnitude / dynamicScale;
+    _motionLevel =
+        ((_motionLevel * 0.85) + (normalizedDynamicMagnitude * 0.15)).clamp(
+      0.0,
+      8.0,
+    );
   }
 
   double filter(double rawValue) {

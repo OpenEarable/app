@@ -45,6 +45,7 @@ const List<String> _postureSupportedDevices = [
 ];
 const List<String> _heartSupportedDevices = [
   "OpenEarable",
+  "OpenRing",
 ];
 const List<String> _feverSupportedDevices = [
   "OpenEarable",
@@ -112,7 +113,7 @@ final List<AppInfo> _apps = [
   AppInfo(
     logoPath: "lib/apps/heart_tracker/assets/logo.png",
     title: "Heart Tracker",
-    description: "Demo-only heart rate and HRV visualization",
+    description: "Heart rate and HRV visualization",
     supportedDevices: _heartSupportedDevices,
     accentColor: _appAccentColor,
     widget: SelectEarableView(
@@ -176,7 +177,7 @@ final List<AppInfo> _apps = [
   AppInfo(
     logoPath: "lib/apps/fever_thermometer/assets/fever_thermometer_icon.svg",
     title: "Fever Thermometer",
-    description: "Demo-only temperature estimate from the optical sensor",
+    description: "Temperature estimate from the optical sensor",
     supportedDevices: _feverSupportedDevices,
     accentColor: const Color(0xFFB75E53),
     svgIconInset: 0,
@@ -240,7 +241,29 @@ class AppsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final connectedCount = context.watch<WearablesProvider>().wearables.length;
+    final connectedWearables = context.watch<WearablesProvider>().wearables;
+    final connectedCount = connectedWearables.length;
+    final connectedWearableNames = connectedWearables
+        .map((wearable) => wearable.name)
+        .toList(growable: false);
+
+    final enabledApps = <_AppListEntry>[];
+    final disabledApps = <_AppListEntry>[];
+    for (final app in _apps) {
+      final isEnabled = connectedWearableNames.any(
+        (wearableName) => wearableIsCompatibleWithApp(
+          wearableName: wearableName,
+          supportedDevicePrefixes: app.supportedDevices,
+        ),
+      );
+      final entry = _AppListEntry(app: app, isEnabled: isEnabled);
+      if (isEnabled) {
+        enabledApps.add(entry);
+      } else {
+        disabledApps.add(entry);
+      }
+    }
+    final orderedApps = [...enabledApps, ...disabledApps];
 
     return PlatformScaffold(
       appBar: PlatformAppBar(
@@ -272,11 +295,27 @@ class AppsPage extends StatelessWidget {
                   ),
             ),
           ),
-          ..._apps.map((app) => AppTile(app: app)),
+          ...orderedApps.map(
+            (entry) => AppTile(
+              app: entry.app,
+              isEnabled: entry.isEnabled,
+              connectedWearableNames: connectedWearableNames,
+            ),
+          ),
         ],
       ),
     );
   }
+}
+
+class _AppListEntry {
+  final AppInfo app;
+  final bool isEnabled;
+
+  const _AppListEntry({
+    required this.app,
+    required this.isEnabled,
+  });
 }
 
 class _AppsHeroCard extends StatelessWidget {

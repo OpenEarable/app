@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/view_models/sensor_data_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/common/no_devices_prompt.dart';
 import 'package:open_wearable/widgets/recording_activity_indicator.dart';
@@ -52,12 +54,27 @@ class SensorPage extends StatefulWidget {
 class _SensorPageState extends State<SensorPage>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+  final Map<(Wearable, Sensor), SensorDataProvider> _sensorDataProviders = {};
+  WearablesProvider? _wearablesProvider;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     widget.controller?._attach(this);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final wearablesProvider = context.read<WearablesProvider>();
+    if (_wearablesProvider == wearablesProvider) {
+      return;
+    }
+    _wearablesProvider?.removeListener(_syncSensorDataProviders);
+    _wearablesProvider = wearablesProvider;
+    _wearablesProvider?.addListener(_syncSensorDataProviders);
+    _syncSensorDataProviders();
   }
 
   @override
@@ -71,6 +88,11 @@ class _SensorPageState extends State<SensorPage>
 
   @override
   void dispose() {
+    _wearablesProvider?.removeListener(_syncSensorDataProviders);
+    for (final provider in _sensorDataProviders.values) {
+      provider.dispose();
+    }
+    _sensorDataProviders.clear();
     widget.controller?._detach(this);
     _tabController.dispose();
     super.dispose();
@@ -144,7 +166,9 @@ class _SensorPageState extends State<SensorPage>
                       )
                     : noDevicesPrompt,
                 hasConnectedDevices
-                    ? const SensorValuesPage()
+                    ? SensorValuesPage(
+                        sharedProviders: _sensorDataProviders,
+                      )
                     : noDevicesPrompt,
                 const LocalRecorderView(),
               ],
@@ -153,5 +177,36 @@ class _SensorPageState extends State<SensorPage>
         );
       },
     );
+  }
+
+  void _syncSensorDataProviders() {
+    final wearables = _wearablesProvider?.wearables ?? const <Wearable>[];
+    for (final wearable in wearables) {
+      if (!wearable.hasCapability<SensorManager>()) {
+        continue;
+      }
+      for (final sensor
+          in wearable.requireCapability<SensorManager>().sensors) {
+        _sensorDataProviders.putIfAbsent(
+          (wearable, sensor),
+          () => SensorDataProvider(sensor: sensor),
+        );
+      }
+    }
+
+    _sensorDataProviders.removeWhere((key, provider) {
+      final keepProvider = wearables.any(
+        (wearable) =>
+            wearable.hasCapability<SensorManager>() &&
+            wearable == key.$1 &&
+            wearable.requireCapability<SensorManager>().sensors.contains(
+                  key.$2,
+                ),
+      );
+      if (!keepProvider) {
+        provider.dispose();
+      }
+      return !keepProvider;
+    });
   }
 }

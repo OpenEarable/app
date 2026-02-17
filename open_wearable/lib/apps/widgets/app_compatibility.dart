@@ -1,8 +1,23 @@
+import 'package:open_wearable/models/device_name_formatter.dart';
+
 bool wearableNameStartsWithPrefix(String wearableName, String prefix) {
-  final normalizedWearableName = wearableName.trim().toLowerCase();
   final normalizedPrefix = prefix.trim().toLowerCase();
-  if (normalizedWearableName.isEmpty || normalizedPrefix.isEmpty) return false;
-  return normalizedWearableName.startsWith(normalizedPrefix);
+  final normalizedWearableName = wearableName.trim().toLowerCase();
+  if (normalizedWearableName.isEmpty || normalizedPrefix.isEmpty) {
+    return false;
+  }
+
+  if (normalizedWearableName.startsWith(normalizedPrefix)) {
+    return true;
+  }
+
+  final formattedWearableName =
+      formatWearableDisplayName(wearableName).trim().toLowerCase();
+  if (formattedWearableName.isEmpty) {
+    return false;
+  }
+
+  return formattedWearableName.startsWith(normalizedPrefix);
 }
 
 bool wearableIsCompatibleWithApp({

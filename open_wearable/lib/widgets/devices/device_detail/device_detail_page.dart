@@ -7,6 +7,7 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/models/auto_connect_preferences.dart';
 import 'package:open_wearable/models/device_name_formatter.dart';
 import 'package:open_wearable/models/wearable_status_cache.dart';
+import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/app_toast.dart';
 import 'package:open_wearable/widgets/common/app_section_card.dart';
 import 'package:open_wearable/widgets/devices/device_detail/audio_mode_widget.dart';
@@ -107,11 +108,8 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
       context: context,
       builder: (_) => PlatformAlertDialog(
         title: const Text('Forget device'),
-        content: Text(
-          _opensBluetoothScreenDirectly
-              ? 'To fully forget this device, remove it in your phone Bluetooth settings.'
-              : 'To fully forget this device, remove it in your phone Bluetooth settings. '
-                  'You can open Settings from here.',
+        content: const Text(
+          "To forget this device, remove it from your phone's Bluetooth devices.",
         ),
         actions: <Widget>[
           PlatformDialogAction(
@@ -141,6 +139,9 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
     final navigator = Navigator.of(context);
     final shouldPop = navigator.canPop();
     final device = widget.device;
+    final wearablesProvider = context.read<WearablesProvider>();
+
+    await wearablesProvider.turnOffSensorsForDevice(device);
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -322,24 +323,16 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
             const SizedBox(height: 12),
             Row(
               children: [
-                if (_canForgetDevice) ...[
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _showForgetDialog,
-                      icon: const Icon(
-                        Icons.bluetooth_disabled_rounded,
-                        size: 18,
-                      ),
-                      label: const Text('Forget'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
                 Expanded(
-                  child: FilledButton.icon(
-                    onPressed: _disconnectDevice,
-                    icon: const Icon(Icons.link_off_rounded, size: 18),
-                    label: const Text('Disconnect'),
+                  child: OutlinedButton.icon(
+                    onPressed: _canForgetDevice
+                        ? _showForgetDialog
+                        : _disconnectDevice,
+                    icon: const Icon(
+                      Icons.bluetooth_disabled_rounded,
+                      size: 18,
+                    ),
+                    label: const Text('Forget'),
                   ),
                 ),
               ],

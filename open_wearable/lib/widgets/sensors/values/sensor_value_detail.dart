@@ -37,9 +37,6 @@ class SensorValueDetail extends StatelessWidget {
               formatWearableDisplayName(wearable.name),
               style: Theme.of(context).textTheme.bodyMedium,
             ),
-            const SizedBox(height: 6),
-            const _SensorSamplingRateHeader(),
-            const SizedBox(height: 8),
             Expanded(
               child: ValueListenableBuilder<bool>(
                 valueListenable:
@@ -120,41 +117,5 @@ class SensorValueDetail extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-class _SensorSamplingRateHeader extends StatelessWidget {
-  const _SensorSamplingRateHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<SensorDataProvider>(
-      builder: (context, dataProvider, _) {
-        final samplingRateHz = dataProvider.currentSamplingRateHz;
-        final samplingRateText =
-            samplingRateHz == null ? '--' : _formatFrequency(samplingRateHz);
-        return _buildLabel(context, 'Sampling rate: $samplingRateText');
-      },
-    );
-  }
-
-  Widget _buildLabel(BuildContext context, String text) {
-    return PlatformText(
-      text,
-      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            fontWeight: FontWeight.w600,
-          ),
-    );
-  }
-
-  String _formatFrequency(double hz) {
-    if ((hz - hz.roundToDouble()).abs() < 0.01) {
-      return '${hz.round()} Hz';
-    }
-    if (hz >= 10) {
-      return '${hz.toStringAsFixed(1)} Hz';
-    }
-    return '${hz.toStringAsFixed(2)} Hz';
   }
 }

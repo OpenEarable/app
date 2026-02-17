@@ -40,6 +40,9 @@ class SensorConfigurationDeviceRow extends StatefulWidget {
 class _SensorConfigurationDeviceRowState
     extends State<SensorConfigurationDeviceRow>
     with SingleTickerProviderStateMixin {
+  static const String _builtInOffProfileKey = '__builtin_off_profile__';
+  static const String _builtInOffProfileTitle = 'Off';
+
   late final TabController _tabController;
   late Future<DeviceProfileScopeMatch> _profileScopeMatchFuture;
   List<Widget> _content = const [];
@@ -77,6 +80,7 @@ class _SensorConfigurationDeviceRowState
         pairedProviderChanged ||
         displayNameChanged ||
         scopeChanged) {
+      _profileConfigFutures.clear();
       _profileScopeMatchFuture = _resolveProfileScopeMatch();
       _updateContent();
     }
@@ -207,10 +211,99 @@ class _SensorConfigurationDeviceRowState
     return match;
   }
 
+  bool _isBuiltInProfileKey(String key) => key == _builtInOffProfileKey;
+
+  Future<Map<String, String>> _loadProfileConfiguration(String key) async {
+    if (_isBuiltInProfileKey(key)) {
+      return _buildBuiltInOffProfileConfig(widget.device);
+    }
+    return SensorConfigurationStorage.loadConfiguration(key);
+  }
+
+  Map<String, String> _buildBuiltInOffProfileConfig(Wearable device) {
+    if (!device.hasCapability<SensorConfigurationManager>()) {
+      return const <String, String>{};
+    }
+
+    final manager = device.requireCapability<SensorConfigurationManager>();
+    final config = <String, String>{};
+    for (final sensorConfig in manager.sensorConfigurations) {
+      final offValue = _resolveBuiltInOffValue(sensorConfig);
+      if (offValue != null) {
+        config[sensorConfig.name] = offValue.key;
+      }
+    }
+    return config;
+  }
+
+  SensorConfigurationValue? _resolveBuiltInOffValue(
+    SensorConfiguration sensorConfig,
+  ) {
+    final offValue = sensorConfig.offValue;
+    if (sensorConfig is ConfigurableSensorConfiguration) {
+      final configurableValues = sensorConfig.values
+          .whereType<ConfigurableSensorConfigurationValue>()
+          .toList(growable: false);
+
+      if (offValue is ConfigurableSensorConfigurationValue) {
+        for (final candidate in configurableValues) {
+          if (_normalizeName(candidate.withoutOptions().key) ==
+                  _normalizeName(offValue.withoutOptions().key) &&
+              candidate.options.isEmpty) {
+            return candidate;
+          }
+        }
+      }
+
+      final withoutTargets = configurableValues
+          .where((candidate) => candidate.options.isEmpty)
+          .toList(growable: false);
+      if (withoutTargets.isNotEmpty) {
+        final frequencyCandidates =
+            withoutTargets.whereType<SensorFrequencyConfigurationValue>();
+        if (frequencyCandidates.isNotEmpty) {
+          var best = frequencyCandidates.first;
+          for (final candidate in frequencyCandidates.skip(1)) {
+            if (candidate.frequencyHz < best.frequencyHz) {
+              best = candidate;
+            }
+          }
+          return best;
+        }
+        return withoutTargets.first;
+      }
+    }
+
+    if (offValue != null) {
+      return offValue;
+    }
+
+    if (sensorConfig.values.isEmpty) {
+      return null;
+    }
+
+    final frequencyValues =
+        sensorConfig.values.whereType<SensorFrequencyConfigurationValue>();
+    if (frequencyValues.isNotEmpty) {
+      var best = frequencyValues.first;
+      for (final candidate in frequencyValues.skip(1)) {
+        if (candidate.frequencyHz < best.frequencyHz) {
+          best = candidate;
+        }
+      }
+      return best;
+    }
+
+    return sensorConfig.values.first;
+  }
+
   Future<bool> _ensureProfileKeyMatchesCurrentDevice({
     required String key,
     required String profileTitle,
   }) async {
+    if (_isBuiltInProfileKey(key)) {
+      return true;
+    }
     final scopeMatch = await _readCurrentScopeMatch();
     if (scopeMatch.allowsKey(key)) {
       return true;
@@ -327,6 +420,13 @@ class _SensorConfigurationDeviceRowState
         _content = [
           SaveConfigRow(
             storageScope: scopeMatch.saveScope,
+            uniqueNameScope: scopeMatch.nameScope,
+            reservedProfileNames: const {_builtInOffProfileTitle},
+            reservedProfilesByName: {
+              _builtInOffProfileTitle: _buildBuiltInOffProfileConfig(
+                widget.device,
+              ),
+            },
             onSaved: _refreshProfiles,
           ),
           const Divider(),
@@ -357,13 +457,24 @@ class _SensorConfigurationDeviceRowState
         .where(SensorConfigurationStorage.isLegacyUnscopedKey)
         .toList()
       ..sort();
-    final profileKeys = [...scopedKeys, ...legacyKeys];
+    final profileKeys = [
+      ...scopedKeys.where((key) => key != _builtInOffProfileKey),
+      ...legacyKeys.where((key) => key != _builtInOffProfileKey),
+      _builtInOffProfileKey,
+    ];
 
     if (!mounted) return;
 
     final content = <Widget>[
       SaveConfigRow(
         storageScope: scopeMatch.saveScope,
+        uniqueNameScope: scopeMatch.nameScope,
+        reservedProfileNames: const {_builtInOffProfileTitle},
+        reservedProfilesByName: {
+          _builtInOffProfileTitle: _buildBuiltInOffProfileConfig(
+            widget.device,
+          ),
+        },
         onSaved: _refreshProfiles,
       ),
       const Divider(),
@@ -398,22 +509,26 @@ class _SensorConfigurationDeviceRowState
     String key, {
     required DeviceProfileScopeMatch scopeMatch,
   }) {
+    final isBuiltIn = _isBuiltInProfileKey(key);
     final matchedScope = scopeMatch.matchingScopeForKey(key);
-    final isDeviceScoped = matchedScope != null;
+    final isDeviceScoped = isBuiltIn || matchedScope != null;
 
-    final title = isDeviceScoped
-        ? SensorConfigurationStorage.displayNameFromScopedKey(
-            key,
-            scope: matchedScope,
-          )
-        : key;
+    final title = switch ((isBuiltIn, matchedScope)) {
+      (true, _) => _builtInOffProfileTitle,
+      (false, final scope?) =>
+        SensorConfigurationStorage.displayNameFromScopedKey(
+          key,
+          scope: scope,
+        ),
+      _ => key,
+    };
 
     return Consumer<SensorConfigurationProvider>(
       builder: (context, provider, _) {
         return FutureBuilder<Map<String, String>>(
           future: _profileConfigFutures.putIfAbsent(
             key,
-            () => SensorConfigurationStorage.loadConfiguration(key),
+            () => _loadProfileConfiguration(key),
           ),
           builder: (context, snapshot) {
             final profileConfig = snapshot.data;
@@ -452,9 +567,11 @@ class _SensorConfigurationDeviceRowState
                   : 'Applied on both devices',
               _ProfileApplicationState.mixed =>
                 'Mixed state across paired devices',
-              _ProfileApplicationState.none => isDeviceScoped
-                  ? 'Tap to load as current'
-                  : 'Legacy shared profile',
+              _ProfileApplicationState.none => isBuiltIn
+                  ? 'Built-in default profile'
+                  : isDeviceScoped
+                      ? 'Tap to load as current'
+                      : 'Legacy shared profile',
             };
 
             return Padding(
@@ -677,7 +794,7 @@ class _SensorConfigurationDeviceRowState
       return;
     }
 
-    final config = await SensorConfigurationStorage.loadConfiguration(key);
+    final config = await _loadProfileConfiguration(key);
     if (!mounted) return;
 
     final provider = context.read<SensorConfigurationProvider>();
@@ -686,11 +803,13 @@ class _SensorConfigurationDeviceRowState
     final pairedProvider = widget.pairedProvider;
     final pairedDevice = widget.pairedDevice;
     if (pairedProvider != null && pairedDevice != null) {
-      final mirroredConfig = _buildMirroredProfileConfig(
-        sourceDevice: widget.device,
-        targetDevice: pairedDevice,
-        sourceProfileConfig: config,
-      );
+      final mirroredConfig = _isBuiltInProfileKey(key)
+          ? _buildBuiltInOffProfileConfig(pairedDevice)
+          : _buildMirroredProfileConfig(
+              sourceDevice: widget.device,
+              targetDevice: pairedDevice,
+              sourceProfileConfig: config,
+            );
       if (mirroredConfig != null && mirroredConfig.isNotEmpty) {
         pairedResult = await pairedProvider.restoreFromJson(mirroredConfig);
       }
@@ -749,6 +868,15 @@ class _SensorConfigurationDeviceRowState
     required String key,
     required String title,
   }) async {
+    if (_isBuiltInProfileKey(key)) {
+      _showSnackBar(
+        'Built-in profile "$title" cannot be overwritten.',
+        type: AppToastType.info,
+        icon: Icons.info_outline_rounded,
+      );
+      return;
+    }
+
     final keyMatches = await _ensureProfileKeyMatchesCurrentDevice(
       key: key,
       profileTitle: title,
@@ -777,6 +905,15 @@ class _SensorConfigurationDeviceRowState
     required String key,
     required String title,
   }) async {
+    if (_isBuiltInProfileKey(key)) {
+      _showSnackBar(
+        'Built-in profile "$title" cannot be deleted.',
+        type: AppToastType.info,
+        icon: Icons.lock_outline_rounded,
+      );
+      return;
+    }
+
     final keyMatches = await _ensureProfileKeyMatchesCurrentDevice(
       key: key,
       profileTitle: title,
@@ -803,6 +940,7 @@ class _SensorConfigurationDeviceRowState
     required String key,
     required String title,
   }) {
+    final isBuiltIn = _isBuiltInProfileKey(key);
     showPlatformModalSheet<void>(
       context: context,
       builder: (sheetContext) => PlatformWidget(
@@ -825,22 +963,24 @@ class _SensorConfigurationDeviceRowState
                   await _loadProfile(key: key, title: title);
                 },
               ),
-              ListTile(
-                leading: const Icon(Icons.save),
-                title: const Text('Overwrite with current settings'),
-                onTap: () async {
-                  Navigator.of(sheetContext).pop();
-                  await _overwriteProfile(key: key, title: title);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.delete),
-                title: const Text('Delete'),
-                onTap: () async {
-                  Navigator.of(sheetContext).pop();
-                  await _deleteProfile(key: key, title: title);
-                },
-              ),
+              if (!isBuiltIn)
+                ListTile(
+                  leading: const Icon(Icons.save),
+                  title: const Text('Overwrite with current settings'),
+                  onTap: () async {
+                    Navigator.of(sheetContext).pop();
+                    await _overwriteProfile(key: key, title: title);
+                  },
+                ),
+              if (!isBuiltIn)
+                ListTile(
+                  leading: const Icon(Icons.delete),
+                  title: const Text('Delete'),
+                  onTap: () async {
+                    Navigator.of(sheetContext).pop();
+                    await _deleteProfile(key: key, title: title);
+                  },
+                ),
             ],
           ),
         ),
@@ -861,21 +1001,23 @@ class _SensorConfigurationDeviceRowState
               },
               child: const Text('Load'),
             ),
-            CupertinoActionSheetAction(
-              onPressed: () async {
-                Navigator.of(sheetContext).pop();
-                await _overwriteProfile(key: key, title: title);
-              },
-              child: const Text('Overwrite with current settings'),
-            ),
-            CupertinoActionSheetAction(
-              isDestructiveAction: true,
-              onPressed: () async {
-                Navigator.of(sheetContext).pop();
-                await _deleteProfile(key: key, title: title);
-              },
-              child: const Text('Delete'),
-            ),
+            if (!isBuiltIn)
+              CupertinoActionSheetAction(
+                onPressed: () async {
+                  Navigator.of(sheetContext).pop();
+                  await _overwriteProfile(key: key, title: title);
+                },
+                child: const Text('Overwrite with current settings'),
+              ),
+            if (!isBuiltIn)
+              CupertinoActionSheetAction(
+                isDestructiveAction: true,
+                onPressed: () async {
+                  Navigator.of(sheetContext).pop();
+                  await _deleteProfile(key: key, title: title);
+                },
+                child: const Text('Delete'),
+              ),
           ],
           cancelButton: CupertinoActionSheetAction(
             onPressed: () => Navigator.of(sheetContext).pop(),
@@ -898,8 +1040,7 @@ class _SensorConfigurationDeviceRowState
       return;
     }
 
-    final profileConfig =
-        await SensorConfigurationStorage.loadConfiguration(key);
+    final profileConfig = await _loadProfileConfiguration(key);
     if (!mounted) return;
 
     if (!widget.device.hasCapability<SensorConfigurationManager>()) {

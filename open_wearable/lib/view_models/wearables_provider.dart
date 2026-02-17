@@ -420,21 +420,40 @@ class WearablesProvider with ChangeNotifier {
     }
   }
 
+  Future<void> _turnOffSensorsForDeviceWithProvider({
+    required Wearable wearable,
+    required SensorConfigurationProvider provider,
+  }) async {
+    try {
+      await provider.turnOffAllSensors();
+    } catch (e, st) {
+      logger.w(
+        'Failed to turn off sensors for ${formatWearableDisplayName(wearable.name)}: $e\n$st',
+      );
+    }
+  }
+
+  Future<void> turnOffSensorsForDevice(Wearable wearable) async {
+    final provider = _sensorConfigurationProviders[wearable];
+    if (provider == null) {
+      return;
+    }
+    await _turnOffSensorsForDeviceWithProvider(
+      wearable: wearable,
+      provider: provider,
+    );
+  }
+
   Future<void> turnOffSensorsForAllDevices() async {
     final providersByWearable = Map<Wearable, SensorConfigurationProvider>.from(
       _sensorConfigurationProviders,
     );
 
     for (final entry in providersByWearable.entries) {
-      final wearable = entry.key;
-      final provider = entry.value;
-      try {
-        await provider.turnOffAllSensors();
-      } catch (e, st) {
-        logger.w(
-          'Failed to turn off sensors for ${formatWearableDisplayName(wearable.name)}: $e\n$st',
-        );
-      }
+      await _turnOffSensorsForDeviceWithProvider(
+        wearable: entry.key,
+        provider: entry.value,
+      );
     }
   }
 

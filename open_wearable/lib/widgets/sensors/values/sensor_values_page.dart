@@ -10,7 +10,12 @@ import 'package:open_wearable/widgets/sensors/values/sensor_value_card.dart';
 import 'package:provider/provider.dart';
 
 class SensorValuesPage extends StatefulWidget {
-  const SensorValuesPage({super.key});
+  final Map<(Wearable, Sensor), SensorDataProvider>? sharedProviders;
+
+  const SensorValuesPage({
+    super.key,
+    this.sharedProviders,
+  });
 
   @override
   State<SensorValuesPage> createState() => _SensorValuesPageState();
@@ -18,17 +23,24 @@ class SensorValuesPage extends StatefulWidget {
 
 class _SensorValuesPageState extends State<SensorValuesPage>
     with AutomaticKeepAliveClientMixin<SensorValuesPage> {
-  final Map<(Wearable, Sensor), SensorDataProvider> _sensorDataProvider = {};
+  final Map<(Wearable, Sensor), SensorDataProvider> _ownedProviders = {};
+
+  Map<(Wearable, Sensor), SensorDataProvider> get _sensorDataProvider =>
+      widget.sharedProviders ?? _ownedProviders;
+
+  bool get _ownsProviders => widget.sharedProviders == null;
 
   @override
   bool get wantKeepAlive => true;
 
   @override
   void dispose() {
-    for (final provider in _sensorDataProvider.values) {
-      provider.dispose();
+    if (_ownsProviders) {
+      for (final provider in _ownedProviders.values) {
+        provider.dispose();
+      }
+      _ownedProviders.clear();
     }
-    _sensorDataProvider.clear();
     super.dispose();
   }
 
@@ -196,6 +208,9 @@ class _SensorValuesPageState extends State<SensorValuesPage>
   }
 
   void _cleanupProviders(List<Wearable> orderedWearables) {
+    if (!_ownsProviders) {
+      return;
+    }
     _sensorDataProvider.removeWhere((key, provider) {
       final keepProvider = orderedWearables.any(
         (device) =>

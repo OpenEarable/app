@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/apps/heart_tracker/model/open_ring_classic_heart_processor.dart';
 import 'package:open_wearable/apps/heart_tracker/model/ppg_filter.dart';
 import 'package:open_wearable/apps/heart_tracker/widgets/rowling_chart.dart';
+import 'package:open_wearable/models/device_name_formatter.dart';
 import 'package:open_wearable/models/wearable_display_group.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 import 'package:open_wearable/widgets/devices/devices_page.dart';
@@ -30,7 +32,12 @@ class HeartTrackerPage extends StatefulWidget {
 
 class _HeartTrackerPageState extends State<HeartTrackerPage> {
   PpgFilter? _ppgFilter;
+  OpenRingClassicHeartProcessor? _openRingProcessor;
   Stream<(int, double)>? _displayPpgSignalStream;
+  Stream<double?>? _heartRateStream;
+  Stream<double?>? _hrvStream;
+  Stream<PpgSignalQuality>? _signalQualityStream;
+  bool _usesOpenRingPipeline = false;
   SensorConfigurationProvider? _sensorConfigProvider;
 
   @override
@@ -70,10 +77,11 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
 
       final ppgStream = ppgSensor.sensorStream
           .map<PpgOpticalSample?>((data) {
-            if (data is! SensorDoubleValue) {
+            final values = _sensorValuesAsDoubles(data);
+            if (values == null) {
               return null;
             }
-            return _extractPpgOpticalSample(ppgSensor, data);
+            return _extractPpgOpticalSample(ppgSensor, data, values);
           })
           .where((sample) => sample != null)
           .cast<PpgOpticalSample>()
@@ -83,10 +91,15 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
       if (accelerometerSensor != null) {
         accelerometerMotionStream = accelerometerSensor.sensorStream
             .map<PpgMotionSample?>((data) {
-              if (data is! SensorDoubleValue) {
+              final values = _sensorValuesAsDoubles(data);
+              if (values == null) {
                 return null;
               }
-              return _extractImuMotionSample(accelerometerSensor, data);
+              return _extractImuMotionSample(
+                accelerometerSensor,
+                data,
+                values,
+              );
             })
             .where((sample) => sample != null)
             .cast<PpgMotionSample>()
@@ -97,12 +110,14 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
       if (opticalTemperatureSensor != null) {
         opticalTemperatureStream = opticalTemperatureSensor.sensorStream
             .map<PpgTemperatureSample?>((data) {
-              if (data is! SensorDoubleValue) {
+              final values = _sensorValuesAsDoubles(data);
+              if (values == null) {
                 return null;
               }
               return _extractOpticalTemperatureSample(
                 opticalTemperatureSensor,
                 data,
+                values,
               );
             })
             .where((sample) => sample != null)
@@ -113,6 +128,22 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
       if (!mounted) {
         return;
       }
+      if (_isOpenRingWearable(widget.wearable.name)) {
+        final openRingProcessor = OpenRingClassicHeartProcessor(
+          inputStream: ppgStream,
+          sampleFreq: sampleFreq,
+        );
+        setState(() {
+          _displayPpgSignalStream = openRingProcessor.displaySignalStream;
+          _heartRateStream = openRingProcessor.heartRateStream;
+          _hrvStream = openRingProcessor.hrvStream;
+          _signalQualityStream = openRingProcessor.signalQualityStream;
+          _openRingProcessor = openRingProcessor;
+          _usesOpenRingPipeline = true;
+        });
+        return;
+      }
+
       final ppgFilter = PpgFilter(
         inputStream: ppgStream,
         motionStream: accelerometerMotionStream,
@@ -122,7 +153,11 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
       );
       setState(() {
         _displayPpgSignalStream = ppgFilter.displaySignalStream;
+        _heartRateStream = ppgFilter.heartRateStream;
+        _hrvStream = ppgFilter.hrvStream;
+        _signalQualityStream = ppgFilter.signalQualityStream;
         _ppgFilter = ppgFilter;
+        _usesOpenRingPipeline = false;
       });
     });
   }
@@ -142,7 +177,20 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
       }
     }
     _ppgFilter?.dispose();
+    _openRingProcessor?.dispose();
     super.dispose();
+  }
+
+  bool _isOpenRingWearable(String wearableName) {
+    final normalizedRaw = wearableName.trim().toLowerCase();
+    if (normalizedRaw.startsWith('openring') ||
+        normalizedRaw.startsWith('bcl')) {
+      return true;
+    }
+
+    final normalizedDisplay =
+        formatWearableDisplayName(wearableName).trim().toLowerCase();
+    return normalizedDisplay.startsWith('openring');
   }
 
   void _disableSensorStreaming(
@@ -257,11 +305,24 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
     return nextBigger ?? maxValue ?? values.first;
   }
 
+  List<double>? _sensorValuesAsDoubles(SensorValue data) {
+    if (data is SensorDoubleValue) {
+      return data.values;
+    }
+    if (data is SensorIntValue) {
+      return data.values
+          .map((value) => value.toDouble())
+          .toList(growable: false);
+    }
+    return null;
+  }
+
   PpgOpticalSample? _extractPpgOpticalSample(
     Sensor sensor,
-    SensorDoubleValue data,
+    SensorValue data,
+    List<double> values,
   ) {
-    if (data.values.isEmpty) {
+    if (values.isEmpty) {
       return null;
     }
 
@@ -276,16 +337,16 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
     }
 
     double valueAt(int? index, double fallback) {
-      if (index != null && index >= 0 && index < data.values.length) {
-        return data.values[index];
+      if (index != null && index >= 0 && index < values.length) {
+        return values[index];
       }
       return fallback;
     }
 
-    final fallbackRed = data.values[0];
-    final fallbackIr = data.values.length > 1 ? data.values[1] : fallbackRed;
-    final fallbackGreen = data.values.length > 2 ? data.values[2] : fallbackRed;
-    final fallbackAmbient = data.values.length > 3 ? data.values[3] : 0.0;
+    final fallbackRed = values[0];
+    final fallbackIr = values.length > 1 ? values[1] : fallbackRed;
+    final fallbackGreen = values.length > 2 ? values[2] : fallbackRed;
+    final fallbackAmbient = values.length > 3 ? values[3] : 0.0;
 
     // Usually channels are [red, ir, green, ambient], but we prefer axis-name
     // matching when available to avoid firmware-order mismatches.
@@ -305,7 +366,8 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
 
   PpgMotionSample _extractImuMotionSample(
     Sensor sensor,
-    SensorDoubleValue data,
+    SensorValue data,
+    List<double> values,
   ) {
     int? findAxisIndex(List<String> keywords) {
       for (var i = 0; i < sensor.axisNames.length; i++) {
@@ -318,15 +380,15 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
     }
 
     double valueAt(int? index, double fallback) {
-      if (index != null && index >= 0 && index < data.values.length) {
-        return data.values[index];
+      if (index != null && index >= 0 && index < values.length) {
+        return values[index];
       }
       return fallback;
     }
 
-    final fallbackX = data.values.isNotEmpty ? data.values[0] : 0.0;
-    final fallbackY = data.values.length > 1 ? data.values[1] : 0.0;
-    final fallbackZ = data.values.length > 2 ? data.values[2] : 0.0;
+    final fallbackX = values.isNotEmpty ? values[0] : 0.0;
+    final fallbackY = values.length > 1 ? values[1] : 0.0;
+    final fallbackZ = values.length > 2 ? values[2] : 0.0;
 
     final x = valueAt(findAxisIndex(['x']), fallbackX);
     final y = valueAt(findAxisIndex(['y']), fallbackY);
@@ -342,9 +404,10 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
 
   PpgTemperatureSample? _extractOpticalTemperatureSample(
     Sensor sensor,
-    SensorDoubleValue data,
+    SensorValue data,
+    List<double> values,
   ) {
-    if (data.values.isEmpty) {
+    if (values.isEmpty) {
       return null;
     }
 
@@ -359,10 +422,10 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
     }
 
     final axisIndex = findAxisIndex(['temp', 'temperature']) ?? 0;
-    if (axisIndex < 0 || axisIndex >= data.values.length) {
+    if (axisIndex < 0 || axisIndex >= values.length) {
       return null;
     }
-    final celsius = data.values[axisIndex];
+    final celsius = values[axisIndex];
     if (!celsius.isFinite) {
       return null;
     }
@@ -374,27 +437,38 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
 
   @override
   Widget build(BuildContext context) {
-    final ppgFilter = _ppgFilter;
     final displayPpgSignalStream = _displayPpgSignalStream;
+    final heartRateStream = _heartRateStream;
+    final hrvStream = _hrvStream;
+    final signalQualityStream = _signalQualityStream;
     return PlatformScaffold(
       appBar: PlatformAppBar(
         title: PlatformText('Heart Tracker'),
       ),
-      body: ppgFilter == null || displayPpgSignalStream == null
+      body: displayPpgSignalStream == null ||
+              heartRateStream == null ||
+              hrvStream == null ||
+              signalQualityStream == null
           ? const Center(child: PlatformCircularProgressIndicator())
           : _buildContent(
               context,
-              ppgFilter,
               displayPpgSignalStream,
+              heartRateStream,
+              hrvStream,
+              signalQualityStream,
+              usesOpenRingPipeline: _usesOpenRingPipeline,
             ),
     );
   }
 
   Widget _buildContent(
     BuildContext context,
-    PpgFilter ppgFilter,
     Stream<(int, double)> displayPpgSignalStream,
-  ) {
+    Stream<double?> heartRateStream,
+    Stream<double?> hrvStream,
+    Stream<PpgSignalQuality> signalQualityStream, {
+    required bool usesOpenRingPipeline,
+  }) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
       children: [
@@ -403,7 +477,7 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
         ),
         const SizedBox(height: 12),
         StreamBuilder<PpgSignalQuality>(
-          stream: ppgFilter.signalQualityStream,
+          stream: signalQualityStream,
           initialData: PpgSignalQuality.unavailable,
           builder: (context, snapshot) {
             final quality = snapshot.data ?? PpgSignalQuality.unavailable;
@@ -415,7 +489,7 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
           children: [
             Expanded(
               child: StreamBuilder<double?>(
-                stream: ppgFilter.heartRateStream,
+                stream: heartRateStream,
                 builder: (context, snapshot) {
                   final bpm = snapshot.data;
                   return _MetricCard(
@@ -432,7 +506,7 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
             const SizedBox(width: 10),
             Expanded(
               child: StreamBuilder<double?>(
-                stream: ppgFilter.hrvStream,
+                stream: hrvStream,
                 builder: (context, snapshot) {
                   final hrv = snapshot.data;
                   return _MetricCard(
@@ -450,13 +524,15 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
         ),
         const SizedBox(height: 12),
         _SignalPanelCard(
-          title: 'Filtered PPG (IMU-fused)',
-          subtitle: 'Noise-suppressed PPG signal via NLMS Motion-ANC.',
+          title: 'Filtered PPG',
+          subtitle: usesOpenRingPipeline
+              ? 'OpenRing physiological preprocessing and classic peak-based heart-rate estimation.'
+              : 'Noise-suppressed PPG signal via NLMS Motion-ANC.',
           icon: Icons.show_chart_rounded,
           chartStream: displayPpgSignalStream,
           timestampExponent: widget.ppgSensor.timestampExponent,
-          fixedMeasureMin: -1.6,
-          fixedMeasureMax: 1.6,
+          fixedMeasureMin: usesOpenRingPipeline ? null : -1.6,
+          fixedMeasureMax: usesOpenRingPipeline ? null : 1.6,
         ),
         const SizedBox(height: 12),
         Card(
@@ -482,27 +558,41 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
                   ],
                 ),
                 const SizedBox(height: 6),
-                Text(
-                  'Beat detection: MSPTDfast v2 '
-                  '(Charlton et al., 2025). '
-                  'DOI: 10.1088/1361-6579/adb89e',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Motion artifact suppression: multi-reference NLMS Motion-ANC '
-                  'adapted from padasip (MIT, Cejnek & Vrba, 2022). '
-                  'DOI: 10.1016/j.jocs.2022.101887',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Implementation optimized for real-time, smartphone-class '
-                  'compute using streaming filters and bounded state.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                ),
+                if (usesOpenRingPipeline) ...[
+                  Text(
+                    'OpenRing processing path: physiological signal filter and classic adaptive peak detection adapted from Tsinghua OpenRing source '
+                    '(SignalFilters.java, ClassicAlgorithmProcessor.java).',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Device citation: τ-Ring: A Smart Ring Platform for Multimodal Physiological and Behavioral Sensing '
+                    '(Tang et al., UbiComp Companion, 2025). arXiv:2508.00778',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ] else ...[
+                  Text(
+                    'Beat detection: MSPTDfast v2 '
+                    '(Charlton et al., 2025). '
+                    'DOI: 10.1088/1361-6579/adb89e',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Motion artifact suppression: multi-reference NLMS Motion-ANC '
+                    'adapted from padasip (MIT, Cejnek & Vrba, 2022). '
+                    'DOI: 10.1016/j.jocs.2022.101887',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Implementation optimized for real-time, smartphone-class '
+                    'compute using streaming filters and bounded state.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -657,7 +747,7 @@ class _SignalPanelCard extends StatelessWidget {
               child: RollingChart(
                 dataSteam: chartStream,
                 timestampExponent: timestampExponent,
-                timeWindow: 10,
+                timeWindow: 5,
                 showXAxis: false,
                 showYAxis: false,
                 fixedMeasureMin: fixedMeasureMin,
