@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/widgets/app_toast.dart';
+import 'package:open_wearable/widgets/common/app_section_card.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -35,14 +38,16 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
       final device = updateProvider.selectedWearable;
 
       if (device != null && device.hasCapability<BatteryLevelStatus>()) {
-        final batteryLevel = await device
-            .requireCapability<BatteryLevelStatus>()
-            .batteryPercentageStream
-            .first
-            .timeout(
-              const Duration(seconds: 5),
-              onTimeout: () => 0,
-            );
+        int? batteryLevel;
+        try {
+          batteryLevel = await device
+              .requireCapability<BatteryLevelStatus>()
+              .batteryPercentageStream
+              .first
+              .timeout(const Duration(seconds: 5));
+        } on TimeoutException {
+          batteryLevel = null;
+        }
 
         if (mounted) {
           setState(() {
@@ -196,7 +201,7 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
         children: [
-          _SectionCard(
+          AppSectionCard(
             title: 'Before You Update',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -225,7 +230,7 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
             ),
           ),
           const SizedBox(height: SensorPageSpacing.sectionGap),
-          _SectionCard(
+          AppSectionCard(
             title: 'Checklist',
             subtitle: 'Please confirm these points before continuing.',
             child: Column(
@@ -303,7 +308,7 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
     final colorScheme = theme.colorScheme;
 
     if (_checkingBattery) {
-      return _SectionCard(
+      return AppSectionCard(
         title: 'Battery Status',
         subtitle: 'Checking current battery level...',
         child: Row(
@@ -331,7 +336,7 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
     }
 
     if (_currentBatteryLevel == null) {
-      return _SectionCard(
+      return AppSectionCard(
         title: 'Battery Status',
         subtitle: 'Battery level could not be determined.',
         child: _StatusNotice(
@@ -348,7 +353,7 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
     final batteryLevel = _currentBatteryLevel!;
     final low = batteryLevel < _minimumBatteryThreshold;
 
-    return _SectionCard(
+    return AppSectionCard(
       title: 'Battery Status',
       subtitle: low
           ? 'Battery is below the recommended update threshold.'
@@ -365,53 +370,6 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
         borderColor: low
             ? colorScheme.error.withValues(alpha: 0.5)
             : colorScheme.primary.withValues(alpha: 0.35),
-      ),
-    );
-  }
-}
-
-class _SectionCard extends StatelessWidget {
-  final String title;
-  final String? subtitle;
-  final Widget child;
-
-  const _SectionCard({
-    required this.title,
-    this.subtitle,
-    required this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            if (subtitle != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                subtitle!,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-            const SizedBox(height: 10),
-            child,
-          ],
-        ),
       ),
     );
   }

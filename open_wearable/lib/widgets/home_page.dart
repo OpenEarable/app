@@ -26,6 +26,7 @@ const int _sensorsIndex = 2;
 const int _sectionCount = 5;
 
 const double _largeScreenBreakpoint = 960;
+const double _overviewDevicePillMinHeight = 30;
 
 class HomePage extends StatefulWidget {
   final int initialSectionIndex;
@@ -100,7 +101,7 @@ class _HomePageState extends State<HomePage> {
         onLogsRequested: _openLogFiles,
         onConnectRequested: _openConnectDevices,
         onConnectorsRequested: _openConnectors,
-        onAppCloseBehaviorRequested: _openAppCloseBehavior,
+        onGeneralSettingsRequested: _openGeneralSettings,
       ),
     ];
   }
@@ -237,9 +238,9 @@ class _HomePageState extends State<HomePage> {
     context.push('/connectors');
   }
 
-  void _openAppCloseBehavior() {
+  void _openGeneralSettings() {
     if (!mounted) return;
-    context.push('/settings/app-close');
+    context.push('/settings/general');
   }
 }
 
@@ -928,7 +929,7 @@ class _ConnectedWearablePillState extends State<_ConnectedWearablePill> {
 
     Widget buildPill(String? sideLabel) {
       final pill = Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
           color: colorScheme.surface,
           borderRadius: BorderRadius.circular(999),
@@ -936,36 +937,46 @@ class _ConnectedWearablePillState extends State<_ConnectedWearablePill> {
             color: colorScheme.outlineVariant.withValues(alpha: 0.6),
           ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              widget.label,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-            if (sideLabel != null) ...[
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                decoration: BoxDecoration(
-                  color: colorScheme.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(
-                    color: colorScheme.primary.withValues(alpha: 0.24),
-                  ),
-                ),
-                child: Text(
-                  sideLabel,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: colorScheme.primary,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minHeight: _overviewDevicePillMinHeight,
+          ),
+          child: Align(
+            alignment: Alignment.center,
+            widthFactor: 1,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  widget.label,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                 ),
-              ),
-            ],
-          ],
+                if (sideLabel != null) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: colorScheme.primary.withValues(alpha: 0.24),
+                      ),
+                    ),
+                    child: Text(
+                      sideLabel,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
         ),
       );
 
@@ -1006,13 +1017,13 @@ class _SettingsPage extends StatelessWidget {
   final VoidCallback onLogsRequested;
   final VoidCallback onConnectRequested;
   final VoidCallback onConnectorsRequested;
-  final VoidCallback onAppCloseBehaviorRequested;
+  final VoidCallback onGeneralSettingsRequested;
 
   const _SettingsPage({
     required this.onLogsRequested,
     required this.onConnectRequested,
     required this.onConnectorsRequested,
-    required this.onAppCloseBehaviorRequested,
+    required this.onGeneralSettingsRequested,
   });
 
   @override
@@ -1042,7 +1053,7 @@ class _SettingsPage extends StatelessWidget {
             icon: Icons.tune_rounded,
             title: 'General settings',
             subtitle: 'Manage app-wide behavior.',
-            onTap: onAppCloseBehaviorRequested,
+            onTap: onGeneralSettingsRequested,
           ),
           _QuickActionTile(
             icon: Icons.receipt_long,

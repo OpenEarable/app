@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/models/wearable_display_group.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
+import 'package:open_wearable/widgets/common/no_devices_prompt.dart';
 import 'package:open_wearable/widgets/devices/connect_devices_page.dart';
 import 'package:open_wearable/widgets/devices/device_detail/audio_mode_widget.dart';
 import 'package:open_wearable/widgets/devices/device_detail/device_detail_page.dart';
 import 'package:open_wearable/widgets/devices/device_status_pills.dart';
+import 'package:open_wearable/widgets/devices/wearable_icon.dart';
 import 'package:open_wearable/widgets/recording_activity_indicator.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 import 'package:provider/provider.dart';
@@ -70,8 +71,10 @@ class _DevicesPageState extends State<DevicesPage> {
     if (wearablesProvider.wearables.isEmpty) {
       return RefreshIndicator(
         onRefresh: () async {
-          // await _startBluetooth();
-          //TODO: implement refresh logic
+          final wearables = await WearableManager().connectToSystemDevices();
+          for (final wearable in wearables) {
+            wearablesProvider.addWearable(wearable);
+          }
         },
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -80,7 +83,7 @@ class _DevicesPageState extends State<DevicesPage> {
             SizedBox(
               height: MediaQuery.of(context).size.height * 0.62,
               child: Center(
-                child: _NoDevicesPromptView(
+                child: NoDevicesPrompt(
                   onScanPressed: () => context.push('/connect-devices'),
                 ),
               ),
@@ -100,7 +103,7 @@ class _DevicesPageState extends State<DevicesPage> {
         ),
       ),
       builder: (context, snapshot) {
-        final groups = _orderGroupsForOverview(
+        final groups = orderWearableGroupsForOverview(
           snapshot.data ??
               wearablesProvider.wearables
                   .map(
@@ -153,7 +156,7 @@ class _DevicesPageState extends State<DevicesPage> {
         ),
       ),
       builder: (context, snapshot) {
-        final groups = _orderGroupsForOverview(
+        final groups = orderWearableGroupsForOverview(
           snapshot.data ??
               wearablesProvider.wearables
                   .map(
@@ -169,7 +172,7 @@ class _DevicesPageState extends State<DevicesPage> {
               constraints: const BoxConstraints(maxWidth: 560),
               child: Padding(
                 padding: const EdgeInsets.all(20),
-                child: _NoDevicesPromptView(
+                child: NoDevicesPrompt(
                   onScanPressed: () => context.push('/connect-devices'),
                 ),
               ),
@@ -184,8 +187,6 @@ class _DevicesPageState extends State<DevicesPage> {
             crossAxisSpacing: 10,
             mainAxisSpacing: 10,
           ),
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
           itemCount: groups.length + 1,
           itemBuilder: (context, index) {
             if (index == groups.length) {
@@ -227,6 +228,7 @@ class _DevicesPageState extends State<DevicesPage> {
             }
             return DeviceRow(
               group: groups[index],
+              cardMargin: EdgeInsets.zero,
               onPairCombineChanged: (pairKey, combined) =>
                   wearablesProvider.setStereoPairKeyCombined(
                 pairKey: pairKey,
@@ -236,109 +238,6 @@ class _DevicesPageState extends State<DevicesPage> {
           },
         );
       },
-    );
-  }
-
-  List<WearableDisplayGroup> _orderGroupsForOverview(
-    List<WearableDisplayGroup> groups,
-  ) {
-    final indexed = groups.asMap().entries.toList();
-
-    int rank(WearableDisplayGroup group) {
-      if (group.isCombined) {
-        return 0;
-      }
-      if (group.primaryPosition == DevicePosition.left) {
-        return 1;
-      }
-      if (group.primaryPosition == DevicePosition.right) {
-        return 2;
-      }
-      return 3;
-    }
-
-    indexed.sort((a, b) {
-      final rankA = rank(a.value);
-      final rankB = rank(b.value);
-      if (rankA != rankB) {
-        return rankA.compareTo(rankB);
-      }
-
-      if (rankA <= 2) {
-        final byName = a.value.displayName
-            .toLowerCase()
-            .compareTo(b.value.displayName.toLowerCase());
-        if (byName != 0) {
-          return byName;
-        }
-      }
-
-      return a.key.compareTo(b.key);
-    });
-
-    return indexed.map((entry) => entry.value).toList();
-  }
-}
-
-class _NoDevicesPromptView extends StatelessWidget {
-  final VoidCallback onScanPressed;
-
-  const _NoDevicesPromptView({required this.onScanPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 58,
-            height: 58,
-            decoration: BoxDecoration(
-              color: colorScheme.primaryContainer.withValues(alpha: 0.45),
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: Icon(
-              Icons.bluetooth_searching_rounded,
-              size: 28,
-              color: colorScheme.primary,
-            ),
-          ),
-          const SizedBox(height: 14),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 280),
-            child: Text(
-              'No devices connected',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 280),
-            child: Text(
-              'Scan for devices to start streaming and recording data.',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-          const SizedBox(height: 14),
-          FilledButton.icon(
-            onPressed: onScanPressed,
-            icon: const Icon(Icons.search_rounded, size: 18),
-            label: const Text('Scan for devices'),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -352,6 +251,7 @@ class DeviceRow extends StatelessWidget {
   final void Function(String pairKey, bool combined)? onPairCombineChanged;
   final void Function(Wearable device)? onSingleDeviceSelected;
   final bool showWearableIcon;
+  final EdgeInsetsGeometry cardMargin;
 
   const DeviceRow({
     super.key,
@@ -359,6 +259,8 @@ class DeviceRow extends StatelessWidget {
     this.onPairCombineChanged,
     this.onSingleDeviceSelected,
     this.showWearableIcon = true,
+    this.cardMargin =
+        const EdgeInsets.only(bottom: SensorPageSpacing.sectionGap),
   });
 
   @override
@@ -379,6 +281,7 @@ class DeviceRow extends StatelessWidget {
     return GestureDetector(
       onTap: () => _openDetails(context),
       child: Card(
+        margin: cardMargin,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           child: Column(
@@ -393,9 +296,12 @@ class DeviceRow extends StatelessWidget {
                       child: SizedBox(
                         width: 56,
                         height: 56,
-                        child: _WearableIconView(
-                          device: primary,
+                        child: WearableIcon(
+                          wearable: primary,
                           initialVariant: knownIconVariant,
+                          hideWhileResolvingStereoPosition: true,
+                          hideWhenResolvedVariantIsSingle: true,
+                          fallback: const SizedBox.shrink(),
                         ),
                       ),
                     ),
@@ -733,118 +639,6 @@ class DeviceRow extends StatelessWidget {
   }
 }
 
-class _WearableIconView extends StatefulWidget {
-  final Wearable device;
-  final WearableIconVariant initialVariant;
-
-  const _WearableIconView({
-    required this.device,
-    required this.initialVariant,
-  });
-
-  @override
-  State<_WearableIconView> createState() => _WearableIconViewState();
-}
-
-class _WearableIconViewState extends State<_WearableIconView> {
-  static final Expando<Future<DevicePosition?>> _positionFutureCache =
-      Expando<Future<DevicePosition?>>();
-
-  Future<DevicePosition?>? _positionFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _configurePositionFuture();
-  }
-
-  @override
-  void didUpdateWidget(covariant _WearableIconView oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (!identical(oldWidget.device, widget.device) ||
-        oldWidget.initialVariant != widget.initialVariant) {
-      _configurePositionFuture();
-    }
-  }
-
-  void _configurePositionFuture() {
-    if (widget.initialVariant != WearableIconVariant.single ||
-        !widget.device.hasCapability<StereoDevice>()) {
-      _positionFuture = null;
-      return;
-    }
-
-    final stereoDevice = widget.device.requireCapability<StereoDevice>();
-    _positionFuture =
-        _positionFutureCache[stereoDevice] ??= stereoDevice.position;
-  }
-
-  WearableIconVariant _variantForPosition(DevicePosition? position) {
-    return switch (position) {
-      DevicePosition.left => WearableIconVariant.left,
-      DevicePosition.right => WearableIconVariant.right,
-      _ => widget.initialVariant,
-    };
-  }
-
-  String? _resolveIconPath(WearableIconVariant variant) {
-    final variantPath = widget.device.getWearableIconPath(variant: variant);
-    if (variantPath != null && variantPath.isNotEmpty) {
-      return variantPath;
-    }
-
-    if (variant != WearableIconVariant.single) {
-      final fallbackPath = widget.device.getWearableIconPath();
-      if (fallbackPath != null && fallbackPath.isNotEmpty) {
-        return fallbackPath;
-      }
-    }
-    return null;
-  }
-
-  Widget _buildIcon(WearableIconVariant variant) {
-    final path = _resolveIconPath(variant);
-    if (path == null) {
-      return const SizedBox.shrink();
-    }
-
-    if (path.toLowerCase().endsWith('.svg')) {
-      return SvgPicture.asset(
-        path,
-        fit: BoxFit.contain,
-      );
-    }
-
-    return Image.asset(
-      path,
-      fit: BoxFit.contain,
-      errorBuilder: (_, __, ___) => const Icon(Icons.watch_outlined),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_positionFuture == null) {
-      return _buildIcon(widget.initialVariant);
-    }
-
-    return FutureBuilder<DevicePosition?>(
-      future: _positionFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          // Avoid flashing the generic icon before stereo side is known.
-          return const SizedBox.shrink();
-        }
-        final variant = _variantForPosition(snapshot.data);
-        if (variant == WearableIconVariant.single) {
-          return const SizedBox.shrink();
-        }
-        return _buildIcon(variant);
-      },
-    );
-  }
-}
-
 class _PairedDeviceSheet extends StatelessWidget {
   final String title;
   final Wearable leftDevice;
@@ -924,6 +718,7 @@ class _PairedDeviceSheet extends StatelessWidget {
                   wearable: leftDevice,
                   position: DevicePosition.left,
                 ),
+                cardMargin: EdgeInsets.zero,
                 onSingleDeviceSelected: onOpenDeviceDetail,
               ),
               const SizedBox(height: 8),
@@ -932,6 +727,7 @@ class _PairedDeviceSheet extends StatelessWidget {
                   wearable: rightDevice,
                   position: DevicePosition.right,
                 ),
+                cardMargin: EdgeInsets.zero,
                 onSingleDeviceSelected: onOpenDeviceDetail,
               ),
               if (listeningModeDevice != null) ...[

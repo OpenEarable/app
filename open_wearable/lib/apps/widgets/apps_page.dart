@@ -120,11 +120,28 @@ final List<AppInfo> _apps = [
       startApp: (wearable, _) {
         if (wearable.hasCapability<SensorManager>()) {
           final sensors = wearable.requireCapability<SensorManager>().sensors;
-          final ppgSensor = sensors.firstWhere(
-            (s) =>
-                s.sensorName.toLowerCase() ==
-                'photoplethysmography'.toLowerCase(),
-          );
+          Sensor? ppgSensor;
+          for (final sensor in sensors) {
+            final text =
+                '${sensor.sensorName} ${sensor.chartTitle}'.toLowerCase();
+            if (text.contains('photoplethysmography') ||
+                text.contains('ppg') ||
+                text.contains('pulse')) {
+              ppgSensor = sensor;
+              break;
+            }
+          }
+
+          if (ppgSensor == null) {
+            return PlatformScaffold(
+              appBar: PlatformAppBar(
+                title: PlatformText('Heart Tracker'),
+              ),
+              body: Center(
+                child: PlatformText('No PPG sensor found on this wearable'),
+              ),
+            );
+          }
 
           Sensor? accelerometerSensor;
           for (final sensor in sensors) {

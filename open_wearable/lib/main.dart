@@ -76,6 +76,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   bool _shouldCloseOpenScreensOnResume = false;
   Timer? _pendingCloseShutdownTimer;
   DateTime? _backgroundEnteredAt;
+  bool _backgroundExecutionRequestedForShutdown = false;
+  bool _backgroundExecutionRequestedForRecording = false;
+  bool _isBackgroundExecutionActive = false;
 
   static const Duration _closeShutdownGracePeriod = Duration(
     seconds: 10,
@@ -264,8 +267,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   }
 
   Future<void> _maybeTurnOffAllSensorsOnAppClose() async {
-    if (_closingSensorShutdownInProgress ||
-        !AppShutdownSettings.shutOffAllSensorsOnAppClose) {
+    if (_closingSensorShutdownInProgress) {
+      return;
+    }
+
+    if (!AppShutdownSettings.shutOffAllSensorsOnAppClose ||
+        _sensorRecorderProvider.isRecording) {
+      _setBackgroundExecutionForShutdown(false);
       return;
     }
 
@@ -276,7 +284,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     } catch (e, st) {
       logger.w('Failed to shut off sensors on app close: $e\n$st');
     } finally {
-      unawaited(AppBackgroundExecutionBridge.endSensorShutdownWindow());
+      _setBackgroundExecutionForShutdown(false);
     }
   }
 
@@ -300,14 +308,49 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     });
   }
 
-  void _scheduleCloseShutdownIfNeeded() {
-    _pendingCloseShutdownTimer?.cancel();
-    if (!AppShutdownSettings.shutOffAllSensorsOnAppClose) {
-      unawaited(AppBackgroundExecutionBridge.endSensorShutdownWindow());
+  void _setBackgroundExecutionForShutdown(bool enabled) {
+    if (_backgroundExecutionRequestedForShutdown == enabled) {
+      return;
+    }
+    _backgroundExecutionRequestedForShutdown = enabled;
+    _syncBackgroundExecutionWindow();
+  }
+
+  void _setBackgroundExecutionForRecording(bool enabled) {
+    if (_backgroundExecutionRequestedForRecording == enabled) {
+      return;
+    }
+    _backgroundExecutionRequestedForRecording = enabled;
+    _syncBackgroundExecutionWindow();
+  }
+
+  void _syncBackgroundExecutionWindow() {
+    final shouldHoldBackgroundExecution =
+        _backgroundExecutionRequestedForShutdown ||
+            _backgroundExecutionRequestedForRecording;
+    if (shouldHoldBackgroundExecution == _isBackgroundExecutionActive) {
       return;
     }
 
-    unawaited(AppBackgroundExecutionBridge.beginSensorShutdownWindow());
+    _isBackgroundExecutionActive = shouldHoldBackgroundExecution;
+    if (shouldHoldBackgroundExecution) {
+      unawaited(AppBackgroundExecutionBridge.beginSensorShutdownWindow());
+      return;
+    }
+    unawaited(AppBackgroundExecutionBridge.endSensorShutdownWindow());
+  }
+
+  void _scheduleCloseShutdownIfNeeded() {
+    _pendingCloseShutdownTimer?.cancel();
+    _pendingCloseShutdownTimer = null;
+
+    if (_sensorRecorderProvider.isRecording ||
+        !AppShutdownSettings.shutOffAllSensorsOnAppClose) {
+      _setBackgroundExecutionForShutdown(false);
+      return;
+    }
+
+    _setBackgroundExecutionForShutdown(true);
     _pendingCloseShutdownTimer = Timer(_closeShutdownGracePeriod, () {
       _pendingCloseShutdownTimer = null;
       unawaited(_maybeTurnOffAllSensorsOnAppClose());
@@ -322,12 +365,15 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       _backgroundEnteredAt = null;
 
       _pendingCloseShutdownTimer?.cancel();
-      unawaited(AppBackgroundExecutionBridge.endSensorShutdownWindow());
+      _pendingCloseShutdownTimer = null;
+      _setBackgroundExecutionForShutdown(false);
+      _setBackgroundExecutionForRecording(false);
 
       final shouldCatchUpShutdown =
           AppShutdownSettings.shutOffAllSensorsOnAppClose &&
               !_shouldCloseOpenScreensOnResume &&
               !_closingSensorShutdownInProgress &&
+              !_sensorRecorderProvider.isRecording &&
               backgroundEnteredAt != null &&
               DateTime.now().difference(backgroundEnteredAt) >=
                   _closeShutdownGracePeriod;
@@ -351,16 +397,33 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       _autoConnector.start();
     } else if (state == AppLifecycleState.inactive) {
       _backgroundEnteredAt ??= DateTime.now();
-      _scheduleCloseShutdownIfNeeded();
+      if (_sensorRecorderProvider.isRecording) {
+        _pendingCloseShutdownTimer?.cancel();
+        _pendingCloseShutdownTimer = null;
+        _setBackgroundExecutionForShutdown(false);
+        _setBackgroundExecutionForRecording(true);
+      } else {
+        _setBackgroundExecutionForRecording(false);
+        _scheduleCloseShutdownIfNeeded();
+      }
     } else if (state == AppLifecycleState.paused) {
       _autoConnector.stop();
       _backgroundEnteredAt ??= DateTime.now();
-      _scheduleCloseShutdownIfNeeded();
+      if (_sensorRecorderProvider.isRecording) {
+        _pendingCloseShutdownTimer?.cancel();
+        _pendingCloseShutdownTimer = null;
+        _setBackgroundExecutionForShutdown(false);
+        _setBackgroundExecutionForRecording(true);
+      } else {
+        _setBackgroundExecutionForRecording(false);
+        _scheduleCloseShutdownIfNeeded();
+      }
     } else if (state == AppLifecycleState.detached) {
       _backgroundEnteredAt = null;
       _pendingCloseShutdownTimer?.cancel();
       _pendingCloseShutdownTimer = null;
-      unawaited(AppBackgroundExecutionBridge.endSensorShutdownWindow());
+      _setBackgroundExecutionForShutdown(false);
+      _setBackgroundExecutionForRecording(false);
       _autoConnector.stop();
     }
   }
@@ -535,8 +598,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     ConnectorSettings.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _pendingCloseShutdownTimer?.cancel();
+    _pendingCloseShutdownTimer = null;
     _backgroundEnteredAt = null;
-    unawaited(AppBackgroundExecutionBridge.endSensorShutdownWindow());
+    _setBackgroundExecutionForShutdown(false);
+    _setBackgroundExecutionForRecording(false);
     _autoConnector.stop();
     super.dispose();
   }

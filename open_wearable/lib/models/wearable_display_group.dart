@@ -103,6 +103,92 @@ class WearableDisplayGroup {
   }
 }
 
+/// Orders groups for device-overview style screens.
+///
+/// Priority:
+/// 1. Combined stereo pairs
+/// 2. Left singles
+/// 3. Right singles
+/// 4. Unknown-position singles
+/// Within 1-3, names are sorted alphabetically; ties keep original order.
+List<WearableDisplayGroup> orderWearableGroupsForOverview(
+  List<WearableDisplayGroup> groups,
+) {
+  final indexed = groups.asMap().entries.toList();
+
+  int rank(WearableDisplayGroup group) {
+    if (group.isCombined) {
+      return 0;
+    }
+    if (group.primaryPosition == DevicePosition.left) {
+      return 1;
+    }
+    if (group.primaryPosition == DevicePosition.right) {
+      return 2;
+    }
+    return 3;
+  }
+
+  indexed.sort((a, b) {
+    final rankA = rank(a.value);
+    final rankB = rank(b.value);
+    if (rankA != rankB) {
+      return rankA.compareTo(rankB);
+    }
+
+    if (rankA <= 2) {
+      final byName = a.value.displayName
+          .toLowerCase()
+          .compareTo(b.value.displayName.toLowerCase());
+      if (byName != 0) {
+        return byName;
+      }
+    }
+
+    return a.key.compareTo(b.key);
+  });
+
+  return indexed.map((entry) => entry.value).toList(growable: false);
+}
+
+/// Keeps original order by default, but ensures left/right singles with the
+/// same base name appear in deterministic side order.
+List<WearableDisplayGroup> orderWearableGroupsByNameAndSide(
+  List<WearableDisplayGroup> groups,
+) {
+  final indexed = groups.asMap().entries.toList();
+
+  indexed.sort((a, b) {
+    final groupA = a.value;
+    final groupB = b.value;
+    final sameName =
+        groupA.displayName.toLowerCase() == groupB.displayName.toLowerCase();
+    final bothSingle = !groupA.isCombined && !groupB.isCombined;
+    if (sameName && bothSingle) {
+      final sideOrderA = _positionSortRank(groupA.primaryPosition);
+      final sideOrderB = _positionSortRank(groupB.primaryPosition);
+      final knownSides = sideOrderA <= 1 && sideOrderB <= 1;
+      if (knownSides && sideOrderA != sideOrderB) {
+        return sideOrderA.compareTo(sideOrderB);
+      }
+    }
+
+    return a.key.compareTo(b.key);
+  });
+
+  return indexed.map((entry) => entry.value).toList(growable: false);
+}
+
+int _positionSortRank(DevicePosition? position) {
+  if (position == DevicePosition.left) {
+    return 0;
+  }
+  if (position == DevicePosition.right) {
+    return 1;
+  }
+  return 2;
+}
+
 class _StereoMetadata {
   final Wearable wearable;
   final DevicePosition? position;

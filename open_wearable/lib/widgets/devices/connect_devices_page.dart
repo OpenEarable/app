@@ -47,7 +47,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
     final connectedWearables = wearablesProvider.wearables;
     final connectedDeviceIds =
         connectedWearables.map((wearable) => wearable.deviceId).toSet();
-    final connectedGroups = _orderGroupsForOverview(
+    final connectedGroups = orderWearableGroupsForOverview(
       connectedWearables
           .map(
             (wearable) => WearableDisplayGroup.single(
@@ -116,7 +116,10 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   for (var i = 0; i < connectedGroups.length; i++) ...[
-                    DeviceRow(group: connectedGroups[i]),
+                    DeviceRow(
+                      group: connectedGroups[i],
+                      cardMargin: EdgeInsets.zero,
+                    ),
                     if (i < connectedGroups.length - 1)
                       const SizedBox(height: 8),
                   ],
@@ -289,46 +292,6 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
     final name = device.name.trim();
     if (name.isEmpty) return 'Unnamed device';
     return formatWearableDisplayName(name);
-  }
-
-  List<WearableDisplayGroup> _orderGroupsForOverview(
-    List<WearableDisplayGroup> groups,
-  ) {
-    final indexed = groups.asMap().entries.toList();
-
-    int rank(WearableDisplayGroup group) {
-      if (group.isCombined) {
-        return 0;
-      }
-      if (group.primaryPosition == DevicePosition.left) {
-        return 1;
-      }
-      if (group.primaryPosition == DevicePosition.right) {
-        return 2;
-      }
-      return 3;
-    }
-
-    indexed.sort((a, b) {
-      final rankA = rank(a.value);
-      final rankB = rank(b.value);
-      if (rankA != rankB) {
-        return rankA.compareTo(rankB);
-      }
-
-      if (rankA <= 2) {
-        final byName = a.value.displayName
-            .toLowerCase()
-            .compareTo(b.value.displayName.toLowerCase());
-        if (byName != 0) {
-          return byName;
-        }
-      }
-
-      return a.key.compareTo(b.key);
-    });
-
-    return indexed.map((entry) => entry.value).toList();
   }
 
   String _formatScanTime(DateTime startedAt) {

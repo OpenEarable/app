@@ -42,7 +42,10 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
   DateTime? _activeRecordingStart;
   SensorRecorderProvider? _recorder;
 
-  String _basename(String path) => path.split(Platform.pathSeparator).last;
+  bool get _isIOS => !kIsWeb && Platform.isIOS;
+  bool get _isAndroid => !kIsWeb && Platform.isAndroid;
+
+  String _basename(String path) => path.split(RegExp(r'[\\/]+')).last;
 
   void _scrollRecordingsFromHeaderDrag(DragUpdateDetails details) {
     if (!_recordingsScrollController.hasClients) return;
@@ -81,33 +84,56 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
   }
 
   Future<void> _openFolder(String path) async {
+    if (kIsWeb) {
+      return;
+    }
+
     try {
-      if (Platform.isIOS) {
+      if (_isIOS) {
         await platform
             .invokeMethod('openFolder', {'path': "shareddocuments://$path"});
-      } else if (Platform.isAndroid) {
+      } else if (_isAndroid) {
         await platform.invokeMethod('openFolder', {'path': path});
       }
     } on PlatformException catch (e) {
-      print("Failed to open folder: '${e.message}'.");
-      // Optional: Show error dialog here too if needed
+      _logger.w("Failed to open folder: '${e.message}'.");
+      await _showErrorDialog('Failed to open recording folder.');
     }
   }
 
   Future<void> _listRecordings() async {
+    if (kIsWeb) {
+      if (!mounted) return;
+      setState(() {
+        _recordings = [];
+      });
+      return;
+    }
+
     Directory recordingsDir;
 
-    if (Platform.isAndroid) {
+    if (_isAndroid) {
       Directory? dir = await getExternalStorageDirectory();
-      if (dir == null) return;
+      if (dir == null) {
+        if (!mounted) return;
+        setState(() {
+          _recordings = [];
+        });
+        return;
+      }
       recordingsDir = dir;
-    } else if (Platform.isIOS) {
+    } else if (_isIOS) {
       recordingsDir = await getIOSDirectory();
     } else {
+      if (!mounted) return;
+      setState(() {
+        _recordings = [];
+      });
       return;
     }
 
     if (!await recordingsDir.exists()) {
+      if (!mounted) return;
       setState(() {
         _recordings = [];
       });
@@ -117,7 +143,7 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
     List<FileSystemEntity> entities = recordingsDir.listSync();
 
     // Filter only directories that start with "OpenWearable_Recording"
-    _recordings = entities
+    final recordings = entities
         .where(
           (entity) =>
               entity is Directory &&
@@ -126,11 +152,14 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
         .toList();
 
     // Sort by modification time (newest first)
-    _recordings.sort((a, b) {
+    recordings.sort((a, b) {
       return b.statSync().changed.compareTo(a.statSync().changed);
     });
 
-    setState(() {});
+    if (!mounted) return;
+    setState(() {
+      _recordings = recordings;
+    });
   }
 
   List<File> _getFilesInFolder(Directory folder) {
@@ -584,7 +613,7 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
               onPressed: _listRecordings,
               icon: const Icon(Icons.refresh),
             ),
-            if (Platform.isIOS)
+            if (_isIOS)
               IconButton(
                 tooltip: 'Open recording folder',
                 onPressed: () async {
@@ -836,7 +865,11 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
 /* ──────────────────────────────────────────────────────────── */
 
 Future<String?> _pickDirectory() async {
-  if (!Platform.isIOS && !kIsWeb) {
+  if (kIsWeb) {
+    return null;
+  }
+
+  if (Platform.isAndroid) {
     final recordingName =
         'OpenWearable_Recording_${DateTime.now().toIso8601String()}';
     Directory? appDir = await getExternalStorageDirectory();

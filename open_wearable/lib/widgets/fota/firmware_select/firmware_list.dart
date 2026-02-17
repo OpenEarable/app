@@ -1,5 +1,3 @@
-// ignore_for_file: use_build_context_synchronously
-
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
@@ -58,9 +56,7 @@ class _FirmwareListState extends State<FirmwareList> {
       ...beta,
     ];
 
-    // Require both requests to succeed. If either source request fails,
-    // surface the fetch error UI.
-    if (stableError != null || betaError != null) {
+    if (stableError != null && betaError != null) {
       throw Exception('Could not fetch firmware list from the internet.');
     }
 
@@ -84,15 +80,19 @@ class _FirmwareListState extends State<FirmwareList> {
       return;
     }
 
-    final version = await wearable
-        .requireCapability<DeviceFirmwareVersion>()
-        .readDeviceFirmwareVersion();
-    if (!mounted) {
-      return;
+    try {
+      final version = await wearable
+          .requireCapability<DeviceFirmwareVersion>()
+          .readDeviceFirmwareVersion();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        firmwareVersion = version;
+      });
+    } catch (_) {
+      // Keep UI usable even when firmware version cannot be read.
     }
-    setState(() {
-      firmwareVersion = version;
-    });
   }
 
   @override
@@ -102,7 +102,7 @@ class _FirmwareListState extends State<FirmwareList> {
         title: const Text('Select Firmware'),
         trailingActions: [
           PlatformIconButton(
-            onPressed: () => _onCustomFirmwareSelect(context),
+            onPressed: _onCustomFirmwareSelect,
             icon: const Icon(Icons.upload_file_rounded),
             padding: EdgeInsets.zero,
           ),
@@ -112,10 +112,10 @@ class _FirmwareListState extends State<FirmwareList> {
     );
   }
 
-  void _onCustomFirmwareSelect(BuildContext context) async {
+  void _onCustomFirmwareSelect() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => PlatformAlertDialog(
+      builder: (dialogContext) => PlatformAlertDialog(
         title: const Text('Custom Firmware'),
         content: const Text(
           'By selecting a custom firmware file, you acknowledge that you are doing so at your own risk. The developers are not responsible for any damage caused.',
@@ -123,31 +123,36 @@ class _FirmwareListState extends State<FirmwareList> {
         actions: <Widget>[
           PlatformDialogAction(
             child: const Text('Cancel'),
-            onPressed: () => Navigator.of(context).pop(false),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
           ),
           PlatformDialogAction(
             child: const Text('Continue'),
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
           ),
         ],
       ),
     );
 
-    if (confirmed != true) return;
+    if (confirmed != true || !mounted) return;
 
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['zip', 'bin'],
     );
-    if (result == null) return;
+    if (result == null || !mounted) return;
 
     final ext = result.files.first.extension;
     final fwType =
         ext == 'zip' ? FirmwareType.multiImage : FirmwareType.singleImage;
 
     final firstResult = result.files.first;
-    final file = File(firstResult.path!);
+    final path = firstResult.path;
+    if (path == null || path.isEmpty) {
+      return;
+    }
+    final file = File(path);
     final bytes = await file.readAsBytes();
+    if (!mounted) return;
 
     final fw = LocalFirmware(
       data: bytes,
@@ -156,9 +161,7 @@ class _FirmwareListState extends State<FirmwareList> {
     );
 
     context.read<FirmwareUpdateRequestProvider>().setFirmware(fw);
-    if (mounted) {
-      Navigator.pop(context);
-    }
+    Navigator.pop(context);
   }
 
   Widget _body() {
@@ -715,6 +718,9 @@ class _FirmwareListState extends State<FirmwareList> {
   }
 
   void _installFirmware(RemoteFirmware firmware) {
+    if (!mounted) {
+      return;
+    }
     context.read<FirmwareUpdateRequestProvider>().setFirmware(firmware);
     Navigator.pop(context);
   }

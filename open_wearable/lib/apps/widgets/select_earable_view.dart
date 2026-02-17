@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/apps/widgets/app_compatibility.dart';
 import 'package:open_wearable/models/device_name_formatter.dart';
@@ -8,6 +7,7 @@ import 'package:open_wearable/models/wearable_display_group.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/devices/device_status_pills.dart';
+import 'package:open_wearable/widgets/devices/wearable_icon.dart';
 import 'package:provider/provider.dart';
 
 class SelectEarableView extends StatefulWidget {
@@ -293,9 +293,12 @@ class _SelectableWearableCard extends StatelessWidget {
                   child: SizedBox(
                     width: 56,
                     height: 56,
-                    child: _SelectableWearableIconView(
+                    child: WearableIcon(
                       wearable: wearable,
                       initialVariant: iconVariant,
+                      hideWhileResolvingStereoPosition: true,
+                      hideWhenResolvedVariantIsSingle: true,
+                      fallback: const SizedBox.shrink(),
                     ),
                   ),
                 ),
@@ -395,118 +398,5 @@ class _SelectableWearableCard extends StatelessWidget {
 
   Widget _buildStatusPillLine(List<Widget> pills) {
     return DevicePillLine(pills: pills);
-  }
-}
-
-class _SelectableWearableIconView extends StatefulWidget {
-  final Wearable wearable;
-  final WearableIconVariant initialVariant;
-
-  const _SelectableWearableIconView({
-    required this.wearable,
-    required this.initialVariant,
-  });
-
-  @override
-  State<_SelectableWearableIconView> createState() =>
-      _SelectableWearableIconViewState();
-}
-
-class _SelectableWearableIconViewState
-    extends State<_SelectableWearableIconView> {
-  static final Expando<Future<DevicePosition?>> _positionFutureCache =
-      Expando<Future<DevicePosition?>>();
-
-  Future<DevicePosition?>? _positionFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _configurePositionFuture();
-  }
-
-  @override
-  void didUpdateWidget(covariant _SelectableWearableIconView oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (!identical(oldWidget.wearable, widget.wearable) ||
-        oldWidget.initialVariant != widget.initialVariant) {
-      _configurePositionFuture();
-    }
-  }
-
-  void _configurePositionFuture() {
-    if (widget.initialVariant != WearableIconVariant.single ||
-        !widget.wearable.hasCapability<StereoDevice>()) {
-      _positionFuture = null;
-      return;
-    }
-
-    final stereoDevice = widget.wearable.requireCapability<StereoDevice>();
-    _positionFuture =
-        _positionFutureCache[stereoDevice] ??= stereoDevice.position;
-  }
-
-  WearableIconVariant _variantForPosition(DevicePosition? position) {
-    return switch (position) {
-      DevicePosition.left => WearableIconVariant.left,
-      DevicePosition.right => WearableIconVariant.right,
-      _ => widget.initialVariant,
-    };
-  }
-
-  String? _resolveIconPath(WearableIconVariant variant) {
-    final variantPath = widget.wearable.getWearableIconPath(variant: variant);
-    if (variantPath != null && variantPath.isNotEmpty) {
-      return variantPath;
-    }
-
-    if (variant != WearableIconVariant.single) {
-      final fallbackPath = widget.wearable.getWearableIconPath();
-      if (fallbackPath != null && fallbackPath.isNotEmpty) {
-        return fallbackPath;
-      }
-    }
-    return null;
-  }
-
-  Widget _buildIcon(WearableIconVariant variant) {
-    final path = _resolveIconPath(variant);
-    if (path == null) {
-      return const SizedBox.shrink();
-    }
-
-    if (path.toLowerCase().endsWith('.svg')) {
-      return SvgPicture.asset(
-        path,
-        fit: BoxFit.contain,
-      );
-    }
-
-    return Image.asset(
-      path,
-      fit: BoxFit.contain,
-      errorBuilder: (_, __, ___) => const Icon(Icons.watch_outlined),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_positionFuture == null) {
-      return _buildIcon(widget.initialVariant);
-    }
-
-    return FutureBuilder<DevicePosition?>(
-      future: _positionFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const SizedBox.shrink();
-        }
-        final variant = _variantForPosition(snapshot.data);
-        if (variant == WearableIconVariant.single) {
-          return const SizedBox.shrink();
-        }
-        return _buildIcon(variant);
-      },
-    );
   }
 }

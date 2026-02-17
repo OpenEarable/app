@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/models/app_shutdown_settings.dart';
 import 'package:open_wearable/models/device_name_formatter.dart';
+import 'package:open_wearable/view_models/sensor_data_provider.dart';
 import 'package:open_wearable/widgets/sensors/values/sensor_chart.dart';
+import 'package:provider/provider.dart';
 
 class SensorValueDetail extends StatelessWidget {
   final Sensor sensor;
@@ -40,48 +42,73 @@ class SensorValueDetail extends StatelessWidget {
                 valueListenable:
                     AppShutdownSettings.disableLiveDataGraphsListenable,
                 builder: (context, disableLiveDataGraphs, _) {
-                  if (!disableLiveDataGraphs) {
-                    return const SensorChart(
-                      allowToggleAxes: true,
-                    );
-                  }
+                  return ValueListenableBuilder<bool>(
+                    valueListenable: AppShutdownSettings
+                        .hideLiveDataGraphsWithoutDataListenable,
+                    builder: (context, hideGraphsWithoutData, __) {
+                      final shouldHideWithoutData =
+                          hideGraphsWithoutData && !disableLiveDataGraphs;
+                      if (!shouldHideWithoutData) {
+                        return SensorChart(
+                          allowToggleAxes: true,
+                          liveUpdatesEnabled: !disableLiveDataGraphs,
+                          onDisabledTap: disableLiveDataGraphs
+                              ? () => context.push('/settings/general')
+                              : null,
+                        );
+                      }
 
-                  return Center(
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: () => context.push('/settings/app-close'),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 18,
-                            vertical: 12,
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'Live data graphs are disabled in General settings.',
-                                textAlign: TextAlign.center,
-                                style: Theme.of(context).textTheme.bodyMedium,
+                      return Consumer<SensorDataProvider>(
+                        builder: (context, dataProvider, ___) {
+                          if (dataProvider.sensorValues.isNotEmpty) {
+                            return const SensorChart(
+                              allowToggleAxes: true,
+                            );
+                          }
+
+                          return Center(
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(12),
+                                onTap: () => context.push('/settings/general'),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 18,
+                                    vertical: 12,
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        'Live data graph is hidden while this sensor has no data.',
+                                        textAlign: TextAlign.center,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium,
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        'Tap to open General settings',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .primary,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
-                              const SizedBox(height: 6),
-                              Text(
-                                'Tap to open General settings',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
+                            ),
+                          );
+                        },
+                      );
+                    },
                   );
                 },
               ),

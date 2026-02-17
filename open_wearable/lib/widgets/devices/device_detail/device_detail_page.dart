@@ -2,15 +2,16 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/models/auto_connect_preferences.dart';
 import 'package:open_wearable/models/device_name_formatter.dart';
 import 'package:open_wearable/models/wearable_status_cache.dart';
 import 'package:open_wearable/widgets/app_toast.dart';
+import 'package:open_wearable/widgets/common/app_section_card.dart';
 import 'package:open_wearable/widgets/devices/device_detail/audio_mode_widget.dart';
 import 'package:open_wearable/widgets/devices/device_status_pills.dart';
+import 'package:open_wearable/widgets/devices/wearable_icon.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -149,9 +150,21 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
       // Disconnect should continue even if preference cleanup fails.
     }
 
-    await device.disconnect();
-    if (shouldPop) {
-      navigator.pop();
+    try {
+      await device.disconnect();
+      if (shouldPop) {
+        navigator.pop();
+      }
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      AppToast.show(
+        context,
+        message: 'Could not disconnect device.',
+        type: AppToastType.error,
+        icon: Icons.link_off_rounded,
+      );
     }
   }
 
@@ -191,7 +204,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
       _buildInfoCard(context),
       if (widget.device.hasCapability<StatusLed>() &&
           widget.device.hasCapability<RgbLed>())
-        _SectionCard(
+        AppSectionCard(
           title: 'Status LED',
           subtitle: 'Customize the status indicator behavior.',
           child: StatusLEDControlWidget(
@@ -200,7 +213,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
           ),
         )
       else if (widget.device.hasCapability<RgbLed>())
-        _SectionCard(
+        AppSectionCard(
           title: 'RGB LED',
           subtitle: 'Set a custom color for the RGB LED.',
           child: _ActionSurface(
@@ -259,7 +272,11 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                   SizedBox(
                     width: 56,
                     height: 56,
-                    child: _DeviceHeaderWearableIcon(device: widget.device),
+                    child: WearableIcon(
+                      wearable: widget.device,
+                      initialVariant: WearableIconVariant.single,
+                      fallback: const Icon(Icons.watch_outlined),
+                    ),
                   ),
                 if (hasWearableIcon) const SizedBox(width: 12),
                 Expanded(
@@ -339,7 +356,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
     final hasFirmware = _firmwareVersionFuture != null;
     final hasHardware = _hardwareVersionFuture != null;
 
-    return _SectionCard(
+    return AppSectionCard(
       title: 'Device Information',
       subtitle: 'Identifiers and software versions.',
       child: Column(
@@ -402,7 +419,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
     final hasEnergy = widget.device.hasCapability<BatteryEnergyStatusService>();
     final hasHealth = widget.device.hasCapability<BatteryHealthStatusService>();
 
-    return _SectionCard(
+    return AppSectionCard(
       title: 'Battery',
       subtitle: hasEnergy && hasHealth
           ? 'Live energy and health metrics.'
@@ -499,150 +516,6 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
           ],
         );
       },
-    );
-  }
-}
-
-class _DeviceHeaderWearableIcon extends StatefulWidget {
-  final Wearable device;
-
-  const _DeviceHeaderWearableIcon({required this.device});
-
-  @override
-  State<_DeviceHeaderWearableIcon> createState() =>
-      _DeviceHeaderWearableIconState();
-}
-
-class _DeviceHeaderWearableIconState extends State<_DeviceHeaderWearableIcon> {
-  static final Expando<Future<DevicePosition?>> _positionFutureCache =
-      Expando<Future<DevicePosition?>>();
-
-  Future<DevicePosition?>? _positionFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _configurePositionFuture();
-  }
-
-  @override
-  void didUpdateWidget(covariant _DeviceHeaderWearableIcon oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (!identical(oldWidget.device, widget.device)) {
-      _configurePositionFuture();
-    }
-  }
-
-  void _configurePositionFuture() {
-    if (!widget.device.hasCapability<StereoDevice>()) {
-      _positionFuture = null;
-      return;
-    }
-
-    final stereoDevice = widget.device.requireCapability<StereoDevice>();
-    _positionFuture =
-        _positionFutureCache[stereoDevice] ??= stereoDevice.position;
-  }
-
-  WearableIconVariant _variantForPosition(DevicePosition? position) {
-    return switch (position) {
-      DevicePosition.left => WearableIconVariant.left,
-      DevicePosition.right => WearableIconVariant.right,
-      _ => WearableIconVariant.single,
-    };
-  }
-
-  String? _resolveIconPath(WearableIconVariant variant) {
-    final variantPath = widget.device.getWearableIconPath(variant: variant);
-    if (variantPath != null && variantPath.isNotEmpty) {
-      return variantPath;
-    }
-
-    if (variant != WearableIconVariant.single) {
-      final fallbackPath = widget.device.getWearableIconPath();
-      if (fallbackPath != null && fallbackPath.isNotEmpty) {
-        return fallbackPath;
-      }
-    }
-
-    return null;
-  }
-
-  Widget _buildIcon(WearableIconVariant variant) {
-    final iconPath = _resolveIconPath(variant);
-    if (iconPath == null) {
-      return const SizedBox.shrink();
-    }
-
-    if (iconPath.toLowerCase().endsWith('.svg')) {
-      return SvgPicture.asset(iconPath, fit: BoxFit.contain);
-    }
-
-    return Image.asset(
-      iconPath,
-      fit: BoxFit.contain,
-      errorBuilder: (_, __, ___) => const Icon(Icons.watch_outlined),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_positionFuture == null) {
-      return _buildIcon(WearableIconVariant.single);
-    }
-
-    return FutureBuilder<DevicePosition?>(
-      future: _positionFuture,
-      builder: (context, snapshot) {
-        return _buildIcon(_variantForPosition(snapshot.data));
-      },
-    );
-  }
-}
-
-class _SectionCard extends StatelessWidget {
-  final String title;
-  final String? subtitle;
-  final Widget child;
-
-  const _SectionCard({
-    required this.title,
-    this.subtitle,
-    required this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            if (subtitle != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                subtitle!,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-            const SizedBox(height: 10),
-            child,
-          ],
-        ),
-      ),
     );
   }
 }

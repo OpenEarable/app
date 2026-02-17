@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/models/app_shutdown_settings.dart';
 import 'package:open_wearable/models/wearable_display_group.dart';
 import 'package:open_wearable/view_models/sensor_data_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
@@ -8,45 +9,112 @@ import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 import 'package:open_wearable/widgets/sensors/values/sensor_value_card.dart';
 import 'package:provider/provider.dart';
 
-class SensorValuesPage extends StatelessWidget {
+class SensorValuesPage extends StatefulWidget {
+  const SensorValuesPage({super.key});
+
+  @override
+  State<SensorValuesPage> createState() => _SensorValuesPageState();
+}
+
+class _SensorValuesPageState extends State<SensorValuesPage>
+    with AutomaticKeepAliveClientMixin<SensorValuesPage> {
   final Map<(Wearable, Sensor), SensorDataProvider> _sensorDataProvider = {};
 
-  SensorValuesPage({super.key});
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void dispose() {
+    for (final provider in _sensorDataProvider.values) {
+      provider.dispose();
+    }
+    _sensorDataProvider.clear();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<WearablesProvider>(
-      builder: (context, wearablesProvider, child) {
-        return FutureBuilder<List<WearableDisplayGroup>>(
-          future: buildWearableDisplayGroups(
-            wearablesProvider.wearables,
-            shouldCombinePair: (left, right) =>
-                wearablesProvider.isStereoPairCombined(
-              first: left,
-              second: right,
-            ),
-          ),
-          builder: (context, snapshot) {
-            final groups = _orderGroupsForLiveData(
-              snapshot.data ??
-                  wearablesProvider.wearables
-                      .map(
-                        (wearable) =>
-                            WearableDisplayGroup.single(wearable: wearable),
-                      )
-                      .toList(),
-            );
-            final orderedWearables = _orderedWearablesFromGroups(groups);
-            final charts = _buildCharts(orderedWearables);
-            _cleanupProviders(orderedWearables);
+    super.build(context);
+    return ValueListenableBuilder<bool>(
+      valueListenable: AppShutdownSettings.disableLiveDataGraphsListenable,
+      builder: (context, disableLiveDataGraphs, _) {
+        return ValueListenableBuilder<bool>(
+          valueListenable:
+              AppShutdownSettings.hideLiveDataGraphsWithoutDataListenable,
+          builder: (context, hideCardsWithoutLiveData, __) {
+            final shouldHideCardsWithoutLiveData =
+                hideCardsWithoutLiveData && !disableLiveDataGraphs;
+            return Consumer<WearablesProvider>(
+              builder: (context, wearablesProvider, child) {
+                return FutureBuilder<List<WearableDisplayGroup>>(
+                  future: buildWearableDisplayGroups(
+                    wearablesProvider.wearables,
+                    shouldCombinePair: (left, right) =>
+                        wearablesProvider.isStereoPairCombined(
+                      first: left,
+                      second: right,
+                    ),
+                  ),
+                  builder: (context, snapshot) {
+                    final groups = orderWearableGroupsByNameAndSide(
+                      snapshot.data ??
+                          wearablesProvider.wearables
+                              .map(
+                                (wearable) => WearableDisplayGroup.single(
+                                  wearable: wearable,
+                                ),
+                              )
+                              .toList(),
+                    );
+                    final orderedWearables =
+                        _orderedWearablesFromGroups(groups);
+                    _ensureProviders(orderedWearables);
+                    _cleanupProviders(orderedWearables);
 
-            return LayoutBuilder(
-              builder: (context, constraints) {
-                if (constraints.maxWidth < 600) {
-                  return _buildSmallScreenLayout(context, charts);
-                } else {
-                  return _buildLargeScreenLayout(context, charts);
-                }
+                    Widget buildContent() {
+                      final hasAnySensors = _hasAnySensors(orderedWearables);
+                      final charts = _buildCharts(
+                        orderedWearables,
+                        hideCardsWithoutLiveData:
+                            shouldHideCardsWithoutLiveData,
+                      );
+
+                      return LayoutBuilder(
+                        builder: (context, constraints) {
+                          if (constraints.maxWidth < 600) {
+                            return _buildSmallScreenLayout(
+                              context,
+                              charts,
+                              hasAnySensors: hasAnySensors,
+                              hideCardsWithoutLiveData:
+                                  shouldHideCardsWithoutLiveData,
+                            );
+                          } else {
+                            return _buildLargeScreenLayout(
+                              context,
+                              charts,
+                              hasAnySensors: hasAnySensors,
+                              hideCardsWithoutLiveData:
+                                  shouldHideCardsWithoutLiveData,
+                            );
+                          }
+                        },
+                      );
+                    }
+
+                    if (disableLiveDataGraphs) {
+                      return buildContent();
+                    }
+
+                    final sensorDataListenable =
+                        Listenable.merge(_providersFor(orderedWearables));
+
+                    return AnimatedBuilder(
+                      animation: sensorDataListenable,
+                      builder: (context, ___) => buildContent(),
+                    );
+                  },
+                );
               },
             );
           },
@@ -55,7 +123,50 @@ class SensorValuesPage extends StatelessWidget {
     );
   }
 
-  List<Widget> _buildCharts(List<Wearable> orderedWearables) {
+  void _ensureProviders(List<Wearable> orderedWearables) {
+    for (final wearable in orderedWearables) {
+      if (!wearable.hasCapability<SensorManager>()) {
+        continue;
+      }
+      for (final sensor
+          in wearable.requireCapability<SensorManager>().sensors) {
+        _sensorDataProvider.putIfAbsent(
+          (wearable, sensor),
+          () => SensorDataProvider(sensor: sensor),
+        );
+      }
+    }
+  }
+
+  Iterable<SensorDataProvider> _providersFor(
+    List<Wearable> orderedWearables,
+  ) sync* {
+    for (final wearable in orderedWearables) {
+      if (!wearable.hasCapability<SensorManager>()) {
+        continue;
+      }
+      for (final sensor
+          in wearable.requireCapability<SensorManager>().sensors) {
+        final provider = _sensorDataProvider[(wearable, sensor)];
+        if (provider != null) {
+          yield provider;
+        }
+      }
+    }
+  }
+
+  bool _hasAnySensors(List<Wearable> orderedWearables) {
+    return orderedWearables.any(
+      (wearable) =>
+          wearable.hasCapability<SensorManager>() &&
+          wearable.requireCapability<SensorManager>().sensors.isNotEmpty,
+    );
+  }
+
+  List<Widget> _buildCharts(
+    List<Wearable> orderedWearables, {
+    required bool hideCardsWithoutLiveData,
+  }) {
     final charts = <Widget>[];
     for (final wearable in orderedWearables) {
       if (!wearable.hasCapability<SensorManager>()) {
@@ -63,13 +174,16 @@ class SensorValuesPage extends StatelessWidget {
       }
       for (final sensor
           in wearable.requireCapability<SensorManager>().sensors) {
-        if (!_sensorDataProvider.containsKey((wearable, sensor))) {
-          _sensorDataProvider[(wearable, sensor)] =
-              SensorDataProvider(sensor: sensor);
+        final provider = _sensorDataProvider[(wearable, sensor)];
+        if (provider == null) {
+          continue;
+        }
+        if (hideCardsWithoutLiveData && provider.sensorValues.isEmpty) {
+          continue;
         }
         charts.add(
           ChangeNotifierProvider.value(
-            value: _sensorDataProvider[(wearable, sensor)],
+            value: provider,
             child: SensorValueCard(
               sensor: sensor,
               wearable: wearable,
@@ -96,43 +210,6 @@ class SensorValuesPage extends StatelessWidget {
     });
   }
 
-  List<WearableDisplayGroup> _orderGroupsForLiveData(
-    List<WearableDisplayGroup> groups,
-  ) {
-    final indexed = groups.asMap().entries.toList();
-
-    indexed.sort((a, b) {
-      final groupA = a.value;
-      final groupB = b.value;
-      final sameName =
-          groupA.displayName.toLowerCase() == groupB.displayName.toLowerCase();
-      final bothSingle = !groupA.isCombined && !groupB.isCombined;
-      if (sameName && bothSingle) {
-        final sideOrderA = _configureSideOrder(groupA.primaryPosition);
-        final sideOrderB = _configureSideOrder(groupB.primaryPosition);
-        final knownSides = sideOrderA <= 1 && sideOrderB <= 1;
-        if (knownSides && sideOrderA != sideOrderB) {
-          return sideOrderA.compareTo(sideOrderB);
-        }
-      }
-
-      // Preserve existing order for all other rows.
-      return a.key.compareTo(b.key);
-    });
-
-    return indexed.map((entry) => entry.value).toList();
-  }
-
-  int _configureSideOrder(DevicePosition? position) {
-    if (position == DevicePosition.left) {
-      return 0;
-    }
-    if (position == DevicePosition.right) {
-      return 1;
-    }
-    return 2;
-  }
-
   List<Wearable> _orderedWearablesFromGroups(
     List<WearableDisplayGroup> groups,
   ) {
@@ -153,12 +230,24 @@ class SensorValuesPage extends StatelessWidget {
     return ordered;
   }
 
-  Widget _buildSmallScreenLayout(BuildContext context, List<Widget> charts) {
+  Widget _buildSmallScreenLayout(
+    BuildContext context,
+    List<Widget> charts, {
+    required bool hasAnySensors,
+    required bool hideCardsWithoutLiveData,
+  }) {
     if (charts.isEmpty) {
-      return Center(
-        child: PlatformText(
-          "No sensors connected",
-          style: Theme.of(context).textTheme.titleLarge,
+      final emptyState = _resolveEmptyState(
+        hasAnySensors: hasAnySensors,
+        hideCardsWithoutLiveData: hideCardsWithoutLiveData,
+      );
+      return Padding(
+        padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: _buildEmptyStateCard(context, emptyState),
+          ),
         ),
       );
     }
@@ -169,7 +258,17 @@ class SensorValuesPage extends StatelessWidget {
     );
   }
 
-  Widget _buildLargeScreenLayout(BuildContext context, List<Widget> charts) {
+  Widget _buildLargeScreenLayout(
+    BuildContext context,
+    List<Widget> charts, {
+    required bool hasAnySensors,
+    required bool hideCardsWithoutLiveData,
+  }) {
+    final emptyState = _resolveEmptyState(
+      hasAnySensors: hasAnySensors,
+      hideCardsWithoutLiveData: hideCardsWithoutLiveData,
+    );
+
     return GridView.builder(
       padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
       gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
@@ -178,31 +277,129 @@ class SensorValuesPage extends StatelessWidget {
         crossAxisSpacing: SensorPageSpacing.gridGap,
         mainAxisSpacing: SensorPageSpacing.gridGap,
       ),
-      shrinkWrap: true,
-      physics: NeverScrollableScrollPhysics(),
       itemCount: charts.isEmpty ? 1 : charts.length,
       itemBuilder: (context, index) {
         if (charts.isEmpty) {
-          return Card(
-            shape: RoundedRectangleBorder(
-              side: BorderSide(
-                color: Colors.grey,
-                width: 1,
-                style: BorderStyle.solid,
-                strokeAlign: -1,
-              ),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Center(
-              child: PlatformText(
-                "No sensors available",
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-            ),
-          );
+          return _buildEmptyStateCard(context, emptyState);
         }
         return charts[index];
       },
     );
   }
+
+  _SensorValuesEmptyState _resolveEmptyState({
+    required bool hasAnySensors,
+    required bool hideCardsWithoutLiveData,
+  }) {
+    if (hasAnySensors && hideCardsWithoutLiveData) {
+      return const _SensorValuesEmptyState(
+        icon: Icons.sensors_outlined,
+        title: 'Waiting for live sensor data',
+        subtitle:
+            'Graphs will appear once your sensors stream their first samples.',
+        removeCardBackground: true,
+      );
+    }
+
+    return const _SensorValuesEmptyState(
+      icon: Icons.sensors_off_outlined,
+      title: 'No sensors connected',
+      subtitle: 'Connect a wearable to start viewing live sensor values.',
+    );
+  }
+
+  Widget _buildEmptyStateCard(
+    BuildContext context,
+    _SensorValuesEmptyState emptyState,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final removeCardBackground = emptyState.removeCardBackground;
+
+    return Card(
+      color: removeCardBackground ? Colors.transparent : null,
+      clipBehavior: Clip.antiAlias,
+      elevation: removeCardBackground ? 0 : null,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: removeCardBackground
+            ? BorderSide.none
+            : BorderSide(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.55),
+              ),
+      ),
+      shadowColor: removeCardBackground ? Colors.transparent : null,
+      surfaceTintColor: removeCardBackground ? Colors.transparent : null,
+      child: Ink(
+        decoration: removeCardBackground
+            ? null
+            : BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    colorScheme.primaryContainer.withValues(alpha: 0.28),
+                    colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                  ],
+                ),
+              ),
+        child: Padding(
+          padding: const EdgeInsets.all(22),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: colorScheme.primary.withValues(alpha: 0.12),
+                    border: Border.all(
+                      color: colorScheme.primary.withValues(alpha: 0.28),
+                    ),
+                  ),
+                  child: Icon(
+                    emptyState.icon,
+                    size: 28,
+                    color: colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                PlatformText(
+                  emptyState.title,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                PlatformText(
+                  emptyState.subtitle,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SensorValuesEmptyState {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool removeCardBackground;
+
+  const _SensorValuesEmptyState({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.removeCardBackground = false,
+  });
 }

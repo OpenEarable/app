@@ -14,6 +14,7 @@ void main() {
     test('defaults to disabled sensor shutdown on app close', () {
       expect(AppShutdownSettings.shutOffAllSensorsOnAppClose, isFalse);
       expect(AppShutdownSettings.disableLiveDataGraphs, isFalse);
+      expect(AppShutdownSettings.hideLiveDataGraphsWithoutData, isFalse);
     });
 
     test('persists and reloads the shutdown preference', () async {
@@ -39,6 +40,19 @@ void main() {
 
       await AppShutdownSettings.saveDisableLiveDataGraphs(false);
       expect(AppShutdownSettings.disableLiveDataGraphs, isFalse);
+    });
+
+    test('persists and reloads hide-no-data graph preference', () async {
+      await AppShutdownSettings.saveHideLiveDataGraphsWithoutData(true);
+
+      expect(AppShutdownSettings.hideLiveDataGraphsWithoutData, isTrue);
+
+      final reloaded =
+          await AppShutdownSettings.loadHideLiveDataGraphsWithoutData();
+      expect(reloaded, isTrue);
+
+      await AppShutdownSettings.saveHideLiveDataGraphsWithoutData(false);
+      expect(AppShutdownSettings.hideLiveDataGraphsWithoutData, isFalse);
     });
   });
 }

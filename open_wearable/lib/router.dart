@@ -7,7 +7,7 @@ import 'package:open_wearable/widgets/fota/firmware_update.dart';
 import 'package:open_wearable/widgets/fota/fota_warning_page.dart';
 import 'package:open_wearable/widgets/home_page.dart';
 import 'package:open_wearable/widgets/logging/log_files_screen.dart';
-import 'package:open_wearable/widgets/settings/app_close_behavior_page.dart';
+import 'package:open_wearable/widgets/settings/general_settings_page.dart';
 import 'package:open_wearable/widgets/settings/connectors_page.dart';
 import 'dart:io' show Platform;
 import 'package:flutter/cupertino.dart';
@@ -16,6 +16,45 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 
 /// Global navigator key for go_router
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+bool _unsupportedFotaDialogVisible = false;
+
+void _showUnsupportedFotaDialog() {
+  if (_unsupportedFotaDialogVisible) {
+    return;
+  }
+  _unsupportedFotaDialogVisible = true;
+
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+    final ctx = rootNavigatorKey.currentContext;
+    if (ctx == null) {
+      _unsupportedFotaDialogVisible = false;
+      return;
+    }
+
+    try {
+      await showPlatformDialog<void>(
+        context: ctx,
+        builder: (_) => PlatformAlertDialog(
+          title: PlatformText('Firmware Update'),
+          content: PlatformText(
+            'Firmware update is not supported on this platform. '
+            'Please use an Android device or J-Link to update the firmware.',
+          ),
+          actions: <Widget>[
+            PlatformDialogAction(
+              cupertino: (_, __) =>
+                  CupertinoDialogActionData(isDefaultAction: true),
+              child: PlatformText('OK'),
+              onPressed: () => Navigator.of(ctx).pop(),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      _unsupportedFotaDialogVisible = false;
+    }
+  });
+}
 
 int _parseHomeSectionIndex(String? tabParam) {
   if (tabParam == null || tabParam.isEmpty) {
@@ -88,9 +127,13 @@ final GoRouter router = GoRouter(
       builder: (context, state) => const ConnectorsPage(),
     ),
     GoRoute(
+      path: '/settings/general',
+      name: 'settings/general',
+      builder: (context, state) => const GeneralSettingsPage(),
+    ),
+    GoRoute(
       path: '/settings/app-close',
-      name: 'settings/app-close',
-      builder: (context, state) => const AppCloseBehaviorPage(),
+      redirect: (_, __) => '/settings/general',
     ),
     GoRoute(
       path: '/fota',
@@ -100,32 +143,8 @@ final GoRouter router = GoRouter(
         final bool isIOS = !kIsWeb && Platform.isIOS;
 
         if (!isAndroid && !isIOS) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            final ctx = rootNavigatorKey.currentContext;
-            if (ctx == null) return;
-
-            showPlatformDialog(
-              context: ctx,
-              builder: (_) => PlatformAlertDialog(
-                title: PlatformText('Firmware Update'),
-                content: PlatformText(
-                  'Firmware update is not supported on this platform. '
-                  'Please use an Android device or J-Link to update the firmware.',
-                ),
-                actions: <Widget>[
-                  PlatformDialogAction(
-                    cupertino: (_, __) => CupertinoDialogActionData(
-                      isDefaultAction: true,
-                    ),
-                    child: PlatformText('OK'),
-                    onPressed: () => Navigator.of(ctx).pop(),
-                  ),
-                ],
-              ),
-            );
-          });
-
-          return state.topRoute?.name;
+          _showUnsupportedFotaDialog();
+          return '/?tab=devices';
         }
 
         return null;

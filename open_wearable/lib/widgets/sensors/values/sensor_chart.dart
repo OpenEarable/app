@@ -9,10 +9,14 @@ import 'package:provider/provider.dart';
 
 class SensorChart extends StatefulWidget {
   final bool allowToggleAxes;
+  final bool liveUpdatesEnabled;
+  final VoidCallback? onDisabledTap;
 
   const SensorChart({
     super.key,
     this.allowToggleAxes = true,
+    this.liveUpdatesEnabled = true,
+    this.onDisabledTap,
   });
 
   @override
@@ -47,9 +51,13 @@ class _SensorChartState extends State<SensorChart> {
 
   @override
   Widget build(BuildContext context) {
-    final dataProvider = context.watch<SensorDataProvider>();
+    final dataProvider = widget.liveUpdatesEnabled
+        ? context.watch<SensorDataProvider>()
+        : context.read<SensorDataProvider>();
     final sensor = dataProvider.sensor;
-    final sensorValues = dataProvider.sensorValues;
+    final sensorValues = widget.liveUpdatesEnabled
+        ? dataProvider.sensorValues
+        : Queue<SensorValue>();
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final compactMode = !widget.allowToggleAxes;
@@ -93,8 +101,8 @@ class _SensorChartState extends State<SensorChart> {
       minY: yAxisBounds.min,
       maxY: yAxisBounds.max,
       lineTouchData: LineTouchData(
-        enabled: !compactMode,
-        handleBuiltInTouches: !compactMode,
+        enabled: widget.liveUpdatesEnabled && !compactMode,
+        handleBuiltInTouches: widget.liveUpdatesEnabled && !compactMode,
       ),
       gridData: FlGridData(
         show: true,
@@ -122,25 +130,32 @@ class _SensorChartState extends State<SensorChart> {
           sideTitles: SideTitles(
             showTitles: true,
             reservedSize: compactMode ? 34 : 46,
-            minIncluded: true,
-            maxIncluded: true,
-            getTitlesWidget: (value, meta) => SideTitleWidget(
-              meta: meta,
-              space: 6,
-              child: SizedBox(
-                width: compactMode ? 30 : 40,
-                child: Text(
-                  _formatYAxisTick(value),
-                  maxLines: 1,
-                  softWrap: false,
-                  overflow: TextOverflow.fade,
-                  textAlign: TextAlign.right,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
+            minIncluded: false,
+            maxIncluded: false,
+            getTitlesWidget: (value, meta) {
+              final isBoundaryTick = (value - yAxisBounds.min).abs() < 1e-6 ||
+                  (value - yAxisBounds.max).abs() < 1e-6;
+              if (isBoundaryTick) {
+                return const SizedBox.shrink();
+              }
+              return SideTitleWidget(
+                meta: meta,
+                space: 6,
+                child: SizedBox(
+                  width: compactMode ? 30 : 40,
+                  child: Text(
+                    _formatYAxisTick(value),
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.fade,
+                    textAlign: TextAlign.right,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ),
         rightTitles: const AxisTitles(
@@ -208,9 +223,50 @@ class _SensorChartState extends State<SensorChart> {
               2,
               0,
             ),
-            child: LineChart(
-              chartData,
-              duration: const Duration(milliseconds: 0),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Opacity(
+                  opacity: widget.liveUpdatesEnabled ? 1 : 0.5,
+                  child: LineChart(
+                    chartData,
+                    duration: const Duration(milliseconds: 0),
+                  ),
+                ),
+                if (!widget.liveUpdatesEnabled)
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: widget.onDisabledTap,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: colorScheme.surface.withValues(alpha: 0.82),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: colorScheme.outline.withValues(alpha: 0.35),
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          child: Text(
+                            widget.onDisabledTap == null
+                                ? 'Live graphs disabled'
+                                : 'Live graphs disabled. Tap to open settings.',
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
         ),
@@ -274,8 +330,9 @@ class _SensorChartState extends State<SensorChart> {
                                   ),
                                 ),
                                 selected: selected,
-                                onSelected: (value) =>
-                                    _toggleAxis(axisName, value),
+                                onSelected: widget.liveUpdatesEnabled
+                                    ? (value) => _toggleAxis(axisName, value)
+                                    : null,
                                 showCheckmark: false,
                                 visualDensity: compactMode
                                     ? const VisualDensity(

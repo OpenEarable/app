@@ -52,19 +52,35 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
   }
 
   Future<void> _loadSettings() async {
-    final settings = await ConnectorSettings.loadUdpBridgeSettings();
-    if (!mounted) {
-      return;
-    }
+    try {
+      final settings = await ConnectorSettings.loadUdpBridgeSettings();
+      if (!mounted) {
+        return;
+      }
 
-    setState(() {
-      _enabled = settings.enabled;
-      _hostController.text = settings.host;
-      _portController.text = settings.port.toString();
-      _streamPrefixController.text = settings.streamPrefix;
-      _validationMessage = null;
-      _isLoading = false;
-    });
+      setState(() {
+        _enabled = settings.enabled;
+        _hostController.text = settings.host;
+        _portController.text = settings.port.toString();
+        _streamPrefixController.text = settings.streamPrefix;
+        _validationMessage = null;
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _validationMessage = 'Could not load connector settings.';
+        _isLoading = false;
+      });
+      AppToast.show(
+        context,
+        message: 'Failed to load Network Relay settings.',
+        type: AppToastType.error,
+        icon: Icons.error_outline_rounded,
+      );
+    }
   }
 
   Future<void> _saveSettings() async {
@@ -124,6 +140,20 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
         type: AppToastType.success,
         icon: Icons.check_circle_outline_rounded,
       );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _validationMessage =
+            'Could not save Network Relay settings. Please try again.';
+      });
+      AppToast.show(
+        context,
+        message: 'Failed to save Network Relay settings.',
+        type: AppToastType.error,
+        icon: Icons.error_outline_rounded,
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -137,6 +167,7 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
     if (_isSaving || !_isUdpBridgeSupported) {
       return;
     }
+    final previousEnabled = _enabled;
 
     final host = _hostController.text.trim();
     final parsedPort = int.tryParse(_portController.text.trim());
@@ -182,6 +213,21 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
         _portController.text = saved.port.toString();
         _streamPrefixController.text = saved.streamPrefix;
       });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _enabled = previousEnabled;
+        _validationMessage =
+            'Could not update connector status. Please try again.';
+      });
+      AppToast.show(
+        context,
+        message: 'Failed to update Network Relay status.',
+        type: AppToastType.error,
+        icon: Icons.error_outline_rounded,
+      );
     } finally {
       if (mounted) {
         setState(() {

@@ -24,6 +24,11 @@ class SensorValueCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
+        if (AppShutdownSettings.disableLiveDataGraphs) {
+          context.push('/settings/general');
+          return;
+        }
+
         final provider = context.read<SensorDataProvider>();
         Navigator.of(context).push(
           MaterialPageRoute(
@@ -76,15 +81,47 @@ class SensorValueCard extends StatelessWidget {
                   valueListenable:
                       AppShutdownSettings.disableLiveDataGraphsListenable,
                   builder: (context, disableLiveDataGraphs, _) {
-                    return SizedBox(
-                      height: 200,
-                      child: disableLiveDataGraphs
-                          ? _GraphsDisabledPlaceholder(
-                              onTap: () => context.push('/settings/app-close'),
-                            )
-                          : const SensorChart(
+                    return ValueListenableBuilder<bool>(
+                      valueListenable: AppShutdownSettings
+                          .hideLiveDataGraphsWithoutDataListenable,
+                      builder: (context, hideGraphsWithoutData, __) {
+                        final shouldHideWithoutData =
+                            hideGraphsWithoutData && !disableLiveDataGraphs;
+                        if (!shouldHideWithoutData) {
+                          return SizedBox(
+                            height: 200,
+                            child: SensorChart(
                               allowToggleAxes: false,
+                              liveUpdatesEnabled: !disableLiveDataGraphs,
+                              onDisabledTap: disableLiveDataGraphs
+                                  ? () => context.push('/settings/general')
+                                  : null,
                             ),
+                          );
+                        }
+
+                        return Consumer<SensorDataProvider>(
+                          builder: (context, dataProvider, ___) {
+                            final hideNoDataGraph =
+                                dataProvider.sensorValues.isEmpty;
+                            return SizedBox(
+                              height: 200,
+                              child: hideNoDataGraph
+                                  ? _GraphsDisabledPlaceholder(
+                                      icon: Icons.sensors_off_outlined,
+                                      title: 'No live data yet',
+                                      subtitle:
+                                          'Graph hidden when no data is received. Tap to open General settings',
+                                      onTap: () =>
+                                          context.push('/settings/general'),
+                                    )
+                                  : const SensorChart(
+                                      allowToggleAxes: false,
+                                    ),
+                            );
+                          },
+                        );
+                      },
                     );
                   },
                 ),
@@ -98,9 +135,17 @@ class SensorValueCard extends StatelessWidget {
 }
 
 class _GraphsDisabledPlaceholder extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
   final VoidCallback onTap;
 
-  const _GraphsDisabledPlaceholder({required this.onTap});
+  const _GraphsDisabledPlaceholder({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -120,12 +165,12 @@ class _GraphsDisabledPlaceholder extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
-                  Icons.area_chart_outlined,
+                  icon,
                   color: colorScheme.onSurfaceVariant,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Live graph disabled',
+                  title,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                         fontWeight: FontWeight.w600,
@@ -133,7 +178,8 @@ class _GraphsDisabledPlaceholder extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Tap to open General settings',
+                  subtitle,
+                  textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: colorScheme.primary,
                         fontWeight: FontWeight.w600,

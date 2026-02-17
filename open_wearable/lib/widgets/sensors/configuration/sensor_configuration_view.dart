@@ -52,7 +52,7 @@ class SensorConfigurationView extends StatelessWidget {
         ),
       ),
       builder: (context, snapshot) {
-        final groups = _orderGroupsForConfigure(
+        final groups = orderWearableGroupsByNameAndSide(
           snapshot.data ??
               wearablesProvider.wearables
                   .map(
@@ -90,56 +90,19 @@ class SensorConfigurationView extends StatelessWidget {
     );
   }
 
-  List<WearableDisplayGroup> _orderGroupsForConfigure(
-    List<WearableDisplayGroup> groups,
-  ) {
-    final indexed = groups.asMap().entries.toList();
-
-    indexed.sort((a, b) {
-      final groupA = a.value;
-      final groupB = b.value;
-      final sameName =
-          groupA.displayName.toLowerCase() == groupB.displayName.toLowerCase();
-      final bothSingle = !groupA.isCombined && !groupB.isCombined;
-      if (sameName && bothSingle) {
-        final sideOrderA = _configureSideOrder(groupA.primaryPosition);
-        final sideOrderB = _configureSideOrder(groupB.primaryPosition);
-        final knownSides = sideOrderA <= 1 && sideOrderB <= 1;
-        if (knownSides && sideOrderA != sideOrderB) {
-          return sideOrderA.compareTo(sideOrderB);
-        }
-      }
-
-      // Preserve existing order for all other rows.
-      return a.key.compareTo(b.key);
-    });
-
-    return indexed.map((entry) => entry.value).toList();
-  }
-
-  int _configureSideOrder(DevicePosition? position) {
-    if (position == DevicePosition.left) {
-      return 0;
-    }
-    if (position == DevicePosition.right) {
-      return 1;
-    }
-    return 2;
-  }
-
   Widget _buildGroupConfigurationRow({
     required WearableDisplayGroup group,
     required WearablesProvider wearablesProvider,
   }) {
     final primary = _resolvePrimaryForConfiguration(group);
     final secondary = _resolveMirroredDevice(group, primary);
-    final pairedProvider =
-        secondary != null && secondary.hasCapability<SensorConfigurationManager>()
-            ? _tryGetSensorConfigurationProvider(
-                wearablesProvider: wearablesProvider,
-                wearable: secondary,
-              )
-            : null;
+    final pairedProvider = secondary != null &&
+            secondary.hasCapability<SensorConfigurationManager>()
+        ? _tryGetSensorConfigurationProvider(
+            wearablesProvider: wearablesProvider,
+            wearable: secondary,
+          )
+        : null;
     final storageScope = _storageScopeForGroup(group);
     final rowKey = ValueKey(
       _configurationRowIdentity(
@@ -449,7 +412,8 @@ class SensorConfigurationView extends StatelessWidget {
     return _entriesToApplyForProvider(mirroredProvider);
   }
 
-  List<(SensorConfiguration, SensorConfigurationValue)> _entriesToApplyForProvider(
+  List<(SensorConfiguration, SensorConfigurationValue)>
+      _entriesToApplyForProvider(
     SensorConfigurationProvider provider,
   ) {
     return _mergeConfigurationEntries(

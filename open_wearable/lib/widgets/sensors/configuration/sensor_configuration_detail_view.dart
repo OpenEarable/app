@@ -418,7 +418,7 @@ class _OptionToggleTile extends StatelessWidget {
     if (option is RecordSensorConfigOption) {
       return (
         'Record to SD card',
-        'Include this sensor in on-device recordings. Turn this data target off to complete recording and close the file.',
+        'Include this sensor in on-device recordings. Turn data target off to complete and close the file.',
       );
     }
     return (option.name, null);

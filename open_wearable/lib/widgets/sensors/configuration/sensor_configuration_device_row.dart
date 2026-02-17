@@ -525,8 +525,10 @@ class _SensorConfigurationDeviceRowState
       return null;
     }
 
-    final sourceManager = sourceDevice.requireCapability<SensorConfigurationManager>();
-    final targetManager = targetDevice.requireCapability<SensorConfigurationManager>();
+    final sourceManager =
+        sourceDevice.requireCapability<SensorConfigurationManager>();
+    final targetManager =
+        targetDevice.requireCapability<SensorConfigurationManager>();
     final mirrored = <String, String>{};
 
     for (final entry in sourceProfileConfig.entries) {
@@ -623,7 +625,8 @@ class _SensorConfigurationDeviceRowState
     if (!mounted) return;
 
     final hasPrimaryValues = result.hasRestoredValues;
-    final hasPairedValues = pairedResult == null || pairedResult.hasRestoredValues;
+    final hasPairedValues =
+        pairedResult == null || pairedResult.hasRestoredValues;
     if (!hasPrimaryValues || !hasPairedValues) {
       await showPlatformDialog<void>(
         context: context,
@@ -645,8 +648,8 @@ class _SensorConfigurationDeviceRowState
       return;
     }
 
-    final pairedSkipped =
-        (pairedResult?.skippedCount ?? 0) + (pairedResult?.unknownConfigCount ?? 0);
+    final pairedSkipped = (pairedResult?.skippedCount ?? 0) +
+        (pairedResult?.unknownConfigCount ?? 0);
     if (result.skippedCount > 0 ||
         result.unknownConfigCount > 0 ||
         pairedSkipped > 0) {
@@ -798,7 +801,8 @@ class _SensorConfigurationDeviceRowState
     required String key,
     required String title,
   }) async {
-    final profileConfig = await SensorConfigurationStorage.loadConfiguration(key);
+    final profileConfig =
+        await SensorConfigurationStorage.loadConfiguration(key);
     if (!mounted) return;
 
     if (!widget.device.hasCapability<SensorConfigurationManager>()) {
@@ -938,7 +942,8 @@ class _SensorConfigurationDeviceRowState
     final resolved = _describeSensorConfigurationValue(profileValue);
     final selectedMatches =
         provider.selectedMatchesConfigurationValue(sensorConfig, profileValue);
-    final applied = selectedMatches && provider.isConfigurationApplied(sensorConfig);
+    final applied =
+        selectedMatches && provider.isConfigurationApplied(sensorConfig);
     final status = switch ((selectedMatches, applied)) {
       (true, true) => _ProfileDetailStatus.applied,
       (true, false) => _ProfileDetailStatus.selected,
@@ -1080,11 +1085,11 @@ class _SensorConfigurationDeviceRowState
       );
     }
 
-    final dataTargets = value.options
-        .where(_isDataTargetOption)
-        .toSet()
-        .toList(growable: false)
-      ..sort((a, b) => _normalizeName(a.name).compareTo(_normalizeName(b.name)));
+    final dataTargets =
+        value.options.where(_isDataTargetOption).toSet().toList(growable: false)
+          ..sort(
+            (a, b) => _normalizeName(a.name).compareTo(_normalizeName(b.name)),
+          );
 
     return _ResolvedProfileValue(
       samplingLabel: dataTargets.isEmpty ? 'Off' : baseValue,
