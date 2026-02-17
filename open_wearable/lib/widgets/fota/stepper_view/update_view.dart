@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/models/fota_post_update_verification.dart';
+import 'package:open_wearable/widgets/app_banner.dart';
 import 'package:open_wearable/widgets/fota/fota_verification_banner.dart';
 
 import '../logger_screen/logger_screen.dart';
@@ -154,17 +155,17 @@ class _UpdateStepViewState extends State<UpdateStepView> {
   }
 
   Widget _buildPendingState(BuildContext context, String stage) {
-    final colorScheme = Theme.of(context).colorScheme;
+    const neutralBackground = Color(0xFFF5F6F7);
+    const neutralBorder = Color(0xFFD4D8DE);
+    const neutralForeground = Color(0xFF5E6572);
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
       decoration: BoxDecoration(
-        color: colorScheme.primaryContainer.withValues(alpha: 0.26),
+        color: neutralBackground,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: colorScheme.primary.withValues(alpha: 0.35),
-        ),
+        border: Border.all(color: neutralBorder),
       ),
       child: Row(
         children: [
@@ -173,7 +174,7 @@ class _UpdateStepViewState extends State<UpdateStepView> {
             height: 18,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              color: colorScheme.primary,
+              color: neutralForeground,
             ),
           ),
           const SizedBox(width: 8),
@@ -213,8 +214,6 @@ class _UpdateStepViewState extends State<UpdateStepView> {
         ],
         if (showSuccessMessage) ...[
           _successPanel(context),
-          const SizedBox(height: 8),
-          const _VerificationCountdown(),
           const SizedBox(height: 10),
         ],
         if (state.isComplete && state.updateManager?.logger != null) ...[
@@ -285,7 +284,9 @@ class _UpdateStepViewState extends State<UpdateStepView> {
     UpdateFirmwareStateHistory state,
   ) {
     final currentState = state.currentState;
-    final colorScheme = Theme.of(context).colorScheme;
+    const neutralBackground = Color(0xFFF5F6F7);
+    const neutralBorder = Color(0xFFD4D8DE);
+    const neutralForeground = Color(0xFF5E6572);
     final progress = currentState is UpdateProgressFirmware
         ? (currentState.progress.clamp(0, 100) / 100.0)
         : null;
@@ -294,11 +295,9 @@ class _UpdateStepViewState extends State<UpdateStepView> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
       decoration: BoxDecoration(
-        color: colorScheme.primaryContainer.withValues(alpha: 0.26),
+        color: neutralBackground,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: colorScheme.primary.withValues(alpha: 0.35),
-        ),
+        border: Border.all(color: neutralBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -310,7 +309,7 @@ class _UpdateStepViewState extends State<UpdateStepView> {
                 height: 18,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: colorScheme.primary,
+                  color: neutralForeground,
                 ),
               ),
               const SizedBox(width: 8),
@@ -329,8 +328,8 @@ class _UpdateStepViewState extends State<UpdateStepView> {
             LinearProgressIndicator(
               value: progress,
               minHeight: 4,
-              color: colorScheme.primary,
-              backgroundColor: colorScheme.primary.withValues(alpha: 0.16),
+              color: neutralForeground,
+              backgroundColor: neutralForeground.withValues(alpha: 0.18),
             ),
           ],
         ],
@@ -351,75 +350,7 @@ class _UpdateStepViewState extends State<UpdateStepView> {
   }
 
   Widget _successPanel(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final warningBackground =
-        colorScheme.errorContainer.withValues(alpha: 0.42);
-    final warningBorder = colorScheme.error.withValues(alpha: 0.42);
-    final warningForeground = colorScheme.onErrorContainer;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-      decoration: BoxDecoration(
-        color: _successGreen.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: _successGreen.withValues(alpha: 0.34),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Firmware upload completed successfully. The device now verifies '
-            'the image and restarts automatically.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurface,
-                  fontWeight: FontWeight.w700,
-                ),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            decoration: BoxDecoration(
-              color: warningBackground,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: warningBorder),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  Icons.warning_amber_rounded,
-                  size: 18,
-                  color: warningForeground,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Do not reset or power off your OpenEarable during '
-                    'verification.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: warningForeground,
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Verification can take up to 3 minutes.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
-                ),
-          ),
-        ],
-      ),
-    );
+    return const _VerificationWarningPanel();
   }
 
   Widget _firmwareInfoCard(BuildContext context, SelectedFirmware firmware) {
@@ -486,14 +417,15 @@ class _UpdateStepViewState extends State<UpdateStepView> {
   }
 }
 
-class _VerificationCountdown extends StatefulWidget {
-  const _VerificationCountdown();
+class _VerificationWarningPanel extends StatefulWidget {
+  const _VerificationWarningPanel();
 
   @override
-  State<_VerificationCountdown> createState() => _VerificationCountdownState();
+  State<_VerificationWarningPanel> createState() =>
+      _VerificationWarningPanelState();
 }
 
-class _VerificationCountdownState extends State<_VerificationCountdown> {
+class _VerificationWarningPanelState extends State<_VerificationWarningPanel> {
   static const Duration _total = Duration(minutes: 3);
   late Duration _remaining;
   Timer? _timer;
@@ -534,14 +466,20 @@ class _VerificationCountdownState extends State<_VerificationCountdown> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    const warningBackground = Color(0xFFFFECEC);
+    const warningForeground = Color(0xFF8A1C1C);
 
-    return Text(
-      'Estimated remaining: ${_format(_remaining)}',
-      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: colorScheme.onSurfaceVariant,
-            fontWeight: FontWeight.w600,
-          ),
+    return AppBanner(
+      backgroundColor: warningBackground,
+      foregroundColor: warningForeground,
+      leadingIcon: Icons.warning_amber_rounded,
+      content: Text(
+        'Verification in progress, do not reset or power off the device: ${_format(_remaining)}.',
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: warningForeground,
+              fontWeight: FontWeight.w700,
+            ),
+      ),
     );
   }
 }

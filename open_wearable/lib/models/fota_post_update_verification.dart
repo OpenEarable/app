@@ -141,8 +141,9 @@ class FotaPostUpdateVerificationCoordinator {
 
     _pendingById.remove(pending.verificationId);
 
-    final displayName =
-        pending.displayWearableName ?? _displayName(wearable.name) ?? wearable.name;
+    final displayName = pending.displayWearableName ??
+        _displayName(wearable.name) ??
+        wearable.name;
     final sideLabel = pending.expectedSideLabel ?? connectedSideLabel;
 
     return FotaPostUpdateVerificationResult(
@@ -431,7 +432,7 @@ class FotaPostUpdateVerificationCoordinator {
           ? ''
           : ' (version $detectedFirmwareVersion)';
       return 'Verification completed for $wearableName$sideSuffix. '
-          'Update successful$versionSuffix.';
+          'Update verified$versionSuffix.';
     }
 
     if (detectedFirmwareVersion == null) {

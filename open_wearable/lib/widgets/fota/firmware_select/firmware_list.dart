@@ -527,7 +527,7 @@ class _FirmwareListState extends State<FirmwareList> {
                         if (isLatestStable)
                           const _MetaChip(
                             label: 'Latest',
-                            tone: _ChipTone.primary,
+                            tone: _ChipTone.success,
                           ),
                         if (isBeta)
                           const _MetaChip(
@@ -740,6 +740,7 @@ class _MetaChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    const successGreen = Color(0xFF2E7D32);
     final (foreground, background, border) = switch (tone) {
       _ChipTone.primary => (
           colorScheme.primary,
@@ -747,9 +748,9 @@ class _MetaChip extends StatelessWidget {
           colorScheme.primary.withValues(alpha: 0.35),
         ),
       _ChipTone.success => (
-          colorScheme.primary,
-          colorScheme.primaryContainer.withValues(alpha: 0.3),
-          colorScheme.primary.withValues(alpha: 0.35),
+          successGreen,
+          successGreen.withValues(alpha: 0.12),
+          successGreen.withValues(alpha: 0.34),
         ),
       _ChipTone.warning => (
           colorScheme.tertiary,

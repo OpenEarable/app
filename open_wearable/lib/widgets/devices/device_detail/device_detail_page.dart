@@ -255,6 +255,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
 
   Widget _buildHeaderCard(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final hasWearableIcon = widget.device.getWearableIconPath() != null;
 
     final statusPills = buildDeviceStatusPills(
@@ -333,6 +334,11 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
                     onPressed: _canForgetDevice
                         ? _showForgetDialog
                         : _disconnectDevice,
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: colorScheme.primary,
+                      foregroundColor: Colors.white,
+                      side: BorderSide.none,
+                    ),
                     icon: const Icon(
                       Icons.bluetooth_disabled_rounded,
                       size: 18,

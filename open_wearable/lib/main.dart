@@ -464,14 +464,16 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     required FotaPostUpdateVerificationResult result,
     required Color accentColor,
   }) {
-    final baseStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
+    final titleStyle = Theme.of(context).textTheme.titleSmall?.copyWith(
           color: accentColor,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w800,
+          height: 1.05,
         );
     final detailStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
           color: accentColor,
           fontWeight: FontWeight.w600,
         );
+    final statusLabel = result.success ? 'Update verified' : 'Update failed';
 
     final detailText = _verificationToastDetail(result);
 
@@ -479,30 +481,24 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text.rich(
-          TextSpan(
-            style: baseStyle,
-            children: [
-              TextSpan(text: result.wearableName),
-              if (result.sideLabel != null) const TextSpan(text: ' '),
-              if (result.sideLabel != null)
-                WidgetSpan(
-                  alignment: PlaceholderAlignment.middle,
-                  child: _ToastStereoSideBadge(
-                    sideLabel: result.sideLabel!,
-                    accentColor: accentColor,
-                  ),
-                ),
-              TextSpan(
-                text: result.success
-                    ? ' updated successfully.'
-                    : ' verification failed.',
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text(
+              '$statusLabel: ${result.wearableName}',
+              style: titleStyle,
+            ),
+            if (result.sideLabel != null)
+              _ToastStereoSideBadge(
+                sideLabel: result.sideLabel!,
+                accentColor: accentColor,
               ),
-            ],
-          ),
+          ],
         ),
         if (detailText != null) ...[
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(detailText, style: detailStyle),
         ],
       ],
@@ -515,21 +511,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       if (version == null) {
         return null;
       }
-      return _ensureSentenceEndsWithPeriod('Firmware version: $version');
+      return 'Firmware version: $version';
     }
 
     final detected = result.detectedFirmwareVersion;
     final expected = result.expectedFirmwareVersion;
-
-    if (detected == null) {
-      return 'Could not read firmware version. Keep the earable powered on and do not reset.';
-    }
-
-    if (expected == null) {
-      return 'Expected firmware version is unknown (detected $detected). Do not reset or power off.';
-    }
-
-    return 'Expected $expected, detected $detected. Do not reset or power off.';
+    final expectedLabel = expected ?? 'unknown';
+    final detectedLabel = detected ?? 'unknown';
+    return 'Expected: $expectedLabel. Detected: $detectedLabel.';
   }
 
   Widget _buildBannerContent({
@@ -538,9 +527,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     required Color accentColor,
     TextStyle? textStyle,
   }) {
-    final normalizedDescription = _ensureSentenceEndsWithPeriod(
-      event.description,
-    );
+    final isTimeSync = event is WearableTimeSynchronizedEvent;
+    final normalizedDescription = isTimeSync
+        ? _removeTrailingPeriod(event.description)
+        : _ensureSentenceEndsWithPeriod(event.description);
     final resolvedTextStyle = textStyle ??
         Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: textColor,
@@ -551,7 +541,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           fontWeight: FontWeight.w600,
         );
 
-    if (event is! WearableTimeSynchronizedEvent) {
+    if (!isTimeSync) {
       return Text(normalizedDescription, style: resolvedTextStyle);
     }
 
@@ -601,6 +591,31 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     }
 
     return '$trimmed.';
+  }
+
+  String _removeTrailingPeriod(String text) {
+    final trimmed = text.trimRight();
+    if (trimmed.isEmpty) {
+      return trimmed;
+    }
+
+    final lastChar = trimmed[trimmed.length - 1];
+    if (lastChar == '.') {
+      return trimmed.substring(0, trimmed.length - 1);
+    }
+
+    if (trimmed.length > 1 &&
+        (lastChar == '"' ||
+            lastChar == '\'' ||
+            lastChar == ')' ||
+            lastChar == ']')) {
+      final previousChar = trimmed[trimmed.length - 2];
+      if (previousChar == '.') {
+        return '${trimmed.substring(0, trimmed.length - 2)}$lastChar';
+      }
+    }
+
+    return trimmed;
   }
 
   @override

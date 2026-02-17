@@ -76,128 +76,90 @@ class _FotaVerificationBannerState extends State<FotaVerificationBanner> {
 
   @override
   Widget build(BuildContext context) {
-    final baseStyle = DefaultTextStyle.of(context).style;
-    final warningColor = Theme.of(context).colorScheme.error;
-    final buttonBackground = warningColor.withValues(alpha: 0.14);
-    final buttonBorder = warningColor.withValues(alpha: 0.36);
+    const successBackground = Color(0xFFE8F5E9);
+    const successForeground = Color(0xFF1E6A3A);
+    const warningBackground = Color(0xFFFFECEC);
+    const warningForeground = Color(0xFF8A1C1C);
+    final successTextStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: successForeground,
+          fontWeight: FontWeight.w700,
+        );
+    final warningTextStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: warningForeground,
+          fontWeight: FontWeight.w700,
+        );
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          'Firmware upload completed successfully. Verification in progress. '
-          'Do NOT reset or power off your OpenEarable.',
-          style: baseStyle.copyWith(fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 6,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            _TargetLabel(
-              wearableName: widget.wearableName,
-              sideLabel: widget.sideLabel,
-            ),
-            _RemainingPill(
-              remainingText: _format(remaining),
-              warningColor: warningColor,
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            const Spacer(),
-            TextButton.icon(
-              onPressed: widget.onDismiss,
-              icon: const Icon(Icons.check_rounded, size: 16),
-              label: const Text('Confirm and Close'),
-              style: TextButton.styleFrom(
-                foregroundColor: warningColor,
-                backgroundColor: buttonBackground,
-                side: BorderSide(color: buttonBorder),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                minimumSize: const Size(0, 34),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(9),
+        AppBanner(
+          backgroundColor: successBackground,
+          foregroundColor: successForeground,
+          leadingIcon: Icons.verified_rounded,
+          content: Text.rich(
+            TextSpan(
+              style: successTextStyle,
+              children: [
+                const TextSpan(
+                  text: 'Firmware upload completed successfully for ',
                 ),
-              ),
+                TextSpan(text: widget.wearableName),
+                if (widget.sideLabel != null) const TextSpan(text: ' '),
+                if (widget.sideLabel != null)
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.middle,
+                    child: _FotaSideBadge(
+                      sideLabel: widget.sideLabel!,
+                      accentColor: successForeground,
+                    ),
+                  ),
+                const TextSpan(text: '.'),
+              ],
             ),
-          ],
+          ),
+        ),
+        AppBanner(
+          backgroundColor: warningBackground,
+          foregroundColor: warningForeground,
+          leadingIcon: Icons.warning_amber_rounded,
+          content: Text(
+            'Verification in progress, do not reset or power off the device: ${_format(remaining)}.',
+            softWrap: true,
+            style: warningTextStyle,
+          ),
         ),
       ],
     );
   }
 }
 
-class _TargetLabel extends StatelessWidget {
-  final String wearableName;
-  final String? sideLabel;
-
-  const _TargetLabel({
-    required this.wearableName,
-    required this.sideLabel,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.6),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            wearableName,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-          ),
-          if (sideLabel != null) ...[
-            const SizedBox(width: 6),
-            _FotaSideBadge(sideLabel: sideLabel!),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
 class _FotaSideBadge extends StatelessWidget {
   final String sideLabel;
+  final Color accentColor;
 
   const _FotaSideBadge({
     required this.sideLabel,
+    required this.accentColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final foreground = accentColor;
+    final background = foreground.withValues(alpha: 0.16);
+    final border = foreground.withValues(alpha: 0.34);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
       decoration: BoxDecoration(
-        color: colorScheme.primary.withValues(alpha: 0.12),
+        color: background,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: colorScheme.primary.withValues(alpha: 0.24),
-        ),
+        border: Border.all(color: border),
       ),
       child: Text(
         sideLabel,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: colorScheme.primary,
+              color: foreground,
               fontWeight: FontWeight.w700,
             ),
       ),
@@ -205,46 +167,15 @@ class _FotaSideBadge extends StatelessWidget {
   }
 }
 
-class _RemainingPill extends StatelessWidget {
-  final String remainingText;
-  final Color warningColor;
-
-  const _RemainingPill({
-    required this.remainingText,
-    required this.warningColor,
+class _FotaStackedBanner extends AppBanner {
+  const _FotaStackedBanner({
+    super.key,
+    required super.content,
   });
 
   @override
   Widget build(BuildContext context) {
-    final background = warningColor.withValues(alpha: 0.12);
-    final border = warningColor.withValues(alpha: 0.32);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: border),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.schedule_rounded,
-            size: 14,
-            color: warningColor,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            remainingText,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: warningColor,
-                  fontWeight: FontWeight.w800,
-                ),
-          ),
-        ],
-      ),
-    );
+    return content;
   }
 }
 
@@ -278,7 +209,8 @@ void showFotaVerificationBanner(
       final bannerKey =
           ValueKey('fota_verification_banner_${verificationId}_$id');
       _activeFotaVerificationBannerKeys[verificationId] = bannerKey;
-      return AppBanner(
+      return _FotaStackedBanner(
+        key: bannerKey,
         content: FotaVerificationBanner(
           key: ValueKey('fota_verification_$verificationId'),
           deadline: deadline,
@@ -290,10 +222,6 @@ void showFotaVerificationBanner(
             key: bannerKey,
           ),
         ),
-        backgroundColor: const Color(0xFFFFECEC),
-        foregroundColor: const Color(0xFF8A1C1C),
-        leadingIcon: Icons.warning_amber_rounded,
-        key: bannerKey,
       );
     },
   );
