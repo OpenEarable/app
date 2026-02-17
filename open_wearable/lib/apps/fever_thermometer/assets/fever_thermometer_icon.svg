@@ -1,0 +1,24 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="16" y1="8" x2="112" y2="120" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFE2C3"/>
+      <stop offset="1" stop-color="#F7B58A"/>
+    </linearGradient>
+    <linearGradient id="mercury" x1="62" y1="38" x2="74" y2="106" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF7E4E"/>
+      <stop offset="1" stop-color="#D63A31"/>
+    </linearGradient>
+    <linearGradient id="spark" x1="30" y1="31" x2="90" y2="68" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF8EE"/>
+      <stop offset="1" stop-color="#FFD7B0"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="8" y="8" width="112" height="112" rx="26" fill="url(#bg)"/>
+
+  <path d="M31 54L45 54L52 42L58 66L66 47L74 60L91 60" stroke="url(#spark)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <path d="M73 35V84.8C78.2 88 81.6 93.8 81.6 100.4C81.6 110.7 73.3 119 63 119C52.7 119 44.4 110.7 44.4 100.4C44.4 93.8 47.8 88 53 84.8V35C53 29.5 57.5 25 63 25C68.5 25 73 29.5 73 35Z" fill="#F3B58A" fill-opacity="0.9"/>
+  <path d="M68.8 35V87.6C73.4 89.8 76.6 94.5 76.6 100C76.6 107.5 70.5 113.6 63 113.6C55.5 113.6 49.4 107.5 49.4 100C49.4 94.5 52.6 89.8 57.2 87.6V35C57.2 31.8 59.8 29.2 63 29.2C66.2 29.2 68.8 31.8 68.8 35Z" fill="url(#mercury)"/>
+  <circle cx="63" cy="100.2" r="9.8" fill="#FBD5B8" fill-opacity="0.35"/>
+</svg>
