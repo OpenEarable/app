@@ -109,8 +109,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
         title: const Text('Forget device'),
         content: Text(
           _opensBluetoothScreenDirectly
-              ? 'To fully forget this device, remove it in your phone Bluetooth settings. '
-                  'You can open Bluetooth settings directly from here.'
+              ? 'To fully forget this device, remove it in your phone Bluetooth settings.'
               : 'To fully forget this device, remove it in your phone Bluetooth settings. '
                   'You can open Settings from here.',
         ),

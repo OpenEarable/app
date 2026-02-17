@@ -297,7 +297,7 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Forward sensor data from this app to other platforms, such as your computer.',
+                  'Forward sensor data from this app to other platforms, such as your computer',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
@@ -317,7 +317,7 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        'More connectors coming soon.',
+                        'More connectors coming soon',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Theme.of(context)
                                   .colorScheme
@@ -396,7 +396,7 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                'Forward sensor data from this app to your computer.',
+                                'Forward sensor data from this app to your computer',
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodySmall
@@ -446,7 +446,7 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
-                          'Network Relay forwarding is not supported on this platform.',
+                          'Network Relay forwarding is not supported on this platform',
                           style:
                               Theme.of(context).textTheme.bodySmall?.copyWith(
                                     color: colorScheme.onErrorContainer,
@@ -555,7 +555,7 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
         ? 'Network Relay unreachable'
         : 'Network Relay active';
     final detail = hasConnectionProblem
-        ? 'Could not reach $endpoint. Check host, port, and network.'
+        ? 'Could not reach $endpoint. Check host, port, and network'
         : 'Connected to $endpoint';
 
     return Container(

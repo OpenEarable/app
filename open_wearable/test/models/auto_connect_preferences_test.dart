@@ -6,8 +6,9 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('AutoConnectPreferences', () {
-    setUp(() {
+    setUp(() async {
       SharedPreferences.setMockInitialValues(<String, Object>{});
+      await AutoConnectPreferences.loadAutoConnectEnabled();
     });
 
     test('rememberDeviceName stores normalized names and keeps duplicates',
@@ -110,6 +111,28 @@ void main() {
       final forgetChange = AutoConnectPreferences.changes.first;
       await AutoConnectPreferences.forgetDeviceName(prefs, 'OpenEarable 9');
       await expectLater(forgetChange, completes);
+    });
+
+    test('auto-connect enabled defaults to true when no value is stored',
+        () async {
+      final loaded = await AutoConnectPreferences.loadAutoConnectEnabled();
+
+      expect(loaded, isTrue);
+      expect(AutoConnectPreferences.autoConnectEnabled, isTrue);
+    });
+
+    test('saveAutoConnectEnabled persists value and emits changes', () async {
+      final changed = AutoConnectPreferences.changes.first;
+      final saved = await AutoConnectPreferences.saveAutoConnectEnabled(false);
+      final prefs = await SharedPreferences.getInstance();
+
+      expect(saved, isFalse);
+      expect(
+        prefs.getBool(AutoConnectPreferences.autoConnectEnabledKey),
+        false,
+      );
+      expect(AutoConnectPreferences.autoConnectEnabled, isFalse);
+      await expectLater(changed, completes);
     });
   });
 }

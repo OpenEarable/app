@@ -103,7 +103,6 @@ class SensorConfigurationView extends StatelessWidget {
             wearable: secondary,
           )
         : null;
-    final storageScope = _storageScopeForGroup(group);
     final rowKey = ValueKey(
       _configurationRowIdentity(
         group: group,
@@ -120,30 +119,27 @@ class SensorConfigurationView extends StatelessWidget {
         pairedDevice: secondary,
         pairedProvider: pairedProvider,
         displayName: group.displayName,
-        storageScope: storageScope,
       );
     }
 
+    final primaryProvider = _tryGetSensorConfigurationProvider(
+      wearablesProvider: wearablesProvider,
+      wearable: primary,
+    );
+    if (primaryProvider == null) {
+      return const SizedBox.shrink();
+    }
+
     return ChangeNotifierProvider<SensorConfigurationProvider>.value(
-      value: wearablesProvider.getSensorConfigurationProvider(primary),
+      value: primaryProvider,
       child: SensorConfigurationDeviceRow(
         key: rowKey,
         device: primary,
         pairedDevice: secondary,
         pairedProvider: pairedProvider,
         displayName: group.displayName,
-        storageScope: storageScope,
       ),
     );
-  }
-
-  String _storageScopeForGroup(WearableDisplayGroup group) {
-    if (!group.isCombined) {
-      return 'device_${group.representative.deviceId}';
-    }
-
-    final ids = group.members.map((device) => device.deviceId).toList()..sort();
-    return 'stereo_${ids.join('_')}';
   }
 
   String _configurationRowIdentity({
@@ -186,12 +182,20 @@ class SensorConfigurationView extends StatelessWidget {
               wearable: mirrorTarget,
             );
 
+      final primaryProvider = _tryGetSensorConfigurationProvider(
+        wearablesProvider: wearablesProvider,
+        wearable: primary,
+      );
+      if (primaryProvider == null) {
+        continue;
+      }
+
       targets.add(
         _ConfigApplyTarget(
           primaryDevice: primary,
           mirroredDevice: mirrorTarget,
           mirroredProvider: mirrorProvider,
-          provider: wearablesProvider.getSensorConfigurationProvider(primary),
+          provider: primaryProvider,
         ),
       );
     }

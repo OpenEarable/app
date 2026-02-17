@@ -7,6 +7,7 @@ import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 import 'package:open_wearable/models/app_background_execution_bridge.dart';
 import 'package:open_wearable/models/app_launch_session.dart';
 import 'package:open_wearable/models/app_shutdown_settings.dart';
+import 'package:open_wearable/models/auto_connect_preferences.dart';
 import 'package:open_wearable/models/log_file_manager.dart';
 import 'package:open_wearable/models/connector_settings.dart';
 import 'package:open_wearable/models/fota_post_update_verification.dart';
@@ -33,6 +34,7 @@ void main() async {
   initOpenWearableLogger(logFileManager.libLogger);
   initLogger(logFileManager.logger);
   await ConnectorSettings.initialize();
+  await AutoConnectPreferences.initialize();
   await AppShutdownSettings.initialize();
 
   runApp(
@@ -224,6 +226,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       prefsFuture: _prefsFuture,
       onWearableConnected: _handleWearableConnected,
     );
+    AutoConnectPreferences.autoConnectEnabledListenable.addListener(
+      _syncAutoConnectorWithSetting,
+    );
 
     _wearableEventSub = connector.events.listen((event) {
       if (event is WearableConnectEvent) {
@@ -231,7 +236,15 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       }
     });
 
-    _autoConnector.start();
+    _syncAutoConnectorWithSetting();
+  }
+
+  void _syncAutoConnectorWithSetting() {
+    if (AutoConnectPreferences.autoConnectEnabled) {
+      _autoConnector.start();
+      return;
+    }
+    _autoConnector.stop();
   }
 
   void _handleWearableConnected(Wearable wearable) {
@@ -386,7 +399,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             }
             _closeOpenScreensAfterSensorShutdownIfNeeded();
             _closingSensorShutdownInProgress = false;
-            _autoConnector.start();
+            _syncAutoConnectorWithSetting();
           }(),
         );
         return;
@@ -394,7 +407,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
       _closingSensorShutdownInProgress = false;
       _closeOpenScreensAfterSensorShutdownIfNeeded();
-      _autoConnector.start();
+      _syncAutoConnectorWithSetting();
     } else if (state == AppLifecycleState.inactive) {
       _backgroundEnteredAt ??= DateTime.now();
       if (_sensorRecorderProvider.isRecording) {
@@ -595,6 +608,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     _unsupportedFirmwareSub.cancel();
     _wearableEventSub.cancel();
     _wearableProvEventSub.cancel();
+    AutoConnectPreferences.autoConnectEnabledListenable.removeListener(
+      _syncAutoConnectorWithSetting,
+    );
     ConnectorSettings.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _pendingCloseShutdownTimer?.cancel();

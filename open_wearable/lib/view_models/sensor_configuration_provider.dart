@@ -441,6 +441,7 @@ class SensorConfigurationProvider with ChangeNotifier {
   ) async {
     final restoredConfigurations =
         <SensorConfiguration, SensorConfigurationValue>{};
+    final shouldMarkPendingByConfiguration = <SensorConfiguration, bool>{};
     int requestedCount = 0;
     int skippedCount = 0;
 
@@ -469,15 +470,39 @@ class SensorConfigurationProvider with ChangeNotifier {
       }
 
       restoredConfigurations[config] = matchingValue;
+      final selected = _sensorConfigurations[config];
+      shouldMarkPendingByConfiguration[config] = selected == null ||
+          !_configurationValuesMatch(selected, matchingValue);
     }
 
-    for (final config in restoredConfigurations.keys) {
-      _sensorConfigurations[config] = restoredConfigurations[config]!;
+    var hasStateChange = false;
+    for (final entry in restoredConfigurations.entries) {
+      final config = entry.key;
+      final value = entry.value;
+      final selected = _sensorConfigurations[config];
+      final selectedChanged =
+          selected == null || !_configurationValuesMatch(selected, value);
+      if (selectedChanged) {
+        hasStateChange = true;
+      }
+
+      _sensorConfigurations[config] = value;
       _updateSelectedOptions(config);
-      _pendingConfigurations.add(config);
+      final shouldMarkPending =
+          shouldMarkPendingByConfiguration[config] ?? true;
+      if (shouldMarkPending) {
+        hasStateChange = _pendingConfigurations.add(config) || hasStateChange;
+        continue;
+      }
+
+      final reported = getLastReportedConfigurationValue(config);
+      if (reported != null && _configurationValuesMatch(reported, value)) {
+        hasStateChange =
+            _pendingConfigurations.remove(config) || hasStateChange;
+      }
     }
 
-    if (restoredConfigurations.isNotEmpty) {
+    if (restoredConfigurations.isNotEmpty && hasStateChange) {
       notifyListeners();
     }
 

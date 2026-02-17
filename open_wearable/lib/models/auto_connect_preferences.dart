@@ -1,13 +1,41 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AutoConnectPreferences {
   static const String connectedDeviceNamesKey = 'connectedDeviceNames';
+  static const String autoConnectEnabledKey = 'auto_connect_enabled';
   static final StreamController<void> _changesController =
       StreamController<void>.broadcast();
+  static final ValueNotifier<bool> _autoConnectEnabledNotifier =
+      ValueNotifier<bool>(true);
 
   static Stream<void> get changes => _changesController.stream;
+  static ValueListenable<bool> get autoConnectEnabledListenable =>
+      _autoConnectEnabledNotifier;
+  static bool get autoConnectEnabled => _autoConnectEnabledNotifier.value;
+
+  static Future<void> initialize() async {
+    await loadAutoConnectEnabled();
+  }
+
+  static Future<bool> loadAutoConnectEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    final enabled = prefs.getBool(autoConnectEnabledKey) ?? true;
+    _setAutoConnectEnabled(enabled);
+    return enabled;
+  }
+
+  static Future<bool> saveAutoConnectEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    final success = await prefs.setBool(autoConnectEnabledKey, enabled);
+    if (success) {
+      _setAutoConnectEnabled(enabled);
+      _changesController.add(null);
+    }
+    return enabled;
+  }
 
   static List<String> readRememberedDeviceNames(SharedPreferences prefs) {
     final names =
@@ -80,5 +108,12 @@ class AutoConnectPreferences {
     if (success) {
       _changesController.add(null);
     }
+  }
+
+  static void _setAutoConnectEnabled(bool enabled) {
+    if (_autoConnectEnabledNotifier.value == enabled) {
+      return;
+    }
+    _autoConnectEnabledNotifier.value = enabled;
   }
 }

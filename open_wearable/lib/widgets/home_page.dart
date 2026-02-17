@@ -1046,13 +1046,13 @@ class _SettingsPage extends StatelessWidget {
             icon: Icons.hub,
             title: 'Connectors',
             subtitle:
-                'Forward sensor data from this app to other platforms, such as your computer.',
+                'Forward sensor data from this app to other platforms, such as your computer',
             onTap: onConnectorsRequested,
           ),
           _QuickActionTile(
             icon: Icons.tune_rounded,
             title: 'General settings',
-            subtitle: 'Manage app-wide behavior.',
+            subtitle: 'Manage app-wide behavior',
             onTap: onGeneralSettingsRequested,
           ),
           _QuickActionTile(

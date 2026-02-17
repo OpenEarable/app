@@ -94,6 +94,44 @@ class SensorConfigurationStorage {
   static String scopedPrefix(String scope) =>
       '${sanitizeKey(scope)}$_scopeSeparator';
 
+  static String normalizeDeviceNameForScope(String deviceName) {
+    final compact = deviceName.trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (compact.isEmpty) {
+      return 'unknown_device';
+    }
+    return sanitizeKey(compact.toLowerCase());
+  }
+
+  static String? normalizeFirmwareVersionForScope(String? firmwareVersion) {
+    if (firmwareVersion == null) {
+      return null;
+    }
+    var normalized = firmwareVersion.trim().toLowerCase();
+    if (normalized.isEmpty) {
+      return null;
+    }
+    normalized = normalized.replaceFirst(RegExp(r'^v(?=\d)'), '');
+    if (normalized.isEmpty) {
+      return null;
+    }
+    return sanitizeKey(normalized);
+  }
+
+  static String deviceNameScope(String deviceName) =>
+      'name_${normalizeDeviceNameForScope(deviceName)}';
+
+  static String? deviceNameFirmwareScope({
+    required String deviceName,
+    required String? firmwareVersion,
+  }) {
+    final normalizedFirmware =
+        normalizeFirmwareVersionForScope(firmwareVersion);
+    if (normalizedFirmware == null) {
+      return null;
+    }
+    return '${deviceNameScope(deviceName)}__fw_$normalizedFirmware';
+  }
+
   static String buildScopedKey({
     required String scope,
     required String name,
@@ -120,4 +158,43 @@ class SensorConfigurationStorage {
 
   static String sanitizeKey(String key) =>
       key.replaceAll(RegExp(r'[^\w\-]'), '_');
+}
+
+class DeviceProfileScopeMatch {
+  final String nameScope;
+  final String? firmwareScope;
+
+  const DeviceProfileScopeMatch({
+    required this.nameScope,
+    required this.firmwareScope,
+  });
+
+  factory DeviceProfileScopeMatch.forDevice({
+    required String deviceName,
+    String? firmwareVersion,
+  }) {
+    return DeviceProfileScopeMatch(
+      nameScope: SensorConfigurationStorage.deviceNameScope(deviceName),
+      firmwareScope: SensorConfigurationStorage.deviceNameFirmwareScope(
+        deviceName: deviceName,
+        firmwareVersion: firmwareVersion,
+      ),
+    );
+  }
+
+  String get saveScope => firmwareScope ?? nameScope;
+
+  String? matchingScopeForKey(String key) {
+    final preferredScope = firmwareScope ?? nameScope;
+    if (SensorConfigurationStorage.keyMatchesScope(key, preferredScope)) {
+      return preferredScope;
+    }
+    return null;
+  }
+
+  bool matchesScopedKey(String key) => matchingScopeForKey(key) != null;
+
+  bool allowsKey(String key) =>
+      matchesScopedKey(key) ||
+      SensorConfigurationStorage.isLegacyUnscopedKey(key);
 }

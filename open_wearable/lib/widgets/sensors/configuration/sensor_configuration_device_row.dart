@@ -41,17 +41,16 @@ class _SensorConfigurationDeviceRowState
     extends State<SensorConfigurationDeviceRow>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+  late Future<DeviceProfileScopeMatch> _profileScopeMatchFuture;
   List<Widget> _content = const [];
   final Map<String, Future<Map<String, String>>> _profileConfigFutures = {};
-
-  String get _deviceProfileScope =>
-      widget.storageScope ?? 'device_${widget.device.deviceId}';
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(_onTabChanged);
+    _profileScopeMatchFuture = _resolveProfileScopeMatch();
     _content = const [Center(child: CircularProgressIndicator())];
     _updateContent();
   }
@@ -71,11 +70,14 @@ class _SensorConfigurationDeviceRowState
         oldWidget.pairedDevice?.deviceId != widget.pairedDevice?.deviceId;
     final pairedProviderChanged =
         oldWidget.pairedProvider != widget.pairedProvider;
+    final displayNameChanged = oldWidget.displayName != widget.displayName;
     final scopeChanged = oldWidget.storageScope != widget.storageScope;
     if (deviceChanged ||
         pairedDeviceChanged ||
         pairedProviderChanged ||
+        displayNameChanged ||
         scopeChanged) {
+      _profileScopeMatchFuture = _resolveProfileScopeMatch();
       _updateContent();
     }
   }
@@ -158,6 +160,85 @@ class _SensorConfigurationDeviceRowState
     }
   }
 
+  Future<DeviceProfileScopeMatch> _resolveProfileScopeMatch() async {
+    final explicitScope = widget.storageScope?.trim();
+    if (explicitScope != null && explicitScope.isNotEmpty) {
+      return DeviceProfileScopeMatch(
+        nameScope: explicitScope,
+        firmwareScope: null,
+      );
+    }
+
+    final firmwareVersion =
+        await _readFirmwareVersionForProfiles(widget.device);
+    return DeviceProfileScopeMatch.forDevice(
+      deviceName: _profileDeviceName(),
+      firmwareVersion: firmwareVersion,
+    );
+  }
+
+  String _profileDeviceName() {
+    final name =
+        widget.displayName ?? formatWearableDisplayName(widget.device.name);
+    final trimmed = name.trim();
+    return trimmed.isEmpty ? widget.device.name : trimmed;
+  }
+
+  Future<String?> _readFirmwareVersionForProfiles(Wearable wearable) async {
+    if (!wearable.hasCapability<DeviceFirmwareVersion>()) {
+      return null;
+    }
+    try {
+      final version = await wearable
+          .requireCapability<DeviceFirmwareVersion>()
+          .readDeviceFirmwareVersion()
+          .timeout(const Duration(seconds: 2));
+      return SensorConfigurationStorage.normalizeFirmwareVersionForScope(
+        version,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<DeviceProfileScopeMatch> _readCurrentScopeMatch() async {
+    final future = _profileScopeMatchFuture;
+    final match = await future;
+    return match;
+  }
+
+  Future<bool> _ensureProfileKeyMatchesCurrentDevice({
+    required String key,
+    required String profileTitle,
+  }) async {
+    final scopeMatch = await _readCurrentScopeMatch();
+    if (scopeMatch.allowsKey(key)) {
+      return true;
+    }
+    if (!mounted) {
+      return false;
+    }
+
+    await showPlatformDialog<void>(
+      context: context,
+      builder: (dialogContext) => PlatformAlertDialog(
+        title: const Text('Profile mismatch'),
+        content: Text(
+          'Profile "$profileTitle" no longer matches this device name/firmware and cannot be used.',
+        ),
+        actions: [
+          PlatformDialogAction(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+
+    _refreshProfiles();
+    return false;
+  }
+
   Future<void> _updateContent() async {
     final device = widget.device;
 
@@ -226,20 +307,26 @@ class _SensorConfigurationDeviceRowState
       _content = const [Center(child: CircularProgressIndicator())];
     });
 
+    final scopeFuture = _profileScopeMatchFuture;
+    final scopeMatch = await scopeFuture;
+    if (!mounted || !identical(scopeFuture, _profileScopeMatchFuture)) {
+      return;
+    }
+
     List<String> allConfigKeys;
     try {
       allConfigKeys = await SensorConfigurationStorage.listConfigurationKeys()
           .timeout(const Duration(seconds: 8));
     } catch (error, stackTrace) {
       debugPrint(
-        'Failed to load sensor profiles for $_deviceProfileScope: '
+        'Failed to load sensor profiles for ${scopeMatch.saveScope}: '
         '$error\n$stackTrace',
       );
       if (!mounted) return;
       setState(() {
         _content = [
           SaveConfigRow(
-            storageScope: _deviceProfileScope,
+            storageScope: scopeMatch.saveScope,
             onSaved: _refreshProfiles,
           ),
           const Divider(),
@@ -264,14 +351,7 @@ class _SensorConfigurationDeviceRowState
       });
       return;
     }
-    final scopedKeys = allConfigKeys
-        .where(
-          (key) => SensorConfigurationStorage.keyMatchesScope(
-            key,
-            _deviceProfileScope,
-          ),
-        )
-        .toList()
+    final scopedKeys = allConfigKeys.where(scopeMatch.matchesScopedKey).toList()
       ..sort();
     final legacyKeys = allConfigKeys
         .where(SensorConfigurationStorage.isLegacyUnscopedKey)
@@ -283,7 +363,7 @@ class _SensorConfigurationDeviceRowState
 
     final content = <Widget>[
       SaveConfigRow(
-        storageScope: _deviceProfileScope,
+        storageScope: scopeMatch.saveScope,
         onSaved: _refreshProfiles,
       ),
       const Divider(),
@@ -299,7 +379,14 @@ class _SensorConfigurationDeviceRowState
         ),
       );
     } else {
-      content.addAll(profileKeys.map(_buildProfileTile));
+      content.addAll(
+        profileKeys.map(
+          (key) => _buildProfileTile(
+            key,
+            scopeMatch: scopeMatch,
+          ),
+        ),
+      );
     }
 
     setState(() {
@@ -307,16 +394,17 @@ class _SensorConfigurationDeviceRowState
     });
   }
 
-  Widget _buildProfileTile(String key) {
-    final isDeviceScoped = SensorConfigurationStorage.keyMatchesScope(
-      key,
-      _deviceProfileScope,
-    );
+  Widget _buildProfileTile(
+    String key, {
+    required DeviceProfileScopeMatch scopeMatch,
+  }) {
+    final matchedScope = scopeMatch.matchingScopeForKey(key);
+    final isDeviceScoped = matchedScope != null;
 
     final title = isDeviceScoped
         ? SensorConfigurationStorage.displayNameFromScopedKey(
             key,
-            scope: _deviceProfileScope,
+            scope: matchedScope,
           )
         : key;
 
@@ -351,36 +439,17 @@ class _SensorConfigurationDeviceRowState
                       : stateColor,
                 );
             final tileDecoration = switch (state) {
-              _ProfileApplicationState.selected => BoxDecoration(
-                  color: colorScheme.primary.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: colorScheme.primary.withValues(alpha: 0.28),
-                  ),
-                ),
-              _ProfileApplicationState.applied => BoxDecoration(
-                  color: appliedGreen.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: appliedGreen.withValues(alpha: 0.34),
-                  ),
-                ),
-              _ProfileApplicationState.mixed => BoxDecoration(
-                  color: colorScheme.error.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: colorScheme.error.withValues(alpha: 0.30),
-                  ),
-                ),
+              _ProfileApplicationState.selected => null,
+              _ProfileApplicationState.applied => null,
+              _ProfileApplicationState.mixed => null,
               _ProfileApplicationState.none => null,
             };
 
             final subtitle = switch (state) {
-              _ProfileApplicationState.selected =>
-                'Selected in app, not applied yet',
+              _ProfileApplicationState.selected => 'Selected, not applied',
               _ProfileApplicationState.applied => widget.pairedProvider == null
                   ? 'Applied on device'
-                  : 'Applied on both paired devices',
+                  : 'Applied on both devices',
               _ProfileApplicationState.mixed =>
                 'Mixed state across paired devices',
               _ProfileApplicationState.none => isDeviceScoped
@@ -394,9 +463,7 @@ class _SensorConfigurationDeviceRowState
                 decoration: tileDecoration ?? const BoxDecoration(),
                 child: PlatformListTile(
                   leading: Icon(
-                    isDeviceScoped
-                        ? Icons.bookmark_border_rounded
-                        : Icons.collections_bookmark_rounded,
+                    Icons.view_list_rounded,
                     color: state == _ProfileApplicationState.none
                         ? colorScheme.onSurfaceVariant
                         : stateColor,
@@ -480,39 +547,53 @@ class _SensorConfigurationDeviceRowState
     required SensorConfigurationProvider provider,
     required Map<String, String> expectedConfig,
   }) {
-    final currentConfig = provider.toJson();
-    if (!_mapsEqual(currentConfig, expectedConfig)) {
-      return _ProfileApplicationState.none;
-    }
     if (!device.hasCapability<SensorConfigurationManager>()) {
       return _ProfileApplicationState.none;
     }
 
     final manager = device.requireCapability<SensorConfigurationManager>();
-    bool allApplied = true;
-    for (final config in manager.sensorConfigurations) {
-      final expectedValueKey = expectedConfig[config.name];
-      if (expectedValueKey == null) {
-        continue;
+    var allSelected = true;
+    var allApplied = provider.hasReceivedConfigurationReport;
+    for (final entry in expectedConfig.entries) {
+      final config = _findConfigurationByName(
+        manager: manager,
+        configName: entry.key,
+      );
+      if (config == null) {
+        return _ProfileApplicationState.none;
       }
+
       final expectedValue = _findConfigurationValueByKey(
         config: config,
-        valueKey: expectedValueKey,
+        valueKey: entry.value,
       );
       if (expectedValue == null) {
         return _ProfileApplicationState.none;
       }
+
       if (!provider.selectedMatchesConfigurationValue(config, expectedValue)) {
-        return _ProfileApplicationState.none;
+        allSelected = false;
       }
-      if (!provider.isConfigurationApplied(config)) {
+
+      if (allApplied) {
+        final reportedValue =
+            provider.getLastReportedConfigurationValue(config);
+        if (reportedValue == null ||
+            !_configurationValuesMatch(reportedValue, expectedValue)) {
+          allApplied = false;
+        }
+      } else {
         allApplied = false;
       }
     }
 
-    return allApplied
-        ? _ProfileApplicationState.applied
-        : _ProfileApplicationState.selected;
+    if (allApplied) {
+      return _ProfileApplicationState.applied;
+    }
+    if (allSelected) {
+      return _ProfileApplicationState.selected;
+    }
+    return _ProfileApplicationState.none;
   }
 
   Map<String, String>? _buildMirroredProfileConfig({
@@ -567,22 +648,6 @@ class _SensorConfigurationDeviceRowState
     return mirrored;
   }
 
-  bool _mapsEqual(
-    Map<String, String> left,
-    Map<String, String> right,
-  ) {
-    if (left.length != right.length) {
-      return false;
-    }
-
-    for (final entry in left.entries) {
-      if (right[entry.key] != entry.value) {
-        return false;
-      }
-    }
-    return true;
-  }
-
   Widget? _buildTabBar(BuildContext context) {
     if (!widget.device.hasCapability<SensorConfigurationManager>()) return null;
 
@@ -604,6 +669,14 @@ class _SensorConfigurationDeviceRowState
     required String key,
     required String title,
   }) async {
+    final keyMatches = await _ensureProfileKeyMatchesCurrentDevice(
+      key: key,
+      profileTitle: title,
+    );
+    if (!keyMatches || !mounted) {
+      return;
+    }
+
     final config = await SensorConfigurationStorage.loadConfiguration(key);
     if (!mounted) return;
 
@@ -676,6 +749,14 @@ class _SensorConfigurationDeviceRowState
     required String key,
     required String title,
   }) async {
+    final keyMatches = await _ensureProfileKeyMatchesCurrentDevice(
+      key: key,
+      profileTitle: title,
+    );
+    if (!keyMatches || !mounted) {
+      return;
+    }
+
     final confirmed = await _confirmOverwrite(title);
     if (!confirmed) return;
     if (!mounted) return;
@@ -696,6 +777,14 @@ class _SensorConfigurationDeviceRowState
     required String key,
     required String title,
   }) async {
+    final keyMatches = await _ensureProfileKeyMatchesCurrentDevice(
+      key: key,
+      profileTitle: title,
+    );
+    if (!keyMatches) {
+      return;
+    }
+
     final confirmed = await _confirmDelete(title);
     if (!confirmed) return;
 
@@ -801,6 +890,14 @@ class _SensorConfigurationDeviceRowState
     required String key,
     required String title,
   }) async {
+    final keyMatches = await _ensureProfileKeyMatchesCurrentDevice(
+      key: key,
+      profileTitle: title,
+    );
+    if (!keyMatches || !mounted) {
+      return;
+    }
+
     final profileConfig =
         await SensorConfigurationStorage.loadConfiguration(key);
     if (!mounted) return;
@@ -1457,18 +1554,9 @@ class _ProfileDetailCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const appliedGreen = Color(0xFF2E7D32);
     final colorScheme = Theme.of(context).colorScheme;
-    final accentColor = switch (entry.status) {
-      _ProfileDetailStatus.notSelected => colorScheme.onSurfaceVariant,
-      _ProfileDetailStatus.selected => colorScheme.primary,
-      _ProfileDetailStatus.applied => appliedGreen,
-      _ProfileDetailStatus.mixed => colorScheme.error,
-      _ProfileDetailStatus.unavailable => colorScheme.error,
-    };
-    final indicatorColor = accentColor.withValues(
-      alpha: entry.status == _ProfileDetailStatus.notSelected ? 0.65 : 0.78,
-    );
+    final neutralAccent = colorScheme.onSurfaceVariant;
+    final indicatorColor = colorScheme.outlineVariant.withValues(alpha: 0.72);
     final icon = switch (entry.status) {
       _ProfileDetailStatus.mixed => Icons.sync_problem_rounded,
       _ProfileDetailStatus.unavailable => Icons.warning_amber_outlined,
@@ -1481,9 +1569,7 @@ class _ProfileDetailCard extends StatelessWidget {
         (entry.status == _ProfileDetailStatus.notSelected ||
             entry.status == _ProfileDetailStatus.mixed ||
             entry.status == _ProfileDetailStatus.unavailable);
-    final titleColor = entry.status == _ProfileDetailStatus.notSelected
-        ? colorScheme.onSurface
-        : accentColor;
+    final titleColor = colorScheme.onSurface;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
@@ -1493,7 +1579,7 @@ class _ProfileDetailCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
-              width: entry.status == _ProfileDetailStatus.notSelected ? 2 : 3,
+              width: 2,
               height: 30,
               decoration: BoxDecoration(
                 color: indicatorColor,
@@ -1504,7 +1590,7 @@ class _ProfileDetailCard extends StatelessWidget {
             Icon(
               icon,
               size: 15,
-              color: accentColor,
+              color: neutralAccent,
             ),
             const SizedBox(width: 7),
             Expanded(
@@ -1536,14 +1622,14 @@ class _ProfileDetailCard extends StatelessWidget {
                         const SizedBox(width: 6),
                         _ProfileOptionsCompactBadge(
                           options: entry.dataTargetOptions,
-                          accentColor: accentColor,
+                          accentColor: neutralAccent,
                         ),
                       ],
                       if (showValueBubbles && entry.samplingLabel != null) ...[
                         const SizedBox(width: 8),
                         _ProfileSamplingRatePill(
                           label: entry.samplingLabel!,
-                          foreground: accentColor,
+                          foreground: neutralAccent,
                         ),
                       ],
                     ],
@@ -1553,10 +1639,7 @@ class _ProfileDetailCard extends StatelessWidget {
                     Text(
                       entry.detailText!,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color:
-                                entry.status == _ProfileDetailStatus.notSelected
-                                    ? colorScheme.onSurfaceVariant
-                                    : colorScheme.error,
+                            color: colorScheme.onSurfaceVariant,
                             fontWeight: FontWeight.w600,
                           ),
                     ),
@@ -1679,16 +1762,16 @@ class _ProfileMixedStateBubble extends StatelessWidget {
         alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
-          color: colorScheme.error.withValues(alpha: 0.10),
+          color: colorScheme.surface,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-            color: colorScheme.error.withValues(alpha: 0.38),
+            color: colorScheme.outlineVariant.withValues(alpha: 0.82),
           ),
         ),
         child: Text(
           'Mixed',
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: colorScheme.error,
+                color: colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w700,
               ),
         ),
