@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:path_provider/path_provider.dart';
@@ -13,7 +12,11 @@ import 'package:share_plus/share_plus.dart';
 import 'package:flutter_archive/flutter_archive.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
-import 'package:open_wearable/widgets/recording_activity_indicator.dart';
+import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_all_recordings_page.dart';
+import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_empty_state_card.dart';
+import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_recording_card.dart';
+import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_recording_folder_card.dart';
+import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_see_all_recordings_card.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 
 Logger _logger = Logger();
@@ -23,6 +26,8 @@ enum _StopRecordingMode {
   stopAndTurnOffSensors,
 }
 
+// MARK: - LocalRecorderView
+
 class LocalRecorderView extends StatefulWidget {
   const LocalRecorderView({super.key});
 
@@ -31,8 +36,6 @@ class LocalRecorderView extends StatefulWidget {
 }
 
 class _LocalRecorderViewState extends State<LocalRecorderView> {
-  static const MethodChannel platform = MethodChannel('edu.teco.open_folder');
-  final ScrollController _recordingsScrollController = ScrollController();
   List<FileSystemEntity> _recordings = [];
   final Set<String> _expandedFolders = {}; // Track which folders are expanded
   Timer? _recordingTimer;
@@ -46,18 +49,6 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
   bool get _isAndroid => !kIsWeb && Platform.isAndroid;
 
   String _basename(String path) => path.split(RegExp(r'[\\/]+')).last;
-
-  void _scrollRecordingsFromHeaderDrag(DragUpdateDetails details) {
-    if (!_recordingsScrollController.hasClients) return;
-    final position = _recordingsScrollController.position;
-    final nextOffset = (position.pixels - details.delta.dy).clamp(
-      position.minScrollExtent,
-      position.maxScrollExtent,
-    );
-    if (nextOffset != position.pixels) {
-      _recordingsScrollController.jumpTo(nextOffset);
-    }
-  }
 
   @override
   void initState() {
@@ -83,24 +74,7 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
     );
   }
 
-  Future<void> _openFolder(String path) async {
-    if (kIsWeb) {
-      return;
-    }
-
-    try {
-      if (_isIOS) {
-        await platform
-            .invokeMethod('openFolder', {'path': "shareddocuments://$path"});
-      } else if (_isAndroid) {
-        await platform.invokeMethod('openFolder', {'path': path});
-      }
-    } on PlatformException catch (e) {
-      _logger.w("Failed to open folder: '${e.message}'.");
-      await _showErrorDialog('Failed to open recording folder.');
-    }
-  }
-
+  /// Load the list of recording folders from the device's storage, filtering and sorting them appropriately.
   Future<void> _listRecordings() async {
     if (kIsWeb) {
       if (!mounted) return;
@@ -172,8 +146,9 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
     }
   }
 
-  Future<void> _confirmAndDeleteRecording(FileSystemEntity entity) async {
-    if (!mounted) return;
+  /// Show a confirmation dialog before deleting a recording folder or file, and handle the deletion if confirmed.
+  Future<bool> _confirmAndDeleteRecording(FileSystemEntity entity) async {
+    if (!mounted) return false;
     final name = _basename(entity.path);
     final shouldDelete = await showPlatformDialog<bool>(
           context: context,
@@ -199,7 +174,7 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
         ) ??
         false;
 
-    if (!shouldDelete) return;
+    if (!shouldDelete) return false;
 
     if (entity.existsSync()) {
       try {
@@ -212,8 +187,10 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
       } catch (e) {
         _logger.e('Error deleting recording: $e');
         _showErrorDialog('Failed to delete recording: $e');
+        return false;
       }
     }
+    return true;
   }
 
   Future<void> _handleStopRecording(
@@ -284,7 +261,6 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
   void dispose() {
     _recordingTimer?.cancel();
     _recorder?.removeListener(_handleRecorderUpdate);
-    _recordingsScrollController.dispose();
     super.dispose();
   }
 
@@ -413,388 +389,26 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
     }
   }
 
-  Widget _buildRecorderCard(
-    BuildContext context, {
-    required SensorRecorderProvider recorder,
-    required bool isRecording,
-    required bool canStartRecording,
-  }) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final hasSensorsConnected = recorder.hasSensorsConnected;
-    final statusIcon = isRecording
-        ? Icons.fiber_manual_record
-        : hasSensorsConnected
-            ? Icons.sensors
-            : Icons.sensors_off;
-    final statusColor = isRecording
-        ? colorScheme.error
-        : hasSensorsConnected
-            ? colorScheme.primary
-            : colorScheme.onSurfaceVariant;
-    final statusTitle = isRecording
-        ? 'Recording in progress'
-        : hasSensorsConnected
-            ? 'Ready to record'
-            : 'No active sensors';
-    final statusSubtitle = isRecording
-        ? 'Capturing live Bluetooth sensor data.'
-        : hasSensorsConnected
-            ? 'Start a session to capture live Bluetooth sensor data.'
-            : 'Connect a wearable and enable sensors to start recording.';
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: isRecording
-                      ? const Center(
-                          child: RecordingActivityIndicator(
-                            size: 20,
-                            showIdleOutline: false,
-                            padding: EdgeInsets.zero,
-                          ),
-                        )
-                      : Icon(statusIcon, color: statusColor, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Local Recorder',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        statusTitle,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          color: statusColor,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        statusSubtitle,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (isRecording)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: colorScheme.errorContainer.withValues(alpha: 0.45),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      _formatDuration(_elapsedRecording),
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: colorScheme.onErrorContainer,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            if (!isRecording)
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: canStartRecording
-                      ? () => _startRecording(recorder)
-                      : null,
-                  icon: const Icon(Icons.play_arrow),
-                  label: const Text('Start Recording'),
-                ),
-              ),
-            if (!isRecording && !recorder.hasSensorsConnected)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  'No connected sensors detected yet.',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-            if (isRecording) ...[
-              Row(
-                children: [
-                  Expanded(
-                    child: FilledButton.tonalIcon(
-                      style: FilledButton.styleFrom(
-                        foregroundColor: colorScheme.error,
-                        backgroundColor:
-                            colorScheme.errorContainer.withValues(alpha: 0.45),
-                      ),
-                      onPressed: _isHandlingStopAction
-                          ? null
-                          : () => _handleStopRecording(
-                                recorder,
-                                mode: _StopRecordingMode.stopAndTurnOffSensors,
-                              ),
-                      icon: const Icon(Icons.power_settings_new),
-                      label: const Text('Stop + Off'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: colorScheme.error,
-                        foregroundColor: colorScheme.onError,
-                      ),
-                      onPressed: _isHandlingStopAction
-                          ? null
-                          : () => _handleStopRecording(
-                                recorder,
-                                mode: _StopRecordingMode.stopOnly,
-                              ),
-                      icon: const Icon(Icons.stop),
-                      label: const Text('Stop Recording'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ],
+  Future<void> _openAllRecordingsPage({required bool isRecording}) async {
+    //TODO: use go navigator instead of pushing a new page to avoid reloading recordings list on return
+    final recordings = _recordings.whereType<Directory>().toList();
+    await Navigator.of(context).push(
+      platformPageRoute(
+        context: context,
+        builder: (_) => LocalRecorderAllRecordingsPage(
+          recordings: recordings,
+          isRecording: isRecording,
+          formatDateTime: _formatDateTime,
+          getFilesInFolder: _getFilesInFolder,
+          formatFileSize: _formatFileSize,
+          onShareFile: _shareFile,
+          onOpenFile: _openRecordingFile,
+          onShareFolder: _shareFolder,
+          onDeleteFolder: _confirmAndDeleteRecording,
         ),
       ),
     );
-  }
-
-  Widget _buildRecordingsHeaderCard(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final recordingCount = _recordings.length;
-    final subtitle = recordingCount == 1
-        ? '1 recording folder'
-        : '$recordingCount recording folders';
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        child: Row(
-          children: [
-            Expanded(
-              child: ListTile(
-                contentPadding: EdgeInsets.zero,
-                minLeadingWidth: 26,
-                leading: const Icon(Icons.folder_copy_outlined),
-                title: const Text('Recordings'),
-                subtitle: Text(subtitle),
-              ),
-            ),
-            IconButton(
-              tooltip: 'Refresh recordings',
-              onPressed: _listRecordings,
-              icon: const Icon(Icons.refresh),
-            ),
-            if (_isIOS)
-              IconButton(
-                tooltip: 'Open recording folder',
-                onPressed: () async {
-                  final recordDir = await getIOSDirectory();
-                  _openFolder(recordDir.path);
-                },
-                icon: Icon(
-                  Icons.folder_open,
-                  color: colorScheme.primary,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyRecordingsState(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          children: [
-            Icon(
-              Icons.folder_open_outlined,
-              size: 36,
-              color: colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'No recordings yet',
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Start a recording session to create your first export.',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRecordingFileTile(BuildContext context, File file) {
-    final fileName = _basename(file.path);
-    final fileSize = _formatFileSize(file);
-    final isCsv = fileName.toLowerCase().endsWith('.csv');
-
-    return ListTile(
-      contentPadding: const EdgeInsets.fromLTRB(58, 2, 10, 2),
-      dense: true,
-      leading: Icon(
-        isCsv ? Icons.table_chart_outlined : Icons.insert_drive_file_outlined,
-        size: 20,
-      ),
-      title: Text(
-        fileName,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: Theme.of(context).textTheme.bodyMedium,
-      ),
-      subtitle: Text(fileSize),
-      trailing: IconButton(
-        tooltip: 'Share file',
-        icon: const Icon(Icons.ios_share, size: 20),
-        onPressed: () => _shareFile(file),
-      ),
-      onTap: () => _openRecordingFile(file),
-    );
-  }
-
-  Widget _buildRecordingCard(
-    BuildContext context,
-    Directory folder, {
-    required bool isRecording,
-    required int index,
-  }) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final folderName = _basename(folder.path);
-    final isCurrentRecording = isRecording && index == 0;
-    final isExpanded = _expandedFolders.contains(folder.path);
-    final files = isExpanded ? _getFilesInFolder(folder) : <File>[];
-    final modified = folder.statSync().changed;
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: SensorPageSpacing.sectionGap),
-      child: Column(
-        children: [
-          ListTile(
-            leading: Icon(
-              isExpanded ? Icons.folder_open : Icons.folder_outlined,
-              color: isCurrentRecording
-                  ? colorScheme.error
-                  : colorScheme.onSurfaceVariant,
-            ),
-            title: Text(
-              folderName,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            subtitle: Text(
-              isCurrentRecording
-                  ? 'Active recording'
-                  : 'Updated ${_formatDateTime(modified)}',
-            ),
-            trailing: isCurrentRecording
-                ? SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: colorScheme.error,
-                    ),
-                  )
-                : Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        tooltip: 'Share folder',
-                        onPressed: () => _shareFolder(folder),
-                        icon: Icon(Icons.ios_share, color: colorScheme.primary),
-                      ),
-                      IconButton(
-                        tooltip: 'Delete folder',
-                        onPressed: () => _confirmAndDeleteRecording(folder),
-                        icon: Icon(
-                          Icons.delete_outline,
-                          color: colorScheme.error,
-                        ),
-                      ),
-                      Icon(
-                        isExpanded ? Icons.expand_less : Icons.expand_more,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ],
-                  ),
-            onTap: () {
-              if (isCurrentRecording) return;
-              setState(() {
-                if (isExpanded) {
-                  _expandedFolders.remove(folder.path);
-                } else {
-                  _expandedFolders.add(folder.path);
-                }
-              });
-            },
-          ),
-          if (isExpanded) const Divider(height: 1),
-          if (isExpanded && files.isEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(58, 10, 10, 12),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'No files in this folder',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-            ),
-          if (isExpanded)
-            ...files.map(
-              (file) => _buildRecordingFileTile(
-                context,
-                file,
-              ),
-            ),
-        ],
-      ),
-    );
+    await _listRecordings();
   }
 
   @override
@@ -803,56 +417,80 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
       builder: (context, recorder, _) {
         final isRecording = recorder.isRecording;
         final canStartRecording = recorder.hasSensorsConnected && !isRecording;
+        final hasRecordings = _recordings.isNotEmpty;
+        final latestRecording =
+            hasRecordings ? _recordings.first as Directory : null;
 
         return SafeArea(
           top: false,
-          child: Column(
-            children: [
-              Padding(
-                padding: SensorPageSpacing.pageHeaderPadding,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onVerticalDragUpdate: _scrollRecordingsFromHeaderDrag,
-                  child: Column(
-                    children: [
-                      _buildRecorderCard(
-                        context,
-                        recorder: recorder,
-                        isRecording: isRecording,
-                        canStartRecording: canStartRecording,
+          child: RefreshIndicator(
+            onRefresh: _listRecordings,
+            child: Padding(
+              padding: SensorPageSpacing.pageHeaderPadding,
+              child: ListView(
+                children: [
+                  LocalRecorderRecordingCard(
+                    isRecording: isRecording,
+                    hasSensorsConnected: recorder.hasSensorsConnected,
+                    canStartRecording: canStartRecording,
+                    isHandlingStopAction: _isHandlingStopAction,
+                    elapsedRecordingLabel: _formatDuration(_elapsedRecording),
+                    onStartRecording: () => _startRecording(recorder),
+                    onStopAndTurnOff: () => _handleStopRecording(
+                      recorder,
+                      mode: _StopRecordingMode.stopAndTurnOffSensors,
+                    ),
+                    onStopRecordingOnly: () => _handleStopRecording(
+                      recorder,
+                      mode: _StopRecordingMode.stopOnly,
+                    ),
+                  ),
+                  const SizedBox(height: SensorPageSpacing.sectionGap),
+                  Text("Recordings", style: Theme.of(context).textTheme.titleMedium),
+                  if (!hasRecordings) const LocalRecorderEmptyStateCard(),
+                  if (latestRecording != null)
+                    LocalRecorderRecordingFolderCard(
+                      folder: latestRecording,
+                      isCurrentRecording: isRecording,
+                      isExpanded: _expandedFolders.contains(
+                        latestRecording.path,
                       ),
-                      const SizedBox(height: SensorPageSpacing.sectionGap),
-                      _buildRecordingsHeaderCard(context),
-                    ],
+                      files: _expandedFolders.contains(latestRecording.path)
+                          ? _getFilesInFolder(latestRecording)
+                          : const <File>[],
+                      updatedLabel:
+                          'Updated ${_formatDateTime(latestRecording.statSync().changed)}',
+                      onToggleExpanded: () {
+                        setState(() {
+                          if (_expandedFolders.contains(latestRecording.path)) {
+                            _expandedFolders.remove(latestRecording.path);
+                          } else {
+                            _expandedFolders.add(latestRecording.path);
+                          }
+                        });
+                      },
+                        onShareFolder: () => _shareFolder(latestRecording),
+                        onDeleteFolder: () async {
+                          final deleted =
+                              await _confirmAndDeleteRecording(latestRecording);
+                          if (!deleted) return;
+                          setState(() {
+                            _expandedFolders.remove(latestRecording.path);
+                          });
+                        },
+                      onShareFile: _shareFile,
+                      onOpenFile: _openRecordingFile,
+                      formatFileSize: _formatFileSize,
+                    ),
+                  LocalRecorderSeeAllRecordingsTile(
+                    recordingCount: _recordings.length,
+                    onTap: () => _openAllRecordingsPage(
+                      isRecording: isRecording,
+                    ),
                   ),
-                ),
+                ],
               ),
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: _listRecordings,
-                  child: ListView(
-                    controller: _recordingsScrollController,
-                    primary: false,
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: SensorPageSpacing.pageListPadding,
-                    children: [
-                      if (_recordings.isEmpty)
-                        _buildEmptyRecordingsState(context),
-                      if (_recordings.isNotEmpty)
-                        ..._recordings.asMap().entries.map((entry) {
-                          final folder = entry.value as Directory;
-                          return _buildRecordingCard(
-                            context,
-                            folder,
-                            isRecording: isRecording,
-                            index: entry.key,
-                          );
-                        }),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         );
       },
@@ -861,7 +499,7 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
 }
 
 /* ──────────────────────────────────────────────────────────── */
-/*  Helpers                                                    */
+/*  MARK: Helpers                                               */
 /* ──────────────────────────────────────────────────────────── */
 
 Future<String?> _pickDirectory() async {
