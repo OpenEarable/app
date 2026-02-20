@@ -30,28 +30,28 @@ class GlobalAppBannerOverlay extends StatelessWidget {
               child,
               if (hasBanners)
                 Positioned(
-                  top: MediaQuery.of(context).padding.top,
+                  top: 0,
                   left: 0,
                   right: 0,
                   child: SafeArea(
                     bottom: false,
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      physics: const BouncingScrollPhysics(
-                        parent: AlwaysScrollableScrollPhysics(),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        children: [
-                          for (final banner in banners)
-                            Padding(
-                              padding:
-                                const EdgeInsets.symmetric(horizontal: 8),
-                              key: banner.key,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: 6),
+                        ...banners.map(
+                          (banner) => Padding(
+                            padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+                            child: Dismissible(
+                              key: banner.key ?? UniqueKey(),
+                              direction: DismissDirection.up,
+                              onDismissed: (_) => controller.hideBanner(banner),
                               child: banner,
                             ),
-                        ],
-                      ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
