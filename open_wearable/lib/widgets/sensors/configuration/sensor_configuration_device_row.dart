@@ -9,7 +9,7 @@ import 'package:open_wearable/widgets/app_toast.dart';
 import 'package:open_wearable/widgets/devices/stereo_position_badge.dart';
 import 'package:open_wearable/widgets/sensors/configuration/edge_recorder_prefix_row.dart';
 import 'package:open_wearable/widgets/sensors/configuration/save_config_row.dart';
-import 'package:open_wearable/widgets/sensors/configuration/sensor_config_option_icon_factory.dart';
+import 'package:open_wearable/widgets/sensors/configuration/sensor_configuration_profile_widgets.dart';
 import 'package:open_wearable/widgets/sensors/configuration/sensor_configuration_value_row.dart';
 import 'package:provider/provider.dart';
 
@@ -119,7 +119,7 @@ class _SensorConfigurationDeviceRowState
                       if (isCombinedPair)
                         const Padding(
                           padding: EdgeInsets.only(left: 8),
-                          child: _CombinedStereoBadge(),
+                          child: CombinedStereoBadge(),
                         )
                       else if (device.hasCapability<StereoDevice>())
                         Padding(
@@ -385,7 +385,7 @@ class _SensorConfigurationDeviceRowState
 
     if (device.hasCapability<EdgeRecorderManager>()) {
       content.addAll([
-        const _InsetSectionDivider(),
+        const InsetSectionDivider(),
         EdgeRecorderPrefixRow(
           manager: device.requireCapability<EdgeRecorderManager>(),
         ),
@@ -600,7 +600,7 @@ class _SensorConfigurationDeviceRowState
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (state != ProfileApplicationState.none)
-                        _ProfileApplicationBadge(state: state),
+                        ProfileApplicationBadge(state: state),
                       PlatformIconButton(
                         icon: const Icon(Icons.more_horiz),
                         onPressed: () => _showProfileActions(
@@ -920,9 +920,9 @@ class _SensorConfigurationDeviceRowState
         configName: entry.key,
       );
       if (sourceConfig == null) {
-        return _ProfileDetailEntry(
+        return ProfileDetailEntry(
           configName: entry.key,
-          status: _ProfileDetailStatus.unavailable,
+          status: ProfileDetailStatus.unavailable,
           detailText: 'Configuration not available on this device.',
         );
       }
@@ -932,9 +932,9 @@ class _SensorConfigurationDeviceRowState
         valueKey: entry.value,
       );
       if (sourceValue == null) {
-        return _ProfileDetailEntry(
+        return ProfileDetailEntry(
           configName: entry.key,
-          status: _ProfileDetailStatus.unavailable,
+          status: ProfileDetailStatus.unavailable,
           detailText: 'Saved value is not available on this firmware.',
         );
       }
@@ -1010,7 +1010,7 @@ class _SensorConfigurationDeviceRowState
                       : ListView.builder(
                           padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
                           itemCount: details.length,
-                          itemBuilder: (context, index) => _ProfileDetailCard(
+                          itemBuilder: (context, index) => ProfileDetailCard(
                             entry: details[index],
                           ),
                         ),
@@ -1023,7 +1023,7 @@ class _SensorConfigurationDeviceRowState
     );
   }
 
-  _ProfileDetailEntry _buildSingleProfileDetailEntry({
+  ProfileDetailEntry _buildSingleProfileDetailEntry({
     required String configName,
     required SensorConfiguration sensorConfig,
     required SensorConfigurationValue profileValue,
@@ -1036,23 +1036,23 @@ class _SensorConfigurationDeviceRowState
     final applied =
         selectedMatches && provider.isConfigurationApplied(sensorConfig);
     final status = switch ((selectedMatches, applied)) {
-      (true, true) => _ProfileDetailStatus.applied,
-      (true, false) => _ProfileDetailStatus.selected,
-      _ => _ProfileDetailStatus.notSelected,
+      (true, true) => ProfileDetailStatus.applied,
+      (true, false) => ProfileDetailStatus.selected,
+      _ => ProfileDetailStatus.notSelected,
     };
 
-    return _ProfileDetailEntry(
+    return ProfileDetailEntry(
       configName: configName,
       status: status,
       samplingLabel: resolved.samplingLabel,
       dataTargetOptions: resolved.dataTargetOptions,
-      detailText: status == _ProfileDetailStatus.notSelected
+      detailText: status == ProfileDetailStatus.notSelected
           ? 'Current setting differs from this profile.'
           : null,
     );
   }
 
-  _ProfileDetailEntry _buildPairedProfileDetailEntry({
+  ProfileDetailEntry _buildPairedProfileDetailEntry({
     required String configName,
     required SensorConfiguration primaryConfig,
     required SensorConfigurationValue primaryProfileValue,
@@ -1068,9 +1068,9 @@ class _SensorConfigurationDeviceRowState
       sourceConfig: primaryConfig,
     );
     if (mirroredConfig == null) {
-      return _ProfileDetailEntry(
+      return ProfileDetailEntry(
         configName: configName,
-        status: _ProfileDetailStatus.mixed,
+        status: ProfileDetailStatus.mixed,
         detailText: 'Configuration is unavailable on the paired device.',
       );
     }
@@ -1080,9 +1080,9 @@ class _SensorConfigurationDeviceRowState
       sourceValue: primaryProfileValue,
     );
     if (mirroredProfileValue == null) {
-      return _ProfileDetailEntry(
+      return ProfileDetailEntry(
         configName: configName,
-        status: _ProfileDetailStatus.mixed,
+        status: ProfileDetailStatus.mixed,
         detailText: 'Saved value is unavailable on the paired device.',
       );
     }
@@ -1106,27 +1106,27 @@ class _SensorConfigurationDeviceRowState
     );
 
     if (!statesMatch || !selectedValuesMatch) {
-      return _ProfileDetailEntry(
+      return ProfileDetailEntry(
         configName: configName,
-        status: _ProfileDetailStatus.mixed,
+        status: ProfileDetailStatus.mixed,
         detailText:
             'Paired devices differ in selected/apply state, sampling rate, or data targets.',
       );
     }
 
     final status = switch (primarySnapshot.state) {
-      DeviceProfileConfigState.applied => _ProfileDetailStatus.applied,
-      DeviceProfileConfigState.selected => _ProfileDetailStatus.selected,
-      DeviceProfileConfigState.notSelected => _ProfileDetailStatus.notSelected,
-      DeviceProfileConfigState.unavailable => _ProfileDetailStatus.unavailable,
+      DeviceProfileConfigState.applied => ProfileDetailStatus.applied,
+      DeviceProfileConfigState.selected => ProfileDetailStatus.selected,
+      DeviceProfileConfigState.notSelected => ProfileDetailStatus.notSelected,
+      DeviceProfileConfigState.unavailable => ProfileDetailStatus.unavailable,
     };
 
-    return _ProfileDetailEntry(
+    return ProfileDetailEntry(
       configName: configName,
       status: status,
       samplingLabel: resolved.samplingLabel,
       dataTargetOptions: resolved.dataTargetOptions,
-      detailText: status == _ProfileDetailStatus.notSelected
+      detailText: status == ProfileDetailStatus.notSelected
           ? 'Current paired setting differs from this profile.'
           : null,
     );
@@ -1195,67 +1195,6 @@ class _SensorConfigurationDeviceRowState
   }
 }
 
-class _ProfileApplicationBadge extends StatelessWidget {
-  final ProfileApplicationState state;
-
-  const _ProfileApplicationBadge({
-    required this.state,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const appliedGreen = Color(0xFF2E7D32);
-    final colorScheme = Theme.of(context).colorScheme;
-    final (label, foreground, background, border) = switch (state) {
-      ProfileApplicationState.selected => (
-          'Selected',
-          colorScheme.primary,
-          colorScheme.primary.withValues(alpha: 0.10),
-          colorScheme.primary.withValues(alpha: 0.30),
-        ),
-      ProfileApplicationState.applied => (
-          'Applied',
-          appliedGreen,
-          appliedGreen.withValues(alpha: 0.12),
-          appliedGreen.withValues(alpha: 0.34),
-        ),
-      ProfileApplicationState.mixed => (
-          'Mixed',
-          colorScheme.error,
-          colorScheme.error.withValues(alpha: 0.12),
-          colorScheme.error.withValues(alpha: 0.34),
-        ),
-      ProfileApplicationState.none => (
-          '',
-          colorScheme.onSurfaceVariant,
-          Colors.transparent,
-          Colors.transparent,
-        ),
-    };
-
-    if (state == ProfileApplicationState.none) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(right: 2),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: border),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: foreground,
-              fontWeight: FontWeight.w700,
-            ),
-      ),
-    );
-  }
-}
-
 class _ProfileActionItem {
   final String label;
   final IconData icon;
@@ -1268,310 +1207,4 @@ class _ProfileActionItem {
     required this.onPressed,
     this.isDestructive = false,
   });
-}
-
-enum _ProfileDetailStatus {
-  notSelected,
-  selected,
-  applied,
-  mixed,
-  unavailable,
-}
-
-class _ProfileDetailEntry {
-  final String configName;
-  final _ProfileDetailStatus status;
-  final String? samplingLabel;
-  final List<SensorConfigurationOption> dataTargetOptions;
-  final String? detailText;
-
-  const _ProfileDetailEntry({
-    required this.configName,
-    required this.status,
-    this.samplingLabel,
-    this.dataTargetOptions = const [],
-    this.detailText,
-  });
-}
-
-class _ProfileDetailCard extends StatelessWidget {
-  final _ProfileDetailEntry entry;
-
-  const _ProfileDetailCard({
-    required this.entry,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final neutralAccent = colorScheme.onSurfaceVariant;
-    final indicatorColor = colorScheme.outlineVariant.withValues(alpha: 0.72);
-    final icon = switch (entry.status) {
-      _ProfileDetailStatus.mixed => Icons.sync_problem_rounded,
-      _ProfileDetailStatus.unavailable => Icons.warning_amber_outlined,
-      _ => Icons.sensors_rounded,
-    };
-    final showMixedBubble = entry.status == _ProfileDetailStatus.mixed;
-    final showValueBubbles =
-        !showMixedBubble && entry.status != _ProfileDetailStatus.unavailable;
-    final showHelperText = entry.detailText != null &&
-        (entry.status == _ProfileDetailStatus.notSelected ||
-            entry.status == _ProfileDetailStatus.mixed ||
-            entry.status == _ProfileDetailStatus.unavailable);
-    final titleColor = colorScheme.onSurface;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 44),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              width: 2,
-              height: 30,
-              decoration: BoxDecoration(
-                color: indicatorColor,
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
-            const SizedBox(width: 6),
-            Icon(
-              icon,
-              size: 15,
-              color: neutralAccent,
-            ),
-            const SizedBox(width: 7),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          entry.configName,
-                          maxLines: 1,
-                          softWrap: false,
-                          overflow: TextOverflow.ellipsis,
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: titleColor,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                        ),
-                      ),
-                      if (showMixedBubble) ...[
-                        const SizedBox(width: 8),
-                        const _ProfileMixedStateBubble(),
-                      ] else if (showValueBubbles &&
-                          entry.dataTargetOptions.isNotEmpty) ...[
-                        const SizedBox(width: 6),
-                        _ProfileOptionsCompactBadge(
-                          options: entry.dataTargetOptions,
-                          accentColor: neutralAccent,
-                        ),
-                      ],
-                      if (showValueBubbles && entry.samplingLabel != null) ...[
-                        const SizedBox(width: 8),
-                        _ProfileSamplingRatePill(
-                          label: entry.samplingLabel!,
-                          foreground: neutralAccent,
-                        ),
-                      ],
-                    ],
-                  ),
-                  if (showHelperText) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      entry.detailText!,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ProfileOptionsCompactBadge extends StatelessWidget {
-  final List<SensorConfigurationOption> options;
-  final Color accentColor;
-
-  const _ProfileOptionsCompactBadge({
-    required this.options,
-    required this.accentColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final visibleCount = options.length > 2 ? 2 : options.length;
-    final remainingCount = options.length - visibleCount;
-
-    return SizedBox(
-      height: 22,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        decoration: BoxDecoration(
-          color: colorScheme.surface,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: accentColor.withValues(alpha: 0.38),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (var i = 0; i < visibleCount; i++) ...[
-              Icon(
-                getSensorConfigurationOptionIcon(options[i]) ??
-                    Icons.tune_rounded,
-                size: 10,
-                color: accentColor,
-              ),
-              if (i < visibleCount - 1) const SizedBox(width: 3),
-            ],
-            if (remainingCount > 0) ...[
-              const SizedBox(width: 4),
-              Text(
-                '+$remainingCount',
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: accentColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ProfileSamplingRatePill extends StatelessWidget {
-  final String label;
-  final Color foreground;
-
-  const _ProfileSamplingRatePill({
-    required this.label,
-    required this.foreground,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return SizedBox(
-      height: 22,
-      child: Container(
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 7),
-        decoration: BoxDecoration(
-          color: colorScheme.surface,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: foreground.withValues(alpha: 0.42),
-          ),
-        ),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 38),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: foreground,
-                  fontWeight: FontWeight.w700,
-                ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ProfileMixedStateBubble extends StatelessWidget {
-  const _ProfileMixedStateBubble();
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return SizedBox(
-      height: 22,
-      child: Container(
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        decoration: BoxDecoration(
-          color: colorScheme.surface,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.82),
-          ),
-        ),
-        child: Text(
-          'Mixed',
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w700,
-              ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CombinedStereoBadge extends StatelessWidget {
-  const _CombinedStereoBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final foregroundColor = colorScheme.primary;
-    final backgroundColor = foregroundColor.withValues(alpha: 0.12);
-    final borderColor = foregroundColor.withValues(alpha: 0.24);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: borderColor),
-      ),
-      child: Text(
-        'L+R',
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: foregroundColor,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.1,
-            ),
-      ),
-    );
-  }
-}
-
-class _InsetSectionDivider extends StatelessWidget {
-  const _InsetSectionDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Divider(
-        height: 1,
-        thickness: 0.6,
-        color: Theme.of(context).colorScheme.outlineVariant.withValues(
-              alpha: 0.55,
-            ),
-      ),
-    );
-  }
 }
