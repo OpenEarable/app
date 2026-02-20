@@ -31,15 +31,17 @@ class _HomePageState extends State<HomePage> {
   late final List<Widget> _sections;
   int _selectedIndex = _overviewIndex;
 
+  int _normalizeSectionIndex(int requested) {
+    return (requested >= _overviewIndex && requested < _sectionCount)
+        ? requested
+        : _overviewIndex;
+  }
+
   @override
   void initState() {
     super.initState();
 
-    final requestedInitial = widget.initialSectionIndex;
-    final initialIndex =
-        (requestedInitial >= _overviewIndex && requestedInitial < _sectionCount)
-            ? requestedInitial
-            : _overviewIndex;
+    final initialIndex = _normalizeSectionIndex(widget.initialSectionIndex);
     _selectedIndex = initialIndex;
 
     _tabController = PlatformTabController(initialIndex: initialIndex);
@@ -89,6 +91,20 @@ class _HomePageState extends State<HomePage> {
         onGeneralSettingsRequested: _openGeneralSettings,
       ),
     ];
+  }
+
+  @override
+  void didUpdateWidget(covariant HomePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialSectionIndex == widget.initialSectionIndex) {
+      return;
+    }
+
+    final nextIndex = _normalizeSectionIndex(widget.initialSectionIndex);
+    if (_selectedIndex != nextIndex) {
+      _selectedIndex = nextIndex;
+    }
+    _tabController.setIndex(context, nextIndex);
   }
 
   @override
