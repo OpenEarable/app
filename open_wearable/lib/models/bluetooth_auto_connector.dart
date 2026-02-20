@@ -81,6 +81,7 @@ class BluetoothAutoConnector {
     _scanRetryTimer?.cancel();
     _scanRetryTimer = null;
     _stopScanning();
+    wearableManager.stopScan();
   }
 
   String _normalizeDeviceId(String id) => id.trim().toUpperCase();
