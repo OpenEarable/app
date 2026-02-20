@@ -7,6 +7,7 @@ import 'package:open_wearable/widgets/fota/firmware_update.dart';
 import 'package:open_wearable/widgets/fota/fota_warning_page.dart';
 import 'package:open_wearable/widgets/home_page.dart';
 import 'package:open_wearable/widgets/logging/log_files_screen.dart';
+import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_all_recordings_page.dart';
 import 'package:open_wearable/widgets/settings/general_settings_page.dart';
 import 'dart:io' show Platform;
 import 'package:flutter/cupertino.dart';
@@ -119,6 +120,14 @@ final GoRouter router = GoRouter(
       path: '/log-files',
       name: 'log-files',
       builder: (context, state) => const LogFilesScreen(),
+    ),
+    GoRoute(
+      path: '/recordings',
+      name: 'recordings',
+      builder: (context, state) {
+        final isRecording = state.extra is bool ? state.extra as bool : false;
+        return LocalRecorderAllRecordingsPage(isRecording: isRecording);
+      },
     ),
     GoRoute(
       path: '/settings/general',
