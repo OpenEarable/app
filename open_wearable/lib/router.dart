@@ -180,5 +180,16 @@ final GoRouter router = GoRouter(
         },
       ),
     ),
+    GoRoute(
+      path: '/view',
+      name: 'view',
+      builder: (context, state) {
+        final extra = state.extra;
+        if (extra is Widget) {
+          return extra;
+        }
+        return const HomePage();
+      },
+    ),
   ],
 );
