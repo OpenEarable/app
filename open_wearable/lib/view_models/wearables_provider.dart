@@ -252,7 +252,6 @@ class WearablesProvider with ChangeNotifier {
     // Disconnect listener (sync)
     wearable.addDisconnectListener(() {
       removeWearable(wearable);
-      notifyListeners();
     });
 
     // Notify ASAP so UI updates with the newly connected device
