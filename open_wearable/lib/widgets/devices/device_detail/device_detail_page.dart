@@ -11,6 +11,7 @@ import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/app_toast.dart';
 import 'package:open_wearable/widgets/common/app_section_card.dart';
 import 'package:open_wearable/widgets/devices/device_detail/audio_mode_widget.dart';
+import 'package:open_wearable/widgets/devices/device_detail/device_detail_shared_widgets.dart';
 import 'package:open_wearable/widgets/devices/device_status_pills.dart';
 import 'package:open_wearable/widgets/devices/wearable_icon.dart';
 import 'package:provider/provider.dart';
@@ -216,7 +217,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
         AppSectionCard(
           title: 'RGB LED',
           subtitle: 'Set a custom color for the RGB LED.',
-          child: _ActionSurface(
+          child: ActionSurface(
             title: 'LED Color',
             subtitle: 'Choose the active color shown on the device.',
             trailing: RgbControlView(
@@ -365,32 +366,32 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _DetailInfoRow(
+          DetailInfoRow(
             label: 'Bluetooth Address',
             value: Text(widget.device.deviceId),
             showDivider: hasIdentifier || hasFirmware || hasHardware,
           ),
           if (hasIdentifier)
-            _DetailInfoRow(
+            DetailInfoRow(
               label: 'Device Identifier',
-              value: _AsyncValueText(
+              value: AsyncValueText(
                 future: _deviceIdentifierFuture!,
               ),
               showDivider: hasFirmware || hasHardware,
             ),
           if (hasFirmware)
-            _DetailInfoRow(
+            DetailInfoRow(
               label: 'Firmware Version',
               value: _buildFirmwareVersionValue(),
-              trailing: _FirmwareTableUpdateHint(
+              trailing: FirmwareTableUpdateHint(
                 onTap: _openFirmwareUpdate,
               ),
               showDivider: hasHardware,
             ),
           if (hasHardware)
-            _DetailInfoRow(
+            DetailInfoRow(
               label: 'Hardware Version',
-              value: _AsyncValueText(
+              value: AsyncValueText(
                 future: _hardwareVersionFuture!,
               ),
               showDivider: false,
@@ -404,13 +405,13 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
     return Row(
       children: [
         Flexible(
-          child: _AsyncValueText(
+          child: AsyncValueText(
             future: _firmwareVersionFuture!,
           ),
         ),
         if (_firmwareSupportFuture != null) ...[
           const SizedBox(width: 6),
-          _FirmwareSupportIndicator(
+          FirmwareSupportIndicator(
             supportFuture: _firmwareSupportFuture!,
           ),
         ],
@@ -451,30 +452,30 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
           .energyStatusStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const _InlineLoading();
+          return const InlineLoading();
         }
         if (snapshot.hasError) {
-          return const _InlineError(
+          return const InlineError(
             text: 'Unable to read battery energy status.',
           );
         }
         final energyStatus = snapshot.data;
         if (energyStatus == null) {
-          return const _InlineHint(text: 'No battery energy data available.');
+          return const InlineHint(text: 'No battery energy data available.');
         }
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _DetailInfoRow(
+            DetailInfoRow(
               label: 'Battery Voltage',
               value: Text('${energyStatus.voltage.toStringAsFixed(1)} V'),
             ),
-            _DetailInfoRow(
+            DetailInfoRow(
               label: 'Charge Rate',
               value: Text('${energyStatus.chargeRate.toStringAsFixed(3)} W'),
             ),
-            _DetailInfoRow(
+            DetailInfoRow(
               label: 'Battery Capacity',
               value: Text(
                 '${energyStatus.availableCapacity.toStringAsFixed(2)} Wh',
@@ -496,336 +497,27 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
           .healthStatusStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const _InlineLoading();
+          return const InlineLoading();
         }
         if (snapshot.hasError) {
-          return const _InlineError(
+          return const InlineError(
             text: 'Unable to read battery health status.',
           );
         }
         final healthStatus = snapshot.data;
         if (healthStatus == null) {
-          return const _InlineHint(text: 'No battery health data available.');
+          return const InlineHint(text: 'No battery health data available.');
         }
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _DetailInfoRow(
+            DetailInfoRow(
               label: 'Battery Temperature',
               value: Text('${healthStatus.currentTemperature} °C'),
               showDivider: showTrailingDivider,
             ),
           ],
-        );
-      },
-    );
-  }
-}
-
-class _ActionSurface extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final Widget trailing;
-
-  const _ActionSurface({
-    required this.title,
-    required this.subtitle,
-    required this.trailing,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.55),
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          trailing,
-        ],
-      ),
-    );
-  }
-}
-
-class _DetailInfoRow extends StatelessWidget {
-  final String label;
-  final Widget value;
-  final Widget? trailing;
-  final bool showDivider;
-
-  const _DetailInfoRow({
-    required this.label,
-    required this.value,
-    this.trailing,
-    this.showDivider = true,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    DefaultTextStyle(
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ) ??
-                          const TextStyle(),
-                      child: value,
-                    ),
-                  ],
-                ),
-              ),
-              if (trailing != null) ...[
-                const SizedBox(width: 10),
-                trailing!,
-              ],
-            ],
-          ),
-          if (showDivider) ...[
-            const SizedBox(height: 8),
-            Divider(
-              height: 1,
-              color: colorScheme.outlineVariant.withValues(alpha: 0.55),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _AsyncValueText extends StatelessWidget {
-  final Future<Object?> future;
-
-  const _AsyncValueText({
-    required this.future,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return FutureBuilder<Object?>(
-      future: future,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: colorScheme.primary,
-            ),
-          );
-        }
-
-        final valueText =
-            snapshot.hasError ? '--' : (snapshot.data?.toString() ?? '--');
-        return Text(
-          valueText,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: colorScheme.onSurfaceVariant,
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _InlineLoading extends StatelessWidget {
-  const _InlineLoading();
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Center(
-      child: SizedBox(
-        width: 22,
-        height: 22,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          color: colorScheme.primary,
-        ),
-      ),
-    );
-  }
-}
-
-class _InlineHint extends StatelessWidget {
-  final String text;
-
-  const _InlineHint({required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-    );
-  }
-}
-
-class _InlineError extends StatelessWidget {
-  final String text;
-
-  const _InlineError({required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.error,
-            fontWeight: FontWeight.w600,
-          ),
-    );
-  }
-}
-
-class _FirmwareTableUpdateHint extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const _FirmwareTableUpdateHint({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return FilledButton.icon(
-      onPressed: onTap,
-      style: FilledButton.styleFrom(
-        visualDensity: VisualDensity.compact,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        minimumSize: const Size(0, 34),
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        backgroundColor: colorScheme.primary,
-        foregroundColor: Colors.white,
-      ),
-      icon: Icon(
-        Icons.system_update_alt_rounded,
-        size: 15,
-        color: Colors.white,
-      ),
-      label: Text(
-        'Update',
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: Colors.white,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
-class _FirmwareSupportIndicator extends StatelessWidget {
-  final Future<FirmwareSupportStatus> supportFuture;
-
-  const _FirmwareSupportIndicator({required this.supportFuture});
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<FirmwareSupportStatus>(
-      future: supportFuture,
-      builder: (context, snapshot) {
-        final support = snapshot.data;
-        if (support == null || support == FirmwareSupportStatus.supported) {
-          return const SizedBox.shrink();
-        }
-
-        final colorScheme = Theme.of(context).colorScheme;
-
-        IconData icon = Icons.help_rounded;
-        Color color = colorScheme.onSurfaceVariant;
-        String tooltip = 'Firmware support status is unknown';
-
-        switch (support) {
-          case FirmwareSupportStatus.tooOld:
-            icon = Icons.warning_rounded;
-            color = Colors.orange;
-            tooltip = 'Firmware is too old';
-            break;
-          case FirmwareSupportStatus.tooNew:
-            icon = Icons.warning_rounded;
-            color = Colors.orange;
-            tooltip = 'Firmware is newer than supported';
-            break;
-          case FirmwareSupportStatus.unknown:
-            icon = Icons.help_rounded;
-            color = colorScheme.onSurfaceVariant;
-            tooltip = 'Firmware support is unknown';
-            break;
-          case FirmwareSupportStatus.unsupported:
-            icon = Icons.error_outline_rounded;
-            color = colorScheme.error;
-            tooltip = 'Firmware is unsupported';
-            break;
-          case FirmwareSupportStatus.supported:
-            return const SizedBox.shrink();
-        }
-
-        return Tooltip(
-          message: tooltip,
-          child: Icon(
-            icon,
-            size: 16,
-            color: color,
-          ),
         );
       },
     );
