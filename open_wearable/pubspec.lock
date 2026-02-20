@@ -467,10 +467,11 @@ packages:
   open_earable_flutter:
     dependency: "direct main"
     description:
-      path: "../../open_earable_flutter"
-      relative: true
-    source: path
-    version: "2.3.2"
+      name: open_earable_flutter
+      sha256: ec12584ef483ddd9c764e00917ab0224042c2fc2330fc1fa848e687eca63e52e
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.3.3"
   open_file:
     dependency: "direct main"
     description:
