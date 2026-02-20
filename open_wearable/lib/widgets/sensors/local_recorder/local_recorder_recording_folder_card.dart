@@ -15,6 +15,9 @@ class LocalRecorderRecordingFolderCard extends StatelessWidget {
   final void Function(File file) onShareFile;
   final void Function(File file) onOpenFile;
   final String Function(File file) formatFileSize;
+  final bool selectionMode;
+  final bool isSelected;
+  final VoidCallback? onSelectionToggle;
 
   const LocalRecorderRecordingFolderCard({
     super.key,
@@ -29,6 +32,9 @@ class LocalRecorderRecordingFolderCard extends StatelessWidget {
     required this.onShareFile,
     required this.onOpenFile,
     required this.formatFileSize,
+    this.selectionMode = false,
+    this.isSelected = false,
+    this.onSelectionToggle,
   });
 
   String _basename(String path) => path.split(RegExp(r'[\\/]+')).last;
@@ -87,9 +93,26 @@ class LocalRecorderRecordingFolderCard extends StatelessWidget {
                         isExpanded ? Icons.expand_less : Icons.expand_more,
                         color: colorScheme.onSurfaceVariant,
                       ),
+                      if (selectionMode && onSelectionToggle != null)
+                        IconButton(
+                          tooltip: isSelected ? 'Deselect' : 'Select',
+                          onPressed: onSelectionToggle,
+                          icon: Icon(
+                            isSelected
+                                ? Icons.check_circle
+                                : Icons.radio_button_unchecked,
+                            color: isSelected
+                                ? colorScheme.primary
+                                : colorScheme.onSurfaceVariant,
+                          ),
+                        ),
                     ],
                   ),
-            onTap: isCurrentRecording ? null : onToggleExpanded,
+            onTap: isCurrentRecording
+                ? null
+                : (selectionMode && onSelectionToggle != null
+                    ? onSelectionToggle
+                    : onToggleExpanded),
           ),
           if (isExpanded) const Divider(height: 1),
           if (isExpanded && files.isEmpty)
