@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:open_wearable/widgets/app_toast.dart';
 import 'package:open_wearable/widgets/recording_activity_indicator.dart';
@@ -52,13 +53,7 @@ class SettingsPage extends StatelessWidget {
             icon: Icons.info_outline_rounded,
             title: 'About',
             subtitle: 'App information, version, and licenses',
-            onTap: () => Navigator.push(
-              context,
-              platformPageRoute(
-                context: context,
-                builder: (_) => const _AboutPage(),
-              ),
-            ),
+            onTap: () => context.push('/view', extra: const _AboutPage()),
           ),
         ],
       ),
@@ -283,12 +278,9 @@ class _AboutPage extends StatelessWidget {
               title: const Text('Open source licenses'),
               subtitle: const Text('View third-party software licenses'),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.push(
-                context,
-                platformPageRoute(
-                  context: context,
-                  builder: (_) => const _OpenSourceLicensesPage(),
-                ),
+              onTap: () => context.push(
+                '/view',
+                extra: const _OpenSourceLicensesPage(),
               ),
             ),
           ),
