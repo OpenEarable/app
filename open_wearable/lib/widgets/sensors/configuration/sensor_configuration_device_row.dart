@@ -1,10 +1,10 @@
-import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/models/device_name_formatter.dart';
 import 'package:open_wearable/view_models/sensor_configuration_storage.dart';
+import 'package:open_wearable/view_models/sensor_profile_service.dart';
 import 'package:open_wearable/widgets/app_toast.dart';
 import 'package:open_wearable/widgets/devices/stereo_position_badge.dart';
 import 'package:open_wearable/widgets/sensors/configuration/edge_recorder_prefix_row.dart';
@@ -247,8 +247,12 @@ class _SensorConfigurationDeviceRowState
 
       if (offValue is ConfigurableSensorConfigurationValue) {
         for (final candidate in configurableValues) {
-          if (_normalizeName(candidate.withoutOptions().key) ==
-                  _normalizeName(offValue.withoutOptions().key) &&
+          if (SensorProfileService.normalizeName(
+                    candidate.withoutOptions().key,
+                  ) ==
+                  SensorProfileService.normalizeName(
+                    offValue.withoutOptions().key,
+                  ) &&
               candidate.options.isEmpty) {
             return candidate;
           }
@@ -370,7 +374,7 @@ class _SensorConfigurationDeviceRowState
           sensorConfiguration: config,
           pairedSensorConfiguration: pairedManager == null
               ? null
-              : _findMirroredConfiguration(
+              : SensorProfileService.findMirroredConfiguration(
                   manager: pairedManager,
                   sourceConfig: config,
                 ),
@@ -532,42 +536,43 @@ class _SensorConfigurationDeviceRowState
           ),
           builder: (context, snapshot) {
             final profileConfig = snapshot.data;
-            final state = _resolveProfileApplicationState(
-              provider: provider,
+            final state = SensorProfileService.resolveProfileApplicationState(
+              primaryDevice: widget.device,
+              primaryProvider: provider,
               pairedProvider: widget.pairedProvider,
+              pairedDevice: widget.pairedDevice,
               profileConfig: profileConfig,
             );
             final colorScheme = Theme.of(context).colorScheme;
             const appliedGreen = Color(0xFF2E7D32);
             final stateColor = switch (state) {
-              _ProfileApplicationState.none => colorScheme.onSurface,
-              _ProfileApplicationState.selected => colorScheme.primary,
-              _ProfileApplicationState.applied => appliedGreen,
-              _ProfileApplicationState.mixed => colorScheme.error,
+              ProfileApplicationState.none => colorScheme.onSurface,
+              ProfileApplicationState.selected => colorScheme.primary,
+              ProfileApplicationState.applied => appliedGreen,
+              ProfileApplicationState.mixed => colorScheme.error,
             };
             final titleStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: state == _ProfileApplicationState.none
+                  fontWeight: state == ProfileApplicationState.none
                       ? FontWeight.w500
                       : FontWeight.w700,
-                  color: state == _ProfileApplicationState.none
-                      ? null
-                      : stateColor,
+                  color:
+                      state == ProfileApplicationState.none ? null : stateColor,
                 );
             final tileDecoration = switch (state) {
-              _ProfileApplicationState.selected => null,
-              _ProfileApplicationState.applied => null,
-              _ProfileApplicationState.mixed => null,
-              _ProfileApplicationState.none => null,
+              ProfileApplicationState.selected => null,
+              ProfileApplicationState.applied => null,
+              ProfileApplicationState.mixed => null,
+              ProfileApplicationState.none => null,
             };
 
             final subtitle = switch (state) {
-              _ProfileApplicationState.selected => 'Selected, not applied',
-              _ProfileApplicationState.applied => widget.pairedProvider == null
+              ProfileApplicationState.selected => 'Selected, not applied',
+              ProfileApplicationState.applied => widget.pairedProvider == null
                   ? 'Applied on device'
                   : 'Applied on both devices',
-              _ProfileApplicationState.mixed =>
+              ProfileApplicationState.mixed =>
                 'Mixed state across paired devices',
-              _ProfileApplicationState.none => isBuiltIn
+              ProfileApplicationState.none => isBuiltIn
                   ? 'Built-in default profile'
                   : isDeviceScoped
                       ? 'Tap to load as current'
@@ -581,7 +586,7 @@ class _SensorConfigurationDeviceRowState
                 child: PlatformListTile(
                   leading: Icon(
                     Icons.view_list_rounded,
-                    color: state == _ProfileApplicationState.none
+                    color: state == ProfileApplicationState.none
                         ? colorScheme.onSurfaceVariant
                         : stateColor,
                   ),
@@ -594,7 +599,7 @@ class _SensorConfigurationDeviceRowState
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (state != _ProfileApplicationState.none)
+                      if (state != ProfileApplicationState.none)
                         _ProfileApplicationBadge(state: state),
                       PlatformIconButton(
                         icon: const Icon(Icons.more_horiz),
@@ -612,157 +617,6 @@ class _SensorConfigurationDeviceRowState
         );
       },
     );
-  }
-
-  _ProfileApplicationState _resolveProfileApplicationState({
-    required SensorConfigurationProvider provider,
-    required SensorConfigurationProvider? pairedProvider,
-    required Map<String, String>? profileConfig,
-  }) {
-    if (profileConfig == null || profileConfig.isEmpty) {
-      return _ProfileApplicationState.none;
-    }
-
-    final primaryState = _resolveSingleDeviceProfileState(
-      device: widget.device,
-      provider: provider,
-      expectedConfig: profileConfig,
-    );
-
-    final pairedDevice = widget.pairedDevice;
-    if (pairedDevice == null || pairedProvider == null) {
-      return primaryState;
-    }
-
-    final mirroredProfile = _buildMirroredProfileConfig(
-      sourceDevice: widget.device,
-      targetDevice: pairedDevice,
-      sourceProfileConfig: profileConfig,
-    );
-    if (mirroredProfile == null || mirroredProfile.isEmpty) {
-      return _ProfileApplicationState.mixed;
-    }
-
-    final secondaryState = _resolveSingleDeviceProfileState(
-      device: pairedDevice,
-      provider: pairedProvider,
-      expectedConfig: mirroredProfile,
-    );
-
-    if (primaryState == _ProfileApplicationState.none &&
-        secondaryState == _ProfileApplicationState.none) {
-      return _ProfileApplicationState.none;
-    }
-    if (primaryState == secondaryState) {
-      return primaryState;
-    }
-    return _ProfileApplicationState.mixed;
-  }
-
-  _ProfileApplicationState _resolveSingleDeviceProfileState({
-    required Wearable device,
-    required SensorConfigurationProvider provider,
-    required Map<String, String> expectedConfig,
-  }) {
-    if (!device.hasCapability<SensorConfigurationManager>()) {
-      return _ProfileApplicationState.none;
-    }
-
-    final manager = device.requireCapability<SensorConfigurationManager>();
-    var allSelected = true;
-    var allApplied = provider.hasReceivedConfigurationReport;
-    for (final entry in expectedConfig.entries) {
-      final config = _findConfigurationByName(
-        manager: manager,
-        configName: entry.key,
-      );
-      if (config == null) {
-        return _ProfileApplicationState.none;
-      }
-
-      final expectedValue = _findConfigurationValueByKey(
-        config: config,
-        valueKey: entry.value,
-      );
-      if (expectedValue == null) {
-        return _ProfileApplicationState.none;
-      }
-
-      if (!provider.selectedMatchesConfigurationValue(config, expectedValue)) {
-        allSelected = false;
-      }
-
-      if (allApplied) {
-        final reportedValue =
-            provider.getLastReportedConfigurationValue(config);
-        if (reportedValue == null ||
-            !_configurationValuesMatch(reportedValue, expectedValue)) {
-          allApplied = false;
-        }
-      } else {
-        allApplied = false;
-      }
-    }
-
-    if (allApplied) {
-      return _ProfileApplicationState.applied;
-    }
-    if (allSelected) {
-      return _ProfileApplicationState.selected;
-    }
-    return _ProfileApplicationState.none;
-  }
-
-  Map<String, String>? _buildMirroredProfileConfig({
-    required Wearable sourceDevice,
-    required Wearable targetDevice,
-    required Map<String, String> sourceProfileConfig,
-  }) {
-    if (!sourceDevice.hasCapability<SensorConfigurationManager>() ||
-        !targetDevice.hasCapability<SensorConfigurationManager>()) {
-      return null;
-    }
-
-    final sourceManager =
-        sourceDevice.requireCapability<SensorConfigurationManager>();
-    final targetManager =
-        targetDevice.requireCapability<SensorConfigurationManager>();
-    final mirrored = <String, String>{};
-
-    for (final entry in sourceProfileConfig.entries) {
-      final sourceConfig = _findConfigurationByName(
-        manager: sourceManager,
-        configName: entry.key,
-      );
-      if (sourceConfig == null) {
-        continue;
-      }
-      final sourceValue = _findConfigurationValueByKey(
-        config: sourceConfig,
-        valueKey: entry.value,
-      );
-      if (sourceValue == null) {
-        continue;
-      }
-
-      final mirroredConfig = _findMirroredConfiguration(
-        manager: targetManager,
-        sourceConfig: sourceConfig,
-      );
-      if (mirroredConfig == null) {
-        continue;
-      }
-      final mirroredValue = _findMirroredValue(
-        mirroredConfig: mirroredConfig,
-        sourceValue: sourceValue,
-      );
-      if (mirroredValue == null) {
-        continue;
-      }
-      mirrored[mirroredConfig.name] = mirroredValue.key;
-    }
-
-    return mirrored;
   }
 
   Widget? _buildTabBar(BuildContext context) {
@@ -805,7 +659,7 @@ class _SensorConfigurationDeviceRowState
     if (pairedProvider != null && pairedDevice != null) {
       final mirroredConfig = _isBuiltInProfileKey(key)
           ? _buildBuiltInOffProfileConfig(pairedDevice)
-          : _buildMirroredProfileConfig(
+          : SensorProfileService.buildMirroredProfileConfig(
               sourceDevice: widget.device,
               targetDevice: pairedDevice,
               sourceProfileConfig: config,
@@ -1061,7 +915,7 @@ class _SensorConfigurationDeviceRowState
         : null;
 
     final details = profileConfig.entries.map((entry) {
-      final sourceConfig = _findConfigurationByName(
+      final sourceConfig = SensorProfileService.findConfigurationByName(
         manager: sensorManager,
         configName: entry.key,
       );
@@ -1073,7 +927,7 @@ class _SensorConfigurationDeviceRowState
         );
       }
 
-      final sourceValue = _findConfigurationValueByKey(
+      final sourceValue = SensorProfileService.findConfigurationValueByKey(
         config: sourceConfig,
         valueKey: entry.value,
       );
@@ -1175,7 +1029,8 @@ class _SensorConfigurationDeviceRowState
     required SensorConfigurationValue profileValue,
     required SensorConfigurationProvider provider,
   }) {
-    final resolved = _describeSensorConfigurationValue(profileValue);
+    final resolved =
+        SensorProfileService.describeSensorConfigurationValue(profileValue);
     final selectedMatches =
         provider.selectedMatchesConfigurationValue(sensorConfig, profileValue);
     final applied =
@@ -1205,8 +1060,10 @@ class _SensorConfigurationDeviceRowState
     required SensorConfigurationManager pairedManager,
     required SensorConfigurationProvider pairedProvider,
   }) {
-    final resolved = _describeSensorConfigurationValue(primaryProfileValue);
-    final mirroredConfig = _findMirroredConfiguration(
+    final resolved = SensorProfileService.describeSensorConfigurationValue(
+      primaryProfileValue,
+    );
+    final mirroredConfig = SensorProfileService.findMirroredConfiguration(
       manager: pairedManager,
       sourceConfig: primaryConfig,
     );
@@ -1218,7 +1075,7 @@ class _SensorConfigurationDeviceRowState
       );
     }
 
-    final mirroredProfileValue = _findMirroredValue(
+    final mirroredProfileValue = SensorProfileService.findMirroredValue(
       mirroredConfig: mirroredConfig,
       sourceValue: primaryProfileValue,
     );
@@ -1230,19 +1087,20 @@ class _SensorConfigurationDeviceRowState
       );
     }
 
-    final primarySnapshot = _buildDeviceConfigSnapshot(
+    final primarySnapshot = SensorProfileService.buildDeviceConfigSnapshot(
       provider: primaryProvider,
       config: primaryConfig,
       expectedValue: primaryProfileValue,
     );
-    final secondarySnapshot = _buildDeviceConfigSnapshot(
+    final secondarySnapshot = SensorProfileService.buildDeviceConfigSnapshot(
       provider: pairedProvider,
       config: mirroredConfig,
       expectedValue: mirroredProfileValue,
     );
 
     final statesMatch = primarySnapshot.state == secondarySnapshot.state;
-    final selectedValuesMatch = _configurationValuesMatchNullable(
+    final selectedValuesMatch =
+        SensorProfileService.configurationValuesMatchNullable(
       primarySnapshot.selectedValue,
       secondarySnapshot.selectedValue,
     );
@@ -1257,10 +1115,10 @@ class _SensorConfigurationDeviceRowState
     }
 
     final status = switch (primarySnapshot.state) {
-      _DeviceProfileConfigState.applied => _ProfileDetailStatus.applied,
-      _DeviceProfileConfigState.selected => _ProfileDetailStatus.selected,
-      _DeviceProfileConfigState.notSelected => _ProfileDetailStatus.notSelected,
-      _DeviceProfileConfigState.unavailable => _ProfileDetailStatus.unavailable,
+      DeviceProfileConfigState.applied => _ProfileDetailStatus.applied,
+      DeviceProfileConfigState.selected => _ProfileDetailStatus.selected,
+      DeviceProfileConfigState.notSelected => _ProfileDetailStatus.notSelected,
+      DeviceProfileConfigState.unavailable => _ProfileDetailStatus.unavailable,
     };
 
     return _ProfileDetailEntry(
@@ -1273,234 +1131,6 @@ class _SensorConfigurationDeviceRowState
           : null,
     );
   }
-
-  _DeviceConfigSnapshot _buildDeviceConfigSnapshot({
-    required SensorConfigurationProvider provider,
-    required SensorConfiguration config,
-    required SensorConfigurationValue expectedValue,
-  }) {
-    final selectedValue = provider.getSelectedConfigurationValue(config);
-    if (selectedValue == null) {
-      return const _DeviceConfigSnapshot(
-        state: _DeviceProfileConfigState.notSelected,
-        selectedValue: null,
-      );
-    }
-
-    if (!provider.selectedMatchesConfigurationValue(config, expectedValue)) {
-      return _DeviceConfigSnapshot(
-        state: _DeviceProfileConfigState.notSelected,
-        selectedValue: selectedValue,
-      );
-    }
-
-    if (provider.isConfigurationApplied(config)) {
-      return _DeviceConfigSnapshot(
-        state: _DeviceProfileConfigState.applied,
-        selectedValue: selectedValue,
-      );
-    }
-
-    return _DeviceConfigSnapshot(
-      state: _DeviceProfileConfigState.selected,
-      selectedValue: selectedValue,
-    );
-  }
-
-  _ResolvedProfileValue _describeSensorConfigurationValue(
-    SensorConfigurationValue value,
-  ) {
-    final baseValue = value is SensorFrequencyConfigurationValue
-        ? _formatFrequency(value.frequencyHz)
-        : value.key;
-
-    if (value is! ConfigurableSensorConfigurationValue) {
-      return _ResolvedProfileValue(
-        samplingLabel: baseValue,
-        dataTargetOptions: const [],
-      );
-    }
-
-    final dataTargets =
-        value.options.where(_isDataTargetOption).toSet().toList(growable: false)
-          ..sort(
-            (a, b) => _normalizeName(a.name).compareTo(_normalizeName(b.name)),
-          );
-
-    return _ResolvedProfileValue(
-      samplingLabel: dataTargets.isEmpty ? 'Off' : baseValue,
-      dataTargetOptions: dataTargets,
-    );
-  }
-
-  String _formatFrequency(double hz) {
-    if ((hz - hz.roundToDouble()).abs() < 0.01) {
-      return '${hz.round()} Hz';
-    }
-    if (hz >= 10) {
-      return '${hz.toStringAsFixed(1)} Hz';
-    }
-    return '${hz.toStringAsFixed(2)} Hz';
-  }
-
-  bool _isDataTargetOption(SensorConfigurationOption option) {
-    return option is StreamSensorConfigOption ||
-        option is RecordSensorConfigOption;
-  }
-
-  SensorConfiguration? _findConfigurationByName({
-    required SensorConfigurationManager manager,
-    required String configName,
-  }) {
-    for (final config in manager.sensorConfigurations) {
-      if (config.name == configName) {
-        return config;
-      }
-    }
-
-    final normalized = _normalizeName(configName);
-    for (final config in manager.sensorConfigurations) {
-      if (_normalizeName(config.name) == normalized) {
-        return config;
-      }
-    }
-    return null;
-  }
-
-  SensorConfigurationValue? _findConfigurationValueByKey({
-    required SensorConfiguration config,
-    required String valueKey,
-  }) {
-    for (final value in config.values) {
-      if (value.key == valueKey) {
-        return value;
-      }
-    }
-
-    final normalized = _normalizeName(valueKey);
-    for (final value in config.values) {
-      if (_normalizeName(value.key) == normalized) {
-        return value;
-      }
-    }
-    return null;
-  }
-
-  SensorConfiguration? _findMirroredConfiguration({
-    required SensorConfigurationManager manager,
-    required SensorConfiguration sourceConfig,
-  }) {
-    for (final candidate in manager.sensorConfigurations) {
-      if (candidate.name == sourceConfig.name) {
-        return candidate;
-      }
-    }
-
-    final normalizedSource = _normalizeName(sourceConfig.name);
-    for (final candidate in manager.sensorConfigurations) {
-      if (_normalizeName(candidate.name) == normalizedSource) {
-        return candidate;
-      }
-    }
-    return null;
-  }
-
-  SensorConfigurationValue? _findMirroredValue({
-    required SensorConfiguration mirroredConfig,
-    required SensorConfigurationValue sourceValue,
-  }) {
-    for (final candidate in mirroredConfig.values) {
-      if (_normalizeName(candidate.key) == _normalizeName(sourceValue.key)) {
-        return candidate;
-      }
-    }
-
-    if (sourceValue is SensorFrequencyConfigurationValue) {
-      final sourceOptions = _optionNameSet(sourceValue);
-      final candidates = mirroredConfig.values
-          .whereType<SensorFrequencyConfigurationValue>()
-          .toList(growable: false);
-      if (candidates.isNotEmpty) {
-        final sameOptionCandidates = candidates
-            .where(
-              (candidate) =>
-                  setEquals(_optionNameSet(candidate), sourceOptions),
-            )
-            .toList(growable: false);
-        final scoped =
-            sameOptionCandidates.isNotEmpty ? sameOptionCandidates : candidates;
-        SensorFrequencyConfigurationValue? best;
-        double? bestDistance;
-        for (final candidate in scoped) {
-          final distance =
-              (candidate.frequencyHz - sourceValue.frequencyHz).abs();
-          if (best == null || distance < bestDistance!) {
-            best = candidate;
-            bestDistance = distance;
-          }
-        }
-        if (best != null) {
-          return best;
-        }
-      }
-    }
-
-    if (sourceValue is ConfigurableSensorConfigurationValue) {
-      final sourceWithoutOptions = sourceValue.withoutOptions();
-      final sourceOptions = _optionNameSet(sourceValue);
-      for (final candidate in mirroredConfig.values
-          .whereType<ConfigurableSensorConfigurationValue>()) {
-        if (!setEquals(_optionNameSet(candidate), sourceOptions)) {
-          continue;
-        }
-        if (_normalizeName(candidate.withoutOptions().key) ==
-            _normalizeName(sourceWithoutOptions.key)) {
-          return candidate;
-        }
-      }
-    }
-
-    return null;
-  }
-
-  bool _configurationValuesMatchNullable(
-    SensorConfigurationValue? left,
-    SensorConfigurationValue? right,
-  ) {
-    if (left == null || right == null) {
-      return left == null && right == null;
-    }
-    return _configurationValuesMatch(left, right);
-  }
-
-  bool _configurationValuesMatch(
-    SensorConfigurationValue left,
-    SensorConfigurationValue right,
-  ) {
-    if (left is SensorFrequencyConfigurationValue &&
-        right is SensorFrequencyConfigurationValue) {
-      return left.frequencyHz == right.frequencyHz &&
-          setEquals(_optionNameSet(left), _optionNameSet(right));
-    }
-
-    if (left is ConfigurableSensorConfigurationValue &&
-        right is ConfigurableSensorConfigurationValue) {
-      return _normalizeName(left.withoutOptions().key) ==
-              _normalizeName(right.withoutOptions().key) &&
-          setEquals(_optionNameSet(left), _optionNameSet(right));
-    }
-
-    return _normalizeName(left.key) == _normalizeName(right.key);
-  }
-
-  Set<String> _optionNameSet(SensorConfigurationValue value) {
-    if (value is! ConfigurableSensorConfigurationValue) {
-      return const <String>{};
-    }
-    return value.options.map((option) => _normalizeName(option.name)).toSet();
-  }
-
-  String _normalizeName(String value) => value.trim().toLowerCase();
 
   Future<bool> _confirmDelete(String title) async {
     final bool? confirmed = await showPlatformDialog<bool>(
@@ -1565,15 +1195,8 @@ class _SensorConfigurationDeviceRowState
   }
 }
 
-enum _ProfileApplicationState {
-  none,
-  selected,
-  applied,
-  mixed,
-}
-
 class _ProfileApplicationBadge extends StatelessWidget {
-  final _ProfileApplicationState state;
+  final ProfileApplicationState state;
 
   const _ProfileApplicationBadge({
     required this.state,
@@ -1584,25 +1207,25 @@ class _ProfileApplicationBadge extends StatelessWidget {
     const appliedGreen = Color(0xFF2E7D32);
     final colorScheme = Theme.of(context).colorScheme;
     final (label, foreground, background, border) = switch (state) {
-      _ProfileApplicationState.selected => (
+      ProfileApplicationState.selected => (
           'Selected',
           colorScheme.primary,
           colorScheme.primary.withValues(alpha: 0.10),
           colorScheme.primary.withValues(alpha: 0.30),
         ),
-      _ProfileApplicationState.applied => (
+      ProfileApplicationState.applied => (
           'Applied',
           appliedGreen,
           appliedGreen.withValues(alpha: 0.12),
           appliedGreen.withValues(alpha: 0.34),
         ),
-      _ProfileApplicationState.mixed => (
+      ProfileApplicationState.mixed => (
           'Mixed',
           colorScheme.error,
           colorScheme.error.withValues(alpha: 0.12),
           colorScheme.error.withValues(alpha: 0.34),
         ),
-      _ProfileApplicationState.none => (
+      ProfileApplicationState.none => (
           '',
           colorScheme.onSurfaceVariant,
           Colors.transparent,
@@ -1610,7 +1233,7 @@ class _ProfileApplicationBadge extends StatelessWidget {
         ),
     };
 
-    if (state == _ProfileApplicationState.none) {
+    if (state == ProfileApplicationState.none) {
       return const SizedBox.shrink();
     }
 
@@ -1655,23 +1278,6 @@ enum _ProfileDetailStatus {
   unavailable,
 }
 
-enum _DeviceProfileConfigState {
-  notSelected,
-  selected,
-  applied,
-  unavailable,
-}
-
-class _DeviceConfigSnapshot {
-  final _DeviceProfileConfigState state;
-  final SensorConfigurationValue? selectedValue;
-
-  const _DeviceConfigSnapshot({
-    required this.state,
-    required this.selectedValue,
-  });
-}
-
 class _ProfileDetailEntry {
   final String configName;
   final _ProfileDetailStatus status;
@@ -1685,16 +1291,6 @@ class _ProfileDetailEntry {
     this.samplingLabel,
     this.dataTargetOptions = const [],
     this.detailText,
-  });
-}
-
-class _ResolvedProfileValue {
-  final String samplingLabel;
-  final List<SensorConfigurationOption> dataTargetOptions;
-
-  const _ResolvedProfileValue({
-    required this.samplingLabel,
-    required this.dataTargetOptions,
   });
 }
 
