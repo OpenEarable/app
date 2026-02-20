@@ -36,6 +36,7 @@ class _BatteryStateViewState extends State<BatteryStateView> {
   Stream<int>? _batteryPercentageStream;
   Stream<BatteryPowerStatus>? _powerStatusStream;
   StreamSubscription<List<Type>>? _capabilitySubscription;
+  int _disconnectListenerGeneration = 0;
 
   @override
   void initState() {
@@ -48,10 +49,13 @@ class _BatteryStateViewState extends State<BatteryStateView> {
   @override
   void didUpdateWidget(covariant BatteryStateView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.device != widget.device ||
-        oldWidget.liveUpdates != widget.liveUpdates) {
+    final deviceChanged = oldWidget.device != widget.device;
+    final liveUpdatesChanged = oldWidget.liveUpdates != widget.liveUpdates;
+    if (deviceChanged || liveUpdatesChanged) {
       _isDisconnected = false;
-      _attachDisconnectListener();
+      if (deviceChanged) {
+        _attachDisconnectListener();
+      }
       _attachCapabilityListener();
       _resolveBatteryStreams();
     }
@@ -60,9 +64,12 @@ class _BatteryStateViewState extends State<BatteryStateView> {
   String get _deviceKey => widget.device.deviceId;
 
   void _attachDisconnectListener() {
+    final listenerGeneration = ++_disconnectListenerGeneration;
     final keyAtListenerRegistration = _deviceKey;
     widget.device.addDisconnectListener(() {
-      if (!mounted) {
+      if (!mounted ||
+          listenerGeneration != _disconnectListenerGeneration ||
+          _deviceKey != keyAtListenerRegistration) {
         return;
       }
       setState(() {
