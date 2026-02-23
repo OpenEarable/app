@@ -6,6 +6,18 @@ import 'package:flutter/foundation.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/models/sensor_streams.dart';
 
+/// Rolling live-data provider for a single sensor stream.
+///
+/// Needs:
+/// - A `Sensor` and its stream from `SensorStreams.shared(sensor)`.
+///
+/// Does:
+/// - Buffers values within a time window.
+/// - Tracks last timestamp/arrival time for extrapolated display time.
+/// - Throttles notifications and handles stale/silent stream aging.
+///
+/// Provides:
+/// - `sensorValues` and `displayTimestamp` for chart/value widgets.
 class SensorDataProvider with ChangeNotifier {
   final Sensor sensor;
   final int timeWindow; // seconds

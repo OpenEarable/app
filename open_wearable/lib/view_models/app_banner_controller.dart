@@ -2,6 +2,16 @@ import 'package:flutter/material.dart';
 
 import '../widgets/app_banner.dart';
 
+/// Manages transient in-app banners shown in the global overlay.
+///
+/// Needs:
+/// - Banner widgets constructed by callers.
+///
+/// Does:
+/// - Inserts/removes active banners and handles optional auto-dismiss.
+///
+/// Provides:
+/// - A `ChangeNotifier` list (`activeBanners`) consumed by the overlay widget.
 class AppBannerController with ChangeNotifier {
   final List<AppBanner> activeBanners = [];
   int _nextId = 0;

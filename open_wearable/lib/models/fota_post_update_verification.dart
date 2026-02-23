@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/models/device_name_formatter.dart';
 
+/// Metadata returned when a post-update verification check is armed.
 class ArmedFotaPostUpdateVerification {
   final String verificationId;
   final String wearableName;
@@ -15,6 +16,8 @@ class ArmedFotaPostUpdateVerification {
   });
 }
 
+/// Result of matching a newly connected wearable against pending FOTA
+/// verification expectations.
 class FotaPostUpdateVerificationResult {
   final String verificationId;
   final String wearableName;
@@ -35,6 +38,19 @@ class FotaPostUpdateVerificationResult {
   });
 }
 
+/// Coordinates post-FOTA verification matching across reconnect events.
+///
+/// Needs:
+/// - Update request metadata and connected wearable capability reads.
+///
+/// Does:
+/// - Arms verifications after update start/success.
+/// - Matches newly connected devices by id/name/side.
+/// - Compares detected firmware against expected version.
+///
+/// Provides:
+/// - Verification arming metadata for UI banners.
+/// - Verification results consumed by toasts/banners in app lifecycle logic.
 class FotaPostUpdateVerificationCoordinator {
   FotaPostUpdateVerificationCoordinator._();
 
