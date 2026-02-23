@@ -8,6 +8,8 @@ This folder contains high-level documentation for the Flutter app in `open_weara
   - Startup flow, dependency initialization, routing, UI shell, and lifecycle handling.
 - [State and Providers](./state-and-providers.md)
   - How top-level providers are wired, how per-device providers are created, and how data flows from wearables to UI.
+- [Page Documentation](./pages/README.md)
+  - Detailed page-by-page contracts: needs, behavior, and outputs.
 
 ## Suggested Reading Order
 
