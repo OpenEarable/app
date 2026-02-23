@@ -1,6 +1,10 @@
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/models/device_name_formatter.dart';
 
+/// UI-oriented grouping model for one wearable or a stereo pair.
+///
+/// Used by device/sensor pages to render either a combined stereo card or two
+/// side-specific entries with deterministic ordering and labeling.
 class WearableDisplayGroup {
   final Wearable primary;
   final Wearable? secondary;
@@ -205,6 +209,8 @@ class _StereoMetadata {
   });
 }
 
+/// Builds UI groups from connected wearables by resolving stereo metadata and
+/// applying the caller's combine/split policy.
 Future<List<WearableDisplayGroup>> buildWearableDisplayGroups(
   List<Wearable> wearables, {
   required bool Function(Wearable left, Wearable right) shouldCombinePair,

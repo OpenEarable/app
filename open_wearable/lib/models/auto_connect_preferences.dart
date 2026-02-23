@@ -3,6 +3,18 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// Persistent preferences for Bluetooth auto-connect behavior.
+///
+/// Needs:
+/// - `SharedPreferences` storage.
+///
+/// Does:
+/// - Stores auto-connect enabled state.
+/// - Stores remembered wearable names used for reconnect targeting.
+/// - Emits change notifications for connector logic.
+///
+/// Provides:
+/// - Static getters/listenables and helper methods for preference updates.
 class AutoConnectPreferences {
   static const String connectedDeviceNamesKey = 'connectedDeviceNames';
   static const String autoConnectEnabledKey = 'auto_connect_enabled';

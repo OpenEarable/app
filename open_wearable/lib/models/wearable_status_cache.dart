@@ -1,6 +1,16 @@
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 
 /// Caches stable wearable metadata per device id so views can share it.
+///
+/// Needs:
+/// - Wearable capabilities for stereo position, firmware, and hardware reads.
+///
+/// Does:
+/// - De-duplicates concurrent metadata reads per device id.
+/// - Stores successful results for reuse across pages/widgets.
+///
+/// Provides:
+/// - `ensure*` futures and `cached*` getters for fast repeated UI access.
 class WearableStatusCache {
   WearableStatusCache._();
 

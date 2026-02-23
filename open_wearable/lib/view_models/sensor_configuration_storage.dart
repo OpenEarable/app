@@ -2,6 +2,17 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
+/// File-based storage for saved sensor configuration profiles.
+///
+/// Needs:
+/// - App documents directory access.
+///
+/// Does:
+/// - Persists profile maps as JSON files.
+/// - Supports scoped keys (device name and optional firmware version).
+///
+/// Provides:
+/// - CRUD utilities for profile files and scope matching helpers.
 class SensorConfigurationStorage {
   static const String _scopeSeparator = '__';
 
@@ -160,6 +171,7 @@ class SensorConfigurationStorage {
       key.replaceAll(RegExp(r'[^\w\-]'), '_');
 }
 
+/// Encapsulates preferred scope matching for one target device.
 class DeviceProfileScopeMatch {
   final String nameScope;
   final String? firmwareScope;

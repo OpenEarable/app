@@ -8,7 +8,7 @@ import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 
 import '../models/logger.dart';
 
-/// Event for when a newer firmware version is available
+/// Event emitted when a newer firmware version is available for a wearable.
 class NewFirmwareAvailableEvent extends WearableEvent {
   final String currentVersion;
   final String latestVersion;
@@ -27,23 +27,28 @@ class NewFirmwareAvailableEvent extends WearableEvent {
       'NewFirmwareAvailableEvent for ${formatWearableDisplayName(wearable.name)}: $currentVersion -> $latestVersion';
 }
 
+/// Base event type for unsupported firmware checks.
 abstract class UnsupportedFirmwareEvent {
   final Wearable wearable;
   UnsupportedFirmwareEvent(this.wearable);
 }
 
+/// Emitted when firmware is unsupported but without specific age direction.
 class FirmwareUnsupportedEvent extends UnsupportedFirmwareEvent {
   FirmwareUnsupportedEvent(super.wearable);
 }
 
+/// Emitted when wearable firmware is below the minimum supported version.
 class FirmwareTooOldEvent extends UnsupportedFirmwareEvent {
   FirmwareTooOldEvent(super.wearable);
 }
 
+/// Emitted when wearable firmware is newer than the app supports.
 class FirmwareTooNewEvent extends UnsupportedFirmwareEvent {
   FirmwareTooNewEvent(super.wearable);
 }
 
+/// Base event type used by [WearablesProvider.wearableEventStream].
 abstract class WearableEvent {
   final Wearable wearable;
   final String description;
@@ -51,6 +56,7 @@ abstract class WearableEvent {
   WearableEvent({required this.wearable, required this.description});
 }
 
+/// Emitted after successful wearable time synchronization.
 class WearableTimeSynchronizedEvent extends WearableEvent {
   WearableTimeSynchronizedEvent({
     required super.wearable,
@@ -65,6 +71,7 @@ class WearableTimeSynchronizedEvent extends WearableEvent {
       'WearableTimeSynchronizedEvent for ${formatWearableDisplayName(wearable.name)}';
 }
 
+/// Emitted when wearable-side operations fail and should surface in UI.
 class WearableErrorEvent extends WearableEvent {
   final String errorMessage;
   WearableErrorEvent({
@@ -81,8 +88,20 @@ class WearableErrorEvent extends WearableEvent {
       'WearableErrorEvent for ${formatWearableDisplayName(wearable.name)}: $errorMessage, description: $description';
 }
 
-// MARK: WearablesProvider
-
+/// Global wearable runtime state and orchestration provider.
+///
+/// Needs:
+/// - Connected `Wearable` instances from connect/auto-connect flows.
+///
+/// Does:
+/// - Stores connected wearables and per-device `SensorConfigurationProvider`s.
+/// - Emits wearable/firmware streams for global UI messaging.
+/// - Handles capability-driven side effects (time sync, firmware checks).
+/// - Tracks stereo pair combine/split UI preferences.
+///
+/// Provides:
+/// - Wearable list + config provider map for device/sensor/app pages.
+/// - Helper APIs for turning sensors off and resolving device config providers.
 class WearablesProvider with ChangeNotifier {
   final List<Wearable> _wearables = [];
   final Map<Wearable, SensorConfigurationProvider>
