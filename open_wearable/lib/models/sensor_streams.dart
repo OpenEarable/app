@@ -4,6 +4,9 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 
 /// Shared sensor streams to avoid multiple direct subscriptions to
 /// single-subscription sensor streams.
+///
+/// Provides a per-sensor broadcast stream cache used by recorder/live-data
+/// providers.
 class SensorStreams {
   SensorStreams._();
 

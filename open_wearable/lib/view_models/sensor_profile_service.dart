@@ -44,6 +44,18 @@ class ResolvedProfileValue {
 ///
 /// This service intentionally contains no widget code so profile logic can be
 /// reused by multiple UI surfaces and tested independently.
+///
+/// Needs:
+/// - Wearable configuration managers and corresponding
+///   `SensorConfigurationProvider` instances.
+///
+/// Does:
+/// - Resolves selected/applied profile state.
+/// - Maps profile keys/values between paired wearables.
+/// - Produces display-friendly value descriptions.
+///
+/// Provides:
+/// - Static helpers used by profile UI and synchronization flows.
 class SensorProfileService {
   const SensorProfileService._();
 
