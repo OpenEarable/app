@@ -19,6 +19,7 @@ import 'package:open_wearable/models/sensor_streams.dart';
 /// Provides:
 /// - `sensorValues` and `displayTimestamp` for chart/value widgets.
 class SensorDataProvider with ChangeNotifier {
+  final Wearable wearable;
   final Sensor sensor;
   final int timeWindow; // seconds
 
@@ -38,6 +39,7 @@ class SensorDataProvider with ChangeNotifier {
   DateTime? _lastSensorArrivalTime;
 
   SensorDataProvider({
+    required this.wearable,
     required this.sensor,
     this.timeWindow = 5,
   }) {
@@ -64,8 +66,10 @@ class SensorDataProvider with ChangeNotifier {
   }
 
   void _listenToStream() {
-    _sensorStreamSubscription =
-        SensorStreams.shared(sensor).listen((sensorValue) {
+    _sensorStreamSubscription = SensorStreams.shared(
+      wearable: wearable,
+      sensor: sensor,
+    ).listen((sensorValue) {
       sensorValues.add(sensorValue);
       _lastSensorTimestamp = sensorValue.timestamp;
       _lastSensorArrivalTime = DateTime.now();

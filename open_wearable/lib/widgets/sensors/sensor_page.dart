@@ -189,7 +189,10 @@ class _SensorPageState extends State<SensorPage>
           in wearable.requireCapability<SensorManager>().sensors) {
         _sensorDataProviders.putIfAbsent(
           (wearable, sensor),
-          () => SensorDataProvider(sensor: sensor),
+          () => SensorDataProvider(
+            wearable: wearable,
+            sensor: sensor,
+          ),
         );
       }
     }
