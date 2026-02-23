@@ -599,6 +599,12 @@ class DeviceRow extends StatelessWidget {
 
     await showPlatformModalSheet<void>(
       context: context,
+      material: MaterialModalSheetData(
+        isScrollControlled: true,
+        showDragHandle: true,
+        isDismissible: true,
+        enableDrag: true,
+      ),
       builder: (sheetContext) => _PairedDeviceSheet(
         title: group.displayName,
         leftDevice: leftDevice,
@@ -669,83 +675,73 @@ class _PairedDeviceSheet extends StatelessWidget {
     final theme = Theme.of(context);
     final listeningModeDevice = _resolveListeningModeDevice();
 
-    return SafeArea(
-      child: Material(
-        color: theme.colorScheme.surface,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Select a device to open details.',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    tooltip: 'Close',
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close_rounded, size: 20),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              DeviceRow(
-                group: WearableDisplayGroup.single(
-                  wearable: leftDevice,
-                  position: DevicePosition.left,
-                ),
-                cardMargin: EdgeInsets.zero,
-                onSingleDeviceSelected: onOpenDeviceDetail,
-              ),
-              const SizedBox(height: 8),
-              DeviceRow(
-                group: WearableDisplayGroup.single(
-                  wearable: rightDevice,
-                  position: DevicePosition.right,
-                ),
-                cardMargin: EdgeInsets.zero,
-                onSingleDeviceSelected: onOpenDeviceDetail,
-              ),
-              if (listeningModeDevice != null) ...[
-                const SizedBox(height: 12),
-                AudioModeWidget(
-                  key: ValueKey(
-                    'pair_audio_${leftDevice.deviceId}_${rightDevice.deviceId}',
-                  ),
-                  device: listeningModeDevice,
-                  applyScope: AudioModeApplyScope.pairOnly,
-                ),
-              ] else ...[
-                const SizedBox(height: 10),
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.55,
+      minChildSize: 0.35,
+      maxChildSize: 0.95,
+      builder: (context, scrollController) => SafeArea(
+        top: false,
+        child: Material(
+          color: theme.colorScheme.surface,
+          child: SingleChildScrollView(
+            controller: scrollController,
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Text(
-                  'Listening mode is not available for this stereo pair.',
+                  title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Select a device to open details.',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
+                const SizedBox(height: 10),
+                DeviceRow(
+                  group: WearableDisplayGroup.single(
+                    wearable: leftDevice,
+                    position: DevicePosition.left,
+                  ),
+                  cardMargin: EdgeInsets.zero,
+                  onSingleDeviceSelected: onOpenDeviceDetail,
+                ),
+                const SizedBox(height: 8),
+                DeviceRow(
+                  group: WearableDisplayGroup.single(
+                    wearable: rightDevice,
+                    position: DevicePosition.right,
+                  ),
+                  cardMargin: EdgeInsets.zero,
+                  onSingleDeviceSelected: onOpenDeviceDetail,
+                ),
+                if (listeningModeDevice != null) ...[
+                  const SizedBox(height: 12),
+                  AudioModeWidget(
+                    key: ValueKey(
+                      'pair_audio_${leftDevice.deviceId}_${rightDevice.deviceId}',
+                    ),
+                    device: listeningModeDevice,
+                    applyScope: AudioModeApplyScope.pairOnly,
+                  ),
+                ] else ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    'Listening mode is not available for this stereo pair.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
