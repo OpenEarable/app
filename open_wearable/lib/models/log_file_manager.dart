@@ -1,4 +1,5 @@
-import 'dart:io' show Directory, File; // still fine as long as we don't use it on web
+import 'dart:io'
+    show Directory, File; // still fine as long as we don't use it on web
 
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
@@ -15,19 +16,29 @@ class _CustomLogFilter extends LogFilter {
 
     final msg = event.message.toString();
 
-    return !(
-      msg.contains('componentData') ||
-      msg.contains('SensorData') ||
-      msg.contains('Battery') ||
-      msg.contains('Mantissa') ||
-      (msg.toLowerCase().contains('sensor data') &&
-          event.level == Level.trace) ||
-      (msg.toLowerCase().contains('parsed') &&
-          event.level == Level.trace)
-    );
+    return !(msg.contains('componentData') ||
+        msg.contains('SensorData') ||
+        msg.contains('Battery') ||
+        msg.contains('Mantissa') ||
+        (msg.toLowerCase().contains('sensor data') &&
+            event.level == Level.trace) ||
+        (msg.toLowerCase().contains('parsed') && event.level == Level.trace));
   }
 }
 
+/// Central logging service for app/runtime logs and persisted log files.
+///
+/// Needs:
+/// - Logger package and (on non-web) writable app documents directory.
+///
+/// Does:
+/// - Creates app/lib loggers with a shared output pipeline.
+/// - Rotates and exposes log files.
+/// - Notifies listeners when log file inventory changes.
+///
+/// Provides:
+/// - `logger` and `libLogger` for runtime logging.
+/// - File management APIs used by log viewer pages.
 class LogFileManager with ChangeNotifier {
   final Logger _logger;
   final Logger _libLogger;
@@ -93,9 +104,8 @@ class LogFileManager with ChangeNotifier {
       outputs.add(advanced);
     }
 
-    final sharedOutput = outputs.length == 1
-        ? outputs.first
-        : MultiOutput(outputs);
+    final sharedOutput =
+        outputs.length == 1 ? outputs.first : MultiOutput(outputs);
 
     // ------------------------
     // 3) Create loggers

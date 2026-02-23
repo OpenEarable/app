@@ -1,6 +1,16 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// Persisted app-wide shutdown and live-data display settings.
+///
+/// Needs:
+/// - `SharedPreferences` availability.
+///
+/// Does:
+/// - Loads/saves settings and mirrors them through `ValueNotifier`s.
+///
+/// Provides:
+/// - Synchronous getters and `ValueListenable`s consumed by UI/lifecycle code.
 class AppShutdownSettings {
   static const String _shutOffAllSensorsOnAppCloseKey =
       'app_shut_off_all_sensors_on_close';

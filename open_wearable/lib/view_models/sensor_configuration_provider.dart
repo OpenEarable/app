@@ -5,6 +5,7 @@ import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 
 import '../models/logger.dart';
 
+/// Summary of a profile/configuration restore attempt.
 class SensorConfigurationRestoreResult {
   final int restoredCount;
   final int requestedCount;
@@ -21,6 +22,19 @@ class SensorConfigurationRestoreResult {
   bool get hasRestoredValues => restoredCount > 0;
 }
 
+/// Per-device sensor configuration state and reconciliation layer.
+///
+/// Needs:
+/// - A `SensorConfigurationManager` from a connected wearable.
+///
+/// Does:
+/// - Tracks selected values/options and pending edits.
+/// - Reconciles optimistic local state with reported hardware state.
+/// - Exposes apply/read helpers used by configuration UI and profile flows.
+///
+/// Provides:
+/// - Query APIs for selected/applied/pending state.
+/// - Mutation APIs for option/value changes and sensor shutdown.
 class SensorConfigurationProvider with ChangeNotifier {
   final SensorConfigurationManager _sensorConfigurationManager;
 

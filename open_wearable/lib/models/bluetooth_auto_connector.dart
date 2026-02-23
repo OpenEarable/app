@@ -8,6 +8,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'auto_connect_preferences.dart';
 import 'logger.dart';
 
+/// Background reconnect orchestrator for remembered Bluetooth wearables.
+///
+/// Needs:
+/// - `WearableManager` scanning/connection APIs.
+/// - `AutoConnectPreferences` values and change stream.
+/// - Navigation access for permission dialogs.
+///
+/// Does:
+/// - Tracks target wearable names from preferences.
+/// - Scans and connects matching devices with retry logic.
+/// - Maintains per-session connection bookkeeping and disconnect recovery.
+///
+/// Provides:
+/// - `start()` / `stop()` lifecycle control and `onWearableConnected` callback.
 class BluetoothAutoConnector {
   static const Duration _scanRetryInterval = Duration(seconds: 3);
 
