@@ -8,6 +8,7 @@ import 'package:open_wearable/widgets/fota/fota_warning_page.dart';
 import 'package:open_wearable/widgets/home_page.dart';
 import 'package:open_wearable/widgets/logging/log_files_screen.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_all_recordings_page.dart';
+import 'package:open_wearable/widgets/settings/connectors_page.dart';
 import 'package:open_wearable/widgets/settings/general_settings_page.dart';
 import 'dart:io' show Platform;
 import 'package:flutter/cupertino.dart';
@@ -135,8 +136,17 @@ final GoRouter router = GoRouter(
       builder: (context, state) => const GeneralSettingsPage(),
     ),
     GoRoute(
+      path: '/settings/connectors',
+      name: 'settings/connectors',
+      builder: (context, state) => const ConnectorsPage(),
+    ),
+    GoRoute(
       path: '/settings/app-close',
       redirect: (_, __) => '/settings/general',
+    ),
+    GoRoute(
+      path: '/connectors',
+      redirect: (_, __) => '/settings/connectors',
     ),
     GoRoute(
       path: '/fota',
