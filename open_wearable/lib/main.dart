@@ -11,6 +11,7 @@ import 'package:open_wearable/models/app_shutdown_settings.dart';
 import 'package:open_wearable/models/app_upgrade_coordinator.dart';
 import 'package:open_wearable/models/app_upgrade_highlight.dart';
 import 'package:open_wearable/models/auto_connect_preferences.dart';
+import 'package:open_wearable/models/connector_settings.dart';
 import 'package:open_wearable/models/log_file_manager.dart';
 import 'package:open_wearable/models/fota_post_update_verification.dart';
 import 'package:open_wearable/models/wearable_connector.dart'
@@ -38,6 +39,7 @@ void main() async {
   initLogger(logFileManager.logger);
   await AutoConnectPreferences.initialize();
   await AppShutdownSettings.initialize();
+  await ConnectorSettings.initialize();
 
   runApp(
     MultiProvider(
@@ -722,6 +724,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    unawaited(ConnectorSettings.dispose());
     _unsupportedFirmwareSub.cancel();
     _wearableEventSub.cancel();
     _bleAvailabilitySub.cancel();
