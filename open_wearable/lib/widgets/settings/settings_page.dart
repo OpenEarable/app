@@ -15,12 +15,14 @@ class SettingsPage extends StatelessWidget {
   final VoidCallback onLogsRequested;
   final VoidCallback onConnectRequested;
   final VoidCallback onGeneralSettingsRequested;
+  final VoidCallback onConnectorsRequested;
 
   const SettingsPage({
     super.key,
     required this.onLogsRequested,
     required this.onConnectRequested,
     required this.onGeneralSettingsRequested,
+    required this.onConnectorsRequested,
   });
 
   @override
@@ -58,6 +60,12 @@ class SettingsPage extends StatelessWidget {
               subtitle: 'Browse app releases',
               onTap: () => context.push('/whats-new'),
             ),
+          _QuickActionTile(
+            icon: Icons.cable_rounded,
+            title: 'Connectors',
+            subtitle: 'Configure external API connectors',
+            onTap: onConnectorsRequested,
+          ),
           _QuickActionTile(
             icon: Icons.info_outline_rounded,
             title: 'About',
