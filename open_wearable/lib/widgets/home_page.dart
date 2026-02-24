@@ -89,6 +89,7 @@ class _HomePageState extends State<HomePage> {
         onLogsRequested: _openLogFiles,
         onConnectRequested: _openConnectDevices,
         onGeneralSettingsRequested: _openGeneralSettings,
+        onConnectorsRequested: _openConnectors,
       ),
     ];
   }
@@ -237,6 +238,11 @@ class _HomePageState extends State<HomePage> {
   void _openGeneralSettings() {
     if (!mounted) return;
     context.push('/settings/general');
+  }
+
+  void _openConnectors() {
+    if (!mounted) return;
+    context.push('/settings/connectors');
   }
 }
 
