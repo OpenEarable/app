@@ -2,10 +2,16 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
+import 'package:open_wearable/models/connectors/commands/command.dart';
+import 'package:open_wearable/models/connectors/commands/default_action_commands.dart';
+import 'package:open_wearable/models/connectors/commands/default_ipc_commands.dart';
+import 'package:open_wearable/models/connectors/commands/ipc_internal_param_names.dart';
+import 'package:open_wearable/models/connectors/commands/runtime.dart';
+import 'package:open_wearable/models/logger.dart';
 import 'package:open_wearable/models/wearable_connector.dart';
 
-class WebSocketIpcServer {
+class WebSocketIpcServer implements CommandRuntime {
   static const String defaultHost = '127.0.0.1';
   static const int defaultPort = 8765;
   static const String defaultPath = '/ws';
@@ -28,12 +34,21 @@ class WebSocketIpcServer {
   StreamSubscription<Wearable>? _connectSubscription;
 
   int _nextSubscriptionId = 1;
+  final Map<String, Command> _topLevelCommands = <String, Command>{};
+  final Map<String, Command> _actionCommands = <String, Command>{};
 
   WebSocketIpcServer({
     WearableManager? wearableManager,
     WearableConnector? wearableConnector,
   })  : _wearableManager = wearableManager ?? WearableManager(),
-        _wearableConnector = wearableConnector ?? WearableConnector();
+        _wearableConnector = wearableConnector ?? WearableConnector() {
+    for (final command in createDefaultIpcCommands(this)) {
+      addCommand(command);
+    }
+    for (final command in createDefaultActionCommands(this)) {
+      addActionCommand(command);
+    }
+  }
 
   bool get isRunning => _httpServer != null;
 
@@ -110,87 +125,69 @@ class WebSocketIpcServer {
     _clients.remove(client);
   }
 
-  List<String> get methods => const <String>[
-        'ping',
-        'methods',
-        'has_permissions',
-        'check_and_request_permissions',
-        'start_scan',
-        'get_discovered_devices',
-        'connect',
-        'connect_system_devices',
-        'list_connected',
-        'disconnect',
-        'set_auto_connect',
-        'get_wearable',
-        'get_actions',
-        'invoke_action',
-        'subscribe',
-        'unsubscribe',
-      ];
+  @override
+  List<String> get methods => _topLevelCommands.keys.toList(growable: false);
+
+  void addCommand(Command command) {
+    _topLevelCommands[command.name] = command;
+  }
+
+  void addActionCommand(Command command) {
+    _actionCommands[command.name] = command;
+  }
 
   Future<Object?> _handleRequest({
     required _ClientSession client,
     required String method,
     required Map<String, dynamic> params,
   }) async {
-    switch (method) {
-      case 'ping':
-        return <String, dynamic>{'ok': true};
-      case 'methods':
-        return methods;
-      case 'has_permissions':
-        return _wearableManager.hasPermissions();
-      case 'check_and_request_permissions':
-        return WearableManager.checkAndRequestPermissions();
-      case 'start_scan':
-        final checkAndRequestPermissions =
-            _asOptionalBool(params['check_and_request_permissions']) ?? true;
-        _discoveredDevicesById.clear();
-        await _wearableManager.startScan(
-          checkAndRequestPermissions: checkAndRequestPermissions,
-        );
-        return <String, dynamic>{'started': true};
-      case 'get_discovered_devices':
-        return _discoveredDevicesById.values.map(_serializeDiscovered).toList();
-      case 'connect':
-        return _connect(params);
-      case 'connect_system_devices':
-        return _connectSystemDevices(params);
-      case 'list_connected':
-        return _connectedWearablesById.values
-            .map(_serializeWearableSummary)
-            .toList();
-      case 'disconnect':
-        return _disconnect(params);
-      case 'set_auto_connect':
-        return _setAutoConnect(params);
-      case 'get_wearable':
-        return _getWearable(params);
-      case 'get_actions':
-        return _getActions(params);
-      case 'invoke_action':
-        return _invokeAction(params);
-      case 'subscribe':
-        return _subscribe(client, params);
-      case 'unsubscribe':
-        return client.unsubscribe(
-          _asInt(params['subscription_id'], name: 'subscription_id'),
-        );
-      default:
-        throw UnsupportedError('Unknown method: $method');
+    logger.d("Received request: method=$method, params=$params");
+
+    final command = _topLevelCommands[method];
+    if (command == null) {
+      throw UnsupportedError('Unknown method: $method');
     }
+    return command.run(_paramsToCommandParams(params, session: client));
   }
 
-  Future<Map<String, dynamic>> _connect(Map<String, dynamic> params) async {
-    final deviceId = _asString(params['device_id'], name: 'device_id');
+  @override
+  Future<Wearable> getWearable({required String deviceId}) async {
+    return _requireConnectedWearable(deviceId);
+  }
+
+  @override
+  Future<bool> hasPermissions() => _wearableManager.hasPermissions();
+
+  @override
+  Future<bool> checkAndRequestPermissions() =>
+      WearableManager.checkAndRequestPermissions();
+
+  @override
+  Future<Map<String, dynamic>> startScan({
+    bool checkAndRequestPermissions = true,
+  }) async {
+    _discoveredDevicesById.clear();
+    await _wearableManager.startScan(
+      checkAndRequestPermissions: checkAndRequestPermissions,
+    );
+    return <String, dynamic>{'started': true};
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getDiscoveredDevices() async {
+    return _discoveredDevicesById.values.map(_serializeDiscovered).toList();
+  }
+
+  @override
+  Future<Map<String, dynamic>> connect({
+    required String deviceId,
+    bool connectedViaSystem = false,
+  }) async {
     final discovered = _discoveredDevicesById[deviceId];
     if (discovered == null) {
       throw StateError('Device not found in discovered devices: $deviceId');
     }
 
-    final connectedViaSystem =
-        _asOptionalBool(params['connected_via_system']) ?? false;
     final options = connectedViaSystem
         ? <ConnectionOption>{const ConnectedViaSystem()}
         : const <ConnectionOption>{};
@@ -203,12 +200,12 @@ class WebSocketIpcServer {
     return _serializeWearableSummary(wearable);
   }
 
-  Future<List<Map<String, dynamic>>> _connectSystemDevices(
-    Map<String, dynamic> params,
-  ) async {
-    final ignoredIds = _asStringList(params['ignored_device_ids']);
+  @override
+  Future<List<Map<String, dynamic>>> connectSystemDevices({
+    List<String> ignoredDeviceIds = const <String>[],
+  }) async {
     final wearables = await _wearableConnector.connectToSystemDevices(
-      ignoredDeviceIds: ignoredIds,
+      ignoredDeviceIds: ignoredDeviceIds,
     );
     for (final wearable in wearables) {
       _registerConnectedWearable(wearable);
@@ -216,316 +213,85 @@ class WebSocketIpcServer {
     return wearables.map(_serializeWearableSummary).toList();
   }
 
-  Future<Map<String, dynamic>> _disconnect(Map<String, dynamic> params) async {
-    final deviceId = _asString(params['device_id'], name: 'device_id');
+  @override
+  Future<List<Map<String, dynamic>>> listConnected() async {
+    return _connectedWearablesById.values
+        .map(_serializeWearableSummary)
+        .toList();
+  }
+
+  @override
+  Future<Map<String, dynamic>> disconnect({
+    required String deviceId,
+  }) async {
     final wearable = _requireConnectedWearable(deviceId);
     await wearable.disconnect();
     _connectedWearablesById.remove(deviceId);
     return <String, dynamic>{'disconnected': true};
   }
 
-  Map<String, dynamic> _setAutoConnect(Map<String, dynamic> params) {
-    final deviceIds = _asStringList(params['device_ids']);
-    _wearableManager.setAutoConnect(deviceIds);
-    return <String, dynamic>{'device_ids': deviceIds};
+  @override
+  Future<int> createSubscriptionId() async {
+    return _nextSubscriptionId++;
   }
 
-  Map<String, dynamic> _getWearable(Map<String, dynamic> params) {
-    final wearable = _requireConnectedWearable(
-      _asString(params['device_id'], name: 'device_id'),
-    );
-
-    final details = _serializeWearableSummary(wearable);
-    details['sensors'] = _serializeSensors(wearable);
-    details['sensor_configurations'] = _serializeSensorConfigurations(wearable);
-    details['actions'] = _actionsForWearable(wearable);
-    details['streams'] = _streamsForWearable(wearable);
-    return details;
-  }
-
-  List<String> _getActions(Map<String, dynamic> params) {
-    final wearable = _requireConnectedWearable(
-      _asString(params['device_id'], name: 'device_id'),
-    );
-    return _actionsForWearable(wearable);
-  }
-
-  Future<Object?> _invokeAction(Map<String, dynamic> params) async {
-    final wearable = _requireConnectedWearable(
-      _asString(params['device_id'], name: 'device_id'),
-    );
-    final action = _asString(params['action'], name: 'action');
-    final args = _asMap(params['args']);
-
-    switch (action) {
-      case 'disconnect':
-        await wearable.disconnect();
-        _connectedWearablesById.remove(wearable.deviceId);
-        return <String, dynamic>{'disconnected': true};
-      case 'get_wearable_icon_path':
-        return wearable.getWearableIconPath(
-          darkmode: _asOptionalBool(args['darkmode']) ?? false,
-        );
-      case 'list_sensors':
-        return _serializeSensors(wearable);
-      case 'list_sensor_configurations':
-        return _serializeSensorConfigurations(wearable);
-      case 'set_sensor_configuration':
-        return _setSensorConfiguration(wearable, args);
-      case 'set_sensor_frequency_best_effort':
-        return _setSensorFrequencyBestEffort(wearable, args);
-      case 'set_sensor_maximum_frequency':
-        return _setSensorMaximumFrequency(wearable, args);
-      case 'read_device_identifier':
-        return _requireCapability<DeviceIdentifier>(
-          wearable,
-          action: action,
-        ).readDeviceIdentifier();
-      case 'read_device_firmware_version':
-        return _requireCapability<DeviceFirmwareVersion>(
-          wearable,
-          action: action,
-        ).readDeviceFirmwareVersion();
-      case 'read_firmware_version_number':
-        return (await _requireCapability<DeviceFirmwareVersion>(
-          wearable,
-          action: action,
-        ).readFirmwareVersionNumber())
-            ?.toString();
-      case 'check_firmware_support':
-        return (await _requireCapability<DeviceFirmwareVersion>(
-          wearable,
-          action: action,
-        ).checkFirmwareSupport())
-            .name;
-      case 'read_device_hardware_version':
-        return _requireCapability<DeviceHardwareVersion>(
-          wearable,
-          action: action,
-        ).readDeviceHardwareVersion();
-      case 'write_led_color':
-        await _requireCapability<RgbLed>(
-          wearable,
-          action: action,
-        ).writeLedColor(
-          r: _asInt(args['r'], name: 'r'),
-          g: _asInt(args['g'], name: 'g'),
-          b: _asInt(args['b'], name: 'b'),
-        );
-        return <String, dynamic>{'ok': true};
-      case 'show_status':
-        await _requireCapability<StatusLed>(
-          wearable,
-          action: action,
-        ).showStatus(_asRequiredBool(args['status'], name: 'status'));
-        return <String, dynamic>{'ok': true};
-      case 'read_battery_percentage':
-        return _requireCapability<BatteryLevelStatus>(
-          wearable,
-          action: action,
-        ).readBatteryPercentage();
-      case 'read_power_status':
-        return _serializeBatteryPowerStatus(
-          await _requireCapability<BatteryLevelStatusService>(
-            wearable,
-            action: action,
-          ).readPowerStatus(),
-        );
-      case 'read_health_status':
-        return _serializeBatteryHealthStatus(
-          await _requireCapability<BatteryHealthStatusService>(
-            wearable,
-            action: action,
-          ).readHealthStatus(),
-        );
-      case 'read_energy_status':
-        return _serializeBatteryEnergyStatus(
-          await _requireCapability<BatteryEnergyStatusService>(
-            wearable,
-            action: action,
-          ).readEnergyStatus(),
-        );
-      case 'play_frequency':
-        await _playFrequency(wearable, args);
-        return <String, dynamic>{'ok': true};
-      case 'list_wave_types':
-        return _requireCapability<FrequencyPlayer>(
-          wearable,
-          action: action,
-        ).supportedFrequencyPlayerWaveTypes.map((w) => w.key).toList();
-      case 'play_jingle':
-        await _playJingle(wearable, args);
-        return <String, dynamic>{'ok': true};
-      case 'list_jingles':
-        return _requireCapability<JinglePlayer>(
-          wearable,
-          action: action,
-        ).supportedJingles.map((j) => j.key).toList();
-      case 'start_audio':
-        await _requireCapability<AudioPlayerControls>(
-          wearable,
-          action: action,
-        ).startAudio();
-        return <String, dynamic>{'ok': true};
-      case 'pause_audio':
-        await _requireCapability<AudioPlayerControls>(
-          wearable,
-          action: action,
-        ).pauseAudio();
-        return <String, dynamic>{'ok': true};
-      case 'stop_audio':
-        await _requireCapability<AudioPlayerControls>(
-          wearable,
-          action: action,
-        ).stopAudio();
-        return <String, dynamic>{'ok': true};
-      case 'play_audio_from_storage_path':
-        await _requireCapability<StoragePathAudioPlayer>(
-          wearable,
-          action: action,
-        ).playAudioFromStoragePath(
-            _asString(args['filepath'], name: 'filepath'));
-        return <String, dynamic>{'ok': true};
-      case 'list_audio_modes':
-        return _requireCapability<AudioModeManager>(
-          wearable,
-          action: action,
-        ).availableAudioModes.map((mode) => mode.key).toList();
-      case 'set_audio_mode':
-        _setAudioMode(wearable, args);
-        return <String, dynamic>{'ok': true};
-      case 'get_audio_mode':
-        return (await _requireCapability<AudioModeManager>(
-          wearable,
-          action: action,
-        ).getAudioMode())
-            .key;
-      case 'list_microphones':
-        return _listMicrophones(wearable);
-      case 'set_microphone':
-        await _setMicrophone(wearable, args);
-        return <String, dynamic>{'ok': true};
-      case 'get_microphone':
-        return _getMicrophone(wearable);
-      case 'get_file_prefix':
-        return _requireCapability<EdgeRecorderManager>(
-          wearable,
-          action: action,
-        ).filePrefix;
-      case 'set_file_prefix':
-        await _requireCapability<EdgeRecorderManager>(
-          wearable,
-          action: action,
-        ).setFilePrefix(_asString(args['prefix'], name: 'prefix'));
-        return <String, dynamic>{'ok': true};
-      case 'get_position':
-        final position = await _requireCapability<StereoDevice>(
-          wearable,
-          action: action,
-        ).position;
-        return position?.name;
-      case 'pair':
-        await _pairWearable(wearable, args);
-        return <String, dynamic>{'ok': true};
-      case 'unpair':
-        await _requireCapability<StereoDevice>(
-          wearable,
-          action: action,
-        ).unpair();
-        return <String, dynamic>{'ok': true};
-      case 'is_connected_via_system':
-        return _requireCapability<SystemDevice>(
-          wearable,
-          action: action,
-        ).isConnectedViaSystem;
-      case 'is_time_synchronized':
-        return _requireCapability<TimeSynchronizable>(
-          wearable,
-          action: action,
-        ).isTimeSynchronized;
-      case 'synchronize_time':
-        await _requireCapability<TimeSynchronizable>(
-          wearable,
-          action: action,
-        ).synchronizeTime();
-        return <String, dynamic>{'ok': true};
-      case 'measure_audio_response':
-      case 'measure_freq_response':
-        return _measureAudioResponse(wearable, args);
-      default:
-        throw UnsupportedError('Unsupported action: $action');
-    }
-  }
-
-  Future<Map<String, dynamic>> _subscribe(
-    _ClientSession client,
-    Map<String, dynamic> params,
-  ) async {
-    final wearable = _requireConnectedWearable(
-      _asString(params['device_id'], name: 'device_id'),
-    );
-    final streamName = _asString(params['stream'], name: 'stream');
-    final args = _asMap(params['args']);
-
-    final Stream<dynamic> stream;
-    switch (streamName) {
-      case 'sensor_values':
-        stream = _resolveSensor(wearable, args).sensorStream;
-        break;
-      case 'sensor_configuration':
-        stream = _requireCapability<SensorConfigurationManager>(
-          wearable,
-          action: 'subscribe:$streamName',
-        ).sensorConfigurationStream;
-        break;
-      case 'button_events':
-        stream = _requireCapability<ButtonManager>(
-          wearable,
-          action: 'subscribe:$streamName',
-        ).buttonEvents;
-        break;
-      case 'battery_percentage':
-        stream = _requireCapability<BatteryLevelStatus>(
-          wearable,
-          action: 'subscribe:$streamName',
-        ).batteryPercentageStream;
-        break;
-      case 'battery_power_status':
-        stream = _requireCapability<BatteryLevelStatusService>(
-          wearable,
-          action: 'subscribe:$streamName',
-        ).powerStatusStream;
-        break;
-      case 'battery_health_status':
-        stream = _requireCapability<BatteryHealthStatusService>(
-          wearable,
-          action: 'subscribe:$streamName',
-        ).healthStatusStream;
-        break;
-      case 'battery_energy_status':
-        stream = _requireCapability<BatteryEnergyStatusService>(
-          wearable,
-          action: 'subscribe:$streamName',
-        ).energyStatusStream;
-        break;
-      default:
-        throw UnsupportedError('Unknown stream: $streamName');
-    }
-
-    final subscriptionId = _nextSubscriptionId++;
+  @override
+  Future<void> attachStreamSubscription({
+    required dynamic session,
+    required int subscriptionId,
+    required String streamName,
+    required String deviceId,
+    required Stream<dynamic> stream,
+  }) async {
+    final _ClientSession client = session as _ClientSession;
     await client.subscribe(
       subscriptionId: subscriptionId,
       streamName: streamName,
-      deviceId: wearable.deviceId,
+      deviceId: deviceId,
       stream: stream,
       serializer: _serializeStreamData,
     );
+  }
 
-    return <String, dynamic>{
-      'subscription_id': subscriptionId,
-      'stream': streamName,
-      'device_id': wearable.deviceId,
-    };
+  @override
+  Future<Map<String, dynamic>> unsubscribe({
+    required dynamic session,
+    required int subscriptionId,
+  }) async {
+    final _ClientSession client = session as _ClientSession;
+    return client.unsubscribe(subscriptionId);
+  }
+
+  @override
+  Future<Object?> invokeAction({
+    required String deviceId,
+    required String action,
+    Map<String, dynamic> args = const <String, dynamic>{},
+  }) async {
+    final command = _actionCommands[action];
+    if (command == null) {
+      throw UnsupportedError('Unsupported action: $action');
+    }
+    final actionParams = <CommandParam<dynamic>>[
+      CommandParam<dynamic>(name: 'device_id', value: deviceId),
+      ..._paramsToCommandParams(args, session: null),
+    ];
+    return command.run(actionParams);
+  }
+
+  List<CommandParam<dynamic>> _paramsToCommandParams(
+    Map<String, dynamic> params, {
+    required _ClientSession? session,
+  }) {
+    final commandParams = <CommandParam<dynamic>>[];
+    if (session != null) {
+      commandParams
+          .add(CommandParam<dynamic>(name: sessionParamName, value: session));
+    }
+    params.forEach((key, value) {
+      commandParams.add(CommandParam<dynamic>(name: key, value: value));
+    });
+    return commandParams;
   }
 
   void _attachManagerSubscriptions() {
@@ -583,405 +349,6 @@ class WebSocketIpcServer {
     );
   }
 
-  Sensor _resolveSensor(Wearable wearable, Map<String, dynamic> args) {
-    final sensorManager = wearable.getCapability<SensorManager>();
-    if (sensorManager == null) {
-      throw StateError('Wearable has no SensorManager capability.');
-    }
-
-    final sensors = sensorManager.sensors;
-    if (sensors.isEmpty) {
-      throw StateError('Wearable has no sensors.');
-    }
-
-    final sensorId = args['sensor_id'];
-    if (sensorId != null) {
-      final id = _asString(sensorId, name: 'sensor_id');
-      for (var i = 0; i < sensors.length; i++) {
-        if (_sensorId(sensors[i], i) == id) {
-          return sensors[i];
-        }
-      }
-      throw StateError('Unknown sensor_id: $id');
-    }
-
-    final sensorIndex = args['sensor_index'];
-    if (sensorIndex != null) {
-      final index = _asInt(sensorIndex, name: 'sensor_index');
-      if (index < 0 || index >= sensors.length) {
-        throw RangeError.index(index, sensors, 'sensor_index');
-      }
-      return sensors[index];
-    }
-
-    final sensorName = args['sensor_name'];
-    if (sensorName != null) {
-      final name = _asString(sensorName, name: 'sensor_name');
-      final matched =
-          sensors.where((sensor) => sensor.sensorName == name).toList();
-      if (matched.length != 1) {
-        throw StateError(
-          'sensor_name must resolve to exactly one sensor. Matches: ${matched.length}',
-        );
-      }
-      return matched.first;
-    }
-
-    throw ArgumentError(
-      'sensor_values subscription requires one of sensor_id, sensor_index, or sensor_name.',
-    );
-  }
-
-  Map<String, dynamic> _setSensorConfiguration(
-    Wearable wearable,
-    Map<String, dynamic> args,
-  ) {
-    final config = _requireSensorConfiguration(
-      wearable,
-      _asString(args['configuration_name'], name: 'configuration_name'),
-    );
-    final valueKey = _asString(args['value_key'], name: 'value_key');
-    final selected = config.values.where((v) => v.key == valueKey).firstOrNull;
-    if (selected == null) {
-      throw StateError(
-        'Value "$valueKey" not found for configuration ${config.name}.',
-      );
-    }
-
-    _applyConfiguration(config, selected);
-    return <String, dynamic>{
-      'configuration_name': config.name,
-      'value_key': selected.key,
-    };
-  }
-
-  Map<String, dynamic> _setSensorFrequencyBestEffort(
-    Wearable wearable,
-    Map<String, dynamic> args,
-  ) {
-    final config = _requireSensorConfiguration(
-      wearable,
-      _asString(args['configuration_name'], name: 'configuration_name'),
-    );
-    if (config is! SensorFrequencyConfiguration) {
-      throw UnsupportedError(
-        'Configuration ${config.name} is not frequency-based.',
-      );
-    }
-
-    final targetHz = _asInt(args['target_hz'], name: 'target_hz');
-    final streamData = _asOptionalBool(args['stream_data']);
-    final recordData = _asOptionalBool(args['record_data']);
-
-    final selected = _selectBestEffortFrequencyValue(
-      config: config,
-      targetHz: targetHz,
-      streamData: streamData,
-      recordData: recordData,
-    );
-
-    if (selected == null) {
-      throw StateError('No frequency value available for ${config.name}.');
-    }
-
-    _applyConfiguration(config, selected);
-    return <String, dynamic>{
-      'configuration_name': config.name,
-      'value_key': selected.key,
-      'target_hz': targetHz,
-      'selected_hz': _frequencyHzForValue(selected),
-    };
-  }
-
-  Map<String, dynamic> _setSensorMaximumFrequency(
-    Wearable wearable,
-    Map<String, dynamic> args,
-  ) {
-    final config = _requireSensorConfiguration(
-      wearable,
-      _asString(args['configuration_name'], name: 'configuration_name'),
-    );
-    if (config is! SensorFrequencyConfiguration) {
-      throw UnsupportedError(
-        'Configuration ${config.name} is not frequency-based.',
-      );
-    }
-
-    final streamData = _asOptionalBool(args['stream_data']);
-    final recordData = _asOptionalBool(args['record_data']);
-
-    final selected = _selectMaximumFrequencyValue(
-      config: config,
-      streamData: streamData,
-      recordData: recordData,
-    );
-
-    if (selected == null) {
-      throw StateError('No frequency value available for ${config.name}.');
-    }
-
-    _applyConfiguration(config, selected);
-    return <String, dynamic>{
-      'configuration_name': config.name,
-      'value_key': selected.key,
-      'selected_hz': _frequencyHzForValue(selected),
-    };
-  }
-
-  SensorConfiguration _requireSensorConfiguration(
-      Wearable wearable, String name) {
-    final manager = wearable.getCapability<SensorConfigurationManager>();
-    if (manager == null) {
-      throw StateError(
-          'Wearable has no SensorConfigurationManager capability.');
-    }
-
-    final config = manager.sensorConfigurations
-        .where((configuration) => configuration.name == name)
-        .firstOrNull;
-    if (config == null) {
-      throw StateError('Unknown configuration: $name');
-    }
-    return config;
-  }
-
-  void _applyConfiguration(
-    SensorConfiguration configuration,
-    SensorConfigurationValue value,
-  ) {
-    final dynamic dynamicConfiguration = configuration;
-    dynamicConfiguration.setConfiguration(value);
-  }
-
-  SensorConfigurationValue? _selectBestEffortFrequencyValue({
-    required SensorFrequencyConfiguration config,
-    required int targetHz,
-    required bool? streamData,
-    required bool? recordData,
-  }) {
-    final values = _filterConfigValuesByOptions(
-      config.values,
-      streamData: streamData,
-      recordData: recordData,
-    );
-
-    if (values.isEmpty) {
-      return null;
-    }
-
-    SensorConfigurationValue? lower;
-    SensorConfigurationValue? higher;
-
-    for (final value in values) {
-      final hz = _frequencyHzForValue(value);
-      if (hz == null) {
-        continue;
-      }
-
-      if (hz < targetHz) {
-        if (lower == null || hz > (_frequencyHzForValue(lower) ?? hz)) {
-          lower = value;
-        }
-      } else {
-        if (higher == null || hz < (_frequencyHzForValue(higher) ?? hz)) {
-          higher = value;
-        }
-      }
-    }
-
-    return higher ?? lower;
-  }
-
-  SensorConfigurationValue? _selectMaximumFrequencyValue({
-    required SensorFrequencyConfiguration config,
-    required bool? streamData,
-    required bool? recordData,
-  }) {
-    final values = _filterConfigValuesByOptions(
-      config.values,
-      streamData: streamData,
-      recordData: recordData,
-    );
-    if (values.isEmpty) {
-      return null;
-    }
-
-    SensorConfigurationValue? currentMax;
-    for (final value in values) {
-      final hz = _frequencyHzForValue(value);
-      if (hz == null) {
-        continue;
-      }
-      if (currentMax == null || hz > (_frequencyHzForValue(currentMax) ?? hz)) {
-        currentMax = value;
-      }
-    }
-    return currentMax;
-  }
-
-  List<SensorConfigurationValue> _filterConfigValuesByOptions(
-    List<SensorConfigurationValue> values, {
-    bool? streamData,
-    bool? recordData,
-  }) {
-    return values.where((value) {
-      if (value is! ConfigurableSensorConfigurationValue) {
-        return true;
-      }
-
-      bool hasOption<T extends SensorConfigurationOption>() {
-        return value.options.any((option) => option is T);
-      }
-
-      if (streamData != null &&
-          streamData != hasOption<StreamSensorConfigOption>()) {
-        return false;
-      }
-      if (recordData != null &&
-          recordData != hasOption<RecordSensorConfigOption>()) {
-        return false;
-      }
-      return true;
-    }).toList(growable: false);
-  }
-
-  double? _frequencyHzForValue(SensorConfigurationValue value) {
-    if (value is SensorFrequencyConfigurationValue) {
-      return value.frequencyHz;
-    }
-    return null;
-  }
-
-  Future<void> _playFrequency(
-      Wearable wearable, Map<String, dynamic> args) async {
-    final player = _requireCapability<FrequencyPlayer>(
-      wearable,
-      action: 'play_frequency',
-    );
-    final waveTypeKey = _asString(args['wave_type'], name: 'wave_type');
-    final waveType = player.supportedFrequencyPlayerWaveTypes
-        .where((wave) => wave.key == waveTypeKey)
-        .firstOrNull;
-    if (waveType == null) {
-      throw StateError('Unsupported wave type: $waveTypeKey');
-    }
-
-    final frequency = _asDouble(args['frequency']) ?? 440.0;
-    final loudness = _asDouble(args['loudness']) ?? 1.0;
-    await player.playFrequency(
-      waveType,
-      frequency: frequency,
-      loudness: loudness,
-    );
-  }
-
-  Future<void> _playJingle(Wearable wearable, Map<String, dynamic> args) async {
-    final player = _requireCapability<JinglePlayer>(
-      wearable,
-      action: 'play_jingle',
-    );
-    final key = _asString(args['jingle'], name: 'jingle');
-    final jingle =
-        player.supportedJingles.where((j) => j.key == key).firstOrNull;
-    if (jingle == null) {
-      throw StateError('Unsupported jingle: $key');
-    }
-    await player.playJingle(jingle);
-  }
-
-  void _setAudioMode(Wearable wearable, Map<String, dynamic> args) {
-    final manager = _requireCapability<AudioModeManager>(
-      wearable,
-      action: 'set_audio_mode',
-    );
-    final key = _asString(args['audio_mode'], name: 'audio_mode');
-    final mode =
-        manager.availableAudioModes.where((m) => m.key == key).firstOrNull;
-    if (mode == null) {
-      throw StateError('Unsupported audio_mode: $key');
-    }
-    manager.setAudioMode(mode);
-  }
-
-  List<String> _listMicrophones(Wearable wearable) {
-    final manager = _requireCapability<MicrophoneManager>(
-      wearable,
-      action: 'list_microphones',
-    );
-    final microphones = manager.availableMicrophones.cast<dynamic>();
-    return microphones.map((microphone) => microphone.key.toString()).toList();
-  }
-
-  Future<void> _setMicrophone(
-      Wearable wearable, Map<String, dynamic> args) async {
-    final manager = _requireCapability<MicrophoneManager>(
-      wearable,
-      action: 'set_microphone',
-    );
-    final key = _asString(args['microphone'], name: 'microphone');
-    final microphones = manager.availableMicrophones.cast<dynamic>();
-    final dynamic selected = microphones.where((microphone) {
-      return microphone.key.toString() == key;
-    }).firstOrNull;
-
-    if (selected == null) {
-      throw StateError('Unsupported microphone: $key');
-    }
-
-    manager.setMicrophone(selected);
-  }
-
-  Future<String?> _getMicrophone(Wearable wearable) async {
-    final manager = _requireCapability<MicrophoneManager>(
-      wearable,
-      action: 'get_microphone',
-    );
-    final dynamic microphone = await manager.getMicrophone();
-    return microphone?.key?.toString();
-  }
-
-  Future<void> _pairWearable(
-      Wearable wearable, Map<String, dynamic> args) async {
-    final stereo = _requireCapability<StereoDevice>(
-      wearable,
-      action: 'pair',
-    );
-    final otherDeviceId =
-        _asString(args['other_device_id'], name: 'other_device_id');
-    final partner = _requireConnectedWearable(otherDeviceId);
-    final partnerStereo = _requireCapability<StereoDevice>(
-      partner,
-      action: 'pair',
-    );
-    await stereo.pair(partnerStereo);
-  }
-
-  Future<Object?> _measureAudioResponse(
-    Wearable wearable,
-    Map<String, dynamic> args,
-  ) async {
-    final dynamic dynamicWearable = wearable;
-
-    try {
-      if (args.isEmpty) {
-        return await dynamicWearable.measureAudioResponse();
-      }
-      return await Function.apply(
-        dynamicWearable.measureAudioResponse,
-        const <Object?>[],
-        args.map((key, value) => MapEntry(Symbol(key), value)),
-      );
-    } on NoSuchMethodError {
-      if (args.isEmpty) {
-        return await dynamicWearable.measureFreqResponse();
-      }
-      return await Function.apply(
-        dynamicWearable.measureFreqResponse,
-        const <Object?>[],
-        args.map((key, value) => MapEntry(Symbol(key), value)),
-      );
-    }
-  }
 
   Map<String, dynamic> _serializeDiscovered(DiscoveredDevice device) {
     return <String, dynamic>{
@@ -1000,61 +367,6 @@ class WebSocketIpcServer {
       'type': wearable.runtimeType.toString(),
       'capabilities': _capabilitiesForWearable(wearable),
     };
-  }
-
-  List<Map<String, dynamic>> _serializeSensors(Wearable wearable) {
-    final manager = wearable.getCapability<SensorManager>();
-    if (manager == null) {
-      return const <Map<String, dynamic>>[];
-    }
-
-    final sensors = manager.sensors;
-    return [
-      for (var index = 0; index < sensors.length; index++)
-        <String, dynamic>{
-          'sensor_id': _sensorId(sensors[index], index),
-          'sensor_index': index,
-          'sensor_name': sensors[index].sensorName,
-          'chart_title': sensors[index].chartTitle,
-          'short_chart_title': sensors[index].shortChartTitle,
-          'axis_names': sensors[index].axisNames,
-          'axis_units': sensors[index].axisUnits,
-          'timestamp_exponent': sensors[index].timestampExponent,
-        },
-    ];
-  }
-
-  List<Map<String, dynamic>> _serializeSensorConfigurations(Wearable wearable) {
-    final manager = wearable.getCapability<SensorConfigurationManager>();
-    if (manager == null) {
-      return const <Map<String, dynamic>>[];
-    }
-
-    return manager.sensorConfigurations.map((configuration) {
-      return <String, dynamic>{
-        'name': configuration.name,
-        'unit': configuration.unit,
-        'values': configuration.values
-            .map((value) => _serializeSensorConfigurationValue(value))
-            .toList(),
-        'off_value': configuration.offValue?.key,
-      };
-    }).toList();
-  }
-
-  Map<String, dynamic> _serializeSensorConfigurationValue(
-    SensorConfigurationValue value,
-  ) {
-    final payload = <String, dynamic>{'key': value.key};
-
-    if (value is SensorFrequencyConfigurationValue) {
-      payload['frequency_hz'] = value.frequencyHz;
-    }
-    if (value is ConfigurableSensorConfigurationValue) {
-      payload['options'] = value.options.map((option) => option.name).toList();
-    }
-
-    return payload;
   }
 
   Object? _serializeStreamData(dynamic data) {
@@ -1112,7 +424,8 @@ class WebSocketIpcServer {
   }
 
   Map<String, dynamic> _serializeBatteryHealthStatus(
-      BatteryHealthStatus status) {
+    BatteryHealthStatus status,
+  ) {
     return <String, dynamic>{
       'health_summary': status.healthSummary,
       'cycle_count': status.cycleCount,
@@ -1121,7 +434,8 @@ class WebSocketIpcServer {
   }
 
   Map<String, dynamic> _serializeBatteryEnergyStatus(
-      BatteryEnergyStatus status) {
+    BatteryEnergyStatus status,
+  ) {
     return <String, dynamic>{
       'voltage': status.voltage,
       'available_capacity': status.availableCapacity,
@@ -1162,142 +476,12 @@ class WebSocketIpcServer {
     return capabilities;
   }
 
-  List<String> _actionsForWearable(Wearable wearable) {
-    final actions = <String>[
-      'disconnect',
-      'get_wearable_icon_path',
-      'list_sensors',
-      'list_sensor_configurations',
-      'set_sensor_configuration',
-      'set_sensor_frequency_best_effort',
-      'set_sensor_maximum_frequency',
-    ];
-
-    void addIf<T>(List<String> names) {
-      if (wearable.hasCapability<T>()) {
-        actions.addAll(names);
-      }
-    }
-
-    addIf<DeviceIdentifier>(<String>['read_device_identifier']);
-    addIf<DeviceFirmwareVersion>(<String>[
-      'read_device_firmware_version',
-      'read_firmware_version_number',
-      'check_firmware_support',
-    ]);
-    addIf<DeviceHardwareVersion>(<String>['read_device_hardware_version']);
-    addIf<RgbLed>(<String>['write_led_color']);
-    addIf<StatusLed>(<String>['show_status']);
-    addIf<BatteryLevelStatus>(<String>['read_battery_percentage']);
-    addIf<BatteryLevelStatusService>(<String>['read_power_status']);
-    addIf<BatteryHealthStatusService>(<String>['read_health_status']);
-    addIf<BatteryEnergyStatusService>(<String>['read_energy_status']);
-    addIf<FrequencyPlayer>(<String>['play_frequency', 'list_wave_types']);
-    addIf<JinglePlayer>(<String>['play_jingle', 'list_jingles']);
-    addIf<AudioPlayerControls>(
-        <String>['start_audio', 'pause_audio', 'stop_audio']);
-    addIf<StoragePathAudioPlayer>(<String>['play_audio_from_storage_path']);
-    addIf<AudioModeManager>(
-        <String>['list_audio_modes', 'set_audio_mode', 'get_audio_mode']);
-    addIf<MicrophoneManager>(
-        <String>['list_microphones', 'set_microphone', 'get_microphone']);
-    addIf<EdgeRecorderManager>(<String>['get_file_prefix', 'set_file_prefix']);
-    addIf<StereoDevice>(<String>['get_position', 'pair', 'unpair']);
-    addIf<SystemDevice>(<String>['is_connected_via_system']);
-    addIf<TimeSynchronizable>(
-        <String>['is_time_synchronized', 'synchronize_time']);
-
-    final dynamic dynamicWearable = wearable;
-    final hasMeasureAudioResponse = _hasDynamicMethod(
-      dynamicWearable,
-      'measureAudioResponse',
-    );
-    final hasMeasureFreqResponse = _hasDynamicMethod(
-      dynamicWearable,
-      'measureFreqResponse',
-    );
-    if (hasMeasureAudioResponse || hasMeasureFreqResponse) {
-      actions
-          .addAll(<String>['measure_audio_response', 'measure_freq_response']);
-    }
-
-    return actions;
-  }
-
-  List<String> _streamsForWearable(Wearable wearable) {
-    final streams = <String>[];
-    if (wearable.hasCapability<SensorManager>()) {
-      streams.add('sensor_values');
-    }
-    if (wearable.hasCapability<SensorConfigurationManager>()) {
-      streams.add('sensor_configuration');
-    }
-    if (wearable.hasCapability<ButtonManager>()) {
-      streams.add('button_events');
-    }
-    if (wearable.hasCapability<BatteryLevelStatus>()) {
-      streams.add('battery_percentage');
-    }
-    if (wearable.hasCapability<BatteryLevelStatusService>()) {
-      streams.add('battery_power_status');
-    }
-    if (wearable.hasCapability<BatteryHealthStatusService>()) {
-      streams.add('battery_health_status');
-    }
-    if (wearable.hasCapability<BatteryEnergyStatusService>()) {
-      streams.add('battery_energy_status');
-    }
-    return streams;
-  }
-
-  bool _hasDynamicMethod(dynamic target, String methodName) {
-    try {
-      // ignore: unnecessary_statements
-      target.noSuchMethod;
-      switch (methodName) {
-        case 'measureAudioResponse':
-          // ignore: unnecessary_statements
-          target.measureAudioResponse;
-          return true;
-        case 'measureFreqResponse':
-          // ignore: unnecessary_statements
-          target.measureFreqResponse;
-          return true;
-        default:
-          return false;
-      }
-    } on NoSuchMethodError {
-      return false;
-    }
-  }
-
   Wearable _requireConnectedWearable(String deviceId) {
     final wearable = _connectedWearablesById[deviceId];
     if (wearable == null) {
       throw StateError('No connected wearable for device_id: $deviceId');
     }
     return wearable;
-  }
-
-  T _requireCapability<T>(
-    Wearable wearable, {
-    required String action,
-  }) {
-    final capability = wearable.getCapability<T>();
-    if (capability != null) {
-      return capability;
-    }
-    throw UnsupportedError(
-      'Action "$action" requires capability $T on ${wearable.deviceId}.',
-    );
-  }
-
-  String _sensorId(Sensor sensor, int index) {
-    final normalized = sensor.sensorName
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
-        .replaceAll(RegExp(r'^_+|_+$'), '');
-    return '${normalized}_$index';
   }
 
   String _normalizePath(String path) {
@@ -1348,71 +532,6 @@ class WebSocketIpcServer {
     throw FormatException('Expected params/args to be an object.');
   }
 
-  String _asString(Object? value, {required String name}) {
-    if (value is String) {
-      return value;
-    }
-    throw FormatException('Expected "$name" to be a string.');
-  }
-
-  bool? _asOptionalBool(Object? value) {
-    if (value == null) {
-      return null;
-    }
-    if (value is bool) {
-      return value;
-    }
-    throw const FormatException('Expected a boolean.');
-  }
-
-  bool _asRequiredBool(Object? value, {required String name}) {
-    if (value is bool) {
-      return value;
-    }
-    throw FormatException('Expected "$name" to be a boolean.');
-  }
-
-  int _asInt(Object? value, {required String name}) {
-    if (value is int) {
-      return value;
-    }
-    if (value is num) {
-      return value.toInt();
-    }
-    if (value is String) {
-      final parsed = int.tryParse(value);
-      if (parsed != null) {
-        return parsed;
-      }
-    }
-    throw FormatException('Expected "$name" to be an integer.');
-  }
-
-  double? _asDouble(Object? value) {
-    if (value == null) {
-      return null;
-    }
-    if (value is double) {
-      return value;
-    }
-    if (value is num) {
-      return value.toDouble();
-    }
-    if (value is String) {
-      return double.tryParse(value);
-    }
-    return null;
-  }
-
-  List<String> _asStringList(Object? value) {
-    if (value == null) {
-      return <String>[];
-    }
-    if (value is List) {
-      return value.map((entry) => entry.toString()).toList(growable: false);
-    }
-    throw FormatException('Expected a list of strings.');
-  }
 }
 
 class _ClientSession {
@@ -1479,7 +598,8 @@ class _ClientSession {
       final method = request['method'];
       if (method is! String || method.trim().isEmpty) {
         throw const FormatException(
-            'Request method must be a non-empty string.');
+          'Request method must be a non-empty string.',
+        );
       }
 
       final params = server._asMap(request['params']);
@@ -1589,14 +709,5 @@ class _ClientSession {
 
     await socket.close();
     server._onClientClosed(this);
-  }
-}
-
-extension<T> on Iterable<T> {
-  T? get firstOrNull {
-    if (isEmpty) {
-      return null;
-    }
-    return first;
   }
 }
