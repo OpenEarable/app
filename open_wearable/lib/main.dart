@@ -35,11 +35,14 @@ import 'view_models/wearables_provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   LogFileManager logFileManager = await LogFileManager.create();
+  final wearableConnector = WearableConnector();
   initOpenWearableLogger(logFileManager.libLogger);
   initLogger(logFileManager.logger);
   await AutoConnectPreferences.initialize();
   await AppShutdownSettings.initialize();
-  await ConnectorSettings.initialize();
+  await ConnectorSettings.initialize(
+    wearableConnector: wearableConnector,
+  );
 
   runApp(
     MultiProvider(
@@ -58,7 +61,7 @@ void main() async {
             return provider;
           },
         ),
-        Provider.value(value: WearableConnector()),
+        Provider.value(value: wearableConnector),
         ChangeNotifierProvider(
           create: (context) => AppBannerController(),
         ),
