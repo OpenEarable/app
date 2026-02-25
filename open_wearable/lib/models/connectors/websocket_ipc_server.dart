@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/models/wearable_connector.dart';
 
 class WebSocketIpcServer {
   static const String defaultHost = '127.0.0.1';
@@ -10,6 +11,7 @@ class WebSocketIpcServer {
   static const String defaultPath = '/ws';
 
   final WearableManager _wearableManager;
+  final WearableConnector _wearableConnector;
 
   HttpServer? _httpServer;
   String _host = defaultHost;
@@ -27,8 +29,11 @@ class WebSocketIpcServer {
 
   int _nextSubscriptionId = 1;
 
-  WebSocketIpcServer({WearableManager? wearableManager})
-      : _wearableManager = wearableManager ?? WearableManager();
+  WebSocketIpcServer({
+    WearableManager? wearableManager,
+    WearableConnector? wearableConnector,
+  })  : _wearableManager = wearableManager ?? WearableManager(),
+        _wearableConnector = wearableConnector ?? WearableConnector();
 
   bool get isRunning => _httpServer != null;
 
@@ -141,6 +146,7 @@ class WebSocketIpcServer {
       case 'start_scan':
         final checkAndRequestPermissions =
             _asOptionalBool(params['check_and_request_permissions']) ?? true;
+        _discoveredDevicesById.clear();
         await _wearableManager.startScan(
           checkAndRequestPermissions: checkAndRequestPermissions,
         );
@@ -189,7 +195,7 @@ class WebSocketIpcServer {
         ? <ConnectionOption>{const ConnectedViaSystem()}
         : const <ConnectionOption>{};
 
-    final wearable = await _wearableManager.connectToDevice(
+    final wearable = await _wearableConnector.connect(
       discovered,
       options: options,
     );
@@ -201,7 +207,7 @@ class WebSocketIpcServer {
     Map<String, dynamic> params,
   ) async {
     final ignoredIds = _asStringList(params['ignored_device_ids']);
-    final wearables = await _wearableManager.connectToSystemDevices(
+    final wearables = await _wearableConnector.connectToSystemDevices(
       ignoredDeviceIds: ignoredIds,
     );
     for (final wearable in wearables) {

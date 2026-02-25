@@ -58,15 +58,23 @@ class WearableConnector {
 
   WearableConnector([WearableManager? wm]) : _wm = wm ?? WearableManager();
 
-  Future<Wearable> connect(DiscoveredDevice device) async {
-    final wearable = await _wm.connectToDevice(device);
+  Future<Wearable> connect(
+    DiscoveredDevice device, {
+    Set<ConnectionOption> options = const {},
+  }) async {
+    final wearable = await _wm.connectToDevice(device, options: options);
     _handleConnection(wearable);
     return wearable;
   }
 
-  Future<void> connectToSystemDevices() async {
-    List<Wearable> connectedWearables = await _wm.connectToSystemDevices();
+  Future<List<Wearable>> connectToSystemDevices({
+    List<String> ignoredDeviceIds = const [],
+  }) async {
+    final connectedWearables = await _wm.connectToSystemDevices(
+      ignoredDeviceIds: ignoredDeviceIds,
+    );
     connectedWearables.forEach(_handleConnection);
+    return connectedWearables;
   }
 
   void _handleConnection(Wearable wearable) {
