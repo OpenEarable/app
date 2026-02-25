@@ -3,6 +3,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:open_wearable/models/wearable_connector.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'connectors/websocket_ipc_server.dart';
@@ -88,7 +89,7 @@ class ConnectorSettings {
   static const String _websocketPortKey = 'connector_websocket_port';
   static const String _websocketPathKey = 'connector_websocket_path';
 
-  static final WebSocketIpcServer _webSocketServer = WebSocketIpcServer();
+  static WebSocketIpcServer _webSocketServer = WebSocketIpcServer();
 
   static final ValueNotifier<WebSocketConnectorSettings>
       _webSocketSettingsNotifier = ValueNotifier<WebSocketConnectorSettings>(
@@ -112,7 +113,14 @@ class ConnectorSettings {
   static ConnectorRuntimeStatus get currentWebSocketRuntimeStatus =>
       _webSocketRuntimeStatusNotifier.value;
 
-  static Future<void> initialize() async {
+  static Future<void> initialize({
+    WearableConnector? wearableConnector,
+  }) async {
+    if (wearableConnector != null) {
+      _webSocketServer = WebSocketIpcServer(
+        wearableConnector: wearableConnector,
+      );
+    }
     final settings = await loadWebSocketSettings();
     await applyWebSocketSettings(settings);
   }
