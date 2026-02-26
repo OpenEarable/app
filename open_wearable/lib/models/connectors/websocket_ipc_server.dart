@@ -32,6 +32,8 @@ class WebSocketIpcServer implements CommandRuntime {
   StreamSubscription<DiscoveredDevice>? _scanSubscription;
   StreamSubscription<DiscoveredDevice>? _connectingSubscription;
   StreamSubscription<Wearable>? _connectSubscription;
+  final StreamController<DiscoveredDevice> _scanEventsController =
+      StreamController<DiscoveredDevice>.broadcast();
 
   int _nextSubscriptionId = 1;
   final Map<String, Command> _topLevelCommands = <String, Command>{};
@@ -179,6 +181,9 @@ class WebSocketIpcServer implements CommandRuntime {
   }
 
   @override
+  Stream<DiscoveredDevice> get scanEvents => _scanEventsController.stream;
+
+  @override
   Future<Map<String, dynamic>> connect({
     required String deviceId,
     bool connectedViaSystem = false,
@@ -297,6 +302,7 @@ class WebSocketIpcServer implements CommandRuntime {
   void _attachManagerSubscriptions() {
     _scanSubscription ??= _wearableManager.scanStream.listen((device) {
       _discoveredDevicesById[device.id] = device;
+      _scanEventsController.add(device);
       _broadcastEvent(
         <String, dynamic>{
           'event': 'scan',
@@ -349,7 +355,6 @@ class WebSocketIpcServer implements CommandRuntime {
     );
   }
 
-
   Map<String, dynamic> _serializeDiscovered(DiscoveredDevice device) {
     return <String, dynamic>{
       'id': device.id,
@@ -370,6 +375,9 @@ class WebSocketIpcServer implements CommandRuntime {
   }
 
   Object? _serializeStreamData(dynamic data) {
+    if (data is DiscoveredDevice) {
+      return _serializeDiscovered(data);
+    }
     if (data is SensorValue) {
       final payload = <String, dynamic>{
         'timestamp': data.timestamp,
@@ -531,7 +539,6 @@ class WebSocketIpcServer implements CommandRuntime {
     }
     throw FormatException('Expected params/args to be an object.');
   }
-
 }
 
 class _ClientSession {
