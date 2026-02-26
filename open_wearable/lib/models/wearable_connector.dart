@@ -26,7 +26,9 @@ enum DisconnectReason { user, system }
 final class WearableDisconnectedEvent extends WearableConnectionEvent {
   final DisconnectReason disconnectReason;
   WearableDisconnectedEvent(
-      this.disconnectReason, /*super.discoveredDevice, */ super.wearable);
+    this.disconnectReason,
+    /*super.discoveredDevice, */ super.wearable,
+  );
 }
 
 /// Emitted when two wearable sides are paired.
@@ -70,8 +72,12 @@ class WearableConnector {
   void _handleConnection(Wearable wearable) {
     //_connectedDevices[device] = wearable;
     wearable.addDisconnectListener(() {
-      _events.add(WearableDisconnectedEvent(
-          DisconnectReason.system, /* device, */ wearable));
+      _events.add(
+        WearableDisconnectedEvent(
+          DisconnectReason.system,
+          /* device, */ wearable,
+        ),
+      );
       //_connectedDevices.remove(device);
     });
     _events.add(WearableConnectEvent(/*device, */ wearable));
