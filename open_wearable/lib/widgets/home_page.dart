@@ -1,114 +1,253 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:go_router/go_router.dart';
 import 'package:open_wearable/apps/widgets/apps_page.dart';
 import 'package:open_wearable/widgets/devices/devices_page.dart';
-import 'package:open_wearable/widgets/sensors/configuration/sensor_configuration_view.dart';
-import 'package:open_wearable/widgets/sensors/values/sensor_values_page.dart';
+import 'package:open_wearable/widgets/home_page_overview.dart';
+import 'package:open_wearable/widgets/settings/settings_page.dart';
 
 import 'sensors/sensor_page.dart';
 
-/// The home page of the app.
-///
-/// The home page contains a tab bar and an AppBar.
+const int _overviewIndex = 0;
+const int _devicesIndex = 1;
+const int _sensorsIndex = 2;
+const int _sectionCount = 5;
+
+const double _largeScreenBreakpoint = 960;
+
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final int initialSectionIndex;
+
+  const HomePage({super.key, this.initialSectionIndex = _overviewIndex});
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  static final titles = ["Devices", "Sensors", "Apps"];
+  late final PlatformTabController _tabController;
+  late final SensorPageController _sensorPageController;
+  late final List<_HomeDestination> _destinations;
+  late final List<Widget> _sections;
+  int _selectedIndex = _overviewIndex;
 
-  List<BottomNavigationBarItem> items(BuildContext context) {
-    return [
-      BottomNavigationBarItem(
-        icon: Icon(Icons.devices),
-        label: titles[0],
-      ),
-      BottomNavigationBarItem(
-        icon: Icon(Icons.ssid_chart_rounded),
-        label: titles[1],
-      ),
-      BottomNavigationBarItem(
-        icon: Icon(Icons.apps_rounded),
-        label: titles[2],
-      ),
-    ];
+  int _normalizeSectionIndex(int requested) {
+    return (requested >= _overviewIndex && requested < _sectionCount)
+        ? requested
+        : _overviewIndex;
   }
-
-  late PlatformTabController _controller;
-
-  late List<Widget> _tabs;
 
   @override
   void initState() {
     super.initState();
-    _controller = PlatformTabController(initialIndex: 0);
-    _tabs = [
-      DevicesPage(),
-      SensorPage(),
-      const AppsPage(),
+
+    final initialIndex = _normalizeSectionIndex(widget.initialSectionIndex);
+    _selectedIndex = initialIndex;
+
+    _tabController = PlatformTabController(initialIndex: initialIndex);
+    _sensorPageController = SensorPageController();
+    _tabController.addListener(_syncSelectedIndex);
+
+    _destinations = const [
+      _HomeDestination(
+        title: 'Overview',
+        icon: Icons.home_outlined,
+        selectedIcon: Icons.home,
+      ),
+      _HomeDestination(
+        title: 'Devices',
+        icon: Icons.dashboard_outlined,
+        selectedIcon: Icons.dashboard,
+      ),
+      _HomeDestination(
+        title: 'Sensors',
+        icon: Icons.ssid_chart_outlined,
+        selectedIcon: Icons.ssid_chart,
+      ),
+      _HomeDestination(
+        title: 'Apps',
+        icon: Icons.apps_outlined,
+        selectedIcon: Icons.apps,
+      ),
+      _HomeDestination(
+        title: 'Settings',
+        icon: Icons.settings_outlined,
+        selectedIcon: Icons.settings,
+      ),
     ];
+
+    _sections = [
+      OverviewPage(
+        onDeviceSectionRequested: () => _jumpToSection(_devicesIndex),
+        onConnectRequested: _openConnectDevices,
+        onSensorTabRequested: _openSensorsTab,
+      ),
+      const DevicesPage(),
+      SensorPage(controller: _sensorPageController),
+      const AppsPage(),
+      SettingsPage(
+        onLogsRequested: _openLogFiles,
+        onConnectRequested: _openConnectDevices,
+        onGeneralSettingsRequested: _openGeneralSettings,
+      ),
+    ];
+  }
+
+  @override
+  void didUpdateWidget(covariant HomePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialSectionIndex == widget.initialSectionIndex) {
+      return;
+    }
+
+    final nextIndex = _normalizeSectionIndex(widget.initialSectionIndex);
+    if (_selectedIndex != nextIndex) {
+      _selectedIndex = nextIndex;
+    }
+    _tabController.setIndex(context, nextIndex);
+  }
+
+  @override
+  void dispose() {
+    _tabController.removeListener(_syncSelectedIndex);
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        return _buildSmallScreenLayout(context);
+        if (constraints.maxWidth >= _largeScreenBreakpoint) {
+          return _buildLargeScreenLayout(context);
+        }
+        return _buildCompactLayout(context);
       },
     );
   }
 
-  // ignore: unused_element
-  Widget _buildLargeScreenLayout(BuildContext context) {
-    return PlatformScaffold(
-      appBar: PlatformAppBar(
-        title: PlatformText("OpenWearable"),
+  Widget _buildCompactLayout(BuildContext context) {
+    return PlatformTabScaffold(
+      tabController: _tabController,
+      items: _destinations
+          .map(
+            (destination) => BottomNavigationBarItem(
+              icon: Icon(destination.icon),
+              activeIcon: Icon(destination.selectedIcon),
+              label: destination.title,
+            ),
+          )
+          .toList(),
+      bodyBuilder: (context, index) => IndexedStack(
+        index: index,
+        children: _sections,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(10),
-        child: ListView(
+    );
+  }
+
+  Widget _buildLargeScreenLayout(BuildContext context) {
+    final bool useExtendedRail = MediaQuery.of(context).size.width >= 1280;
+
+    return PlatformScaffold(
+      body: SafeArea(
+        child: Row(
           children: [
-            PlatformText(
-              "Connected Devices",
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyLarge
-                  ?.copyWith(color: Theme.of(context).colorScheme.surfaceTint),
+            NavigationRail(
+              selectedIndex: _selectedIndex,
+              onDestinationSelected: (index) => _selectSection(context, index),
+              labelType: NavigationRailLabelType.all,
+              extended: useExtendedRail,
+              leading: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: useExtendedRail
+                    ? Text(
+                        'OpenWearable',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      )
+                    : Icon(
+                        Icons.watch,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+              ),
+              destinations: _destinations
+                  .map(
+                    (destination) => NavigationRailDestination(
+                      icon: Icon(destination.icon),
+                      selectedIcon: Icon(destination.selectedIcon),
+                      label: Text(destination.title),
+                    ),
+                  )
+                  .toList(),
             ),
-            DevicesPage(),
-            PlatformText(
-              "Sensor Configuration",
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyLarge
-                  ?.copyWith(color: Theme.of(context).colorScheme.surfaceTint),
+            const VerticalDivider(width: 1),
+            Expanded(
+              child: IndexedStack(
+                index: _selectedIndex,
+                children: _sections,
+              ),
             ),
-            SensorConfigurationView(),
-            PlatformText(
-              "Sensor Values",
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyLarge
-                  ?.copyWith(color: Theme.of(context).colorScheme.surfaceTint),
-            ),
-            SensorValuesPage(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSmallScreenLayout(BuildContext context) {
-    return PlatformTabScaffold(
-      tabController: _controller,
-      bodyBuilder: (context, index) => IndexedStack(
-        index: index,
-        children: _tabs,
-      ),
-      items: items(context),
-    );
+  void _syncSelectedIndex() {
+    if (!mounted) return;
+    final int controllerIndex = _tabController.index(context);
+    if (_selectedIndex != controllerIndex) {
+      setState(() {
+        _selectedIndex = controllerIndex;
+      });
+    }
   }
+
+  void _jumpToSection(int index) {
+    if (!mounted) return;
+    _selectSection(context, index);
+  }
+
+  void _selectSection(BuildContext context, int index) {
+    if (index < 0 || index >= _sections.length) return;
+
+    if (_selectedIndex != index) {
+      setState(() {
+        _selectedIndex = index;
+      });
+    }
+    _tabController.setIndex(context, index);
+  }
+
+  void _openConnectDevices() {
+    if (!mounted) return;
+    context.push('/connect-devices');
+  }
+
+  void _openSensorsTab(int tabIndex) {
+    if (!mounted) return;
+    _selectSection(context, _sensorsIndex);
+    _sensorPageController.openTab(tabIndex);
+  }
+
+  void _openLogFiles() {
+    if (!mounted) return;
+    context.push('/log-files');
+  }
+
+  void _openGeneralSettings() {
+    if (!mounted) return;
+    context.push('/settings/general');
+  }
+}
+
+class _HomeDestination {
+  final String title;
+  final IconData icon;
+  final IconData selectedIcon;
+
+  const _HomeDestination({
+    required this.title,
+    required this.icon,
+    required this.selectedIcon,
+  });
 }

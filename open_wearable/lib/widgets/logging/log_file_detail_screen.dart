@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 
 class LogFileDetailScreen extends StatefulWidget {
   const LogFileDetailScreen({
@@ -16,21 +17,31 @@ class LogFileDetailScreen extends StatefulWidget {
 
 class _LogFileDetailScreenState extends State<LogFileDetailScreen> {
   late final Future<String> _contentFuture;
+  late final ScrollController _verticalController;
+  late final ScrollController _horizontalController;
 
   @override
   void initState() {
     super.initState();
     // Read the file only once; FutureBuilder will reuse this future.
     _contentFuture = widget.file.readAsString();
+    _verticalController = ScrollController();
+    _horizontalController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _verticalController.dispose();
+    _horizontalController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final fileName =
-        widget.file.path.split(Platform.pathSeparator).last;
+    final fileName = widget.file.path.split(Platform.pathSeparator).last;
 
-    return Scaffold(
-      appBar: AppBar(
+    return PlatformScaffold(
+      appBar: PlatformAppBar(
         title: Text(fileName),
       ),
       body: FutureBuilder<String>(
@@ -38,7 +49,7 @@ class _LogFileDetailScreenState extends State<LogFileDetailScreen> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(),
+              child: PlatformCircularProgressIndicator(),
             );
           }
 
@@ -59,23 +70,24 @@ class _LogFileDetailScreenState extends State<LogFileDetailScreen> {
             );
           }
 
-          // Scrollbars + both directions scrolling, no line wrapping.
-          final verticalController = ScrollController();
-          final horizontalController = ScrollController();
-
           return Scrollbar(
-            controller: verticalController,
+            controller: _verticalController,
             thumbVisibility: true,
             child: SingleChildScrollView(
-              controller: verticalController,
-              padding: const EdgeInsets.all(12),
+              controller: _verticalController,
+              padding: EdgeInsets.fromLTRB(
+                12,
+                12,
+                12,
+                12 + MediaQuery.paddingOf(context).bottom,
+              ),
               child: Scrollbar(
-                controller: horizontalController,
+                controller: _horizontalController,
                 thumbVisibility: true,
                 notificationPredicate: (notif) =>
                     notif.metrics.axis == Axis.horizontal,
                 child: SingleChildScrollView(
-                  controller: horizontalController,
+                  controller: _horizontalController,
                   scrollDirection: Axis.horizontal,
                   child: SelectableText(
                     content,

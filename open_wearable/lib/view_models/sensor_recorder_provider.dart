@@ -5,7 +5,22 @@ import 'package:flutter/foundation.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 
 import '../models/logger.dart';
+import '../models/sensor_streams.dart';
 
+/// Runtime recorder state for connected wearables and sensors.
+///
+/// Needs:
+/// - Connected wearables (optionally with `SensorManager` capability).
+/// - Writable target directory for CSV output.
+///
+/// Does:
+/// - Builds/owns per-wearable recorder maps.
+/// - Starts/stops all active recorder streams.
+/// - Keeps recording behavior consistent across wearable reconnects.
+///
+/// Provides:
+/// - Recording status (`isRecording`, `recordingStart`, etc.).
+/// - Recorder access used by recorder UI pages.
 class SensorRecorderProvider with ChangeNotifier {
   final Map<Wearable, Map<Sensor, Recorder>> _recorders = {};
 
@@ -71,11 +86,11 @@ class SensorRecorderProvider with ChangeNotifier {
 
     wearable.addDisconnectListener(() {
       removeWearable(wearable);
-      notifyListeners();
     });
 
     if (wearable.hasCapability<SensorManager>()) {
-      for (Sensor sensor in wearable.requireCapability<SensorManager>().sensors) {
+      for (Sensor sensor
+          in wearable.requireCapability<SensorManager>().sensors) {
         if (!_recorders[wearable]!.containsKey(sensor)) {
           _recorders[wearable]![sensor] = Recorder(columns: sensor.axisNames);
         }
@@ -147,7 +162,7 @@ class SensorRecorderProvider with ChangeNotifier {
 
       File file = await recorder.start(
         filepath: filepath,
-        inputStream: sensor.sensorStream,
+        inputStream: SensorStreams.shared(sensor),
       );
 
       logger.i(

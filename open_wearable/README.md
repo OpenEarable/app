@@ -1,16 +1,28 @@
-# open_wearable
+# OpenWearable App Module
 
-A new Flutter project.
+Flutter application module for the OpenEarable app.
 
-## Getting Started
+## Documentation
 
-This project is a starting point for a Flutter application.
+High-level architecture and state-management docs live in [`docs/`](./docs/README.md).
 
-A few resources to get you started if this is your first Flutter project:
+- [App Setup and Architecture](./docs/app-setup.md)
+- [State and Providers](./docs/state-and-providers.md)
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Development Quick Start
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+1. Install Flutter (stable channel).
+2. From this folder (`open_wearable/`), fetch dependencies:
+   ```bash
+   flutter pub get
+   ```
+3. Run on a connected device/emulator:
+   ```bash
+   flutter run
+   ```
+
+## Notes
+
+- Core app bootstrap is in `lib/main.dart`.
+- Route definitions are in `lib/router.dart`.
+- High-level feature state is primarily under `lib/view_models/`.
