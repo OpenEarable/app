@@ -3,6 +3,7 @@ import 'command.dart';
 import 'connect_command.dart';
 import 'connect_system_devices_command.dart';
 import 'disconnect_command.dart';
+import 'async_scan_command.dart';
 import 'get_discovered_devices_command.dart';
 import 'has_permissions_command.dart';
 import 'invoke_action_command.dart';
@@ -21,6 +22,7 @@ List<Command> createDefaultIpcCommands(CommandRuntime runtime) {
     HasPermissionsCommand(runtime: runtime),
     CheckAndRequestPermissionsCommand(runtime: runtime),
     StartScanCommand(runtime: runtime),
+    AsyncScanCommand(runtime: runtime),
     GetDiscoveredDevicesCommand(runtime: runtime),
     ConnectCommand(runtime: runtime),
     ConnectSystemDevicesCommand(runtime: runtime),

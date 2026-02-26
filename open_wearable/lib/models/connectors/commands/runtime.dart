@@ -12,6 +12,7 @@ abstract class CommandRuntime {
   });
 
   Future<List<Map<String, dynamic>>> getDiscoveredDevices();
+  Stream<DiscoveredDevice> get scanEvents;
 
   Future<Map<String, dynamic>> connect({
     required String deviceId,
