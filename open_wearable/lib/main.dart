@@ -8,6 +8,7 @@ import 'package:open_wearable/models/app_background_execution_bridge.dart';
 import 'package:open_wearable/models/app_launch_session.dart';
 import 'package:open_wearable/models/app_shutdown_settings.dart';
 import 'package:open_wearable/models/auto_connect_preferences.dart';
+import 'package:open_wearable/models/connector_settings.dart';
 import 'package:open_wearable/models/log_file_manager.dart';
 import 'package:open_wearable/models/fota_post_update_verification.dart';
 import 'package:open_wearable/models/wearable_connector.dart'
@@ -30,10 +31,14 @@ import 'view_models/wearables_provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   LogFileManager logFileManager = await LogFileManager.create();
+  final wearableConnector = WearableConnector();
   initOpenWearableLogger(logFileManager.libLogger);
   initLogger(logFileManager.logger);
   await AutoConnectPreferences.initialize();
   await AppShutdownSettings.initialize();
+  await ConnectorSettings.initialize(
+    wearableConnector: wearableConnector,
+  );
 
   runApp(
     MultiProvider(
@@ -45,7 +50,7 @@ void main() async {
         ChangeNotifierProvider(
           create: (context) => SensorRecorderProvider(),
         ),
-        Provider.value(value: WearableConnector()),
+        Provider.value(value: wearableConnector),
         ChangeNotifierProvider(
           create: (context) => AppBannerController(),
         ),
@@ -618,6 +623,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    unawaited(ConnectorSettings.dispose());
     _unsupportedFirmwareSub.cancel();
     _wearableEventSub.cancel();
     _wearableProvEventSub.cancel();
