@@ -72,6 +72,7 @@ class SensorRecorderProvider with ChangeNotifier {
 
     wearable.addDisconnectListener(() {
       removeWearable(wearable);
+      notifyListeners();
     });
 
     if (wearable.hasCapability<SensorManager>()) {
