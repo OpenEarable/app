@@ -8,8 +8,8 @@ class LoggerScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return PlatformScaffold(
-      appBar: PlatformAppBar(
+    return Scaffold(
+      appBar: AppBar(
         title: PlatformText('Log'),
       ),
       body: _logFutureBuilder(),
@@ -17,22 +17,18 @@ class LoggerScreen extends StatelessWidget {
   }
 
   Widget _logFutureBuilder() {
-    return FutureBuilder<List<McuLogMessage>>(
+    return FutureBuilder(
       future: logger.readLogs(),
       builder: (context, snapshot) {
         if (snapshot.hasData) {
-          final messages = (snapshot.data ?? const <McuLogMessage>[])
+          final messages = (snapshot.data as List<McuLogMessage>)
               .where((element) => element.level.rawValue >= 1)
               .toList();
           return _messageList(messages);
         } else if (snapshot.hasError) {
-          return Center(
-            child: PlatformText(snapshot.error.toString()),
-          );
+          return PlatformText(snapshot.error.toString());
         }
-        return const Center(
-          child: PlatformCircularProgressIndicator(),
-        );
+        return CircularProgressIndicator();
       },
     );
   }
