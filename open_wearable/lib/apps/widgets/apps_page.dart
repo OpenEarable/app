@@ -91,13 +91,12 @@ final List<AppInfo> _apps = [
     accentColor: _appAccentColor,
     widget: SelectEarableView(
       supportedDevicePrefixes: _postureSupportedDevices,
-      startApp: (wearable, sensorConfigProvider) async {
+      startApp: (wearable, sensorConfigProvider) {
         return PostureTrackerView(
           EarableAttitudeTracker(
             wearable.requireCapability<SensorManager>(),
             sensorConfigProvider,
-            wearable.hasCapability<StereoDevice>() &&
-                await wearable.requireCapability<StereoDevice>().position == DevicePosition.left,
+            wearable.name.endsWith("L"),
           ),
         );
       },
@@ -111,7 +110,7 @@ final List<AppInfo> _apps = [
     accentColor: _appAccentColor,
     widget: SelectEarableView(
       supportedDevicePrefixes: _heartSupportedDevices,
-      startApp: (wearable, _) async {
+      startApp: (wearable, _) {
         if (wearable.hasCapability<SensorManager>()) {
           final sensors = wearable.requireCapability<SensorManager>().sensors;
           Sensor? ppgSensor;
