@@ -1,9 +1,5 @@
 import 'package:flutter/services.dart';
 
-/// Best-effort platform bridge for temporary background execution windows.
-///
-/// Used when the app needs short background time for sensor shutdown or
-/// recorder-related handoff.
 class AppBackgroundExecutionBridge {
   static const MethodChannel _channel = MethodChannel(
     'edu.kit.teco.open_wearable/lifecycle',

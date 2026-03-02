@@ -2,50 +2,34 @@ import 'dart:async';
 
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 
-/// Base event type emitted by [WearableConnector].
 abstract class WearableEvent {
   final Wearable wearable;
   WearableEvent(this.wearable);
 }
 
-/// Base class for wearable connection lifecycle events.
 abstract class WearableConnectionEvent extends WearableEvent {
   // final DiscoveredDevice discoveredDevice;
-  WearableConnectionEvent(/*this.discoveredDevice, */ super.wearable);
+  WearableConnectionEvent(/*this.discoveredDevice, */super.wearable);
 }
-
-/// Emitted when a wearable connection is established.
 final class WearableConnectEvent extends WearableConnectionEvent {
-  WearableConnectEvent(/*super.discoveredDevice, */ super.wearable);
+  WearableConnectEvent(/*super.discoveredDevice, */super.wearable);
 }
 
-/// Disconnection reason used by [WearableDisconnectedEvent].
-enum DisconnectReason { user, system }
-
-/// Emitted when an already connected wearable disconnects.
+enum DisconnectReason {
+  user, system
+}
 final class WearableDisconnectedEvent extends WearableConnectionEvent {
   final DisconnectReason disconnectReason;
-  WearableDisconnectedEvent(
-      this.disconnectReason, /*super.discoveredDevice, */ super.wearable);
+  WearableDisconnectedEvent(this.disconnectReason, /*super.discoveredDevice, */super.wearable);
 }
 
-/// Emitted when two wearable sides are paired.
 final class WearableStereoPairedEvent extends WearableEvent {
   final Wearable partner;
   WearableStereoPairedEvent(this.partner, super.wearable);
 }
 
-/// Connection facade around `WearableManager` with a broadcast event stream.
-///
-/// Needs:
-/// - A configured `WearableManager` (default or injected).
-///
-/// Does:
-/// - Connects discovered/system devices.
-/// - Emits connection/disconnection events.
-///
-/// Provides:
-/// - A single stream (`events`) consumed by app-level orchestration.
+
+/// This class handles all connections with wearables and notifies subscribers over Wearable events
 class WearableConnector {
   // final Map<DiscoveredDevice, Wearable> _connectedDevices = {};
 
@@ -70,10 +54,9 @@ class WearableConnector {
   void _handleConnection(Wearable wearable) {
     //_connectedDevices[device] = wearable;
     wearable.addDisconnectListener(() {
-      _events.add(WearableDisconnectedEvent(
-          DisconnectReason.system, /* device, */ wearable));
+      _events.add(WearableDisconnectedEvent(DisconnectReason.system,/* device, */wearable));
       //_connectedDevices.remove(device);
     });
-    _events.add(WearableConnectEvent(/*device, */ wearable));
+    _events.add(WearableConnectEvent(/*device, */wearable));
   }
 }

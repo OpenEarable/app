@@ -1,7 +1,3 @@
-/// Tracks whether an in-app feature flow is currently open.
-///
-/// This is used by lifecycle logic to decide whether temporary flow screens
-/// should be closed after background-triggered sensor shutdown.
 class AppLaunchSession {
   static int _openAppFlowCount = 0;
 
