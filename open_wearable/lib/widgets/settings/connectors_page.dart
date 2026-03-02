@@ -100,7 +100,7 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
 
       AppToast.show(
         context,
-        message: 'WebSocket IPC settings saved.',
+        message: 'Network connector settings saved.',
         type: AppToastType.success,
         icon: Icons.check_circle_outline_rounded,
       );
@@ -110,11 +110,65 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
       }
       setState(() {
         _validationMessage =
-            'Could not start WebSocket IPC server: ${error.toString()}';
+            'Could not start network connector server: ${error.toString()}';
       });
       AppToast.show(
         context,
-        message: 'Failed to apply WebSocket IPC settings.',
+        message: 'Failed to apply network connector settings.',
+        type: AppToastType.error,
+        icon: Icons.error_outline_rounded,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _resetSettingsToDefaults() async {
+    if (_isSaving) {
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+      _validationMessage = null;
+    });
+
+    try {
+      final saved = await ConnectorSettings.saveWebSocketSettings(
+        const WebSocketConnectorSettings.defaults(),
+      );
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _enabled = saved.enabled;
+        _hostController.text = saved.host;
+        _portController.text = saved.port.toString();
+        _pathController.text = saved.path;
+      });
+
+      AppToast.show(
+        context,
+        message: 'Network connector settings reset to defaults.',
+        type: AppToastType.success,
+        icon: Icons.restart_alt_rounded,
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _validationMessage =
+            'Could not restore default network connector settings: ${error.toString()}';
+      });
+      AppToast.show(
+        context,
+        message: 'Failed to reset network connector settings.',
         type: AppToastType.error,
         icon: Icons.error_outline_rounded,
       );
@@ -209,7 +263,7 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Expose OpenEarable features for external tools.',
+                          'Expose OpenWearable features for external tools.',
                           style:
                               Theme.of(context).textTheme.bodySmall?.copyWith(
                                     color: Theme.of(context)
@@ -287,14 +341,14 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'WebSocket IPC',
+                        'Network Connector',
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.w700,
                             ),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Expose the OpenEarable Flutter API over JSON messages.',
+                        'Expose the OpenWearable Flutter API over JSON messages.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: colorScheme.onSurfaceVariant,
                             ),
@@ -370,13 +424,23 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
               ),
             ],
             const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: PlatformElevatedButton(
-                onPressed:
-                    _isSaving || !hasPendingChanges ? null : _saveSettings,
-                child: Text(_isSaving ? 'Saving...' : 'Save & Apply'),
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: PlatformTextButton(
+                    onPressed: _isSaving ? null : _resetSettingsToDefaults,
+                    child: const Text('Reset to Defaults'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: PlatformElevatedButton(
+                    onPressed:
+                        _isSaving || !hasPendingChanges ? null : _saveSettings,
+                    child: Text(_isSaving ? 'Saving...' : 'Save & Apply'),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
