@@ -24,11 +24,7 @@ class EarableAttitudeTracker extends AttitudeTracker {
 
   final bool _isLeft;
 
-  EarableAttitudeTracker(
-    this._sensorManager,
-    this._sensorConfigurationProvider,
-    this._isLeft,
-  );
+  EarableAttitudeTracker(this._sensorManager, this._sensorConfigurationProvider, this._isLeft);
 
   @override
   void start() {
@@ -37,33 +33,18 @@ class EarableAttitudeTracker extends AttitudeTracker {
       return;
     }
 
-    final Sensor accelSensor = _sensorManager.sensors.firstWhere(
-      (s) => s.sensorName.toLowerCase() == "accelerometer".toLowerCase(),
-    );
+    final Sensor accelSensor = _sensorManager.sensors.firstWhere((s) => s.sensorName.toLowerCase() == "accelerometer".toLowerCase());
 
     final Set<SensorConfiguration> configurations = {};
     configurations.addAll(accelSensor.relatedConfigurations);
 
     for (final SensorConfiguration configuration in configurations) {
-      if (configuration is ConfigurableSensorConfiguration &&
-          configuration.availableOptions.contains(StreamSensorConfigOption())) {
-        _sensorConfigurationProvider.addSensorConfigurationOption(
-          configuration,
-          StreamSensorConfigOption(),
-          markPending: false,
-        );
+      if (configuration is ConfigurableSensorConfiguration && configuration.availableOptions.contains(StreamSensorConfigOption())) {
+        _sensorConfigurationProvider.addSensorConfigurationOption(configuration, StreamSensorConfigOption());
       }
-      List<SensorConfigurationValue> values = _sensorConfigurationProvider
-          .getSensorConfigurationValues(configuration, distinct: true);
-      _sensorConfigurationProvider.addSensorConfiguration(
-        configuration,
-        values.first,
-        markPending: false,
-      );
-      configuration.setConfiguration(
-        _sensorConfigurationProvider
-            .getSelectedConfigurationValue(configuration)!,
-      );
+      List<SensorConfigurationValue> values = _sensorConfigurationProvider.getSensorConfigurationValues(configuration, distinct: true);
+      _sensorConfigurationProvider.addSensorConfiguration(configuration, values.first);
+      configuration.setConfiguration(_sensorConfigurationProvider.getSelectedConfigurationValue(configuration)!);
     }
 
     calibrate(
