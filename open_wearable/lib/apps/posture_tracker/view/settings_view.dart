@@ -19,38 +19,24 @@ class _SettingsViewState extends State<SettingsView> {
   late final TextEditingController _badPostureTimeThresholdController;
   late final TextEditingController _goodPostureTimeThresholdController;
 
-  late PostureTrackerViewModel _viewModel;
+  late final PostureTrackerViewModel _viewModel;
 
   @override
   void initState() {
     super.initState();
     _viewModel = widget._viewModel;
-    _rollAngleThresholdController = TextEditingController();
-    _pitchAngleThresholdController = TextEditingController();
-    _badPostureTimeThresholdController = TextEditingController();
-    _goodPostureTimeThresholdController = TextEditingController();
-    _syncControllersFromViewModel();
-  }
-
-  @override
-  void didUpdateWidget(covariant SettingsView oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget._viewModel == widget._viewModel) {
-      return;
-    }
-    _viewModel = widget._viewModel;
-    _syncControllersFromViewModel();
-  }
-
-  void _syncControllersFromViewModel() {
-    _rollAngleThresholdController.text =
-        _viewModel.badPostureSettings.rollAngleThreshold.toString();
-    _pitchAngleThresholdController.text =
-        _viewModel.badPostureSettings.pitchAngleThreshold.toString();
-    _badPostureTimeThresholdController.text =
-        _viewModel.badPostureSettings.timeThreshold.toString();
-    _goodPostureTimeThresholdController.text =
-        _viewModel.badPostureSettings.resetTimeThreshold.toString();
+    _rollAngleThresholdController = TextEditingController(
+      text: _viewModel.badPostureSettings.rollAngleThreshold.toString(),
+    );
+    _pitchAngleThresholdController = TextEditingController(
+      text: _viewModel.badPostureSettings.pitchAngleThreshold.toString(),
+    );
+    _badPostureTimeThresholdController = TextEditingController(
+      text: _viewModel.badPostureSettings.timeThreshold.toString(),
+    );
+    _goodPostureTimeThresholdController = TextEditingController(
+      text: _viewModel.badPostureSettings.resetTimeThreshold.toString(),
+    );
   }
 
   @override
