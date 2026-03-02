@@ -27,8 +27,7 @@ class DevicesPage extends StatefulWidget {
 
 class _DevicesPageState extends State<DevicesPage> {
   Future<void> _refreshSystemDevices(
-    WearablesProvider wearablesProvider,
-  ) async {
+      WearablesProvider wearablesProvider) async {
     final wearables = await WearableManager().connectToSystemDevices();
     for (final wearable in wearables) {
       wearablesProvider.addWearable(wearable);
