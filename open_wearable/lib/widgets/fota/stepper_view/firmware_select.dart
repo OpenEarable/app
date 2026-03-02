@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import '../firmware_select/firmware_list.dart';
@@ -109,7 +108,12 @@ class FirmwareSelect extends StatelessWidget {
   }
 
   void _openFirmwareSelection(BuildContext context) {
-    context.push('/view', extra: const FirmwareList());
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const FirmwareList(),
+      ),
+    );
   }
 
   String _subtitleForFirmware(SelectedFirmware firmware) {

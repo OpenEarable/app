@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -139,9 +138,11 @@ class LogFilesScreen extends StatelessWidget {
                           subtitle,
                         ),
                       ),
-                      onTap: () => context.push(
-                        '/view',
-                        extra: LogFileDetailScreen(file: file),
+                      onTap: () => Navigator.of(context).push(
+                        platformPageRoute(
+                          context: context,
+                          builder: (_) => LogFileDetailScreen(file: file),
+                        ),
                       ),
                     );
                     // PlatformWidget(

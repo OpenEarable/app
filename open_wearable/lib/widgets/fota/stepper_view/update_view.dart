@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/models/fota_post_update_verification.dart';
 import 'package:open_wearable/widgets/app_banner.dart';
@@ -220,10 +219,12 @@ class _UpdateStepViewState extends State<UpdateStepView> {
         if (state.isComplete && state.updateManager?.logger != null) ...[
           OutlinedButton.icon(
             onPressed: () {
-              context.push(
-                '/view',
-                extra: LoggerScreen(
-                  logger: state.updateManager!.logger,
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => LoggerScreen(
+                    logger: state.updateManager!.logger,
+                  ),
                 ),
               );
             },

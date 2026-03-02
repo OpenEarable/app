@@ -30,11 +30,12 @@ class SensorValueCard extends StatelessWidget {
         }
 
         final provider = context.read<SensorDataProvider>();
-        context.push(
-          '/view',
-          extra: ChangeNotifierProvider.value(
-            value: provider,
-            child: SensorValueDetail(sensor: sensor, wearable: wearable),
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => ChangeNotifierProvider.value(
+              value: provider,
+              child: SensorValueDetail(sensor: sensor, wearable: wearable),
+            ),
           ),
         );
       },
