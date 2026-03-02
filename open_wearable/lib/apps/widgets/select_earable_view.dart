@@ -11,10 +11,7 @@ import 'package:open_wearable/widgets/devices/wearable_icon.dart';
 import 'package:provider/provider.dart';
 
 class SelectEarableView extends StatefulWidget {
-  final Future<Widget> Function(
-    Wearable,
-    SensorConfigurationProvider,
-  ) startApp;
+  final Widget Function(Wearable, SensorConfigurationProvider) startApp;
   final List<String> supportedDevicePrefixes;
 
   const SelectEarableView({
@@ -31,7 +28,6 @@ class _SelectEarableViewState extends State<SelectEarableView> {
   Wearable? _selectedWearable;
   Future<List<WearableDisplayGroup>>? _groupsFuture;
   String _groupFingerprint = '';
-  bool _isStartingApp = false;
 
   @override
   Widget build(BuildContext context) {
@@ -72,19 +68,14 @@ class _SelectEarableViewState extends State<SelectEarableView> {
                 child: SizedBox(
                   width: double.infinity,
                   child: PlatformElevatedButton(
-                    onPressed: hasSelectedCompatibleWearable && !_isStartingApp
+                    onPressed: hasSelectedCompatibleWearable
                         ? () => _startSelectedApp(
+                              context,
                               wearablesProvider,
                               compatibleWearables,
                             )
                         : null,
-                    child: _isStartingApp
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: PlatformCircularProgressIndicator(),
-                          )
-                        : PlatformText('Start App'),
+                    child: PlatformText('Start App'),
                   ),
                 ),
               ),
@@ -225,10 +216,11 @@ class _SelectEarableViewState extends State<SelectEarableView> {
     return indexed.map((entry) => entry.value).toList(growable: false);
   }
 
-  Future<void> _startSelectedApp(
+  void _startSelectedApp(
+    BuildContext context,
     WearablesProvider wearablesProvider,
     List<Wearable> compatibleWearables,
-  ) async {
+  ) {
     final selectedId = _selectedWearable?.deviceId;
     if (selectedId == null) {
       return;
@@ -244,70 +236,17 @@ class _SelectEarableViewState extends State<SelectEarableView> {
 
     final sensorConfigProvider =
         wearablesProvider.getSensorConfigurationProvider(selectedWearable);
-    final navigator = Navigator.of(context);
 
-    setState(() {
-      _isStartingApp = true;
-    });
-
-    navigator.push(
+    Navigator.push(
+      context,
       platformPageRoute(
         context: context,
-        builder: (context) => const _AppStartupLoadingScreen(),
-      ),
-    );
-
-    try {
-      final app = await widget.startApp(
-        selectedWearable,
-        sensorConfigProvider,
-      );
-
-      if (!mounted) {
-        return;
-      }
-
-      navigator.pushReplacement(
-        platformPageRoute(
-          context: context,
-          builder: (context) => ChangeNotifierProvider.value(
-            value: sensorConfigProvider,
-            child: app,
+        builder: (context) => ChangeNotifierProvider.value(
+          value: sensorConfigProvider,
+          child: widget.startApp(
+            selectedWearable,
+            sensorConfigProvider,
           ),
-        ),
-      );
-    } catch (_) {
-      if (navigator.canPop()) {
-        navigator.pop();
-      }
-      rethrow;
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isStartingApp = false;
-        });
-      }
-    }
-  }
-}
-
-class _AppStartupLoadingScreen extends StatelessWidget {
-  const _AppStartupLoadingScreen();
-
-  @override
-  Widget build(BuildContext context) {
-    return PlatformScaffold(
-      appBar: PlatformAppBar(
-        title: const Text('Starting App'),
-      ),
-      body: const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            PlatformCircularProgressIndicator(),
-            SizedBox(height: 12),
-            Text('Preparing app...'),
-          ],
         ),
       ),
     );
