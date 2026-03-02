@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart' show setEquals;
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 
-/// High-level state of a profile relative to a device (or paired devices).
 enum ProfileApplicationState {
   none,
   selected,
@@ -10,7 +9,6 @@ enum ProfileApplicationState {
   mixed,
 }
 
-/// Per-device state used while evaluating profile matches.
 enum DeviceProfileConfigState {
   notSelected,
   selected,
@@ -18,7 +16,6 @@ enum DeviceProfileConfigState {
   unavailable,
 }
 
-/// Snapshot of the selected value and its state for a specific configuration.
 class DeviceConfigSnapshot {
   final DeviceProfileConfigState state;
   final SensorConfigurationValue? selectedValue;
@@ -29,7 +26,6 @@ class DeviceConfigSnapshot {
   });
 }
 
-/// User-facing representation of a saved profile value.
 class ResolvedProfileValue {
   final String samplingLabel;
   final List<SensorConfigurationOption> dataTargetOptions;
@@ -40,16 +36,9 @@ class ResolvedProfileValue {
   });
 }
 
-/// Shared matching/mirroring helpers for sensor profile workflows.
-///
-/// This service intentionally contains no widget code so profile logic can be
-/// reused by multiple UI surfaces and tested independently.
 class SensorProfileService {
   const SensorProfileService._();
 
-  /// Resolves whether [profileConfig] is selected/applied on one or two devices.
-  ///
-  /// For paired devices, both sides must agree to return a non-`mixed` state.
   static ProfileApplicationState resolveProfileApplicationState({
     required Wearable primaryDevice,
     required SensorConfigurationProvider primaryProvider,
@@ -96,8 +85,6 @@ class SensorProfileService {
     return ProfileApplicationState.mixed;
   }
 
-  /// Resolves profile state for one device by comparing expected keys with
-  /// provider-selected and provider-applied values.
   static ProfileApplicationState resolveSingleDeviceProfileState({
     required Wearable device,
     required SensorConfigurationProvider provider,
@@ -152,8 +139,6 @@ class SensorProfileService {
     return ProfileApplicationState.none;
   }
 
-  /// Builds a profile payload for [targetDevice] by mapping each source config
-  /// and value from [sourceProfileConfig] to the closest compatible target key.
   static Map<String, String>? buildMirroredProfileConfig({
     required Wearable sourceDevice,
     required Wearable targetDevice,
@@ -206,7 +191,6 @@ class SensorProfileService {
     return mirrored;
   }
 
-  /// Builds a compact snapshot for a single configuration on one device.
   static DeviceConfigSnapshot buildDeviceConfigSnapshot({
     required SensorConfigurationProvider provider,
     required SensorConfiguration config,
@@ -240,7 +224,6 @@ class SensorProfileService {
     );
   }
 
-  /// Converts a raw value into a display-ready description.
   static ResolvedProfileValue describeSensorConfigurationValue(
     SensorConfigurationValue value,
   ) {
@@ -267,7 +250,6 @@ class SensorProfileService {
     );
   }
 
-  /// Formats sampling frequency labels for profile detail UI.
   static String formatFrequency(double hz) {
     if ((hz - hz.roundToDouble()).abs() < 0.01) {
       return '${hz.round()} Hz';
@@ -278,7 +260,6 @@ class SensorProfileService {
     return '${hz.toStringAsFixed(2)} Hz';
   }
 
-  /// Finds a configuration by exact name first, then normalized name.
   static SensorConfiguration? findConfigurationByName({
     required SensorConfigurationManager manager,
     required String configName,
@@ -298,7 +279,6 @@ class SensorProfileService {
     return null;
   }
 
-  /// Finds a configuration value by exact key first, then normalized key.
   static SensorConfigurationValue? findConfigurationValueByKey({
     required SensorConfiguration config,
     required String valueKey,
@@ -318,7 +298,6 @@ class SensorProfileService {
     return null;
   }
 
-  /// Finds the target-side configuration that best matches [sourceConfig].
   static SensorConfiguration? findMirroredConfiguration({
     required SensorConfigurationManager manager,
     required SensorConfiguration sourceConfig,
@@ -338,12 +317,6 @@ class SensorProfileService {
     return null;
   }
 
-  /// Maps a source value to the closest compatible value in [mirroredConfig].
-  ///
-  /// Matching strategy:
-  /// 1. Exact/normalized key match.
-  /// 2. Frequency value with closest Hz and matching option set.
-  /// 3. Configurable value with matching base key and option set.
   static SensorConfigurationValue? findMirroredValue({
     required SensorConfiguration mirroredConfig,
     required SensorConfigurationValue sourceValue,
@@ -401,7 +374,6 @@ class SensorProfileService {
     return null;
   }
 
-  /// Null-safe variant of [configurationValuesMatch].
   static bool configurationValuesMatchNullable(
     SensorConfigurationValue? left,
     SensorConfigurationValue? right,
@@ -412,7 +384,6 @@ class SensorProfileService {
     return configurationValuesMatch(left, right);
   }
 
-  /// Compares two values by semantic equivalence (not object identity).
   static bool configurationValuesMatch(
     SensorConfigurationValue left,
     SensorConfigurationValue right,
@@ -433,7 +404,6 @@ class SensorProfileService {
     return normalizeName(left.key) == normalizeName(right.key);
   }
 
-  /// Returns normalized option names for configurable values.
   static Set<String> optionNameSet(SensorConfigurationValue value) {
     if (value is! ConfigurableSensorConfigurationValue) {
       return const <String>{};
@@ -441,7 +411,6 @@ class SensorProfileService {
     return value.options.map((option) => normalizeName(option.name)).toSet();
   }
 
-  /// Normalizes identifiers used in matching logic.
   static String normalizeName(String value) => value.trim().toLowerCase();
 
   static bool _isDataTargetOption(SensorConfigurationOption option) {
