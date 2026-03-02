@@ -50,6 +50,10 @@ class BandPassFilter {
   }
 
   double filter(double x) {
+    if (!x.isFinite) {
+      return _isInitialized ? y1 : 0;
+    }
+
     if (!_isInitialized) {
       _isInitialized = true;
       x1 = x;
@@ -60,6 +64,14 @@ class BandPassFilter {
     }
 
     final y = a0 * x + a1 * x1 + a2 * x2 - b1 * y1 - b2 * y2;
+    if (!y.isFinite) {
+      _isInitialized = false;
+      x1 = x;
+      x2 = x;
+      y1 = 0;
+      y2 = 0;
+      return 0;
+    }
     x2 = x1;
     x1 = x;
     y2 = y1;

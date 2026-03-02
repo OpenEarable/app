@@ -6,7 +6,6 @@ import 'dart:math';
 
 import 'package:open_wearable/apps/heart_tracker/model/band_pass_filter.dart';
 import 'package:open_wearable/apps/heart_tracker/model/high_pass_filter.dart';
-import 'package:open_wearable/apps/heart_tracker/model/msptd_fast_v2_detector.dart';
 
 enum PpgSignalQuality {
   unavailable,
@@ -81,8 +80,6 @@ class PpgFilter {
   final double sampleFreq;
   final int timestampExponent;
 
-  final MsptdFastV2Detector _msptdDetector = const MsptdFastV2Detector();
-
   double _hrEstimate = 75.0;
   double _hrCovariance = 1.0;
   final double _hrProcessNoise = 0.02;
@@ -114,13 +111,18 @@ class PpgFilter {
     this.opticalTemperatureStream,
   });
 
+  void initialize() {
+    // Eagerly build pipelines so filters/subscriptions are ready on app start.
+    displaySignalStream;
+    _sampleStream;
+    _metricsStream;
+  }
+
   Stream<(int, double)> get displaySignalStream {
     if (_displaySignalStream != null) {
       return _displaySignalStream!;
     }
-    _displaySignalStream = _sampleStream
-        .map((sample) => (sample.timestamp, sample.displaySignal))
-        .asBroadcastStream();
+    _displaySignalStream = _createLiveDisplaySignalStream().asBroadcastStream();
     return _displaySignalStream!;
   }
 
@@ -171,6 +173,63 @@ class PpgFilter {
     }
     _vitalsStream = _createVitalsStream().asBroadcastStream();
     return _vitalsStream!;
+  }
+
+  Stream<(int, double)> _createLiveDisplaySignalStream() {
+    final safeSampleFreq =
+        sampleFreq.isFinite && sampleFreq > 0 ? sampleFreq : 50.0;
+    final bandPassFilter = BandPassFilter(
+      sampleFreq: safeSampleFreq,
+      lowCut: 0.5,
+      highCut: 3.2,
+    );
+    int? selectedChannel;
+    var lastFiniteSample = 0.0;
+
+    return inputStream.map((sample) {
+      selectedChannel ??= _pickStableDisplayChannel(sample);
+      var selectedOpticalSignal = _readDisplayChannel(
+        sample,
+        selectedChannel!,
+      );
+      if (!selectedOpticalSignal.isFinite) {
+        selectedOpticalSignal = lastFiniteSample;
+      } else {
+        lastFiniteSample = selectedOpticalSignal;
+      }
+      final bandPassed = bandPassFilter.filter(selectedOpticalSignal);
+      return (sample.timestamp, bandPassed);
+    });
+  }
+
+  int _pickStableDisplayChannel(PpgOpticalSample sample) {
+    final candidates = [sample.green, sample.red, sample.ir];
+    var bestChannel = 0;
+    var bestEnergy = -1.0;
+    for (var i = 0; i < candidates.length; i++) {
+      final value = candidates[i];
+      if (!value.isFinite) {
+        continue;
+      }
+      final energy = value.abs();
+      if (energy > bestEnergy && energy > 1e-9) {
+        bestEnergy = energy;
+        bestChannel = i;
+      }
+    }
+    return bestChannel;
+  }
+
+  double _readDisplayChannel(PpgOpticalSample sample, int channelIndex) {
+    switch (channelIndex) {
+      case 1:
+        return sample.red;
+      case 2:
+        return sample.ir;
+      case 0:
+      default:
+        return sample.green;
+    }
   }
 
   Stream<_MotionAwareSample> _createProcessedStream() {
@@ -267,20 +326,51 @@ class PpgFilter {
       return (heartRateBpm: null, peakTimestamps: const []);
     }
 
-    // Match MSPTDfast-v2 usage: run beat detection on the raw PPG waveform
-    // (lightly centered only) and let the detector handle detrending/scales.
+    // Simple extraction: local maxima on the filtered waveform with a fixed
+    // refractory distance and dynamic amplitude threshold.
     final signal =
-        samples.map((sample) => sample.rawGreen).toList(growable: false);
+        samples.map((sample) => sample.signal).toList(growable: false);
     final mean = signal.reduce((a, b) => a + b) / signal.length;
     final centered =
         signal.map((value) => value - mean).toList(growable: false);
-    final msptdIndices = _msptdDetector.detectPeakIndices(
-      centered,
-      sampleFreqHz: estimatedSampleFreqHz,
-    );
 
-    final peaks = msptdIndices
-        .where((index) => index >= 0 && index < samples.length)
+    final signalStd = _standardDeviation(centered);
+    if (!signalStd.isFinite || signalStd < 1e-4) {
+      return (heartRateBpm: null, peakTimestamps: const []);
+    }
+
+    final safeSampleFreq =
+        estimatedSampleFreqHz.isFinite && estimatedSampleFreqHz > 0
+            ? estimatedSampleFreqHz
+            : (sampleFreq.isFinite && sampleFreq > 0 ? sampleFreq : 50.0);
+    final minPeakDistanceSamples =
+        max(1, (safeSampleFreq * _minBeatIntervalSec * 0.85).round());
+    final amplitudeThreshold = max(0.04, signalStd * 0.35);
+
+    final peakIndices = <int>[];
+    for (var i = 1; i < centered.length - 1; i++) {
+      final current = centered[i];
+      if (!current.isFinite || current < amplitudeThreshold) {
+        continue;
+      }
+      final isLocalMaximum =
+          current >= centered[i - 1] && current > centered[i + 1];
+      if (!isLocalMaximum) {
+        continue;
+      }
+
+      if (peakIndices.isNotEmpty &&
+          (i - peakIndices.last) < minPeakDistanceSamples) {
+        // Within refractory period keep only the stronger peak.
+        if (current > centered[peakIndices.last]) {
+          peakIndices[peakIndices.length - 1] = i;
+        }
+        continue;
+      }
+      peakIndices.add(i);
+    }
+
+    final peaks = peakIndices
         .map((index) => samples[index].timestamp)
         .toList(growable: false);
 
