@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_wearable/models/connector_settings.dart';
+import 'package:open_wearable/models/network/device_ip_address.dart';
 import 'package:open_wearable/widgets/app_toast.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 
@@ -12,19 +13,19 @@ class ConnectorsPage extends StatefulWidget {
 }
 
 class _ConnectorsPageState extends State<ConnectorsPage> {
-  late final TextEditingController _hostController;
   late final TextEditingController _portController;
   late final TextEditingController _pathController;
 
   bool _enabled = false;
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _isResolvingIpAddress = true;
+  String? _currentIpAddress;
   String? _validationMessage;
 
   @override
   void initState() {
     super.initState();
-    _hostController = TextEditingController();
     _portController = TextEditingController();
     _pathController = TextEditingController();
     _loadSettings();
@@ -32,7 +33,6 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
 
   @override
   void dispose() {
-    _hostController.dispose();
     _portController.dispose();
     _pathController.dispose();
     super.dispose();
@@ -40,17 +40,21 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
 
   Future<void> _loadSettings() async {
     try {
-      final settings = await ConnectorSettings.loadWebSocketSettings();
+      final settingsFuture = ConnectorSettings.loadWebSocketSettings();
+      final ipAddressFuture = resolveCurrentDeviceIpAddress();
+      final settings = await settingsFuture;
+      final ipAddress = await ipAddressFuture;
       if (!mounted) {
         return;
       }
 
       setState(() {
         _enabled = settings.enabled;
-        _hostController.text = settings.host;
         _portController.text = settings.port.toString();
         _pathController.text = settings.path;
+        _currentIpAddress = ipAddress;
         _validationMessage = null;
+        _isResolvingIpAddress = false;
         _isLoading = false;
       });
     } catch (_) {
@@ -59,6 +63,7 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
       }
       setState(() {
         _validationMessage = 'Could not load connector settings.';
+        _isResolvingIpAddress = false;
         _isLoading = false;
       });
       AppToast.show(
@@ -67,6 +72,38 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
         type: AppToastType.error,
         icon: Icons.error_outline_rounded,
       );
+    }
+  }
+
+  Future<void> _refreshCurrentIpAddress() async {
+    setState(() {
+      _isResolvingIpAddress = true;
+      _validationMessage = null;
+    });
+
+    try {
+      final ipAddress = await resolveCurrentDeviceIpAddress();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _currentIpAddress = ipAddress;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _currentIpAddress = null;
+        _validationMessage =
+            'Could not determine the current device IP address.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isResolvingIpAddress = false;
+        });
+      }
     }
   }
 
@@ -93,7 +130,6 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
 
       setState(() {
         _enabled = saved.enabled;
-        _hostController.text = saved.host;
         _portController.text = saved.port.toString();
         _pathController.text = saved.path;
       });
@@ -132,6 +168,14 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
       return;
     }
 
+    final host = _currentIpAddress?.trim() ?? '';
+    if (host.isEmpty) {
+      setState(() {
+        _validationMessage = 'Current device IP address is unavailable.';
+      });
+      return;
+    }
+
     setState(() {
       _isSaving = true;
       _validationMessage = null;
@@ -139,7 +183,7 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
 
     try {
       final saved = await ConnectorSettings.saveWebSocketSettings(
-        const WebSocketConnectorSettings.defaults(),
+        const WebSocketConnectorSettings.defaults().copyWith(host: host),
       );
       if (!mounted) {
         return;
@@ -147,7 +191,6 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
 
       setState(() {
         _enabled = saved.enabled;
-        _hostController.text = saved.host;
         _portController.text = saved.port.toString();
         _pathController.text = saved.path;
       });
@@ -182,14 +225,14 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
   }
 
   WebSocketConnectorSettings? _buildValidatedSettings() {
-    final host = _hostController.text.trim();
     final parsedPort = int.tryParse(_portController.text.trim());
     final rawPath = _pathController.text.trim();
     final path = rawPath.isEmpty ? '/ws' : rawPath;
 
+    final host = _currentIpAddress?.trim() ?? '';
     if (host.isEmpty) {
       setState(() {
-        _validationMessage = 'Host is required.';
+        _validationMessage = 'Current device IP address is unavailable.';
       });
       return null;
     }
@@ -230,9 +273,10 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
     final path = _pathController.text.trim().isEmpty
         ? '/ws'
         : _pathController.text.trim();
+    final host = _currentIpAddress?.trim();
 
     return _enabled != applied.enabled ||
-        _hostController.text.trim() != applied.host ||
+        (host != null && host.isNotEmpty && host != applied.host) ||
         parsedPort != applied.port ||
         path != applied.path;
   }
@@ -303,9 +347,9 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
 
     final endpoint = Uri(
       scheme: 'ws',
-      host: _hostController.text.trim().isEmpty
-          ? appliedSettings.host
-          : _hostController.text.trim(),
+      host: (_currentIpAddress?.trim().isNotEmpty ?? false)
+          ? _currentIpAddress!.trim()
+          : appliedSettings.host,
       port: int.tryParse(_portController.text.trim()) ?? appliedSettings.port,
       path: _pathController.text.trim().isEmpty
           ? appliedSettings.path
@@ -371,13 +415,26 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
               ],
             ),
             const SizedBox(height: 10),
-            TextField(
-              controller: _hostController,
-              enabled: !_isSaving,
-              onChanged: _clearValidation,
-              decoration: const InputDecoration(
-                labelText: 'Host',
-                hintText: '127.0.0.1',
+            InputDecorator(
+              decoration: InputDecoration(
+                labelText: 'Current IP Address',
+                suffixIcon: IconButton(
+                  onPressed: _isSaving || _isResolvingIpAddress
+                      ? null
+                      : _refreshCurrentIpAddress,
+                  icon: _isResolvingIpAddress
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.refresh_rounded),
+                  tooltip: 'Refresh IP address',
+                ),
+              ),
+              child: Text(
+                _currentIpAddress ?? 'Unavailable on this device',
+                style: Theme.of(context).textTheme.bodyLarge,
               ),
             ),
             const SizedBox(height: 10),
