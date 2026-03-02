@@ -941,25 +941,45 @@ class _SensorConfigurationDeviceRowState
     required String title,
   }) {
     final isBuiltIn = _isBuiltInProfileKey(key);
-    final actions = _buildProfileActions(
-      key: key,
-      title: title,
-      isBuiltIn: isBuiltIn,
-    );
     showPlatformModalSheet<void>(
       context: context,
       builder: (sheetContext) => PlatformWidget(
         material: (_, __) => SafeArea(
           child: Wrap(
             children: [
-              for (final action in actions)
+              ListTile(
+                leading: const Icon(Icons.info_outline),
+                title: const Text('View details'),
+                onTap: () async {
+                  Navigator.of(sheetContext).pop();
+                  await _viewProfileDetails(key: key, title: title);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.download),
+                title: const Text('Load'),
+                onTap: () async {
+                  Navigator.of(sheetContext).pop();
+                  await _loadProfile(key: key, title: title);
+                },
+              ),
+              if (!isBuiltIn)
                 ListTile(
-                  leading: Icon(action.icon),
-                  title: Text(action.label),
-                  onTap: () => _runProfileActionFromSheet(
-                    sheetContext: sheetContext,
-                    action: action,
-                  ),
+                  leading: const Icon(Icons.save),
+                  title: const Text('Overwrite with current settings'),
+                  onTap: () async {
+                    Navigator.of(sheetContext).pop();
+                    await _overwriteProfile(key: key, title: title);
+                  },
+                ),
+              if (!isBuiltIn)
+                ListTile(
+                  leading: const Icon(Icons.delete),
+                  title: const Text('Delete'),
+                  onTap: () async {
+                    Navigator.of(sheetContext).pop();
+                    await _deleteProfile(key: key, title: title);
+                  },
                 ),
             ],
           ),
@@ -967,14 +987,36 @@ class _SensorConfigurationDeviceRowState
         cupertino: (_, __) => CupertinoActionSheet(
           title: Text(title),
           actions: [
-            for (final action in actions)
+            CupertinoActionSheetAction(
+              onPressed: () async {
+                Navigator.of(sheetContext).pop();
+                await _viewProfileDetails(key: key, title: title);
+              },
+              child: const Text('View details'),
+            ),
+            CupertinoActionSheetAction(
+              onPressed: () async {
+                Navigator.of(sheetContext).pop();
+                await _loadProfile(key: key, title: title);
+              },
+              child: const Text('Load'),
+            ),
+            if (!isBuiltIn)
               CupertinoActionSheetAction(
-                isDestructiveAction: action.isDestructive,
-                onPressed: () => _runProfileActionFromSheet(
-                  sheetContext: sheetContext,
-                  action: action,
-                ),
-                child: Text(action.label),
+                onPressed: () async {
+                  Navigator.of(sheetContext).pop();
+                  await _overwriteProfile(key: key, title: title);
+                },
+                child: const Text('Overwrite with current settings'),
+              ),
+            if (!isBuiltIn)
+              CupertinoActionSheetAction(
+                isDestructiveAction: true,
+                onPressed: () async {
+                  Navigator.of(sheetContext).pop();
+                  await _deleteProfile(key: key, title: title);
+                },
+                child: const Text('Delete'),
               ),
           ],
           cancelButton: CupertinoActionSheetAction(
@@ -984,46 +1026,6 @@ class _SensorConfigurationDeviceRowState
         ),
       ),
     );
-  }
-
-  List<_ProfileActionItem> _buildProfileActions({
-    required String key,
-    required String title,
-    required bool isBuiltIn,
-  }) {
-    return [
-      _ProfileActionItem(
-        label: 'View details',
-        icon: Icons.info_outline,
-        onPressed: () => _viewProfileDetails(key: key, title: title),
-      ),
-      _ProfileActionItem(
-        label: 'Load',
-        icon: Icons.download,
-        onPressed: () => _loadProfile(key: key, title: title),
-      ),
-      if (!isBuiltIn)
-        _ProfileActionItem(
-          label: 'Overwrite with current settings',
-          icon: Icons.save,
-          onPressed: () => _overwriteProfile(key: key, title: title),
-        ),
-      if (!isBuiltIn)
-        _ProfileActionItem(
-          label: 'Delete',
-          icon: Icons.delete,
-          isDestructive: true,
-          onPressed: () => _deleteProfile(key: key, title: title),
-        ),
-    ];
-  }
-
-  Future<void> _runProfileActionFromSheet({
-    required BuildContext sheetContext,
-    required _ProfileActionItem action,
-  }) async {
-    Navigator.of(sheetContext).pop();
-    await action.onPressed();
   }
 
   Future<void> _viewProfileDetails({
@@ -1631,20 +1633,6 @@ class _ProfileApplicationBadge extends StatelessWidget {
       ),
     );
   }
-}
-
-class _ProfileActionItem {
-  final String label;
-  final IconData icon;
-  final bool isDestructive;
-  final Future<void> Function() onPressed;
-
-  const _ProfileActionItem({
-    required this.label,
-    required this.icon,
-    required this.onPressed,
-    this.isDestructive = false,
-  });
 }
 
 enum _ProfileDetailStatus {

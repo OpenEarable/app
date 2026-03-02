@@ -26,14 +26,6 @@ class DevicesPage extends StatefulWidget {
 }
 
 class _DevicesPageState extends State<DevicesPage> {
-  Future<void> _refreshSystemDevices(
-      WearablesProvider wearablesProvider) async {
-    final wearables = await WearableManager().connectToSystemDevices();
-    for (final wearable in wearables) {
-      wearablesProvider.addWearable(wearable);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Consumer<WearablesProvider>(
@@ -78,7 +70,12 @@ class _DevicesPageState extends State<DevicesPage> {
   ) {
     if (wearablesProvider.wearables.isEmpty) {
       return RefreshIndicator(
-        onRefresh: () => _refreshSystemDevices(wearablesProvider),
+        onRefresh: () async {
+          final wearables = await WearableManager().connectToSystemDevices();
+          for (final wearable in wearables) {
+            wearablesProvider.addWearable(wearable);
+          }
+        },
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
@@ -117,7 +114,13 @@ class _DevicesPageState extends State<DevicesPage> {
         );
 
         return RefreshIndicator(
-          onRefresh: () => _refreshSystemDevices(wearablesProvider),
+          onRefresh: () {
+            return WearableManager().connectToSystemDevices().then((wearables) {
+              for (var wearable in wearables) {
+                wearablesProvider.addWearable(wearable);
+              }
+            });
+          },
           child: Padding(
             padding: const EdgeInsets.all(10),
             child: ListView.builder(
