@@ -1,0 +1,130 @@
+name: Build PR Artifacts
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-build-artifacts-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  APP_DIR: open_wearable
+
+jobs:
+  build_ubuntu_targets:
+    name: Build Android, Linux, and Web
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: "17"
+          cache: gradle
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang \
+            cmake \
+            libgtk-3-dev \
+            ninja-build \
+            pkg-config
+
+      - name: Read Flutter version
+        run: echo "flutter_version=$(cat $APP_DIR/.flutter_version)" >> "$GITHUB_ENV"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.flutter_version }}
+          cache: true
+
+      - name: Install dependencies
+        working-directory: ${{ env.APP_DIR }}
+        run: flutter pub get
+
+      - name: Analyze project
+        working-directory: ${{ env.APP_DIR }}
+        run: flutter analyze
+
+      - name: Build Android APK
+        working-directory: ${{ env.APP_DIR }}
+        run: flutter build apk --release
+
+      - name: Build Linux bundle
+        working-directory: ${{ env.APP_DIR }}
+        run: flutter build linux --release
+
+      - name: Build Web bundle
+        working-directory: ${{ env.APP_DIR }}
+        run: flutter build web --release
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: open_wearable/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+
+      - name: Upload Linux bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-bundle
+          path: open_wearable/build/linux/x64/release/bundle
+          if-no-files-found: error
+
+      - name: Upload Web bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-bundle
+          path: open_wearable/build/web
+          if-no-files-found: error
+
+  build_windows_target:
+    name: Build Windows
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Read Flutter version
+        shell: bash
+        run: echo "flutter_version=$(cat $APP_DIR/.flutter_version)" >> "$GITHUB_ENV"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.flutter_version }}
+          cache: true
+
+      - name: Install dependencies
+        working-directory: ${{ env.APP_DIR }}
+        run: flutter pub get
+
+      - name: Build Windows runner
+        working-directory: ${{ env.APP_DIR }}
+        run: flutter build windows --release
+
+      - name: Upload Windows runner
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-runner
+          path: open_wearable/build/windows/x64/runner/Release
+          if-no-files-found: error
