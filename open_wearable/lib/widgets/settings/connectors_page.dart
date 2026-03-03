@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_wearable/models/connector_settings.dart';
-import 'package:open_wearable/models/connectors/websocket_ipc_server.dart';
 import 'package:open_wearable/models/network/device_ip_address.dart';
 import 'package:open_wearable/widgets/app_toast.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
@@ -238,7 +237,6 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
 
     return WebSocketConnectorSettings(
       enabled: _enabled,
-      host: WebSocketIpcServer.defaultHost,
       port: parsedPort,
       path: path,
     );
@@ -332,7 +330,7 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
       scheme: 'ws',
       host: (_currentIpAddress?.trim().isNotEmpty ?? false)
           ? _currentIpAddress!.trim()
-          : appliedSettings.host,
+          : 'device-ip-unavailable',
       port: int.tryParse(_portController.text.trim()) ?? appliedSettings.port,
       path: _pathController.text.trim().isEmpty
           ? appliedSettings.path
