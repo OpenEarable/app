@@ -8,49 +8,38 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'connectors/websocket_ipc_server.dart';
 
+/// Persisted configuration for the network connector.
 class WebSocketConnectorSettings {
   final bool enabled;
-  final String host;
   final int port;
   final String path;
 
   const WebSocketConnectorSettings({
     required this.enabled,
-    required this.host,
     required this.port,
     required this.path,
   });
 
   const WebSocketConnectorSettings.defaults()
       : enabled = false,
-        host = WebSocketIpcServer.defaultHost,
         port = WebSocketIpcServer.defaultPort,
         path = WebSocketIpcServer.defaultPath;
 
-  bool get isConfigured => host.trim().isNotEmpty;
-
-  Uri get endpoint => Uri(
-        scheme: 'ws',
-        host: host,
-        port: port,
-        path: path,
-      );
-
+  /// Returns a copy with selectively replaced fields.
   WebSocketConnectorSettings copyWith({
     bool? enabled,
-    String? host,
     int? port,
     String? path,
   }) {
     return WebSocketConnectorSettings(
       enabled: enabled ?? this.enabled,
-      host: host ?? this.host,
       port: port ?? this.port,
       path: path ?? this.path,
     );
   }
 }
 
+/// High-level runtime state of the connector server.
 enum ConnectorRuntimeState {
   disabled,
   starting,
@@ -58,6 +47,7 @@ enum ConnectorRuntimeState {
   error,
 }
 
+/// Snapshot of the current connector runtime state and message.
 class ConnectorRuntimeStatus {
   final ConnectorRuntimeState state;
   final String? message;
@@ -83,8 +73,8 @@ class ConnectorRuntimeStatus {
       : state = ConnectorRuntimeState.error;
 }
 
+/// Loads, normalizes, persists, and applies connector settings.
 class ConnectorSettings {
-  static const String _legacyLoopbackHost = '127.0.0.1';
   static const String _websocketEnabledKey = 'connector_websocket_enabled';
   static const String _websocketHostKey = 'connector_websocket_host';
   static const String _websocketPortKey = 'connector_websocket_port';
@@ -108,12 +98,15 @@ class ConnectorSettings {
   static ValueListenable<ConnectorRuntimeStatus>
       get webSocketRuntimeStatusListenable => _webSocketRuntimeStatusNotifier;
 
+  /// Returns the current persisted settings snapshot.
   static WebSocketConnectorSettings get currentWebSocketSettings =>
       _webSocketSettingsNotifier.value;
 
+  /// Returns the current runtime status snapshot.
   static ConnectorRuntimeStatus get currentWebSocketRuntimeStatus =>
       _webSocketRuntimeStatusNotifier.value;
 
+  /// Initializes the server runtime and applies persisted settings.
   static Future<void> initialize({
     WearableConnector? wearableConnector,
   }) async {
@@ -126,17 +119,17 @@ class ConnectorSettings {
     await applyWebSocketSettings(settings);
   }
 
+  /// Stops the running server and resets the runtime status.
   static Future<void> dispose() async {
     await _webSocketServer.stop();
     _setRuntimeStatus(const ConnectorRuntimeStatus.disabled());
   }
 
+  /// Loads persisted websocket settings and normalizes any legacy values.
   static Future<WebSocketConnectorSettings> loadWebSocketSettings() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = WebSocketConnectorSettings(
       enabled: prefs.getBool(_websocketEnabledKey) ?? false,
-      host:
-          prefs.getString(_websocketHostKey) ?? WebSocketIpcServer.defaultHost,
       port: prefs.getInt(_websocketPortKey) ?? WebSocketIpcServer.defaultPort,
       path:
           prefs.getString(_websocketPathKey) ?? WebSocketIpcServer.defaultPath,
@@ -147,6 +140,7 @@ class ConnectorSettings {
     return normalized;
   }
 
+  /// Saves websocket settings, removes deprecated host state, and applies them.
   static Future<WebSocketConnectorSettings> saveWebSocketSettings(
     WebSocketConnectorSettings settings,
   ) async {
@@ -154,22 +148,23 @@ class ConnectorSettings {
     final prefs = await SharedPreferences.getInstance();
 
     await prefs.setBool(_websocketEnabledKey, normalized.enabled);
-    await prefs.setString(_websocketHostKey, normalized.host);
     await prefs.setInt(_websocketPortKey, normalized.port);
     await prefs.setString(_websocketPathKey, normalized.path);
+    await prefs.remove(_websocketHostKey);
 
     _setWebSocketSettings(normalized);
     await applyWebSocketSettings(normalized);
     return normalized;
   }
 
+  /// Applies the given settings to the websocket server.
   static Future<void> applyWebSocketSettings(
     WebSocketConnectorSettings settings,
   ) async {
     final normalized = _normalizeWebSocketSettings(settings);
     _setWebSocketSettings(normalized);
 
-    if (!normalized.enabled || !normalized.isConfigured) {
+    if (!normalized.enabled) {
       await _webSocketServer.stop();
       _setRuntimeStatus(const ConnectorRuntimeStatus.disabled());
       return;
@@ -179,7 +174,6 @@ class ConnectorSettings {
 
     try {
       await _webSocketServer.start(
-        host: normalized.host,
         port: normalized.port,
         path: normalized.path,
       );
@@ -190,26 +184,23 @@ class ConnectorSettings {
     }
   }
 
+  /// Normalizes persisted settings into a valid runtime configuration.
   static WebSocketConnectorSettings _normalizeWebSocketSettings(
     WebSocketConnectorSettings settings,
   ) {
-    final trimmedHost = settings.host.trim();
-    final host = trimmedHost.isEmpty || trimmedHost == _legacyLoopbackHost
-        ? WebSocketIpcServer.defaultHost
-        : trimmedHost;
     final port = (settings.port > 0 && settings.port <= 65535)
         ? settings.port
         : WebSocketIpcServer.defaultPort;
     final path = _normalizePath(settings.path);
 
     return settings.copyWith(
-      host: host,
       port: port,
       path: path,
       enabled: settings.enabled,
     );
   }
 
+  /// Ensures the websocket path is non-empty and starts with `/`.
   static String _normalizePath(String path) {
     final trimmed = path.trim();
     if (trimmed.isEmpty) {
@@ -218,10 +209,12 @@ class ConnectorSettings {
     return trimmed.startsWith('/') ? trimmed : '/$trimmed';
   }
 
+  /// Publishes the current settings snapshot to listeners.
   static void _setWebSocketSettings(WebSocketConnectorSettings settings) {
     _webSocketSettingsNotifier.value = settings;
   }
 
+  /// Publishes the current runtime status to listeners.
   static void _setRuntimeStatus(ConnectorRuntimeStatus status) {
     _webSocketRuntimeStatusNotifier.value = status;
   }
