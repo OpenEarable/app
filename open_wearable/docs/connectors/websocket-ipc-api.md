@@ -6,11 +6,12 @@ This document describes how to communicate with the OpenWearable WebSocket conne
 
 Default endpoint:
 
-- `ws://127.0.0.1:8765/ws`
+- `ws://<device-ip>:8765/ws`
 
 Notes:
 
-- Host, port, and path are configurable in app settings.
+- The app binds the websocket server on all IPv4 interfaces and advertises the current device IP for clients on the same network.
+- Port and path are configurable in app settings.
 - The API is JSON over WebSocket text frames.
 
 ## Message Envelopes
@@ -47,9 +48,13 @@ On connect, the server sends:
 ```json
 {
   "event": "ready",
-  "methods": ["ping", "methods", "..."]
+  "methods": ["ping", "methods", "..."],
+  "endpoint": "ws://192.168.1.23:8765/ws"
 }
 ```
+
+`ready.endpoint` may be `null` when the app cannot determine a client-reachable
+LAN IP address. The connector still runs in that case.
 
 Other event messages:
 
