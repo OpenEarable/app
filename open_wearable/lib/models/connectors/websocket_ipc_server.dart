@@ -9,10 +9,11 @@ import 'package:open_wearable/models/connectors/commands/default_ipc_commands.da
 import 'package:open_wearable/models/connectors/commands/ipc_internal_param_names.dart';
 import 'package:open_wearable/models/connectors/commands/runtime.dart';
 import 'package:open_wearable/models/logger.dart';
+import 'package:open_wearable/models/network/device_ip_address.dart';
 import 'package:open_wearable/models/wearable_connector.dart';
 
+/// Websocket-based IPC server that exposes wearable operations to external clients.
 class WebSocketIpcServer implements CommandRuntime {
-  static const String defaultHost = '0.0.0.0';
   static const int defaultPort = 8765;
   static const String defaultPath = '/ws';
 
@@ -20,9 +21,10 @@ class WebSocketIpcServer implements CommandRuntime {
   final WearableConnector _wearableConnector;
 
   HttpServer? _httpServer;
-  String _host = defaultHost;
+  final InternetAddress _host = InternetAddress.anyIPv4;
   int _port = defaultPort;
   String _path = defaultPath;
+  String? _advertisedHost;
 
   final Map<String, DiscoveredDevice> _discoveredDevicesById =
       <String, DiscoveredDevice>{};
@@ -52,33 +54,58 @@ class WebSocketIpcServer implements CommandRuntime {
     }
   }
 
+  /// Returns whether the websocket server is currently bound and accepting requests.
   bool get isRunning => _httpServer != null;
 
-  Uri get endpoint => Uri(
+  /// Returns the internal bind endpoint used by the server.
+  Uri get bindEndpoint => Uri(
         scheme: 'ws',
-        host: _host,
+        host: _host.address,
         port: _port,
         path: _path,
       );
 
+  /// Returns the client-facing endpoint derived from the current advertised IP.
+  Uri? get advertisedEndpoint {
+    final host = _advertisedHost;
+    if (host == null || host.trim().isEmpty) {
+      return null;
+    }
+    return Uri(
+      scheme: 'ws',
+      host: host,
+      port: _port,
+      path: _path,
+    );
+  }
+
+  /// Starts the server with the provided port and path.
   Future<void> start({
-    required String host,
     required int port,
     required String path,
   }) async {
     await stop();
 
-    _host = host.trim();
     _port = port;
     _path = _normalizePath(path);
+    logger.i(
+      '[connector.websocket] starting bind_address=${_host.address} port=$_port path=$_path',
+    );
 
-    _httpServer = await HttpServer.bind(InternetAddress.anyIPv4, _port, shared: true);
+    _httpServer = await HttpServer.bind(_host, _port, shared: true);
+    _advertisedHost = await resolveCurrentDeviceIpAddress();
+    logger.i(
+      '[connector.websocket] listening address=${_httpServer!.address.address} port=${_httpServer!.port} path=$_path advertised_endpoint=${advertisedEndpoint?.toString() ?? 'unavailable'}',
+    );
     _attachManagerSubscriptions();
 
-    unawaited(
-      _httpServer!.forEach((request) async {
+    _httpServer!.listen(
+      (request) async {
         if (request.uri.path != _path ||
             !WebSocketTransformer.isUpgradeRequest(request)) {
+          logger.d(
+            '[connector.websocket] rejected_http_request method=${request.method} path=${request.uri.path} remote=${request.connectionInfo?.remoteAddress.address}:${request.connectionInfo?.remotePort}',
+          );
           request.response
             ..statusCode = HttpStatus.notFound
             ..headers.contentType = ContentType.text
@@ -87,22 +114,39 @@ class WebSocketIpcServer implements CommandRuntime {
           return;
         }
 
+        logger.i(
+          '[connector.websocket] upgrade_request accepted remote=${request.connectionInfo?.remoteAddress.address}:${request.connectionInfo?.remotePort}',
+        );
         final socket = await WebSocketTransformer.upgrade(request);
         final session = _ClientSession(
           socket: socket,
           server: this,
         );
         _clients.add(session);
+        logger.i(
+          '[connector.websocket] client_connected client=${session.label} active_clients=${_clients.length}',
+        );
         session.start();
-      }),
+      },
+      onError: (error, stackTrace) {
+        logger.e(
+          '[connector.websocket] http_server_loop_failed error=$error',
+          error: error,
+          stackTrace: stackTrace,
+        );
+      },
     );
   }
 
+  /// Stops the server, closes active clients, and clears runtime state.
   Future<void> stop() async {
     final server = _httpServer;
     _httpServer = null;
 
     if (server != null) {
+      logger.i(
+        '[connector.websocket] stopping address=${server.address.address} port=${server.port} active_clients=${_clients.length}',
+      );
       await server.close(force: true);
     }
 
@@ -121,49 +165,68 @@ class WebSocketIpcServer implements CommandRuntime {
 
     _discoveredDevicesById.clear();
     _connectedWearablesById.clear();
+    _advertisedHost = null;
+    logger.i('[connector.websocket] stopped');
   }
 
+  /// Removes a disconnected client session from the active set.
   void _onClientClosed(_ClientSession client) {
     _clients.remove(client);
+    logger.i(
+      '[connector.websocket] client_disconnected client=${client.label} active_clients=${_clients.length}',
+    );
   }
 
   @override
+
+  /// Returns the list of registered top-level IPC method names.
   List<String> get methods => _topLevelCommands.keys.toList(growable: false);
 
+  /// Registers a top-level IPC command.
   void addCommand(Command command) {
     _topLevelCommands[command.name] = command;
   }
 
+  /// Registers an action command callable through `invoke_action`.
   void addActionCommand(Command command) {
     _actionCommands[command.name] = command;
   }
 
+  /// Dispatches an inbound request to the matching command.
   Future<Object?> _handleRequest({
     required _ClientSession client,
     required String method,
     required Map<String, dynamic> params,
   }) async {
-    logger.d("Received request: method=$method, params=$params");
-
     final command = _topLevelCommands[method];
     if (command == null) {
+      logger.w(
+        '[connector.websocket] unknown_method client=${client.label} method=$method',
+      );
       throw UnsupportedError('Unknown method: $method');
     }
     return command.run(_paramsToCommandParams(params, session: client));
   }
 
   @override
+
+  /// Returns a connected wearable by device id.
   Future<Wearable> getWearable({required String deviceId}) async {
     return _requireConnectedWearable(deviceId);
   }
 
   @override
+
+  /// Returns whether the underlying wearable runtime already has required permissions.
   Future<bool> hasPermissions() => _wearableManager.hasPermissions();
 
   @override
+
+  /// Checks for and requests missing runtime permissions from the platform.
   Future<bool> checkAndRequestPermissions() =>
       WearableManager.checkAndRequestPermissions();
 
+  /// Starts device scanning through the wearable manager.
   @override
   Future<Map<String, dynamic>> startScan({
     bool checkAndRequestPermissions = true,
@@ -175,14 +238,18 @@ class WebSocketIpcServer implements CommandRuntime {
     return <String, dynamic>{'started': true};
   }
 
+  /// Returns the currently discovered devices as JSON-safe maps.
   @override
   Future<List<Map<String, dynamic>>> getDiscoveredDevices() async {
     return _discoveredDevicesById.values.map(_serializeDiscovered).toList();
   }
 
   @override
+
+  /// Exposes the scan event stream for async scan subscriptions.
   Stream<DiscoveredDevice> get scanEvents => _scanEventsController.stream;
 
+  /// Connects to a discovered device by id.
   @override
   Future<Map<String, dynamic>> connect({
     required String deviceId,
@@ -205,6 +272,7 @@ class WebSocketIpcServer implements CommandRuntime {
     return _serializeWearableSummary(wearable);
   }
 
+  /// Connects to system-managed wearables and registers them with the server.
   @override
   Future<List<Map<String, dynamic>>> connectSystemDevices({
     List<String> ignoredDeviceIds = const <String>[],
@@ -218,6 +286,7 @@ class WebSocketIpcServer implements CommandRuntime {
     return wearables.map(_serializeWearableSummary).toList();
   }
 
+  /// Lists currently connected wearables.
   @override
   Future<List<Map<String, dynamic>>> listConnected() async {
     return _connectedWearablesById.values
@@ -225,6 +294,7 @@ class WebSocketIpcServer implements CommandRuntime {
         .toList();
   }
 
+  /// Disconnects a connected wearable by id.
   @override
   Future<Map<String, dynamic>> disconnect({
     required String deviceId,
@@ -235,11 +305,13 @@ class WebSocketIpcServer implements CommandRuntime {
     return <String, dynamic>{'disconnected': true};
   }
 
+  /// Allocates the next unique subscription id for a client.
   @override
   Future<int> createSubscriptionId() async {
     return _nextSubscriptionId++;
   }
 
+  /// Attaches a stream subscription to the given client session.
   @override
   Future<void> attachStreamSubscription({
     required dynamic session,
@@ -258,6 +330,7 @@ class WebSocketIpcServer implements CommandRuntime {
     );
   }
 
+  /// Cancels a previously registered client stream subscription.
   @override
   Future<Map<String, dynamic>> unsubscribe({
     required dynamic session,
@@ -267,6 +340,7 @@ class WebSocketIpcServer implements CommandRuntime {
     return client.unsubscribe(subscriptionId);
   }
 
+  /// Invokes an action command against a connected wearable.
   @override
   Future<Object?> invokeAction({
     required String deviceId,
@@ -284,6 +358,7 @@ class WebSocketIpcServer implements CommandRuntime {
     return command.run(actionParams);
   }
 
+  /// Converts raw request params into command params for command execution.
   List<CommandParam<dynamic>> _paramsToCommandParams(
     Map<String, dynamic> params, {
     required _ClientSession? session,
@@ -299,6 +374,7 @@ class WebSocketIpcServer implements CommandRuntime {
     return commandParams;
   }
 
+  /// Hooks wearable manager streams into websocket broadcast events.
   void _attachManagerSubscriptions() {
     _scanSubscription ??= _wearableManager.scanStream.listen((device) {
       _discoveredDevicesById[device.id] = device;
@@ -332,6 +408,7 @@ class WebSocketIpcServer implements CommandRuntime {
     });
   }
 
+  /// Tracks a connected wearable and removes it when it disconnects.
   void _registerConnectedWearable(Wearable wearable) {
     _connectedWearablesById[wearable.deviceId] = wearable;
     wearable.addDisconnectListener(() {
@@ -339,6 +416,7 @@ class WebSocketIpcServer implements CommandRuntime {
     });
   }
 
+  /// Broadcasts a JSON event to all currently connected clients.
   void _broadcastEvent(Map<String, dynamic> event) {
     final payload = _jsonEncode(event);
     for (final client in _clients.toList(growable: false)) {
@@ -346,15 +424,18 @@ class WebSocketIpcServer implements CommandRuntime {
     }
   }
 
+  /// Sends the initial ready event to a newly connected client.
   void _sendReady(_ClientSession client) {
     client.send(
       <String, dynamic>{
         'event': 'ready',
         'methods': methods,
+        'endpoint': advertisedEndpoint?.toString(),
       },
     );
   }
 
+  /// Serializes a discovered device into the external IPC format.
   Map<String, dynamic> _serializeDiscovered(DiscoveredDevice device) {
     return <String, dynamic>{
       'id': device.id,
@@ -365,6 +446,7 @@ class WebSocketIpcServer implements CommandRuntime {
     };
   }
 
+  /// Serializes a connected wearable summary into the external IPC format.
   Map<String, dynamic> _serializeWearableSummary(Wearable wearable) {
     return <String, dynamic>{
       'device_id': wearable.deviceId,
@@ -374,6 +456,7 @@ class WebSocketIpcServer implements CommandRuntime {
     };
   }
 
+  /// Serializes streamed capability data into JSON-safe payloads.
   Object? _serializeStreamData(dynamic data) {
     if (data is DiscoveredDevice) {
       return _serializeDiscovered(data);
@@ -416,6 +499,7 @@ class WebSocketIpcServer implements CommandRuntime {
     return _jsonSafe(data);
   }
 
+  /// Serializes battery power status into a JSON-safe payload.
   Map<String, dynamic> _serializeBatteryPowerStatus(BatteryPowerStatus status) {
     return <String, dynamic>{
       'battery_present': status.batteryPresent,
@@ -431,6 +515,7 @@ class WebSocketIpcServer implements CommandRuntime {
     };
   }
 
+  /// Serializes battery health status into a JSON-safe payload.
   Map<String, dynamic> _serializeBatteryHealthStatus(
     BatteryHealthStatus status,
   ) {
@@ -441,6 +526,7 @@ class WebSocketIpcServer implements CommandRuntime {
     };
   }
 
+  /// Serializes battery energy status into a JSON-safe payload.
   Map<String, dynamic> _serializeBatteryEnergyStatus(
     BatteryEnergyStatus status,
   ) {
@@ -451,6 +537,7 @@ class WebSocketIpcServer implements CommandRuntime {
     };
   }
 
+  /// Lists known capabilities for a connected wearable.
   List<String> _capabilitiesForWearable(Wearable wearable) {
     final capabilities = <String>[];
     void addIf<T>(String name) {
@@ -484,6 +571,7 @@ class WebSocketIpcServer implements CommandRuntime {
     return capabilities;
   }
 
+  /// Looks up a connected wearable and throws if it is unavailable.
   Wearable _requireConnectedWearable(String deviceId) {
     final wearable = _connectedWearablesById[deviceId];
     if (wearable == null) {
@@ -492,6 +580,7 @@ class WebSocketIpcServer implements CommandRuntime {
     return wearable;
   }
 
+  /// Ensures the configured websocket path is non-empty and absolute.
   String _normalizePath(String path) {
     final trimmed = path.trim();
     if (trimmed.isEmpty) {
@@ -500,10 +589,12 @@ class WebSocketIpcServer implements CommandRuntime {
     return trimmed.startsWith('/') ? trimmed : '/$trimmed';
   }
 
+  /// Encodes an event payload after coercing unsupported values to JSON-safe forms.
   String _jsonEncode(Map<String, dynamic> payload) {
     return jsonEncode(_jsonSafe(payload));
   }
 
+  /// Recursively converts arbitrary values into JSON-safe representations.
   Object? _jsonSafe(Object? value) {
     if (value == null || value is num || value is bool || value is String) {
       return value;
@@ -527,6 +618,7 @@ class WebSocketIpcServer implements CommandRuntime {
     return value.toString();
   }
 
+  /// Normalizes arbitrary request payloads into string-keyed maps.
   Map<String, dynamic> _asMap(Object? value) {
     if (value == null) {
       return <String, dynamic>{};
@@ -541,6 +633,7 @@ class WebSocketIpcServer implements CommandRuntime {
   }
 }
 
+/// Represents one connected websocket client and its active subscriptions.
 class _ClientSession {
   final WebSocket socket;
   final WebSocketIpcServer server;
@@ -550,11 +643,21 @@ class _ClientSession {
 
   bool _closed = false;
 
+  /// Returns a log-friendly label for this client session.
+  String get label {
+    final remote = socket.closeCode == null
+        ? '${socket.hashCode}'
+        : '${socket.hashCode}:${socket.closeCode}';
+    final address = socket.hashCode;
+    return 'ws#$address/$remote';
+  }
+
   _ClientSession({
     required this.socket,
     required this.server,
   });
 
+  /// Starts listening for websocket messages and lifecycle events.
   void start() {
     server._sendReady(this);
 
@@ -565,13 +668,17 @@ class _ClientSession {
       onDone: () async {
         await close();
       },
-      onError: (_) async {
+      onError: (error, stackTrace) async {
+        logger.w(
+          '[connector.websocket] socket_error client=$label error=$error\n$stackTrace',
+        );
         await close();
       },
       cancelOnError: true,
     );
   }
 
+  /// Sends a JSON payload to the client.
   void send(Map<String, dynamic> payload) {
     if (_closed) {
       return;
@@ -579,6 +686,7 @@ class _ClientSession {
     sendRaw(jsonEncode(payload));
   }
 
+  /// Sends a pre-serialized websocket text frame to the client.
   void sendRaw(String payload) {
     if (_closed) {
       return;
@@ -586,6 +694,7 @@ class _ClientSession {
     socket.add(payload);
   }
 
+  /// Parses and executes a single inbound websocket message.
   Future<void> _handleMessage(dynamic rawMessage) async {
     dynamic id;
     try {
@@ -623,6 +732,9 @@ class _ClientSession {
         },
       );
     } catch (error, stackTrace) {
+      logger.w(
+        '[connector.websocket] request_failed client=$label id=$id error=$error\n$stackTrace',
+      );
       send(
         <String, dynamic>{
           'id': id,
@@ -636,6 +748,7 @@ class _ClientSession {
     }
   }
 
+  /// Registers or replaces a stream subscription owned by this client.
   Future<void> subscribe({
     required int subscriptionId,
     required String streamName,
@@ -657,6 +770,9 @@ class _ClientSession {
         );
       },
       onError: (error, stackTrace) {
+        logger.w(
+          '[connector.websocket] stream_error client=$label subscription_id=$subscriptionId stream=$streamName device_id=$deviceId error=$error\n$stackTrace',
+        );
         send(
           <String, dynamic>{
             'event': 'stream_error',
@@ -686,6 +802,7 @@ class _ClientSession {
     );
   }
 
+  /// Cancels a single client-owned stream subscription.
   Future<Map<String, dynamic>> unsubscribe(int subscriptionId) async {
     final existing = _subscriptions.remove(subscriptionId);
     if (existing == null) {
@@ -701,6 +818,7 @@ class _ClientSession {
     };
   }
 
+  /// Closes the client socket and cancels all active subscriptions.
   Future<void> close() async {
     if (_closed) {
       return;
