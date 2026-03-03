@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_wearable/models/connector_settings.dart';
+import 'package:open_wearable/models/connectors/websocket_ipc_server.dart';
 import 'package:open_wearable/models/network/device_ip_address.dart';
 import 'package:open_wearable/widgets/app_toast.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
@@ -168,14 +169,6 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
       return;
     }
 
-    final host = _currentIpAddress?.trim() ?? '';
-    if (host.isEmpty) {
-      setState(() {
-        _validationMessage = 'Current device IP address is unavailable.';
-      });
-      return;
-    }
-
     setState(() {
       _isSaving = true;
       _validationMessage = null;
@@ -183,7 +176,7 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
 
     try {
       final saved = await ConnectorSettings.saveWebSocketSettings(
-        const WebSocketConnectorSettings.defaults().copyWith(host: host),
+        const WebSocketConnectorSettings.defaults(),
       );
       if (!mounted) {
         return;
@@ -229,14 +222,6 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
     final rawPath = _pathController.text.trim();
     final path = rawPath.isEmpty ? '/ws' : rawPath;
 
-    final host = _currentIpAddress?.trim() ?? '';
-    if (host.isEmpty) {
-      setState(() {
-        _validationMessage = 'Current device IP address is unavailable.';
-      });
-      return null;
-    }
-
     if (parsedPort == null || parsedPort <= 0 || parsedPort > 65535) {
       setState(() {
         _validationMessage = 'Port must be between 1 and 65535.';
@@ -253,7 +238,7 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
 
     return WebSocketConnectorSettings(
       enabled: _enabled,
-      host: host,
+      host: WebSocketIpcServer.defaultHost,
       port: parsedPort,
       path: path,
     );
@@ -273,10 +258,8 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
     final path = _pathController.text.trim().isEmpty
         ? '/ws'
         : _pathController.text.trim();
-    final host = _currentIpAddress?.trim();
 
     return _enabled != applied.enabled ||
-        (host != null && host.isNotEmpty && host != applied.host) ||
         parsedPort != applied.port ||
         path != applied.path;
   }
