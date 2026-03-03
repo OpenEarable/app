@@ -12,7 +12,7 @@ import 'package:open_wearable/models/logger.dart';
 import 'package:open_wearable/models/wearable_connector.dart';
 
 class WebSocketIpcServer implements CommandRuntime {
-  static const String defaultHost = '127.0.0.1';
+  static const String defaultHost = '0.0.0.0';
   static const int defaultPort = 8765;
   static const String defaultPath = '/ws';
 
@@ -72,7 +72,7 @@ class WebSocketIpcServer implements CommandRuntime {
     _port = port;
     _path = _normalizePath(path);
 
-    _httpServer = await HttpServer.bind(_host, _port, shared: true);
+    _httpServer = await HttpServer.bind(InternetAddress.anyIPv4, _port, shared: true);
     _attachManagerSubscriptions();
 
     unawaited(

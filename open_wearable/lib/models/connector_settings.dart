@@ -84,6 +84,7 @@ class ConnectorRuntimeStatus {
 }
 
 class ConnectorSettings {
+  static const String _legacyLoopbackHost = '127.0.0.1';
   static const String _websocketEnabledKey = 'connector_websocket_enabled';
   static const String _websocketHostKey = 'connector_websocket_host';
   static const String _websocketPortKey = 'connector_websocket_port';
@@ -192,9 +193,10 @@ class ConnectorSettings {
   static WebSocketConnectorSettings _normalizeWebSocketSettings(
     WebSocketConnectorSettings settings,
   ) {
-    final host = settings.host.trim().isEmpty
+    final trimmedHost = settings.host.trim();
+    final host = trimmedHost.isEmpty || trimmedHost == _legacyLoopbackHost
         ? WebSocketIpcServer.defaultHost
-        : settings.host.trim();
+        : trimmedHost;
     final port = (settings.port > 0 && settings.port <= 65535)
         ? settings.port
         : WebSocketIpcServer.defaultPort;
