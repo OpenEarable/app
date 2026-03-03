@@ -162,7 +162,10 @@ class SensorRecorderProvider with ChangeNotifier {
 
       File file = await recorder.start(
         filepath: filepath,
-        inputStream: SensorStreams.shared(sensor),
+        inputStream: SensorStreams.shared(
+          wearable: wearable,
+          sensor: sensor,
+        ),
       );
 
       logger.i(
