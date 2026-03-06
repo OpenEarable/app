@@ -13,10 +13,13 @@ class SensorStreams {
   static final Map<Sensor, Stream<SensorValue>> _sharedStreams = {};
 
   static Stream<SensorValue> shared(Sensor sensor) {
-    return _sharedStreams.putIfAbsent(
-      sensor,
-      () => sensor.sensorStream.asBroadcastStream(),
-    );
+    return _sharedStreams.putIfAbsent(sensor, () {
+      return sensor.sensorStream.asBroadcastStream(
+        onCancel: (_) {
+          _sharedStreams.remove(sensor);
+        },
+      );
+    });
   }
 
   static void clearForSensor(Sensor sensor) {

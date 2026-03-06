@@ -108,6 +108,7 @@ class WearablesProvider with ChangeNotifier {
   final Map<Wearable, SensorConfigurationProvider>
       _sensorConfigurationProviders = {};
   final Set<String> _splitStereoPairKeys = {};
+  bool _disposed = false;
 
   List<Wearable> get wearables => _wearables;
   Map<Wearable, SensorConfigurationProvider> get sensorConfigurationProviders =>
@@ -162,7 +163,17 @@ class WearablesProvider with ChangeNotifier {
       _wearables.any((w) => w.deviceId == wearable.deviceId);
 
   void _emitWearableEvent(WearableEvent event) {
+    if (_disposed || _wearableEventController.isClosed) {
+      return;
+    }
     _wearableEventController.add(event);
+  }
+
+  void _emitUnsupportedFirmwareEvent(UnsupportedFirmwareEvent event) {
+    if (_disposed || _unsupportedFirmwareEventsController.isClosed) {
+      return;
+    }
+    _unsupportedFirmwareEventsController.add(event);
   }
 
   void _emitWearableError({
@@ -181,6 +192,9 @@ class WearablesProvider with ChangeNotifier {
 
   void _scheduleMicrotask(FutureOr<void> Function() work) {
     Future.microtask(() async {
+      if (_disposed) {
+        return;
+      }
       try {
         await work();
       } catch (e, st) {
@@ -375,16 +389,13 @@ class WearablesProvider with ChangeNotifier {
           // All good, nothing to do.
           break;
         case FirmwareSupportStatus.tooNew:
-          _unsupportedFirmwareEventsController
-              .add(FirmwareTooNewEvent(wearable));
+          _emitUnsupportedFirmwareEvent(FirmwareTooNewEvent(wearable));
           break;
         case FirmwareSupportStatus.unsupported:
-          _unsupportedFirmwareEventsController
-              .add(FirmwareUnsupportedEvent(wearable));
+          _emitUnsupportedFirmwareEvent(FirmwareUnsupportedEvent(wearable));
           break;
         case FirmwareSupportStatus.tooOld:
-          _unsupportedFirmwareEventsController
-              .add(FirmwareTooOldEvent(wearable));
+          _emitUnsupportedFirmwareEvent(FirmwareTooOldEvent(wearable));
         case FirmwareSupportStatus.unknown:
           logger.w('Firmware support unknown for ${wearable.name}');
           break;
@@ -420,7 +431,7 @@ class WearablesProvider with ChangeNotifier {
         logger.i(
           'Newer firmware available for ${(dev as Wearable).name}: $currentVersion -> $latestVersion',
         );
-        _wearableEventController.add(
+        _emitWearableEvent(
           NewFirmwareAvailableEvent(
             wearable: dev as Wearable,
             currentVersion: currentVersion,
@@ -485,9 +496,11 @@ class WearablesProvider with ChangeNotifier {
       ),
     );
     _wearables.remove(wearable);
-    _sensorConfigurationProviders.remove(wearable);
+    _sensorConfigurationProviders.remove(wearable)?.dispose();
     _capabilitySubscriptions.remove(wearable)?.cancel();
-    notifyListeners();
+    if (!_disposed) {
+      notifyListeners();
+    }
   }
 
   SensorConfigurationProvider getSensorConfigurationProvider(
@@ -519,5 +532,25 @@ class WearablesProvider with ChangeNotifier {
     if (addedCapabilites.isNotEmpty) {
       notifyListeners();
     }
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    for (final sub in _capabilitySubscriptions.values) {
+      unawaited(sub.cancel());
+    }
+    _capabilitySubscriptions.clear();
+
+    for (final provider in _sensorConfigurationProviders.values) {
+      provider.dispose();
+    }
+    _sensorConfigurationProviders.clear();
+    _wearables.clear();
+    _splitStereoPairKeys.clear();
+
+    unawaited(_unsupportedFirmwareEventsController.close());
+    unawaited(_wearableEventController.close());
+    super.dispose();
   }
 }
