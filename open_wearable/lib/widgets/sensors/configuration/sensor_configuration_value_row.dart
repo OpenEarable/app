@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
@@ -7,99 +8,272 @@ import 'package:provider/provider.dart';
 
 import 'sensor_config_option_icon_factory.dart';
 
+const double _kSensorStatusPillHeight = 22;
+
 /// A row that displays a sensor configuration and allows the user to select a value.
 ///
 /// The selected value is added to the [SensorConfigurationProvider].
 class SensorConfigurationValueRow extends StatelessWidget {
   final SensorConfiguration sensorConfiguration;
+  final SensorConfiguration? pairedSensorConfiguration;
+  final SensorConfigurationProvider? pairedProvider;
 
   const SensorConfigurationValueRow({
     super.key,
     required this.sensorConfiguration,
+    this.pairedSensorConfiguration,
+    this.pairedProvider,
   });
 
   @override
   Widget build(BuildContext context) {
-    final sensorConfigNotifier =
-        Provider.of<SensorConfigurationProvider>(context);
+    final primaryProvider = context.watch<SensorConfigurationProvider>();
+    final secondaryProvider = pairedProvider;
+    if (secondaryProvider == null) {
+      return _buildRow(
+        context,
+        primaryProvider: primaryProvider,
+      );
+    }
 
-    return PlatformListTile(
-      onTap: () {
-        showPlatformModalSheet(
-          context: context,
-          builder: (modalContext) {
-            return ChangeNotifierProvider.value(
-              value: sensorConfigNotifier,
-              child: PlatformScaffold(
-                appBar: PlatformAppBar(
-                  title: PlatformText(sensorConfiguration.name),
-                  leading: IconButton(
-                    icon: Icon(Icons.close),
-                    onPressed: () => Navigator.of(modalContext).pop(),
+    return ListenableBuilder(
+      listenable: secondaryProvider,
+      builder: (context, _) => _buildRow(
+        context,
+        primaryProvider: primaryProvider,
+        secondaryProvider: secondaryProvider,
+      ),
+    );
+  }
+
+  Widget _buildRow(
+    BuildContext context, {
+    required SensorConfigurationProvider primaryProvider,
+    SensorConfigurationProvider? secondaryProvider,
+  }) {
+    const sensorOnGreen = Color(0xFF2E7D32);
+    final colorScheme = Theme.of(context).colorScheme;
+    final selectedValue =
+        primaryProvider.getSelectedConfigurationValue(sensorConfiguration);
+    final selectedOptions =
+        sensorConfiguration is ConfigurableSensorConfiguration
+            ? primaryProvider
+                .getSelectedConfigurationOptions(
+                  sensorConfiguration,
+                )
+                .toList(growable: false)
+            : const <SensorConfigurationOption>[];
+
+    bool isApplied = primaryProvider.isConfigurationApplied(
+      sensorConfiguration,
+    );
+    bool isMixed = false;
+    if (secondaryProvider != null) {
+      final mirroredConfig = pairedSensorConfiguration;
+      if (mirroredConfig == null) {
+        isMixed = true;
+      } else {
+        final mirroredValue =
+            secondaryProvider.getSelectedConfigurationValue(mirroredConfig);
+        final mirroredApplied =
+            secondaryProvider.isConfigurationApplied(mirroredConfig);
+        final valuesMatch =
+            _configurationValuesMatchNullable(selectedValue, mirroredValue);
+        final applyStateMatches = isApplied == mirroredApplied;
+        if (!valuesMatch || !applyStateMatches) {
+          isMixed = true;
+        } else {
+          isApplied = isApplied && mirroredApplied;
+        }
+      }
+    }
+
+    final isOn = isMixed ? true : _isOn(primaryProvider, sensorConfiguration);
+    final accentColor = isMixed
+        ? colorScheme.error
+        : (isApplied ? sensorOnGreen : colorScheme.primary);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 2, 12, 2),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () => _openConfigurationSheet(context, primaryProvider),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(2, 8, 2, 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  width: isOn ? 3 : 2,
+                  height: 26,
+                  decoration: BoxDecoration(
+                    color: (isOn
+                            ? accentColor
+                            : (isApplied
+                                ? colorScheme.outlineVariant
+                                : colorScheme.primary))
+                        .withValues(alpha: isOn ? 0.7 : 0.6),
+                    borderRadius: BorderRadius.circular(999),
                   ),
                 ),
-                body: SensorConfigurationDetailView(
-                  sensorConfiguration: sensorConfiguration,
+                const SizedBox(width: 6),
+                Icon(
+                  isMixed
+                      ? Icons.sync_problem_rounded
+                      : (isOn
+                          ? Icons.sensors_rounded
+                          : Icons.sensors_off_rounded),
+                  size: 14,
+                  color: isOn
+                      ? accentColor
+                      : (isApplied ? colorScheme.outline : colorScheme.primary),
                 ),
-              ),
-            );
-          },
-        );
-      },
-      title: PlatformText(sensorConfiguration.name),
-      trailing: _isOn(sensorConfigNotifier, sensorConfiguration)
-          ? () {
-              if (sensorConfigNotifier
-                      .getSelectedConfigurationValue(sensorConfiguration) ==
-                  null) {
-                return PlatformText(
-                  "Internal Error",
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.secondary,
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Text(
+                    sensorConfiguration.name,
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: (isOn || isMixed) ? accentColor : null,
+                          fontWeight: FontWeight.w700,
+                        ),
                   ),
-                );
-              }
-              SensorConfigurationValue value = sensorConfigNotifier
-                  .getSelectedConfigurationValue(sensorConfiguration)!;
-              if (value is SensorFrequencyConfigurationValue) {
-                SensorFrequencyConfigurationValue freqValue = value;
+                ),
+                if (isMixed) ...[
+                  const SizedBox(width: 6),
+                  const _MixedStatePill(),
+                ] else if (selectedOptions.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  _OptionsCompactBadge(
+                    options: selectedOptions,
+                    accentColor: accentColor,
+                  ),
+                ],
+                if (!isMixed) ...[
+                  const SizedBox(width: 6),
+                  _SamplingRatePill(
+                    label: _statusPillLabel(selectedValue, isOn: isOn),
+                    foreground: isOn
+                        ? accentColor
+                        : (isApplied
+                            ? colorScheme.onSurfaceVariant
+                            : colorScheme.primary),
+                  ),
+                ],
+                const SizedBox(width: 2),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 16,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
-                return Row(
-                  mainAxisSize: MainAxisSize.min,
+  void _openConfigurationSheet(
+    BuildContext context,
+    SensorConfigurationProvider sensorConfigNotifier,
+  ) {
+    showPlatformModalSheet<void>(
+      context: context,
+      builder: (modalContext) {
+        return ChangeNotifierProvider.value(
+          value: sensorConfigNotifier,
+          child: SafeArea(
+            child: SizedBox(
+              height: MediaQuery.of(modalContext).size.height * 0.82,
+              child: Material(
+                color: Theme.of(modalContext).colorScheme.surface,
+                child: Column(
                   children: [
-                    if (sensorConfiguration is ConfigurableSensorConfiguration)
-                      ...(sensorConfigNotifier.getSelectedConfigurationOptions(
-                        sensorConfiguration,
-                      )).map(
-                        (option) {
-                          return Icon(
-                            getSensorConfigurationOptionIcon(option),
-                            color: Theme.of(context).colorScheme.secondary,
-                          );
-                        },
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  sensorConfiguration.name,
+                                  style: Theme.of(modalContext)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Adjust data targets and sampling rate.',
+                                  style: Theme.of(modalContext)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: Theme.of(modalContext)
+                                            .colorScheme
+                                            .onSurfaceVariant,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            tooltip: 'Close',
+                            onPressed: () => Navigator.of(modalContext).pop(),
+                            icon: const Icon(Icons.close_rounded, size: 20),
+                          ),
+                        ],
                       ),
-                    PlatformText(
-                      "${freqValue.frequencyHz} Hz",
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.secondary,
+                    ),
+                    Expanded(
+                      child: SensorConfigurationDetailView(
+                        sensorConfiguration: sensorConfiguration,
+                        pairedSensorConfiguration: pairedSensorConfiguration,
+                        pairedProvider: pairedProvider,
                       ),
                     ),
                   ],
-                );
-              }
-
-              return PlatformText(
-                value.toString(),
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.secondary,
                 ),
-              );
-            }()
-          : PlatformText(
-              "Off",
-              style: TextStyle(color: Theme.of(context).colorScheme.secondary),
+              ),
             ),
+          ),
+        );
+      },
     );
+  }
+
+  String _statusPillLabel(
+    SensorConfigurationValue? value, {
+    required bool isOn,
+  }) {
+    if (!isOn) {
+      return 'Off';
+    }
+    if (value is SensorFrequencyConfigurationValue) {
+      return _formatFrequency(value.frequencyHz);
+    }
+    return 'On';
+  }
+
+  String _formatFrequency(double hz) {
+    if ((hz - hz.roundToDouble()).abs() < 0.01) {
+      return '${hz.round()} Hz';
+    }
+    if (hz >= 10) {
+      return '${hz.toStringAsFixed(1)} Hz';
+    }
+    return '${hz.toStringAsFixed(2)} Hz';
   }
 
   bool _isOn(SensorConfigurationProvider notifier, SensorConfiguration config) {
@@ -116,5 +290,170 @@ class SensorConfigurationValueRow extends StatelessWidget {
     }
 
     return isOn;
+  }
+
+  bool _configurationValuesMatchNullable(
+    SensorConfigurationValue? left,
+    SensorConfigurationValue? right,
+  ) {
+    if (left == null || right == null) {
+      return left == null && right == null;
+    }
+    return _configurationValuesMatch(left, right);
+  }
+
+  bool _configurationValuesMatch(
+    SensorConfigurationValue left,
+    SensorConfigurationValue right,
+  ) {
+    if (left is SensorFrequencyConfigurationValue &&
+        right is SensorFrequencyConfigurationValue) {
+      return left.frequencyHz == right.frequencyHz &&
+          setEquals(_optionNameSet(left), _optionNameSet(right));
+    }
+
+    if (left is ConfigurableSensorConfigurationValue &&
+        right is ConfigurableSensorConfigurationValue) {
+      return _normalizeName(left.withoutOptions().key) ==
+              _normalizeName(right.withoutOptions().key) &&
+          setEquals(_optionNameSet(left), _optionNameSet(right));
+    }
+
+    return _normalizeName(left.key) == _normalizeName(right.key);
+  }
+
+  Set<String> _optionNameSet(SensorConfigurationValue value) {
+    if (value is! ConfigurableSensorConfigurationValue) {
+      return const <String>{};
+    }
+    return value.options.map((option) => _normalizeName(option.name)).toSet();
+  }
+
+  String _normalizeName(String value) => value.trim().toLowerCase();
+}
+
+class _OptionsCompactBadge extends StatelessWidget {
+  final List<SensorConfigurationOption> options;
+  final Color accentColor;
+
+  const _OptionsCompactBadge({
+    required this.options,
+    required this.accentColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final visibleCount = options.length > 2 ? 2 : options.length;
+    final remainingCount = options.length - visibleCount;
+
+    return SizedBox(
+      height: _kSensorStatusPillHeight,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: accentColor.withValues(alpha: 0.38),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < visibleCount; i++) ...[
+              Icon(
+                getSensorConfigurationOptionIcon(options[i]) ??
+                    Icons.tune_rounded,
+                size: 10,
+                color: accentColor,
+              ),
+              if (i < visibleCount - 1) const SizedBox(width: 3),
+            ],
+            if (remainingCount > 0) ...[
+              const SizedBox(width: 4),
+              Text(
+                '+$remainingCount',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: accentColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SamplingRatePill extends StatelessWidget {
+  final String label;
+  final Color foreground;
+
+  const _SamplingRatePill({
+    required this.label,
+    required this.foreground,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return SizedBox(
+      height: _kSensorStatusPillHeight,
+      child: Container(
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 7),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: foreground.withValues(alpha: 0.42),
+          ),
+        ),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 38),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: foreground,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MixedStatePill extends StatelessWidget {
+  const _MixedStatePill();
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return SizedBox(
+      height: _kSensorStatusPillHeight,
+      child: Container(
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: colorScheme.error.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: colorScheme.error.withValues(alpha: 0.38),
+          ),
+        ),
+        child: Text(
+          'Mixed',
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: colorScheme.error,
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+      ),
+    );
   }
 }

@@ -1,10 +1,14 @@
-import 'package:flutter/gestures.dart';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/widgets/app_toast.dart';
+import 'package:open_wearable/widgets/common/app_section_card.dart';
+import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class FotaWarningPage extends StatefulWidget {
   const FotaWarningPage({super.key});
@@ -15,10 +19,10 @@ class FotaWarningPage extends StatefulWidget {
 
 class _FotaWarningPageState extends State<FotaWarningPage> {
   static const int _minimumBatteryThreshold = 50;
-  
+
   int? _currentBatteryLevel;
   bool _checkingBattery = true;
-  
+
   @override
   void initState() {
     super.initState();
@@ -32,31 +36,31 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
         listen: false,
       );
       final device = updateProvider.selectedWearable;
-      
+
       if (device != null && device.hasCapability<BatteryLevelStatus>()) {
-        // Get the current battery level from the stream
-        final batteryLevel = await device.requireCapability<BatteryLevelStatus>()
-            .batteryPercentageStream
-            .first
-            .timeout(
-              const Duration(seconds: 5),
-              onTimeout: () => 0,
-            );
-        
+        int? batteryLevel;
+        try {
+          batteryLevel = await device
+              .requireCapability<BatteryLevelStatus>()
+              .batteryPercentageStream
+              .first
+              .timeout(const Duration(seconds: 5));
+        } on TimeoutException {
+          batteryLevel = null;
+        }
+
         if (mounted) {
           setState(() {
             _currentBatteryLevel = batteryLevel;
             _checkingBattery = false;
           });
         }
-      } else {
-        if (mounted) {
-          setState(() {
-            _checkingBattery = false;
-          });
-        }
+      } else if (mounted) {
+        setState(() {
+          _checkingBattery = false;
+        });
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         setState(() {
           _checkingBattery = false;
@@ -69,23 +73,29 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
     final uri = Uri.parse(
       'https://github.com/OpenEarable/open-earable-2?tab=readme-ov-file#setup',
     );
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.platformDefault);
-    } else {
-      throw 'Could not launch $uri';
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (opened || !mounted) {
+      return;
     }
+
+    AppToast.show(
+      context,
+      message: 'Could not open GitHub instructions.',
+      type: AppToastType.error,
+      icon: Icons.link_off_rounded,
+    );
   }
 
   void _handleProceed() {
     if (_currentBatteryLevel == null) {
-      // Battery level could not be determined
       showPlatformDialog(
         context: context,
         builder: (_) => PlatformAlertDialog(
-          title: const Text('Battery Level Unknown'),
+          title: const Text('Battery level unknown'),
           content: Text(
-            'Unable to determine the OpenEarable battery level. '
-            'For safety, please ensure your OpenEarable is charged to at least $_minimumBatteryThreshold% before proceeding with the firmware update.\n\n'
+            'Unable to read the current battery level.\n\n'
+            'Please make sure your OpenEarable is charged to at least '
+            '$_minimumBatteryThreshold% before continuing.\n\n'
             'Do you want to proceed anyway?',
           ),
           actions: <Widget>[
@@ -95,9 +105,8 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
               onPressed: () => Navigator.of(context).pop(),
             ),
             PlatformDialogAction(
-              cupertino: (_, __) => CupertinoDialogActionData(
-                isDestructiveAction: true,
-              ),
+              cupertino: (_, __) =>
+                  CupertinoDialogActionData(isDestructiveAction: true),
               child: const Text('Proceed Anyway'),
               onPressed: () {
                 Navigator.of(context).pop();
@@ -108,7 +117,6 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
         ),
       );
     } else if (_currentBatteryLevel! < _minimumBatteryThreshold) {
-      // Show first warning dialog with option to force update
       _showLowBatteryWarning();
     } else {
       context.push('/fota/update');
@@ -119,11 +127,12 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
     showPlatformDialog(
       context: context,
       builder: (_) => PlatformAlertDialog(
-        title: const Text('Battery Level Too Low'),
+        title: const Text('Battery level too low'),
         content: Text(
-          'Your OpenEarable battery level is $_currentBatteryLevel%, which is below the required $_minimumBatteryThreshold% minimum for firmware updates.\n\n'
-          'Updating with low battery can cause the update to fail and may result in a bricked device.\n\n'
-          'It is strongly recommended to charge your device before proceeding.',
+          'Your OpenEarable battery level is $_currentBatteryLevel%, which is '
+          'below the recommended $_minimumBatteryThreshold% for firmware updates.\n\n'
+          'Updating with low battery can fail and may leave the device unusable, requiring recovery with a J-Link debugger.\n\n'
+          'Please charge your device before continuing.',
         ),
         actions: <Widget>[
           PlatformDialogAction(
@@ -134,9 +143,8 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
             onPressed: () => Navigator.of(context).pop(),
           ),
           PlatformDialogAction(
-            cupertino: (_, __) => CupertinoDialogActionData(
-              isDestructiveAction: true,
-            ),
+            cupertino: (_, __) =>
+                CupertinoDialogActionData(isDestructiveAction: true),
             child: const Text('Force Update Anyway'),
             onPressed: () {
               Navigator.of(context).pop();
@@ -152,10 +160,10 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
     showPlatformDialog(
       context: context,
       builder: (_) => PlatformAlertDialog(
-        title: const Text('Critical Warning'),
+        title: const Text('Critical warning'),
         content: Text(
-          'FINAL WARNING: Proceeding with a firmware update at $_currentBatteryLevel% battery may permanently brick your OpenEarable device.\n\n'
-          'You will not be able to recover the device without a J-Link debugger if the update fails due to low battery.\n\n'
+          'FINAL WARNING: Proceeding with $_currentBatteryLevel% battery can '
+          'cause the update to fail and leave your OpenEarable unusable until it is recovered with a J-Link debugger.\n\n'
           'Are you absolutely sure you want to continue?',
         ),
         actions: <Widget>[
@@ -167,9 +175,8 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
             onPressed: () => Navigator.of(context).pop(),
           ),
           PlatformDialogAction(
-            cupertino: (_, __) => CupertinoDialogActionData(
-              isDestructiveAction: true,
-            ),
+            cupertino: (_, __) =>
+                CupertinoDialogActionData(isDestructiveAction: true),
             child: const Text('I Understand, Proceed'),
             onPressed: () {
               Navigator.of(context).pop();
@@ -184,280 +191,358 @@ class _FotaWarningPageState extends State<FotaWarningPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final textTheme = theme.textTheme;
-    final baseTextStyle = textTheme.bodyLarge; // one place to define size
+    final colorScheme = theme.colorScheme;
 
     return PlatformScaffold(
       appBar: PlatformAppBar(
-        title: const Text('Firmware Update'),
+        title: const Text('Update Instructions'),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 600),
-              child: DefaultTextStyle.merge( // <<– base style for everything
-                style: baseTextStyle ?? const TextStyle(fontSize: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header with warning icon
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.warning_amber_rounded,
-                          color: theme.colorScheme.error,
-                          size: 32,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Warning',
-                          style: (baseTextStyle ?? const TextStyle())
-                              .copyWith(
-                                fontWeight: FontWeight.bold,
-                                fontSize: (baseTextStyle?.fontSize ?? 16) + 2,
-                              ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
-                    // First paragraph with hyperlink
-                    Text.rich(
-                      TextSpan(
-                        style: baseTextStyle,
-                        children: [
-                          const TextSpan(
-                            text:
-                                'Updating OpenEarable via Bluetooth is currently an experimental feature. '
-                                'Hence, updating OpenEarable over Bluetooth might sometimes not complete successfully. '
-                                'If that happens, you can easily perform a manual update with the help of a J-Link debugger (see ',
-                          ),
-                          TextSpan(
-                            text: 'GitHub instructions',
-                            style: const TextStyle(
-                              color: Colors.blue,
-                              decoration: TextDecoration.underline,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            recognizer: TapGestureRecognizer()
-                              ..onTap = _openGitHubLink,
-                          ),
-                          const TextSpan(text: ').'),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    Text(
-                      'To help ensure a smooth update, please:',
-                      style: baseTextStyle?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Steps in a Card
-                    Card(
-                      elevation: 2,
-                      margin: EdgeInsets.zero,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const _NumberedStep(
-                              number: '1.',
-                              text: TextSpan(
-                                text:
-                                    'Power cycle your OpenEarable once before you update.',
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const _NumberedStep(
-                              number: '2.',
-                              text: TextSpan(
-                                text:
-                                    'Keep the app open in the foreground and make sure your phone doesn’t enter power-saving mode.',
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            _NumberedStep(
-                              number: '3.',
-                              text: TextSpan(
-                                text:
-                                    'Ensure your OpenEarable has at least $_minimumBatteryThreshold% battery charge before starting. Fully charging is recommended.',
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const _NumberedStep(
-                              number: '4.',
-                              text: TextSpan(
-                                text: "Keep OpenEarable disconnected from charger during the update.",
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const _NumberedStep(
-                              number: '5.',
-                              text: TextSpan(
-                                text:
-                                    'If you have two devices, power off the one that’s not being updated.',
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const _NumberedStep(
-                              number: '6.',
-                              text: TextSpan(
-                                children: [
-                                  TextSpan(
-                                    text:
-                                        'After the firmware is uploaded, OpenEarable will automatically verify it. '
-                                        'During this step, the device might seem unresponsive for up to 3 minutes. '
-                                        'Don’t worry, this is normal. It will start blinking again once the process is complete.\n',
-                                  ),
-                                  TextSpan(
-                                    text:
-                                        'Don‘t reset the device via the button while the firmware is verified by OpenEarable.',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Battery level warning if below 50%
-                    if (_currentBatteryLevel != null && _currentBatteryLevel! < _minimumBatteryThreshold)
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 16),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.error.withValues(alpha: 0.1),
-                          border: Border.all(
-                            color: theme.colorScheme.error,
-                            width: 2,
-                          ),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.battery_alert,
-                              color: theme.colorScheme.error,
-                              size: 24,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                'Battery level is $_currentBatteryLevel%. Please charge to at least $_minimumBatteryThreshold% before updating.',
-                                style: baseTextStyle?.copyWith(
-                                  color: theme.colorScheme.error,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    
-                    // Battery level warning if unknown
-                    if (!_checkingBattery && _currentBatteryLevel == null)
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 16),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.withValues(alpha: 0.1),
-                          border: Border.all(
-                            color: Colors.orange,
-                            width: 2,
-                          ),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.battery_unknown,
-                              color: Colors.orange,
-                              size: 24,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                'Unable to determine battery level. Please ensure your device is charged to at least $_minimumBatteryThreshold%.',
-                                style: baseTextStyle?.copyWith(
-                                  color: Colors.orange.shade900,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                    // Proceed button
-                    SizedBox(
-                      width: double.infinity,
-                      child: _checkingBattery
-                          ? const Center(child: CircularProgressIndicator())
-                          : PlatformElevatedButton(
-                              onPressed: _handleProceed,
-                              child: const Text('Acknowledge and Proceed'),
-                            ),
-                    ),
-                  ],
+      body: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
+        children: [
+          AppSectionCard(
+            title: 'Before You Update',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _WarningPill(
+                  label: 'Bluetooth firmware updates are experimental.',
                 ),
+                const SizedBox(height: 10),
+                Text(
+                  'Following the steps below ensures that updates will not fail. '
+                  'In the unlikely event that an update fails, the device must be recovered with a J-Link debugger.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _openGitHubLink,
+                    icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                    label: const Text('Open GitHub Recovery Instructions'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: SensorPageSpacing.sectionGap),
+          AppSectionCard(
+            title: 'Checklist',
+            subtitle: 'Please confirm these points before continuing.',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const _ChecklistItem(
+                  number: 1,
+                  text:
+                      'Power cycle your OpenEarable once before starting the update.',
+                ),
+                const SizedBox(height: 8),
+                const _ChecklistItem(
+                  number: 2,
+                  text:
+                      'Keep the app open in the foreground and disable power-saving mode.',
+                ),
+                const SizedBox(height: 8),
+                _ChecklistItem(
+                  number: 3,
+                  text:
+                      'Ensure at least $_minimumBatteryThreshold% battery before updating. Full charge is recommended.',
+                ),
+                const SizedBox(height: 8),
+                const _ChecklistItem(
+                  number: 4,
+                  text: 'Keep OpenEarable disconnected from the charger.',
+                ),
+                const SizedBox(height: 8),
+                const _ChecklistItem(
+                  number: 5,
+                  text:
+                      'If you have two devices, power off the one that is not being updated.',
+                ),
+                const SizedBox(height: 8),
+                const _ChecklistItem(
+                  number: 6,
+                  text:
+                      'After upload, verification can take up to 3 minutes and is indicated by a blinking red LED. Do not reset during verification, or you may brick it.',
+                  boldFragment: 'Do not reset during verification',
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: SensorPageSpacing.sectionGap),
+          _buildBatteryCard(context),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _checkingBattery ? null : _handleProceed,
+              icon: _checkingBattery
+                  ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: colorScheme.onPrimary,
+                      ),
+                    )
+                  : const Icon(Icons.arrow_forward_rounded, size: 18),
+              label: Text(
+                _checkingBattery
+                    ? 'Checking Battery...'
+                    : 'Acknowledge and Proceed',
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBatteryCard(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    if (_checkingBattery) {
+      return AppSectionCard(
+        title: 'Battery Status',
+        subtitle: 'Checking current battery level...',
+        child: Row(
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: colorScheme.primary,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Reading battery level from the device.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ],
         ),
+      );
+    }
+
+    if (_currentBatteryLevel == null) {
+      return AppSectionCard(
+        title: 'Battery Status',
+        subtitle: 'Battery level could not be determined.',
+        child: _StatusNotice(
+          icon: Icons.battery_unknown_rounded,
+          text:
+              'Please ensure your device is charged to at least $_minimumBatteryThreshold% before updating.',
+          foregroundColor: colorScheme.tertiary,
+          backgroundColor: colorScheme.tertiaryContainer.withValues(alpha: 0.5),
+          borderColor: colorScheme.tertiary.withValues(alpha: 0.45),
+        ),
+      );
+    }
+
+    final batteryLevel = _currentBatteryLevel!;
+    final low = batteryLevel < _minimumBatteryThreshold;
+
+    return AppSectionCard(
+      title: 'Battery Status',
+      subtitle: low
+          ? 'Battery is below the recommended update threshold.'
+          : 'Battery level is sufficient for update.',
+      child: _StatusNotice(
+        icon: low ? Icons.battery_alert_rounded : Icons.battery_charging_full,
+        text: low
+            ? 'Battery level is $batteryLevel%. Please charge to at least $_minimumBatteryThreshold% before updating.'
+            : 'Battery level is $batteryLevel%. You can proceed with the update.',
+        foregroundColor: low ? colorScheme.error : colorScheme.primary,
+        backgroundColor: low
+            ? colorScheme.errorContainer.withValues(alpha: 0.45)
+            : colorScheme.primaryContainer.withValues(alpha: 0.35),
+        borderColor: low
+            ? colorScheme.error.withValues(alpha: 0.5)
+            : colorScheme.primary.withValues(alpha: 0.35),
       ),
     );
   }
 }
 
-/// Helper widget for cleanly aligned numbered steps
-class _NumberedStep extends StatelessWidget {
-  final String number;
-  final InlineSpan text; // now accepts TextSpan / InlineSpan
+class _WarningPill extends StatelessWidget {
+  final String label;
 
-  const _NumberedStep({
+  const _WarningPill({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final foreground = colorScheme.error;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: colorScheme.errorContainer.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: foreground.withValues(alpha: 0.45),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.max,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.warning_amber_rounded,
+            size: 15,
+            color: foreground,
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              label,
+              softWrap: true,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: foreground,
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChecklistItem extends StatelessWidget {
+  final int number;
+  final String text;
+  final String? boldFragment;
+
+  const _ChecklistItem({
     required this.number,
     required this.text,
+    this.boldFragment,
   });
 
   @override
   Widget build(BuildContext context) {
-    final baseStyle = Theme.of(context).textTheme.bodyLarge ??
-        const TextStyle(fontSize: 16);
+    final colorScheme = Theme.of(context).colorScheme;
+    final numberColor = colorScheme.primary;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          number,
-          style: baseStyle.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: RichText(
-            text: TextSpan(
-              style: baseStyle,
-              children: [text],
-            ),
+        Container(
+          width: 20,
+          height: 20,
+          decoration: BoxDecoration(
+            color: numberColor.withValues(alpha: 0.14),
+            shape: BoxShape.circle,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            '$number',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: numberColor,
+                  fontWeight: FontWeight.w800,
+                ),
           ),
         ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _buildText(context),
+        ),
       ],
+    );
+  }
+
+  Widget _buildText(BuildContext context) {
+    final baseStyle = Theme.of(context).textTheme.bodyMedium;
+    if (boldFragment == null || boldFragment!.isEmpty) {
+      return Text(
+        text,
+        style: baseStyle,
+      );
+    }
+
+    final start = text.indexOf(boldFragment!);
+    if (start < 0) {
+      return Text(
+        text,
+        style: baseStyle,
+      );
+    }
+
+    final end = start + boldFragment!.length;
+    final before = text.substring(0, start);
+    final bold = text.substring(start, end);
+    final after = text.substring(end);
+
+    return RichText(
+      text: TextSpan(
+        style: baseStyle,
+        children: [
+          if (before.isNotEmpty) TextSpan(text: before),
+          TextSpan(
+            text: bold,
+            style: baseStyle?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          if (after.isNotEmpty) TextSpan(text: after),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusNotice extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final Color foregroundColor;
+  final Color backgroundColor;
+  final Color borderColor;
+
+  const _StatusNotice({
+    required this.icon,
+    required this.text,
+    required this.foregroundColor,
+    required this.backgroundColor,
+    required this.borderColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: foregroundColor),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

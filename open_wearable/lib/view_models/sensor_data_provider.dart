@@ -4,39 +4,130 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/models/sensor_streams.dart';
 
+/// Rolling live-data provider for a single sensor stream.
+///
+/// Needs:
+/// - A `Sensor` and its stream from `SensorStreams.shared(sensor)`.
+///
+/// Does:
+/// - Buffers values within a time window.
+/// - Tracks last timestamp/arrival time for extrapolated display time.
+/// - Throttles notifications and handles stale/silent stream aging.
+///
+/// Provides:
+/// - `sensorValues` and `displayTimestamp` for chart/value widgets.
 class SensorDataProvider with ChangeNotifier {
   final Sensor sensor;
   final int timeWindow; // seconds
 
-  late final int _timestampCutoffMs;
+  late final int _timestampUnitsPerSecond;
+  late final int _timestampCutoff;
   final Queue<SensorValue> sensorValues = Queue();
 
   StreamSubscription<SensorValue>? _sensorStreamSubscription;
 
   Timer? _throttleTimer;
+  Timer? _silenceTimer;
+  Timer? _staleDataTimer;
   final Duration _throttleDuration = const Duration(milliseconds: 15);
+  final Duration _staleDataInterval = const Duration(milliseconds: 100);
+
+  int? _lastSensorTimestamp;
+  DateTime? _lastSensorArrivalTime;
 
   SensorDataProvider({
     required this.sensor,
     this.timeWindow = 5,
   }) {
-    _timestampCutoffMs = pow(10, -sensor.timestampExponent).toInt() * timeWindow;
+    _timestampUnitsPerSecond = max(
+      1,
+      pow(10, -sensor.timestampExponent).round(),
+    );
+    _timestampCutoff = _timestampUnitsPerSecond * timeWindow;
     _listenToStream();
   }
 
-  void _listenToStream() {
-    _sensorStreamSubscription = sensor.sensorStream.listen((sensorValue) {
-      sensorValues.add(sensorValue);
-      final cutoff = sensorValue.timestamp - _timestampCutoffMs;
-      sensorValues.removeWhere((v) => v.timestamp < cutoff);
+  int get displayTimestamp {
+    final lastTimestamp = _lastSensorTimestamp;
+    final lastArrivalTime = _lastSensorArrivalTime;
+    if (lastTimestamp == null || lastArrivalTime == null) {
+      return lastTimestamp ?? 0;
+    }
+    final elapsedMicroseconds =
+        DateTime.now().difference(lastArrivalTime).inMicroseconds;
+    final elapsedTimestampUnits =
+        (elapsedMicroseconds * _timestampUnitsPerSecond) ~/
+            Duration.microsecondsPerSecond;
+    return lastTimestamp + elapsedTimestampUnits;
+  }
 
-      while (sensorValues.isNotEmpty && sensorValues.first.timestamp < cutoff) {
-        sensorValues.removeFirst();
-      }
+  void _listenToStream() {
+    _sensorStreamSubscription =
+        SensorStreams.shared(sensor).listen((sensorValue) {
+      sensorValues.add(sensorValue);
+      _lastSensorTimestamp = sensorValue.timestamp;
+      _lastSensorArrivalTime = DateTime.now();
+      _pruneStaleValues(referenceTimestamp: sensorValue.timestamp);
+      _stopStaleDataTicker();
+      _scheduleSilenceWatch();
 
       _throttledNotifyListeners();
     });
+  }
+
+  void _pruneStaleValues({required int referenceTimestamp}) {
+    final cutoff = referenceTimestamp - _timestampCutoff;
+    // Sensor values are timestamp-ordered from the stream, so stale values
+    // only need to be removed from the queue front.
+    while (sensorValues.isNotEmpty && sensorValues.first.timestamp < cutoff) {
+      sensorValues.removeFirst();
+    }
+  }
+
+  bool get _isSensorSilent {
+    final lastArrivalTime = _lastSensorArrivalTime;
+    if (lastArrivalTime == null) {
+      return true;
+    }
+    return DateTime.now().difference(lastArrivalTime) >= _staleDataInterval;
+  }
+
+  void _scheduleSilenceWatch() {
+    _silenceTimer?.cancel();
+    _silenceTimer = Timer(_staleDataInterval, () {
+      if (_isSensorSilent) {
+        _startStaleDataTickerIfNeeded();
+      }
+    });
+  }
+
+  void _startStaleDataTickerIfNeeded() {
+    if ((_staleDataTimer?.isActive ?? false) || sensorValues.isEmpty) return;
+
+    _staleDataTimer = Timer.periodic(_staleDataInterval, (_) {
+      if (sensorValues.isEmpty || !_isSensorSilent) {
+        _stopStaleDataTicker();
+        return;
+      }
+
+      final previousLength = sensorValues.length;
+      _pruneStaleValues(referenceTimestamp: displayTimestamp);
+
+      if (sensorValues.isEmpty) {
+        _stopStaleDataTicker();
+      }
+
+      if (sensorValues.isNotEmpty || previousLength != sensorValues.length) {
+        _throttledNotifyListeners();
+      }
+    });
+  }
+
+  void _stopStaleDataTicker() {
+    _staleDataTimer?.cancel();
+    _staleDataTimer = null;
   }
 
   void _throttledNotifyListeners() {
@@ -47,6 +138,9 @@ class SensorDataProvider with ChangeNotifier {
 
   @override
   void dispose() {
+    _throttleTimer?.cancel();
+    _silenceTimer?.cancel();
+    _stopStaleDataTicker();
     _sensorStreamSubscription?.cancel();
     super.dispose();
   }
