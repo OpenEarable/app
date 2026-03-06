@@ -171,4 +171,13 @@ class SensorRecorderProvider with ChangeNotifier {
       );
     }
   }
+
+  @override
+  void dispose() {
+    for (final wearable in _recorders.keys.toList()) {
+      _disposeWearable(wearable);
+    }
+    _recorders.clear();
+    super.dispose();
+  }
 }
