@@ -42,6 +42,38 @@ class WearableStatusCache {
   Object? cachedHardwareVersionFor(String deviceId) =>
       _hardwareVersionByDeviceId[deviceId];
 
+  /// Clears all cached metadata for a single device id.
+  ///
+  /// Call this when a wearable disconnects so reconnect reads fresh values.
+  void clearDevice(String deviceId) {
+    _stereoPositionByDeviceId.remove(deviceId);
+    _stereoPositionFutureByDeviceId.remove(deviceId);
+
+    _firmwareVersionByDeviceId.remove(deviceId);
+    _firmwareVersionFutureByDeviceId.remove(deviceId);
+
+    _firmwareSupportByDeviceId.remove(deviceId);
+    _firmwareSupportFutureByDeviceId.remove(deviceId);
+
+    _hardwareVersionByDeviceId.remove(deviceId);
+    _hardwareVersionFutureByDeviceId.remove(deviceId);
+  }
+
+  /// Clears all cached metadata for all devices.
+  void clearAll() {
+    _stereoPositionByDeviceId.clear();
+    _stereoPositionFutureByDeviceId.clear();
+
+    _firmwareVersionByDeviceId.clear();
+    _firmwareVersionFutureByDeviceId.clear();
+
+    _firmwareSupportByDeviceId.clear();
+    _firmwareSupportFutureByDeviceId.clear();
+
+    _hardwareVersionByDeviceId.clear();
+    _hardwareVersionFutureByDeviceId.clear();
+  }
+
   Future<DevicePosition?>? ensureStereoPosition(Wearable wearable) {
     if (!wearable.hasCapability<StereoDevice>()) {
       return null;
