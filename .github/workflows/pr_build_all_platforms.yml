@@ -176,10 +176,10 @@ jobs:
 
             const body = `${marker}
             ### PR Build Artifacts
-            - Android: [Download artifact](${linkFor(process.env.ANDROID_ARTIFACT_ID)})
-            - Linux: [Download artifact](${linkFor(process.env.LINUX_ARTIFACT_ID)})
-            - Windows: [Download artifact](${linkFor(process.env.WINDOWS_ARTIFACT_ID)})
-            - Web: [Download artifact](${linkFor(process.env.WEB_ARTIFACT_ID)})
+            - Android APK: [Download Android build](${linkFor(process.env.ANDROID_ARTIFACT_ID)})
+            - Linux Bundle: [Download Linux build](${linkFor(process.env.LINUX_ARTIFACT_ID)})
+            - Windows Runner: [Download Windows build](${linkFor(process.env.WINDOWS_ARTIFACT_ID)})
+            - Web Bundle: [Download Web build](${linkFor(process.env.WEB_ARTIFACT_ID)})
 
             Full workflow run: ${runUrl}`;
 
