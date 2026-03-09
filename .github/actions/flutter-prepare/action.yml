@@ -1,0 +1,27 @@
+name: Flutter Prepare
+description: Set up Flutter from .flutter_version and fetch dependencies.
+
+inputs:
+  app-dir:
+    description: Path to the Flutter application directory.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Read Flutter version
+      id: flutter_version
+      shell: bash
+      run: echo "version=$(cat ${{ inputs.app-dir }}/.flutter_version)" >> "$GITHUB_OUTPUT"
+
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        channel: stable
+        flutter-version: ${{ steps.flutter_version.outputs.version }}
+        cache: true
+
+    - name: Install dependencies
+      shell: bash
+      working-directory: ${{ inputs.app-dir }}
+      run: flutter pub get
