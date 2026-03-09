@@ -28,10 +28,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: zulu
           java-version: "17"
@@ -48,7 +48,7 @@ jobs:
 
       - name: Upload Android APK
         id: upload_android
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: android-apk
           path: open_wearable/build/app/outputs/flutter-apk/app-release.apk
@@ -62,7 +62,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Linux build dependencies
         run: |
@@ -85,7 +85,7 @@ jobs:
 
       - name: Upload Linux bundle
         id: upload_linux
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: linux-bundle
           path: open_wearable/build/linux/x64/release/bundle
@@ -99,7 +99,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Flutter project
         uses: ./.github/actions/flutter-prepare
@@ -112,7 +112,7 @@ jobs:
 
       - name: Upload Windows runner
         id: upload_windows
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: windows-runner
           path: open_wearable/build/windows/x64/runner/Release
@@ -126,7 +126,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Flutter project
         uses: ./.github/actions/flutter-prepare
@@ -139,7 +139,7 @@ jobs:
 
       - name: Upload Web bundle
         id: upload_web
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: web-bundle
           path: open_wearable/build/web
@@ -157,7 +157,7 @@ jobs:
 
     steps:
       - name: Post or update PR comment with artifact links
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           ANDROID_ARTIFACT_ID: ${{ needs.build_android.outputs.artifact_id }}
