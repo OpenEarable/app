@@ -92,6 +92,11 @@ Other event messages:
 | `connect_system_devices` | `{"ignored_device_ids"?:string[]}` | `WearableSummary[]` |
 | `list_connected` | `{}` | `WearableSummary[]` |
 | `disconnect` | `{"device_id":string}` | `{"disconnected":true}` |
+| `store_sound` | `{"sound_id":string,"audio_base64":string,"codec"?:string,"sample_rate"?:int,"num_channels"?:int,"interleaved"?:bool,"buffer_size"?:int}` | `{"sound_id":string,"stored":true,"bytes":int,"config":object}` |
+| `play_sound` | `{"sound_id"?:string,"url"?:string,"volume"?:number,"codec"?:string,"sample_rate"?:int,"num_channels"?:int}` | `{"source":"sound_id"\\|"url","playing":true,"config":object,...}` |
+| `start_audio_stream` | `{"volume"?:number,"codec"?:string,"sample_rate"?:int,"num_channels"?:int,"interleaved"?:bool,"buffer_size"?:int}` | `{"started":true,"config":object}` |
+| `push_audio_stream_chunk` | `{"audio_base64":string}` | `{"queued_bytes":int}` |
+| `stop_audio_stream` | `{}` | `{"stopped":true}` |
 | `subscribe` | `{"device_id":string,"stream":string,"args"?:object}` | `{"subscription_id":int,"stream":string,"device_id":string}` |
 | `unsubscribe` | `{"subscription_id":int}` | `{"subscription_id":int,"cancelled":bool}` |
 | `invoke_action` | `{"device_id":string,"action":string,"args"?:object}` | depends on action |
@@ -136,6 +141,110 @@ Note:
 
 - `scan` is not a direct `subscribe` stream.
 - Use `start_scan_async` to receive scan data via `stream` events.
+
+## Audio Playback Over WebSocket
+
+The connector supports two audio modes:
+
+1. Distinct preloaded sounds (store once, play many times)
+2. Chunked audio stream playback (headphone-like continuous feed)
+
+### 1) Distinct Preloaded Sounds
+
+Store sound bytes in memory:
+
+```json
+{
+  "id": 20,
+  "method": "store_sound",
+  "params": {
+    "sound_id": "beep_ok",
+    "audio_base64": "<base64-encoded-audio-bytes>"
+  }
+}
+```
+
+Play a stored sound:
+
+```json
+{
+  "id": 21,
+  "method": "play_sound",
+  "params": {
+    "sound_id": "beep_ok",
+    "volume": 1.0
+  }
+}
+```
+
+Play directly from a URL:
+
+```json
+{
+  "id": 22,
+  "method": "play_sound",
+  "params": {
+    "url": "https://example.com/notification.wav",
+    "volume": 1.0
+  }
+}
+```
+
+`play_sound` rules:
+
+- Provide exactly one source: `sound_id` or `url`.
+- If both are set, the server returns an error.
+
+### 2) Chunked Audio Stream
+
+Start stream playback mode:
+
+```json
+{
+  "id": 30,
+  "method": "start_audio_stream",
+  "params": {
+    "volume": 1.0
+  }
+}
+```
+
+Push chunks continuously:
+
+```json
+{
+  "id": 31,
+  "method": "push_audio_stream_chunk",
+  "params": {
+    "audio_base64": "<base64-encoded-audio-chunk>"
+  }
+}
+```
+
+Stop stream playback:
+
+```json
+{
+  "id": 32,
+  "method": "stop_audio_stream",
+  "params": {}
+}
+```
+
+Notes:
+
+- `audio_base64` must be raw audio file/chunk bytes encoded as Base64.
+- Default config when omitted:
+  - `codec=defaultCodec`
+  - `sample_rate=16000`
+  - `num_channels=1`
+  - `interleaved=true`
+  - `buffer_size=8192`
+- PCM stream mode:
+  - `codec=pcm16` or `codec=pcmFloat32` enables low-latency feed mode (`startPlayerFromStream`).
+  - Other codecs are handled as queued chunk playback.
+- Keep chunk sizes moderate to reduce latency and memory pressure.
+- Call `start_audio_stream` before first chunk; otherwise the server returns an error.
 
 ## Data Shapes
 
@@ -208,3 +317,14 @@ Note:
 2. Pick `sensor_id`.
 3. `subscribe` with `stream="sensor_values"` and `args={"sensor_id":"..."}`.
 4. `unsubscribe` when done.
+
+### Distinct sound playback
+
+1. `store_sound` with `sound_id` and `audio_base64`.
+2. `play_sound` with the same `sound_id`.
+
+### Live audio streaming
+
+1. `start_audio_stream`.
+2. Repeatedly call `push_audio_stream_chunk`.
+3. `stop_audio_stream` when done.
