@@ -530,6 +530,9 @@ class WearablesProvider with ChangeNotifier {
         ),
       );
     }
+    if (_disposed) {
+      return;
+    }
     if (addedCapabilites.isNotEmpty) {
       notifyListeners();
     }
