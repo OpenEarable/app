@@ -1,4 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+
+import '../audio_playback_config.dart';
 
 abstract class CommandRuntime {
   List<String> get methods;
@@ -28,6 +32,30 @@ abstract class CommandRuntime {
   Future<Map<String, dynamic>> disconnect({
     required String deviceId,
   });
+
+  Future<Map<String, dynamic>> storeSound({
+    required String soundId,
+    required Uint8List bytes,
+    required AudioPlaybackConfig config,
+  });
+
+  Future<Map<String, dynamic>> playSound({
+    String? soundId,
+    String? url,
+    double? volume,
+    AudioPlaybackConfig? config,
+  });
+
+  Future<Map<String, dynamic>> startAudioStream({
+    double? volume,
+    required AudioPlaybackConfig config,
+  });
+
+  Future<Map<String, dynamic>> pushAudioStreamChunk({
+    required Uint8List bytes,
+  });
+
+  Future<Map<String, dynamic>> stopAudioStream();
 
   Future<int> createSubscriptionId();
 
