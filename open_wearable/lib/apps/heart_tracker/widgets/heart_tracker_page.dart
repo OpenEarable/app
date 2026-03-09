@@ -151,54 +151,10 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
   void dispose() {
     final configProvider = _sensorConfigProvider;
     if (configProvider != null) {
-      _disableSensorStreaming(widget.ppgSensor, configProvider);
-      final accelerometerSensor = widget.accelerometerSensor;
-      if (accelerometerSensor != null) {
-        _disableSensorStreaming(accelerometerSensor, configProvider);
-      }
-      final opticalTemperatureSensor = widget.opticalTemperatureSensor;
-      if (opticalTemperatureSensor != null) {
-        _disableSensorStreaming(opticalTemperatureSensor, configProvider);
-      }
+      unawaited(configProvider.turnOffAllSensors());
     }
     _ppgFilter?.dispose();
     super.dispose();
-  }
-
-  void _disableSensorStreaming(
-    Sensor sensor,
-    SensorConfigurationProvider configProvider,
-  ) {
-    for (final config in sensor.relatedConfigurations) {
-      try {
-        final offValue = config.offValue;
-        if (offValue != null) {
-          configProvider.addSensorConfiguration(
-            config,
-            offValue,
-            markPending: false,
-          );
-          config.setConfiguration(offValue);
-          continue;
-        }
-
-        if (config is ConfigurableSensorConfiguration &&
-            config.availableOptions
-                .any((option) => option is StreamSensorConfigOption)) {
-          configProvider.removeSensorConfigurationOption(
-            config,
-            const StreamSensorConfigOption(),
-            markPending: false,
-          );
-          final selected = configProvider.getSelectedConfigurationValue(config);
-          if (selected is ConfigurableSensorConfigurationValue) {
-            config.setConfiguration(selected);
-          }
-        }
-      } catch (_) {
-        // Best-effort teardown: continue even if one write fails.
-      }
-    }
   }
 
   double _configureSensorForStreaming(

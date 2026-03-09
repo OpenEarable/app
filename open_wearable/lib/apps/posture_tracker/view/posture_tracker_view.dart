@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -7,6 +8,7 @@ import 'package:open_wearable/apps/posture_tracker/model/bad_posture_reminder.da
 import 'package:open_wearable/apps/posture_tracker/view/posture_roll_view.dart';
 import 'package:open_wearable/apps/posture_tracker/view/settings_view.dart';
 import 'package:open_wearable/apps/posture_tracker/view_model/posture_tracker_view_model.dart';
+import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 import 'package:provider/provider.dart';
 
@@ -21,6 +23,19 @@ class PostureTrackerView extends StatefulWidget {
 
 class _PostureTrackerViewState extends State<PostureTrackerView> {
   static const Color _goodPostureColor = Color(0xFF2F8F5B);
+  late final SensorConfigurationProvider _sensorConfigurationProvider;
+
+  @override
+  void initState() {
+    super.initState();
+    _sensorConfigurationProvider = context.read<SensorConfigurationProvider>();
+  }
+
+  @override
+  void dispose() {
+    unawaited(_sensorConfigurationProvider.turnOffAllSensors());
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
