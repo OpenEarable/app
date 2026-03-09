@@ -25,6 +25,36 @@ int requireIntParam(List<CommandParam> params, String name) {
   throw FormatException('Expected "$name" to be an integer.');
 }
 
+String? readOptionalStringParam(List<CommandParam> params, String name) {
+  final CommandParam? param = params.where((p) => p.name == name).firstOrNull;
+  final Object? value = param?.value;
+  if (value == null) {
+    return null;
+  }
+  if (value is String) {
+    return value;
+  }
+  throw FormatException('Expected "\$name" to be a string.');
+}
+
+double? readOptionalDoubleParam(List<CommandParam> params, String name) {
+  final CommandParam? param = params.where((p) => p.name == name).firstOrNull;
+  final Object? value = param?.value;
+  if (value == null) {
+    return null;
+  }
+  if (value is double) {
+    return value;
+  }
+  if (value is num) {
+    return value.toDouble();
+  }
+  if (value is String) {
+    return double.tryParse(value);
+  }
+  throw FormatException('Expected "$name" to be a number.');
+}
+
 bool? readOptionalBoolParam(List<CommandParam> params, String name) {
   final CommandParam? param = params.where((p) => p.name == name).firstOrNull;
   if (param == null || param.value == null) {
@@ -81,4 +111,22 @@ extension<T> on Iterable<T> {
     }
     return first;
   }
+}
+
+int? readOptionalIntParam(List<CommandParam> params, String name) {
+  final CommandParam? param = params.where((p) => p.name == name).firstOrNull;
+  final Object? value = param?.value;
+  if (value == null) {
+    return null;
+  }
+  if (value is int) {
+    return value;
+  }
+  if (value is num) {
+    return value.toInt();
+  }
+  if (value is String) {
+    return int.tryParse(value);
+  }
+  throw FormatException('Expected "\$name" to be an integer.');
 }

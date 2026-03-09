@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 import 'package:open_wearable/models/connectors/commands/command.dart';
@@ -8,6 +9,8 @@ import 'package:open_wearable/models/connectors/commands/default_action_commands
 import 'package:open_wearable/models/connectors/commands/default_ipc_commands.dart';
 import 'package:open_wearable/models/connectors/commands/ipc_internal_param_names.dart';
 import 'package:open_wearable/models/connectors/commands/runtime.dart';
+import 'package:open_wearable/models/connectors/audio_playback_config.dart';
+import 'package:open_wearable/models/connectors/websocket_audio_playback_service.dart';
 import 'package:open_wearable/models/logger.dart';
 import 'package:open_wearable/models/network/device_ip_address.dart';
 import 'package:open_wearable/models/wearable_connector.dart';
@@ -19,6 +22,7 @@ class WebSocketIpcServer implements CommandRuntime {
 
   final WearableManager _wearableManager;
   final WearableConnector _wearableConnector;
+  final WebsocketAudioPlaybackService _audioPlaybackService;
 
   HttpServer? _httpServer;
   final InternetAddress _host = InternetAddress.anyIPv4;
@@ -44,8 +48,11 @@ class WebSocketIpcServer implements CommandRuntime {
   WebSocketIpcServer({
     WearableManager? wearableManager,
     WearableConnector? wearableConnector,
+    WebsocketAudioPlaybackService? audioPlaybackService,
   })  : _wearableManager = wearableManager ?? WearableManager(),
-        _wearableConnector = wearableConnector ?? WearableConnector() {
+        _wearableConnector = wearableConnector ?? WearableConnector(),
+        _audioPlaybackService =
+            audioPlaybackService ?? WebsocketAudioPlaybackService() {
     for (final command in createDefaultIpcCommands(this)) {
       addCommand(command);
     }
@@ -166,6 +173,7 @@ class WebSocketIpcServer implements CommandRuntime {
     _discoveredDevicesById.clear();
     _connectedWearablesById.clear();
     _advertisedHost = null;
+    await _audioPlaybackService.stopStream();
     logger.i('[connector.websocket] stopped');
   }
 
@@ -303,6 +311,102 @@ class WebSocketIpcServer implements CommandRuntime {
     await wearable.disconnect();
     _connectedWearablesById.remove(deviceId);
     return <String, dynamic>{'disconnected': true};
+  }
+
+  /// Stores a sound in app memory for later playback.
+  @override
+  Future<Map<String, dynamic>> storeSound({
+    required String soundId,
+    required Uint8List bytes,
+    required AudioPlaybackConfig config,
+  }) async {
+    await _audioPlaybackService.storeSound(
+      soundId: soundId,
+      bytes: bytes,
+      config: config,
+    );
+    return <String, dynamic>{
+      'sound_id': soundId,
+      'stored': true,
+      'bytes': bytes.length,
+      'config': config.toJson(),
+    };
+  }
+
+  /// Plays a previously stored sound.
+  @override
+  Future<Map<String, dynamic>> playSound({
+    String? soundId,
+    String? url,
+    double? volume,
+    AudioPlaybackConfig? config,
+  }) async {
+    final hasSoundId = soundId != null && soundId.trim().isNotEmpty;
+    final hasUrl = url != null && url.trim().isNotEmpty;
+    if (!hasSoundId && !hasUrl) {
+      throw ArgumentError('play_sound requires either "sound_id" or "url".');
+    }
+    if (hasSoundId && hasUrl) {
+      throw ArgumentError('Provide either "sound_id" or "url", not both.');
+    }
+
+    if (hasSoundId) {
+      final usedConfig = await _audioPlaybackService.playStoredSound(
+        soundId: soundId,
+        volume: volume,
+        overrideConfig: config,
+      );
+      return <String, dynamic>{
+        'source': 'sound_id',
+        'sound_id': soundId,
+        'playing': true,
+        'config': usedConfig.toJson(),
+      };
+    }
+
+    final usedConfig = await _audioPlaybackService.playFromUrl(
+      url: url!,
+      volume: volume,
+      config: config,
+    );
+    return <String, dynamic>{
+      'source': 'url',
+      'url': url,
+      'playing': true,
+      'config': usedConfig.toJson(),
+    };
+  }
+
+  /// Starts chunked audio stream playback.
+  @override
+  Future<Map<String, dynamic>> startAudioStream({
+    double? volume,
+    required AudioPlaybackConfig config,
+  }) async {
+    await _audioPlaybackService.startStream(
+      volume: volume,
+      config: config,
+    );
+    return <String, dynamic>{
+      'started': true,
+      'config': config.toJson(),
+    };
+  }
+
+  /// Pushes one audio chunk into the active playback stream queue.
+  @override
+  Future<Map<String, dynamic>> pushAudioStreamChunk({
+    required Uint8List bytes,
+  }) async {
+    await _audioPlaybackService.pushStreamChunk(bytes);
+    return <String, dynamic>{'queued_bytes': bytes.length};
+  }
+
+  /// Stops chunked audio stream playback and clears the queue.
+  @override
+  Future<Map<String, dynamic>> stopAudioStream() async {
+    await _audioPlaybackService.stopStream();
+    return <String, dynamic>{'stopped': true};
   }
 
   /// Allocates the next unique subscription id for a client.
