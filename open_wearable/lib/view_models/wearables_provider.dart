@@ -395,6 +395,7 @@ class WearablesProvider with ChangeNotifier {
           break;
         case FirmwareSupportStatus.tooOld:
           _emitUnsupportedFirmwareEvent(FirmwareTooOldEvent(wearable));
+          break;
         case FirmwareSupportStatus.unknown:
           logger.w('Firmware support unknown for ${wearable.name}');
           break;
