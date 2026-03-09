@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 import 'package:open_wearable/models/device_name_formatter.dart';
 import 'package:open_wearable/models/wearable_display_group.dart';
+import 'package:open_wearable/models/wearable_status_cache.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 
 import '../models/logger.dart';
@@ -476,6 +477,7 @@ class WearablesProvider with ChangeNotifier {
   }
 
   void removeWearable(Wearable wearable) {
+    WearableStatusCache.instance.clearDevice(wearable.deviceId);
     _splitStereoPairKeys.removeWhere(
       (key) => WearableDisplayGroup.stereoPairKeyContainsDevice(
         key,
