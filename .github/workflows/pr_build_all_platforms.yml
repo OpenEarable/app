@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 concurrency:
   group: pr-build-artifacts-${{ github.event.pull_request.number || github.ref }}
@@ -19,9 +20,11 @@ env:
   APP_DIR: open_wearable
 
 jobs:
-  build_ubuntu_targets:
-    name: Build Android, Linux, and Web
+  build_android:
+    name: Build Android
     runs-on: ubuntu-latest
+    outputs:
+      artifact_id: ${{ steps.upload_android.outputs.artifact-id }}
 
     steps:
       - name: Checkout repository
@@ -34,6 +37,33 @@ jobs:
           java-version: "17"
           cache: gradle
 
+      - name: Set up Flutter project
+        uses: ./.github/actions/flutter-prepare
+        with:
+          app-dir: ${{ env.APP_DIR }}
+
+      - name: Build Android APK
+        working-directory: ${{ env.APP_DIR }}
+        run: flutter build apk --release
+
+      - name: Upload Android APK
+        id: upload_android
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: open_wearable/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+
+  build_linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    outputs:
+      artifact_id: ${{ steps.upload_linux.outputs.artifact-id }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Install Linux build dependencies
         run: |
           sudo apt-get update
@@ -44,87 +74,140 @@ jobs:
             ninja-build \
             pkg-config
 
-      - name: Read Flutter version
-        run: echo "flutter_version=$(cat $APP_DIR/.flutter_version)" >> "$GITHUB_ENV"
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+      - name: Set up Flutter project
+        uses: ./.github/actions/flutter-prepare
         with:
-          channel: stable
-          flutter-version: ${{ env.flutter_version }}
-          cache: true
-
-      - name: Install dependencies
-        working-directory: ${{ env.APP_DIR }}
-        run: flutter pub get
-
-      - name: Analyze project
-        working-directory: ${{ env.APP_DIR }}
-        run: flutter analyze
-
-      - name: Build Android APK
-        working-directory: ${{ env.APP_DIR }}
-        run: flutter build apk --release
+          app-dir: ${{ env.APP_DIR }}
 
       - name: Build Linux bundle
         working-directory: ${{ env.APP_DIR }}
         run: flutter build linux --release
 
-      - name: Build Web bundle
-        working-directory: ${{ env.APP_DIR }}
-        run: flutter build web --release
-
-      - name: Upload Android APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-apk
-          path: open_wearable/build/app/outputs/flutter-apk/app-release.apk
-          if-no-files-found: error
-
       - name: Upload Linux bundle
+        id: upload_linux
         uses: actions/upload-artifact@v4
         with:
           name: linux-bundle
           path: open_wearable/build/linux/x64/release/bundle
           if-no-files-found: error
 
-      - name: Upload Web bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: web-bundle
-          path: open_wearable/build/web
-          if-no-files-found: error
-
-  build_windows_target:
+  build_windows:
     name: Build Windows
     runs-on: windows-latest
+    outputs:
+      artifact_id: ${{ steps.upload_windows.outputs.artifact-id }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Read Flutter version
-        shell: bash
-        run: echo "flutter_version=$(cat $APP_DIR/.flutter_version)" >> "$GITHUB_ENV"
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+      - name: Set up Flutter project
+        uses: ./.github/actions/flutter-prepare
         with:
-          channel: stable
-          flutter-version: ${{ env.flutter_version }}
-          cache: true
-
-      - name: Install dependencies
-        working-directory: ${{ env.APP_DIR }}
-        run: flutter pub get
+          app-dir: ${{ env.APP_DIR }}
 
       - name: Build Windows runner
         working-directory: ${{ env.APP_DIR }}
         run: flutter build windows --release
 
       - name: Upload Windows runner
+        id: upload_windows
         uses: actions/upload-artifact@v4
         with:
           name: windows-runner
           path: open_wearable/build/windows/x64/runner/Release
           if-no-files-found: error
+
+  build_web:
+    name: Build Web
+    runs-on: ubuntu-latest
+    outputs:
+      artifact_id: ${{ steps.upload_web.outputs.artifact-id }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter project
+        uses: ./.github/actions/flutter-prepare
+        with:
+          app-dir: ${{ env.APP_DIR }}
+
+      - name: Build Web bundle
+        working-directory: ${{ env.APP_DIR }}
+        run: flutter build web --release
+
+      - name: Upload Web bundle
+        id: upload_web
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-bundle
+          path: open_wearable/build/web
+          if-no-files-found: error
+
+  comment_artifact_links:
+    name: Comment Artifact Links
+    runs-on: ubuntu-latest
+    needs:
+      - build_android
+      - build_linux
+      - build_windows
+      - build_web
+    if: always()
+
+    steps:
+      - name: Post or update PR comment with artifact links
+        uses: actions/github-script@v7
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ANDROID_ARTIFACT_ID: ${{ needs.build_android.outputs.artifact_id }}
+          LINUX_ARTIFACT_ID: ${{ needs.build_linux.outputs.artifact_id }}
+          WINDOWS_ARTIFACT_ID: ${{ needs.build_windows.outputs.artifact_id }}
+          WEB_ARTIFACT_ID: ${{ needs.build_web.outputs.artifact_id }}
+        with:
+          script: |
+            const marker = '<!-- pr-build-artifacts -->';
+            const prNumber = context.payload.pull_request.number;
+            const runUrl = process.env.RUN_URL;
+            const repoUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}`;
+            const linkFor = (id) => id
+              ? `${repoUrl}/actions/runs/${context.runId}/artifacts/${id}`
+              : runUrl;
+
+            const body = `${marker}
+            ### PR Build Artifacts
+            - Android: [Download artifact](${linkFor(process.env.ANDROID_ARTIFACT_ID)})
+            - Linux: [Download artifact](${linkFor(process.env.LINUX_ARTIFACT_ID)})
+            - Windows: [Download artifact](${linkFor(process.env.WINDOWS_ARTIFACT_ID)})
+            - Web: [Download artifact](${linkFor(process.env.WEB_ARTIFACT_ID)})
+
+            Full workflow run: ${runUrl}`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+            });
+
+            const previous = comments.find(
+              (comment) =>
+                comment.user.type === 'Bot' &&
+                comment.body &&
+                comment.body.includes(marker)
+            );
+
+            if (previous) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: previous.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body,
+              });
+            }
