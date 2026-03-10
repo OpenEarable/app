@@ -46,17 +46,6 @@ abstract class CommandRuntime {
     AudioPlaybackConfig? config,
   });
 
-  Future<Map<String, dynamic>> startAudioStream({
-    double? volume,
-    required AudioPlaybackConfig config,
-  });
-
-  Future<Map<String, dynamic>> pushAudioStreamChunk({
-    required Uint8List bytes,
-  });
-
-  Future<Map<String, dynamic>> stopAudioStream();
-
   Future<int> createSubscriptionId();
 
   Future<void> attachStreamSubscription({

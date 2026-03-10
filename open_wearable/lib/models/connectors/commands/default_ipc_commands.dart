@@ -11,11 +11,8 @@ import 'list_connected_command.dart';
 import 'methods_command.dart';
 import 'ping_command.dart';
 import 'play_sound_command.dart';
-import 'push_audio_stream_chunk_command.dart';
 import 'runtime.dart';
-import 'start_audio_stream_command.dart';
 import 'start_scan_command.dart';
-import 'stop_audio_stream_command.dart';
 import 'store_sound_command.dart';
 import 'subscribe_command.dart';
 import 'unsubscribe_command.dart';
@@ -35,9 +32,6 @@ List<Command> createDefaultIpcCommands(CommandRuntime runtime) {
     DisconnectCommand(runtime: runtime),
     StoreSoundCommand(runtime: runtime),
     PlaySoundCommand(runtime: runtime),
-    StartAudioStreamCommand(runtime: runtime),
-    PushAudioStreamChunkCommand(runtime: runtime),
-    StopAudioStreamCommand(runtime: runtime),
     SubscribeCommand(runtime: runtime),
     UnsubscribeCommand(runtime: runtime),
     InvokeActionCommand(runtime: runtime),
