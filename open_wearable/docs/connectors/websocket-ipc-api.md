@@ -94,9 +94,6 @@ Other event messages:
 | `disconnect` | `{"device_id":string}` | `{"disconnected":true}` |
 | `store_sound` | `{"sound_id":string,"audio_base64":string,"codec"?:string,"sample_rate"?:int,"num_channels"?:int,"interleaved"?:bool,"buffer_size"?:int}` | `{"sound_id":string,"stored":true,"bytes":int,"config":object}` |
 | `play_sound` | `{"sound_id"?:string,"url"?:string,"volume"?:number,"codec"?:string,"sample_rate"?:int,"num_channels"?:int}` | `{"source":"sound_id"\\|"url","playing":true,"config":object,...}` |
-| `start_audio_stream` | `{"volume"?:number,"codec"?:string,"sample_rate"?:int,"num_channels"?:int,"interleaved"?:bool,"buffer_size"?:int}` | `{"started":true,"config":object}` |
-| `push_audio_stream_chunk` | `{"audio_base64":string}` | `{"queued_bytes":int}` |
-| `stop_audio_stream` | `{}` | `{"stopped":true}` |
 | `subscribe` | `{"device_id":string,"stream":string,"args"?:object}` | `{"subscription_id":int,"stream":string,"device_id":string}` |
 | `unsubscribe` | `{"subscription_id":int}` | `{"subscription_id":int,"cancelled":bool}` |
 | `invoke_action` | `{"device_id":string,"action":string,"args"?:object}` | depends on action |
@@ -195,57 +192,6 @@ Play directly from a URL:
 - Provide exactly one source: `sound_id` or `url`.
 - If both are set, the server returns an error.
 
-### 2) Chunked Audio Stream
-
-Start stream playback mode:
-
-```json
-{
-  "id": 30,
-  "method": "start_audio_stream",
-  "params": {
-    "volume": 1.0
-  }
-}
-```
-
-Push chunks continuously:
-
-```json
-{
-  "id": 31,
-  "method": "push_audio_stream_chunk",
-  "params": {
-    "audio_base64": "<base64-encoded-audio-chunk>"
-  }
-}
-```
-
-Stop stream playback:
-
-```json
-{
-  "id": 32,
-  "method": "stop_audio_stream",
-  "params": {}
-}
-```
-
-Notes:
-
-- `audio_base64` must be raw audio file/chunk bytes encoded as Base64.
-- Default config when omitted:
-  - `codec=defaultCodec`
-  - `sample_rate=16000`
-  - `num_channels=1`
-  - `interleaved=true`
-  - `buffer_size=8192`
-- PCM stream mode:
-  - `codec=pcm16` or `codec=pcmFloat32` enables low-latency feed mode (`startPlayerFromStream`).
-  - Other codecs are handled as queued chunk playback.
-- Keep chunk sizes moderate to reduce latency and memory pressure.
-- Call `start_audio_stream` before first chunk; otherwise the server returns an error.
-
 ## Data Shapes
 
 ### DiscoveredDevice
@@ -323,8 +269,3 @@ Notes:
 1. `store_sound` with `sound_id` and `audio_base64`.
 2. `play_sound` with the same `sound_id`.
 
-### Live audio streaming
-
-1. `start_audio_stream`.
-2. Repeatedly call `push_audio_stream_chunk`.
-3. `stop_audio_stream` when done.
