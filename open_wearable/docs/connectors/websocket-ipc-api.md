@@ -93,7 +93,7 @@ Other event messages:
 | `list_connected` | `{}` | `WearableSummary[]` |
 | `disconnect` | `{"device_id":string}` | `{"disconnected":true}` |
 | `store_sound` | `{"sound_id":string,"audio_base64":string,"codec"?:string,"sample_rate"?:int,"num_channels"?:int,"interleaved"?:bool,"buffer_size"?:int}` | `{"sound_id":string,"stored":true,"bytes":int,"config":object}` |
-| `play_sound` | `{"sound_id"?:string,"url"?:string,"volume"?:number,"codec"?:string,"sample_rate"?:int,"num_channels"?:int}` | `{"source":"sound_id"\\|"url","playing":true,"config":object,...}` |
+| `play_sound` | `{"sound_id":string,"volume"?:number,"codec"?:string,"sample_rate"?:int,"num_channels"?:int}` | `{"source":"sound_id","sound_id":string,"playing":true,"config":object}` |
 | `subscribe` | `{"device_id":string,"stream":string,"args"?:object}` | `{"subscription_id":int,"stream":string,"device_id":string}` |
 | `unsubscribe` | `{"subscription_id":int}` | `{"subscription_id":int,"cancelled":bool}` |
 | `invoke_action` | `{"device_id":string,"action":string,"args"?:object}` | depends on action |
@@ -141,10 +141,7 @@ Note:
 
 ## Audio Playback Over WebSocket
 
-The connector supports two audio modes:
-
-1. Distinct preloaded sounds (store once, play many times)
-2. Chunked audio stream playback (headphone-like continuous feed)
+The connector supports distinct preloaded sounds (store once, play many times).
 
 ### 1) Distinct Preloaded Sounds
 
@@ -174,23 +171,7 @@ Play a stored sound:
 }
 ```
 
-Play directly from a URL:
-
-```json
-{
-  "id": 22,
-  "method": "play_sound",
-  "params": {
-    "url": "https://example.com/notification.wav",
-    "volume": 1.0
-  }
-}
-```
-
-`play_sound` rules:
-
-- Provide exactly one source: `sound_id` or `url`.
-- If both are set, the server returns an error.
+`play_sound` requires `sound_id`.
 
 ## Data Shapes
 
@@ -268,4 +249,3 @@ Play directly from a URL:
 
 1. `store_sound` with `sound_id` and `audio_base64`.
 2. `play_sound` with the same `sound_id`.
-
