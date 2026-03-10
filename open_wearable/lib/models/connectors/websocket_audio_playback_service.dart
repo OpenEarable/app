@@ -1,8 +1,8 @@
 import 'dart:typed_data';
 
+import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
-import 'dart:io';
 
 import '../logger.dart';
 import 'audio_playback_config.dart';
@@ -66,49 +66,6 @@ class WebsocketAudioPlaybackService {
       '[connector.audio] playing stored sound_id=$soundId codec=${config.codec} sample_rate=${config.sampleRate} num_channels=${config.numChannels}',
     );
     return config;
-  }
-
-  Future<AudioPlaybackConfig> playFromUrl({
-    required String url,
-    double? volume,
-    AudioPlaybackConfig? config,
-  }) async {
-    final uri = Uri.tryParse(url);
-    if (uri == null || !uri.hasScheme) {
-      throw ArgumentError('Invalid URL: $url');
-    }
-    if (uri.scheme != 'http' && uri.scheme != 'https') {
-      throw ArgumentError(
-        'Only http/https URLs are supported. Got: ${uri.scheme}',
-      );
-    }
-    if (uri.host == 'commons.wikimedia.org' &&
-        uri.path.startsWith('/wiki/File:')) {
-      throw ArgumentError(
-        'URL points to a Wikimedia page, not a direct audio file. Use the raw media URL from upload.wikimedia.org.',
-      );
-    }
-
-    final playbackConfig = config ?? const AudioPlaybackConfig();
-
-    if (volume != null) {
-      await _preloadedPlayer.setVolume(volume);
-    }
-
-    await _preloadedPlayer.stop();
-
-    try {
-      await _preloadedPlayer.play(UrlSource(url));
-    } catch (error) {
-      throw StateError(
-        'Failed to play URL source. Ensure it is a direct audio file URL (not an HTML page). Original error: $error',
-      );
-    }
-
-    logger.i(
-      '[connector.audio] playing url source=$url codec_hint=${playbackConfig.codec}',
-    );
-    return playbackConfig;
   }
 
   Future<void> dispose() async {

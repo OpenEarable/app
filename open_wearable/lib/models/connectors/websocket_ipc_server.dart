@@ -336,41 +336,22 @@ class WebSocketIpcServer implements CommandRuntime {
   @override
   Future<Map<String, dynamic>> playSound({
     String? soundId,
-    String? url,
     double? volume,
     AudioPlaybackConfig? config,
   }) async {
     final hasSoundId = soundId != null && soundId.trim().isNotEmpty;
-    final hasUrl = url != null && url.trim().isNotEmpty;
-    if (!hasSoundId && !hasUrl) {
-      throw ArgumentError('play_sound requires either "sound_id" or "url".');
-    }
-    if (hasSoundId && hasUrl) {
-      throw ArgumentError('Provide either "sound_id" or "url", not both.');
+    if (!hasSoundId) {
+      throw ArgumentError('play_sound requires "sound_id".');
     }
 
-    if (hasSoundId) {
-      final usedConfig = await _audioPlaybackService.playStoredSound(
-        soundId: soundId,
-        volume: volume,
-        overrideConfig: config,
-      );
-      return <String, dynamic>{
-        'source': 'sound_id',
-        'sound_id': soundId,
-        'playing': true,
-        'config': usedConfig.toJson(),
-      };
-    }
-
-    final usedConfig = await _audioPlaybackService.playFromUrl(
-      url: url!,
+    final usedConfig = await _audioPlaybackService.playStoredSound(
+      soundId: soundId,
       volume: volume,
-      config: config,
+      overrideConfig: config,
     );
     return <String, dynamic>{
-      'source': 'url',
-      'url': url,
+      'source': 'sound_id',
+      'sound_id': soundId,
       'playing': true,
       'config': usedConfig.toJson(),
     };
