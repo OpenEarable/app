@@ -41,7 +41,6 @@ abstract class CommandRuntime {
 
   Future<Map<String, dynamic>> playSound({
     String? soundId,
-    String? url,
     double? volume,
     AudioPlaybackConfig? config,
   });
