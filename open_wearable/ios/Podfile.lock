@@ -1,4 +1,7 @@
 PODS:
+  - audioplayers_darwin (0.0.1):
+    - Flutter
+    - FlutterMacOS
   - DKImagePickerController/Core (4.3.9):
     - DKImagePickerController/ImageDataManager
     - DKImagePickerController/Resource
@@ -39,10 +42,6 @@ PODS:
   - flutter_archive (0.0.1):
     - Flutter
     - ZIPFoundation (= 0.9.19)
-  - flutter_sound (9.30.0):
-    - Flutter
-    - flutter_sound_core (= 9.30.0)
-  - flutter_sound_core (9.30.0)
   - iOSMcuManagerLibrary (1.10.1):
     - SwiftCBOR (= 0.4.7)
     - ZIPFoundation (= 0.9.19)
@@ -76,11 +75,11 @@ PODS:
   - ZIPFoundation (0.9.19)
 
 DEPENDENCIES:
+  - audioplayers_darwin (from `.symlinks/plugins/audioplayers_darwin/darwin`)
   - file_picker (from `.symlinks/plugins/file_picker/ios`)
   - file_selector_ios (from `.symlinks/plugins/file_selector_ios/ios`)
   - Flutter (from `Flutter`)
   - flutter_archive (from `.symlinks/plugins/flutter_archive/ios`)
-  - flutter_sound (from `.symlinks/plugins/flutter_sound/ios`)
   - mcumgr_flutter (from `.symlinks/plugins/mcumgr_flutter/ios`)
   - open_file_ios (from `.symlinks/plugins/open_file_ios/ios`)
   - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
@@ -94,7 +93,6 @@ SPEC REPOS:
   trunk:
     - DKImagePickerController
     - DKPhotoGallery
-    - flutter_sound_core
     - iOSMcuManagerLibrary
     - SDWebImage
     - SwiftCBOR
@@ -103,6 +101,8 @@ SPEC REPOS:
     - ZIPFoundation
 
 EXTERNAL SOURCES:
+  audioplayers_darwin:
+    :path: ".symlinks/plugins/audioplayers_darwin/darwin"
   file_picker:
     :path: ".symlinks/plugins/file_picker/ios"
   file_selector_ios:
@@ -111,8 +111,6 @@ EXTERNAL SOURCES:
     :path: Flutter
   flutter_archive:
     :path: ".symlinks/plugins/flutter_archive/ios"
-  flutter_sound:
-    :path: ".symlinks/plugins/flutter_sound/ios"
   mcumgr_flutter:
     :path: ".symlinks/plugins/mcumgr_flutter/ios"
   open_file_ios:
@@ -131,14 +129,13 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/url_launcher_ios/ios"
 
 SPEC CHECKSUMS:
+  audioplayers_darwin: 835ced6edd4c9fc8ebb0a7cc9e294a91d99917d5
   DKImagePickerController: 946cec48c7873164274ecc4624d19e3da4c1ef3c
   DKPhotoGallery: b3834fecb755ee09a593d7c9e389d8b5d6deed60
   file_picker: a0560bc09d61de87f12d246fc47d2119e6ef37be
   file_selector_ios: ec57ec07954363dd730b642e765e58f199bb621a
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   flutter_archive: ad8edfd7f7d1bb12058d05424ba93e27d9930efe
-  flutter_sound: d95194f6476c9ad211d22b3a414d852c12c7ca44
-  flutter_sound_core: 7f2626d249d3a57bfa6da892ef7e22d234482c1a
   iOSMcuManagerLibrary: e9555825af11a61744fe369c12e1e66621061b58
   mcumgr_flutter: 969e99cc15e9fe658242669ce1075bf4612aef8a
   open_file_ios: 46184d802ee7959203f6392abcfa0dd49fdb5be0

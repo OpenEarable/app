@@ -55,7 +55,7 @@ dependencies:
   url_launcher: ^6.3.2
   go_router: ^14.6.2
   http: ^1.6.0
-  flutter_sound: ^9.30.0
+  audioplayers: ^6.6.0
 
 dev_dependencies:
   flutter_test:

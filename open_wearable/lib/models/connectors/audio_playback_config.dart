@@ -1,14 +1,12 @@
-import 'package:flutter_sound/flutter_sound.dart';
-
 class AudioPlaybackConfig {
-  final Codec codec;
+  final String codec;
   final int sampleRate;
   final int numChannels;
   final bool interleaved;
   final int bufferSize;
 
   const AudioPlaybackConfig({
-    this.codec = Codec.defaultCodec,
+    this.codec = 'default',
     this.sampleRate = 16000,
     this.numChannels = 1,
     this.interleaved = true,
@@ -16,7 +14,7 @@ class AudioPlaybackConfig {
   });
 
   AudioPlaybackConfig copyWith({
-    Codec? codec,
+    String? codec,
     int? sampleRate,
     int? numChannels,
     bool? interleaved,
@@ -33,13 +31,15 @@ class AudioPlaybackConfig {
 
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
-      'codec': codec.name,
+      'codec': codec,
       'sample_rate': sampleRate,
       'num_channels': numChannels,
       'interleaved': interleaved,
       'buffer_size': bufferSize,
     };
   }
+
+  String get normalizedCodec => _normalizeCodec(codec);
 
   static AudioPlaybackConfig? fromOptional({
     String? codecKey,
@@ -48,7 +48,6 @@ class AudioPlaybackConfig {
     bool? interleaved,
     int? bufferSize,
   }) {
-    // return null if no config parameters are provided, to allow using defaults from stored sound when playing
     if (codecKey == null &&
         sampleRate == null &&
         numChannels == null &&
@@ -57,9 +56,7 @@ class AudioPlaybackConfig {
       return null;
     }
 
-    final parsedCodec =
-        codecKey == null ? Codec.defaultCodec : _parseCodec(codecKey);
-
+    final resolvedCodec = codecKey == null ? 'default' : _parseCodec(codecKey);
     final resolvedSampleRate = sampleRate ?? 16000;
     final resolvedNumChannels = numChannels ?? 1;
     final resolvedBufferSize = bufferSize ?? 8192;
@@ -75,7 +72,7 @@ class AudioPlaybackConfig {
     }
 
     return AudioPlaybackConfig(
-      codec: parsedCodec,
+      codec: resolvedCodec,
       sampleRate: resolvedSampleRate,
       numChannels: resolvedNumChannels,
       interleaved: interleaved ?? true,
@@ -83,58 +80,73 @@ class AudioPlaybackConfig {
     );
   }
 
-  static Codec _parseCodec(String input) {
-    final normalized =
-        input.trim().toLowerCase().replaceAll('_', '').replaceAll('-', '');
+  static String _parseCodec(String input) {
+    final normalized = _normalizeCodec(input);
     switch (normalized) {
       case 'default':
-      case 'defaultcodec':
-        return Codec.defaultCodec;
       case 'aacadts':
-        return Codec.aacADTS;
       case 'opusogg':
-        return Codec.opusOGG;
       case 'opuscaf':
-        return Codec.opusCAF;
       case 'mp3':
-        return Codec.mp3;
       case 'vorbisogg':
-        return Codec.vorbisOGG;
       case 'pcm16':
-        return Codec.pcm16;
       case 'pcm16wav':
-        return Codec.pcm16WAV;
       case 'pcm16aiff':
-        return Codec.pcm16AIFF;
       case 'pcm16caf':
-        return Codec.pcm16CAF;
       case 'flac':
-        return Codec.flac;
       case 'aacmp4':
-        return Codec.aacMP4;
       case 'amrnb':
-        return Codec.amrNB;
       case 'amrwb':
-        return Codec.amrWB;
       case 'pcm8':
-        return Codec.pcm8;
       case 'pcmfloat32':
-        return Codec.pcmFloat32;
       case 'pcmwebm':
-        return Codec.pcmWebM;
       case 'opuswebm':
-        return Codec.opusWebM;
       case 'vorbiswebm':
-        return Codec.vorbisWebM;
       case 'pcmfloat32wav':
-        return Codec.pcmFloat32WAV;
+        return normalized;
       default:
         throw ArgumentError('Unsupported codec: $input');
     }
   }
 
+  static String _normalizeCodec(String input) {
+    final normalized =
+        input.trim().toLowerCase().replaceAll('_', '').replaceAll('-', '');
+    if (normalized == 'defaultcodec') {
+      return 'default';
+    }
+    return normalized;
+  }
+
+  String fileExtension() {
+    switch (normalizedCodec) {
+      case 'mp3':
+        return 'mp3';
+      case 'flac':
+        return 'flac';
+      case 'aacadts':
+      case 'aacmp4':
+        return 'm4a';
+      case 'pcm16wav':
+      case 'pcmfloat32wav':
+      case 'pcm16':
+      case 'pcmfloat32':
+      case 'pcm8':
+        return 'wav';
+      case 'opusogg':
+      case 'vorbisogg':
+        return 'ogg';
+      case 'opuswebm':
+      case 'vorbiswebm':
+      case 'pcmwebm':
+        return 'webm';
+      default:
+        return 'bin';
+    }
+  }
+
   @override
   String toString() {
-    return 'AudioPlaybackConfig(codec: ${codec.name}, sampleRate: $sampleRate, numChannels: $numChannels, interleaved: $interleaved, bufferSize: $bufferSize)';
+    return 'AudioPlaybackConfig(codec: $codec, sampleRate: $sampleRate, numChannels: $numChannels, interleaved: $interleaved, bufferSize: $bufferSize)';
   }
 }
