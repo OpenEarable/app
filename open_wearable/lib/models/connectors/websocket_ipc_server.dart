@@ -173,7 +173,6 @@ class WebSocketIpcServer implements CommandRuntime {
     _discoveredDevicesById.clear();
     _connectedWearablesById.clear();
     _advertisedHost = null;
-    await _audioPlaybackService.stopStream();
     logger.i('[connector.websocket] stopped');
   }
 
@@ -375,38 +374,6 @@ class WebSocketIpcServer implements CommandRuntime {
       'playing': true,
       'config': usedConfig.toJson(),
     };
-  }
-
-  /// Starts chunked audio stream playback.
-  @override
-  Future<Map<String, dynamic>> startAudioStream({
-    double? volume,
-    required AudioPlaybackConfig config,
-  }) async {
-    await _audioPlaybackService.startStream(
-      volume: volume,
-      config: config,
-    );
-    return <String, dynamic>{
-      'started': true,
-      'config': config.toJson(),
-    };
-  }
-
-  /// Pushes one audio chunk into the active playback stream queue.
-  @override
-  Future<Map<String, dynamic>> pushAudioStreamChunk({
-    required Uint8List bytes,
-  }) async {
-    await _audioPlaybackService.pushStreamChunk(bytes);
-    return <String, dynamic>{'queued_bytes': bytes.length};
-  }
-
-  /// Stops chunked audio stream playback and clears the queue.
-  @override
-  Future<Map<String, dynamic>> stopAudioStream() async {
-    await _audioPlaybackService.stopStream();
-    return <String, dynamic>{'stopped': true};
   }
 
   /// Allocates the next unique subscription id for a client.
