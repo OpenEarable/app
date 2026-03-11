@@ -24,6 +24,7 @@ func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   FlutterArchivePlugin.register(with: registry.registrar(forPlugin: "FlutterArchivePlugin"))
   OpenFilePlugin.register(with: registry.registrar(forPlugin: "OpenFilePlugin"))
   FPPPackageInfoPlusPlugin.register(with: registry.registrar(forPlugin: "FPPPackageInfoPlusPlugin"))
+  PathProviderPlugin.register(with: registry.registrar(forPlugin: "PathProviderPlugin"))
   SharePlusMacosPlugin.register(with: registry.registrar(forPlugin: "SharePlusMacosPlugin"))
   SharedPreferencesPlugin.register(with: registry.registrar(forPlugin: "SharedPreferencesPlugin"))
   UniversalBlePlugin.register(with: registry.registrar(forPlugin: "UniversalBlePlugin"))
