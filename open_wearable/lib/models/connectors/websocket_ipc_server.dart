@@ -614,6 +614,7 @@ class WebSocketIpcServer implements CommandRuntime {
     addIf<AudioPlayerControls>('AudioPlayerControls');
     addIf<StoragePathAudioPlayer>('StoragePathAudioPlayer');
     addIf<AudioModeManager>('AudioModeManager');
+    addIf<AudioResponseManager>('AudioResponseManager');
     addIf<MicrophoneManager>('MicrophoneManager');
     addIf<EdgeRecorderManager>('EdgeRecorderManager');
     addIf<ButtonManager>('ButtonManager');

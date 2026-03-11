@@ -106,6 +106,8 @@ Current actions:
 - `synchronize_time`
 - `list_sensors`
 - `list_sensor_configurations`
+- `measure_audio_response` with optional `args`:
+  - `object` forwarded to `AudioResponseManager.measureAudioResponse(...)`
 - `set_sensor_configuration` with args:
   - `{"configuration_name":string,"value_key":string}`
 
@@ -117,6 +119,10 @@ Examples:
 
 ```json
 {"id":11,"method":"invoke_action","params":{"device_id":"abc","action":"set_sensor_configuration","args":{"configuration_name":"Accelerometer","value_key":"100Hz"}}}
+```
+
+```json
+{"id":12,"method":"invoke_action","params":{"device_id":"abc","action":"measure_audio_response","args":{"gain":12}}}
 ```
 
 ## Subscribe Streams
@@ -194,7 +200,7 @@ Play a stored sound:
   "device_id": "string",
   "name": "string",
   "type": "OpenEarableV2",
-  "capabilities": ["SensorManager", "SensorConfigurationManager"]
+  "capabilities": ["SensorManager", "SensorConfigurationManager", "AudioResponseManager"]
 }
 ```
 
