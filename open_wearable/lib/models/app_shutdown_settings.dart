@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 /// Persisted app-wide shutdown and live-data display settings.
 ///
@@ -18,12 +19,15 @@ class AppShutdownSettings {
       'app_disable_live_data_graphs';
   static const String _hideLiveDataGraphsWithoutDataKey =
       'app_hide_live_data_graphs_without_data';
+  static const String _keepAppInForegroundKey = 'app_keep_in_foreground';
 
   static final ValueNotifier<bool> _shutOffAllSensorsOnAppCloseNotifier =
       ValueNotifier<bool>(false);
   static final ValueNotifier<bool> _disableLiveDataGraphsNotifier =
       ValueNotifier<bool>(false);
   static final ValueNotifier<bool> _hideLiveDataGraphsWithoutDataNotifier =
+      ValueNotifier<bool>(false);
+  static final ValueNotifier<bool> _keepAppInForegroundNotifier =
       ValueNotifier<bool>(false);
 
   static ValueListenable<bool> get shutOffAllSensorsOnAppCloseListenable =>
@@ -32,18 +36,22 @@ class AppShutdownSettings {
       _disableLiveDataGraphsNotifier;
   static ValueListenable<bool> get hideLiveDataGraphsWithoutDataListenable =>
       _hideLiveDataGraphsWithoutDataNotifier;
+  static ValueListenable<bool> get keepAppInForegroundListenable =>
+      _keepAppInForegroundNotifier;
 
   static bool get shutOffAllSensorsOnAppClose =>
       _shutOffAllSensorsOnAppCloseNotifier.value;
   static bool get disableLiveDataGraphs => _disableLiveDataGraphsNotifier.value;
   static bool get hideLiveDataGraphsWithoutData =>
       _hideLiveDataGraphsWithoutDataNotifier.value;
+  static bool get keepAppInForeground => _keepAppInForegroundNotifier.value;
 
   static Future<void> initialize() async {
     await Future.wait([
       loadShutOffAllSensorsOnAppClose(),
       loadDisableLiveDataGraphs(),
       loadHideLiveDataGraphsWithoutData(),
+      loadKeepAppInForeground(),
     ]);
   }
 
@@ -89,6 +97,22 @@ class AppShutdownSettings {
     return enabled;
   }
 
+  static Future<bool> loadKeepAppInForeground() async {
+    final prefs = await SharedPreferences.getInstance();
+    final enabled = prefs.getBool(_keepAppInForegroundKey) ?? false;
+    await _applyKeepAppInForeground(enabled);
+    _setKeepAppInForeground(enabled);
+    return enabled;
+  }
+
+  static Future<bool> saveKeepAppInForeground(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keepAppInForegroundKey, enabled);
+    await _applyKeepAppInForeground(enabled);
+    _setKeepAppInForeground(enabled);
+    return enabled;
+  }
+
   static void _setShutOffAllSensorsOnAppClose(bool enabled) {
     if (_shutOffAllSensorsOnAppCloseNotifier.value == enabled) {
       return;
@@ -108,5 +132,20 @@ class AppShutdownSettings {
       return;
     }
     _hideLiveDataGraphsWithoutDataNotifier.value = enabled;
+  }
+
+  static void _setKeepAppInForeground(bool enabled) {
+    if (_keepAppInForegroundNotifier.value == enabled) {
+      return;
+    }
+    _keepAppInForegroundNotifier.value = enabled;
+  }
+
+  static Future<void> _applyKeepAppInForeground(bool enabled) async {
+    try {
+      await WakelockPlus.toggle(enable: enabled);
+    } catch (_) {
+      // Ignore unsupported platform/runtime errors to keep settings robust.
+    }
   }
 }
