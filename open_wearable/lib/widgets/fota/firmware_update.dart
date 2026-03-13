@@ -8,6 +8,7 @@ import 'package:open_wearable/widgets/app_toast.dart';
 import 'package:open_wearable/widgets/fota/stepper_view/firmware_select.dart';
 import 'package:open_wearable/widgets/fota/stepper_view/update_view.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 class FirmwareUpdateWidget extends StatefulWidget {
   const FirmwareUpdateWidget({super.key});
@@ -75,6 +76,7 @@ class _FirmwareUpdateWidgetState extends State<FirmwareUpdateWidget> {
                       _isUpdateRunning = true;
                       _hasStartedUpdate = true;
                     });
+                    _syncWakeLock(true);
                     provider.nextStep();
                   },
                   icon: const Icon(Icons.system_update_alt_rounded, size: 18),
@@ -156,6 +158,7 @@ class _FirmwareUpdateWidgetState extends State<FirmwareUpdateWidget> {
 
   @override
   void dispose() {
+    _syncWakeLock(false);
     // Reset state after the page has been removed.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       provider.reset();
@@ -178,6 +181,11 @@ class _FirmwareUpdateWidgetState extends State<FirmwareUpdateWidget> {
     setState(() {
       _isUpdateRunning = running;
     });
+    _syncWakeLock(running);
+  }
+
+  void _syncWakeLock(bool enabled) {
+    WakelockPlus.toggle(enable: enabled);
   }
 
   void _showUpdateInProgressToast() {
