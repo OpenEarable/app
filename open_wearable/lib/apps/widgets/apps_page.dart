@@ -97,7 +97,8 @@ final List<AppInfo> _apps = [
             wearable.requireCapability<SensorManager>(),
             sensorConfigProvider,
             wearable.hasCapability<StereoDevice>() &&
-                await wearable.requireCapability<StereoDevice>().position == DevicePosition.left,
+                await wearable.requireCapability<StereoDevice>().position ==
+                    DevicePosition.left,
           ),
         );
       },

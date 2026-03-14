@@ -1,9 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 import 'package:open_wearable/models/wearable_display_group.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
+import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/app_toast.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
@@ -318,6 +320,30 @@ class SensorConfigurationView extends StatelessWidget {
       type: AppToastType.success,
       icon: Icons.check_circle_outline_rounded,
     );
+
+    final recorderProvider = Provider.of<SensorRecorderProvider>(
+      context,
+      listen: false,
+    );
+    bool shouldEnableMicrophoneStreaming = Platform.isAndroid &&
+        targets.any((target) {
+          return target.provider.getSelectedConfigurations().any((entry) {
+            final config = entry.$1;
+            final selectedOptions =
+                target.provider.getSelectedConfigurationOptions(config);
+            return config is ConfigurableSensorConfiguration &&
+                config.name.toLowerCase().contains('microphone') &&
+                selectedOptions.any((opt) => opt is StreamSensorConfigOption);
+          });
+        });
+
+    if (shouldEnableMicrophoneStreaming &&
+        !recorderProvider.isBLEMicrophoneStreamingEnabled) {
+      await recorderProvider.startBLEMicrophoneStream();
+    } else if (!shouldEnableMicrophoneStreaming &&
+        recorderProvider.isBLEMicrophoneStreamingEnabled) {
+      await recorderProvider.stopBLEMicrophoneStream();
+    }
 
     (onSetConfigPressed ?? () {})();
   }

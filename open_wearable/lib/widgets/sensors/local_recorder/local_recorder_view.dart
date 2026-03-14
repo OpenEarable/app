@@ -5,6 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
+import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_dialogs.dart';
+import 'package:open_wearable/widgets/sensors/local_recorder/recording_controls.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:open_file/open_file.dart';
 import 'package:provider/provider.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
@@ -16,6 +20,7 @@ import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_reco
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_see_all_recordings_card.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_storage.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
+import 'local_recorder_files.dart';
 
 Logger _logger = Logger();
 
@@ -120,8 +125,11 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
         _listRecordings();
       } catch (e) {
         _logger.e('Error deleting recording: $e');
-        _showErrorDialog('Failed to delete recording: $e');
-        return false;
+        if (!mounted) return false;
+        LocalRecorderDialogs.showErrorDialog(
+          context,
+          'Failed to delete recording: $e',
+        );
       }
     }
     return true;
@@ -137,8 +145,9 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
     });
 
     try {
-      recorder.stopRecording();
-      if (mode == _StopRecordingMode.stopAndTurnOffSensors) {
+      bool turnOffSensors = mode == _StopRecordingMode.stopAndTurnOffSensors;
+      recorder.stopRecording(turnOffSensors);
+      if (turnOffSensors) {
         final wearablesProvider = context.read<WearablesProvider>();
         final futures = wearablesProvider.sensorConfigurationProviders.values
             .map((provider) => provider.turnOffAllSensors());
@@ -157,32 +166,6 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
     }
   }
 
-  void _startRecordingTimer(DateTime? start) {
-    final reference = start ?? DateTime.now();
-    _activeRecordingStart = reference;
-    _recordingTimer?.cancel();
-    setState(() {
-      _elapsedRecording = DateTime.now().difference(reference);
-    });
-    _recordingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      setState(() {
-        final base = _activeRecordingStart ?? reference;
-        _elapsedRecording = DateTime.now().difference(base);
-      });
-    });
-  }
-
-  void _stopRecordingTimer() {
-    _recordingTimer?.cancel();
-    _recordingTimer = null;
-    _activeRecordingStart = null;
-    if (!mounted) return;
-    setState(() {
-      _elapsedRecording = Duration.zero;
-    });
-  }
-
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
     final hours = twoDigits(duration.inHours);
@@ -191,50 +174,16 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
     return '$hours:$minutes:$seconds';
   }
 
-  @override
-  void dispose() {
-    _recordingTimer?.cancel();
-    _recorder?.removeListener(_handleRecorderUpdate);
-    super.dispose();
-  }
-
-  void _handleRecorderUpdate() {
-    final recorder = _recorder;
-    if (recorder == null) return;
-    final isRecording = recorder.isRecording;
-    final start = recorder.recordingStart;
-    if (isRecording && !_lastRecordingState) {
-      _startRecordingTimer(start);
-    } else if (!isRecording && _lastRecordingState) {
-      _stopRecordingTimer();
-    } else if (isRecording &&
-        _lastRecordingState &&
-        start != null &&
-        _activeRecordingStart != null &&
-        start != _activeRecordingStart) {
-      _startRecordingTimer(start);
-    }
-    _lastRecordingState = isRecording;
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final nextRecorder = context.watch<SensorRecorderProvider>();
-    if (!identical(_recorder, nextRecorder)) {
-      _recorder?.removeListener(_handleRecorderUpdate);
-      _recorder = nextRecorder;
-      _recorder?.addListener(_handleRecorderUpdate);
-      _handleRecorderUpdate();
-    }
-  }
-
   Future<void> _shareFile(File file) async {
     try {
       await localRecorderShareFile(file);
     } catch (e) {
       _logger.e('Error sharing file: $e');
-      await _showErrorDialog('Failed to share file: $e');
+      if (!mounted) return;
+      await LocalRecorderDialogs.showErrorDialog(
+        context,
+        'Failed to share file: $e',
+      );
     }
   }
 
@@ -243,7 +192,11 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
       await localRecorderShareFolder(folder);
     } catch (e) {
       _logger.e('Error sharing folder: $e');
-      await _showErrorDialog('Failed to share folder: $e');
+      if (!mounted) return;
+      await LocalRecorderDialogs.showErrorDialog(
+        context,
+        'Failed to share folder: $e',
+      );
     }
   }
 
@@ -311,7 +264,8 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
                     ),
                   ),
                   const SizedBox(height: SensorPageSpacing.sectionGap),
-                  Text("Recordings", style: Theme.of(context).textTheme.titleMedium),
+                  Text("Recordings",
+                      style: Theme.of(context).textTheme.titleMedium),
                   if (!hasRecordings) const LocalRecorderEmptyStateCard(),
                   if (latestRecording != null)
                     LocalRecorderRecordingFolderCard(
@@ -335,14 +289,14 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
                         });
                       },
                       onShareFolder: () => _shareFolder(latestRecording),
-                        onDeleteFolder: () async {
-                          final deleted =
-                              await _confirmAndDeleteRecording(latestRecording);
-                          if (!deleted) return;
-                          setState(() {
-                            _expandedFolders.remove(latestRecording.path);
-                          });
-                        },
+                      onDeleteFolder: () async {
+                        final deleted =
+                            await _confirmAndDeleteRecording(latestRecording);
+                        if (!deleted) return;
+                        setState(() {
+                          _expandedFolders.remove(latestRecording.path);
+                        });
+                      },
                       onShareFile: _shareFile,
                       onOpenFile: _openRecordingFile,
                       formatFileSize: localRecorderFormatFileSize,

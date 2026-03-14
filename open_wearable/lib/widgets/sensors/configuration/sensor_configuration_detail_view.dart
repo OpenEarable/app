@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart' show setEquals;
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
@@ -38,7 +39,17 @@ class SensorConfigurationDetailView extends StatelessWidget {
     final targetOptions = sensorConfiguration is ConfigurableSensorConfiguration
         ? (sensorConfiguration as ConfigurableSensorConfiguration)
             .availableOptions
-            .toList(growable: false)
+            .where((option) {
+            // Only allow microphone stream on Android
+            if (Platform.isAndroid) return true;
+            final isMicrophone =
+                sensorConfiguration.name.toLowerCase().contains('microphone');
+            final isStreamOption = option is StreamSensorConfigOption;
+            if (isMicrophone && isStreamOption) {
+              return false;
+            }
+            return true;
+          }).toList(growable: false)
         : const <SensorConfigurationOption>[];
 
     return ListView(
@@ -350,9 +361,8 @@ class _OptionToggleTile extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: selected
-            ? accentColor.withValues(alpha: 0.06)
-            : Colors.transparent,
+        color:
+            selected ? accentColor.withValues(alpha: 0.06) : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: (selected ? accentColor : colorScheme.outlineVariant)
