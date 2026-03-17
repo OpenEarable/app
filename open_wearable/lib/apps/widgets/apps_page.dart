@@ -17,7 +17,7 @@ class AppInfo {
   final String logoPath;
   final String title;
   final String description;
-  final List<String> supportedDevices;
+  final List<AppSupportOption> supportedDevices;
   final Color accentColor;
   final Widget widget;
   final double? svgIconInset;
@@ -38,12 +38,21 @@ class AppInfo {
 }
 
 const Color _appAccentColor = Color(0xFF9A6F6B);
-const List<String> _postureSupportedDevices = [
-  "OpenEarable",
+final List<AppSupportOption> _postureSupportedDevices = [
+  const AppSupportOption(
+    label: 'OpenEarable',
+    requirement: AppRequirement.nameStartsWith('OpenEarable'),
+  ),
 ];
-const List<String> _heartSupportedDevices = [
-  "OpenEarable",
-  "OpenRing",
+final List<AppSupportOption> _heartSupportedDevices = [
+  const AppSupportOption(
+    label: 'OpenEarable',
+    requirement: AppRequirement.nameStartsWith('OpenEarable'),
+  ),
+  const AppSupportOption(
+    label: 'OpenRing',
+    requirement: AppRequirement.nameStartsWith('OpenRing'),
+  ),
 ];
 
 Sensor? _findOpticalTemperatureSensor(List<Sensor> sensors) {
@@ -90,7 +99,7 @@ final List<AppInfo> _apps = [
     supportedDevices: _postureSupportedDevices,
     accentColor: _appAccentColor,
     widget: SelectEarableView(
-      supportedDevicePrefixes: _postureSupportedDevices,
+      supportedDevices: _postureSupportedDevices,
       startApp: (wearable, sensorConfigProvider) async {
         return PostureTrackerView(
           EarableAttitudeTracker(
@@ -111,7 +120,7 @@ final List<AppInfo> _apps = [
     supportedDevices: _heartSupportedDevices,
     accentColor: _appAccentColor,
     widget: SelectEarableView(
-      supportedDevicePrefixes: _heartSupportedDevices,
+      supportedDevices: _heartSupportedDevices,
       startApp: (wearable, _) async {
         if (wearable.hasCapability<SensorManager>()) {
           final sensors = wearable.requireCapability<SensorManager>().sensors;
@@ -173,14 +182,13 @@ final List<AppInfo> _apps = [
 int getAvailableAppsCount() => _apps.length;
 
 int getCompatibleAppsCountForWearables(Iterable<Wearable> wearables) {
-  final names = wearables.map((wearable) => wearable.name).toList();
-  if (names.isEmpty) return 0;
+  if (wearables.isEmpty) return 0;
 
   return _apps.where((app) {
-    return names.any(
-      (name) => wearableIsCompatibleWithApp(
-        wearableName: name,
-        supportedDevicePrefixes: app.supportedDevices,
+    return wearables.any(
+      (wearable) => wearableIsCompatibleWithApp(
+        wearable: wearable,
+        supportedDevices: app.supportedDevices,
       ),
     );
   }).length;
@@ -193,17 +201,14 @@ class AppsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final connectedWearables = context.watch<WearablesProvider>().wearables;
     final connectedCount = connectedWearables.length;
-    final connectedWearableNames = connectedWearables
-        .map((wearable) => wearable.name)
-        .toList(growable: false);
 
     final enabledApps = <_AppListEntry>[];
     final disabledApps = <_AppListEntry>[];
     for (final app in _apps) {
-      final isEnabled = connectedWearableNames.any(
-        (wearableName) => wearableIsCompatibleWithApp(
-          wearableName: wearableName,
-          supportedDevicePrefixes: app.supportedDevices,
+      final isEnabled = connectedWearables.any(
+        (wearable) => wearableIsCompatibleWithApp(
+          wearable: wearable,
+          supportedDevices: app.supportedDevices,
         ),
       );
       final entry = _AppListEntry(app: app, isEnabled: isEnabled);
@@ -249,7 +254,7 @@ class AppsPage extends StatelessWidget {
             (entry) => AppTile(
               app: entry.app,
               isEnabled: entry.isEnabled,
-              connectedWearableNames: connectedWearableNames,
+              connectedWearables: connectedWearables,
             ),
           ),
         ],
