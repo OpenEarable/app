@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
-import 'package:open_wearable/apps/widgets/app_compatibility.dart';
+import 'package:open_wearable/apps/models/app_compatibility.dart';
 import 'package:open_wearable/apps/widgets/apps_page.dart';
 import 'package:open_wearable/models/app_launch_session.dart';
 
