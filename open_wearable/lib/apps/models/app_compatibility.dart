@@ -1,4 +1,5 @@
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/apps/models/sensor_matching.dart';
 import 'package:open_wearable/models/device_name_formatter.dart';
 
 typedef WearablePredicate = bool Function(Wearable wearable);
@@ -59,6 +60,17 @@ sealed class AppRequirement {
   /// Matches wearables that expose capability [T].
   static AppRequirement hasCapability<T>() => _HasCapabilityRequirement<T>();
 
+  /// Matches wearables that expose a sensor matching [matcher].
+  static AppRequirement hasSensor(SensorMatcher matcher) {
+    return _HasSensorRequirement(matcher);
+  }
+
+  /// Matches wearables that expose a sensor whose name or chart title contains
+  /// any of [aliases].
+  static AppRequirement hasSensorByAliases(Iterable<String> aliases) {
+    return _HasSensorByAliasesRequirement(aliases);
+  }
+
   /// Matches wearables that expose capability [T] and satisfy [predicate].
   static AppRequirement capability<T>(CapabilityPredicate<T> predicate) {
     return _CapabilityPredicateRequirement<T>(predicate);
@@ -96,6 +108,33 @@ final class _HasCapabilityRequirement<T> extends AppRequirement {
 
   @override
   bool matches(Wearable wearable) => wearable.hasCapability<T>();
+}
+
+final class _HasSensorRequirement extends AppRequirement {
+  final SensorMatcher matcher;
+
+  const _HasSensorRequirement(this.matcher);
+
+  @override
+  bool matches(Wearable wearable) {
+    final sensorManager = wearable.getCapability<SensorManager>();
+    return sensorManager != null &&
+        findSensor(sensorManager.sensors, matcher) != null;
+  }
+}
+
+final class _HasSensorByAliasesRequirement extends AppRequirement {
+  final List<String> aliases;
+
+  _HasSensorByAliasesRequirement(Iterable<String> aliases)
+      : aliases = List.unmodifiable(aliases);
+
+  @override
+  bool matches(Wearable wearable) {
+    final sensorManager = wearable.getCapability<SensorManager>();
+    return sensorManager != null &&
+        findSensorByAliases(sensorManager.sensors, aliases) != null;
+  }
 }
 
 final class _CapabilityPredicateRequirement<T> extends AppRequirement {
