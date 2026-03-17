@@ -117,7 +117,7 @@ class AppTile extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Supported devices',
+                        'Supported by:',
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: isEnabled
                               ? theme.textTheme.bodySmall?.color
