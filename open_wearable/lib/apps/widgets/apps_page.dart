@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/apps/heart_tracker/widgets/heart_tracker_page.dart';
 import 'package:open_wearable/apps/posture_tracker/model/earable_attitude_tracker.dart';
+import 'package:open_wearable/apps/models/sensor_matching.dart';
 import 'package:open_wearable/apps/posture_tracker/view/posture_tracker_view.dart';
 import 'package:open_wearable/apps/widgets/app_compatibility.dart';
 import 'package:open_wearable/apps/widgets/select_earable_view.dart';
@@ -45,7 +46,8 @@ final List<AppSupportOption> _postureSupportedDevices = [
   ),
   AppSupportOption(
     label: "Accelerometer",
-    requirement: AppRequirement.capability<SensorManager>(_hasAccelerometerSensor),
+    requirement:
+        AppRequirement.capability<SensorManager>(sensorManagerHasAccelerometer),
   ),
 ];
 final List<AppSupportOption> _heartSupportedDevices = [
@@ -95,19 +97,6 @@ Sensor? _findOpticalTemperatureSensor(List<Sensor> sensors) {
   return null;
 }
 
-bool _hasAccelerometerSensor(SensorManager sensorManager, Wearable wearable) {
-  for (final sensor in sensorManager.sensors) {
-    final text = '${sensor.sensorName} ${sensor.chartTitle}'.toLowerCase();
-    if (text.contains('accelerometer') ||
-        text.contains('accel') ||
-        text.contains('acc')) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
 final List<AppInfo> _apps = [
   AppInfo(
     logoPath: "lib/apps/posture_tracker/assets/logo.png",
@@ -141,17 +130,7 @@ final List<AppInfo> _apps = [
       startApp: (wearable, _) async {
         if (wearable.hasCapability<SensorManager>()) {
           final sensors = wearable.requireCapability<SensorManager>().sensors;
-          Sensor? ppgSensor;
-          for (final sensor in sensors) {
-            final text =
-                '${sensor.sensorName} ${sensor.chartTitle}'.toLowerCase();
-            if (text.contains('photoplethysmography') ||
-                text.contains('ppg') ||
-                text.contains('pulse')) {
-              ppgSensor = sensor;
-              break;
-            }
-          }
+          final ppgSensor = findPpgSensor(sensors);
 
           if (ppgSensor == null) {
             return PlatformScaffold(
@@ -164,15 +143,7 @@ final List<AppInfo> _apps = [
             );
           }
 
-          Sensor? accelerometerSensor;
-          for (final sensor in sensors) {
-            final text =
-                '${sensor.sensorName} ${sensor.chartTitle}'.toLowerCase();
-            if (text.contains('accelerometer') || text.contains('acc')) {
-              accelerometerSensor = sensor;
-              break;
-            }
-          }
+          final accelerometerSensor = findAccelerometerSensor(sensors);
           final opticalTemperatureSensor =
               _findOpticalTemperatureSensor(sensors);
 
