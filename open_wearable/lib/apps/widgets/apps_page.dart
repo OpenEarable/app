@@ -43,6 +43,10 @@ final List<AppSupportOption> _postureSupportedDevices = [
     label: 'OpenEarable',
     requirement: AppRequirement.nameStartsWith('OpenEarable'),
   ),
+  AppSupportOption(
+    label: "Accelerometer",
+    requirement: AppRequirement.capability<SensorManager>(_hasAccelerometerSensor),
+  ),
 ];
 final List<AppSupportOption> _heartSupportedDevices = [
   const AppSupportOption(
@@ -89,6 +93,19 @@ Sensor? _findOpticalTemperatureSensor(List<Sensor> sensors) {
   }
 
   return null;
+}
+
+bool _hasAccelerometerSensor(SensorManager sensorManager, Wearable wearable) {
+  for (final sensor in sensorManager.sensors) {
+    final text = '${sensor.sensorName} ${sensor.chartTitle}'.toLowerCase();
+    if (text.contains('accelerometer') ||
+        text.contains('accel') ||
+        text.contains('acc')) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 final List<AppInfo> _apps = [
