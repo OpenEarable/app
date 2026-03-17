@@ -56,6 +56,13 @@ final List<AppSupportOption> _heartSupportedDevices = [
   ),
 ];
 
+final List<AppSupportOption> _audioResponseSupportedDevices = [
+  AppSupportOption(
+    label: "Audio Device",
+    requirement: AppRequirement.hasCapability<AudioResponseManager>(),
+  ),
+];
+
 Sensor? _findOpticalTemperatureSensor(List<Sensor> sensors) {
   String normalizeToken(String input) {
     return input
@@ -164,8 +171,11 @@ final List<AppInfo> _apps = [
     logoPath: "",
     title: "Audio Response",
     description: "Measure and store audio responses",
+    supportedDevices: _audioResponseSupportedDevices,
+    accentColor: _appAccentColor,
     widget: SelectEarableView(
-      startApp: (wearable, _) {
+      supportedDevices: _audioResponseSupportedDevices,
+      startApp: (wearable, _) async {
         if (wearable is AudioResponseManager) {
           return AudioResponseMeasurementView(manager: wearable as AudioResponseManager);
         } else {
