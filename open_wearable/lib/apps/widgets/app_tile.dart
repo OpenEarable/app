@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/apps/widgets/app_compatibility.dart';
 import 'package:open_wearable/apps/widgets/apps_page.dart';
 import 'package:open_wearable/models/app_launch_session.dart';
@@ -8,13 +9,13 @@ import 'package:open_wearable/models/app_launch_session.dart';
 class AppTile extends StatelessWidget {
   final AppInfo app;
   final bool isEnabled;
-  final List<String> connectedWearableNames;
+  final List<Wearable> connectedWearables;
 
   const AppTile({
     super.key,
     required this.app,
     required this.isEnabled,
-    required this.connectedWearableNames,
+    required this.connectedWearables,
   });
 
   @override
@@ -22,7 +23,7 @@ class AppTile extends StatelessWidget {
     final theme = Theme.of(context);
     final orderedSupportedDevices = _orderedSupportedDevices(
       app.supportedDevices,
-      connectedWearableNames,
+      connectedWearables,
     );
     final titleStyle = theme.textTheme.titleMedium?.copyWith(
       fontWeight: FontWeight.w700,
@@ -132,11 +133,10 @@ class AppTile extends StatelessWidget {
                         children: orderedSupportedDevices
                             .map(
                               (device) => _SupportedDeviceChip(
-                                text: device,
-                                isConnected: hasConnectedWearableForPrefix(
-                                  devicePrefix: device,
-                                  connectedWearableNames:
-                                      connectedWearableNames,
+                                text: device.label,
+                                isConnected: hasConnectedWearableForOption(
+                                  supportedDevice: device,
+                                  connectedWearables: connectedWearables,
                                 ),
                                 isEnabled: isEnabled,
                               ),
@@ -154,17 +154,17 @@ class AppTile extends StatelessWidget {
     );
   }
 
-  List<String> _orderedSupportedDevices(
-    List<String> supportedDevices,
-    List<String> connectedWearables,
+  List<AppSupportOption> _orderedSupportedDevices(
+    List<AppSupportOption> supportedDevices,
+    List<Wearable> connectedWearables,
   ) {
-    final connected = <String>[];
-    final notConnected = <String>[];
+    final connected = <AppSupportOption>[];
+    final notConnected = <AppSupportOption>[];
 
     for (final device in supportedDevices) {
-      final isConnected = hasConnectedWearableForPrefix(
-        devicePrefix: device,
-        connectedWearableNames: connectedWearables,
+      final isConnected = hasConnectedWearableForOption(
+        supportedDevice: device,
+        connectedWearables: connectedWearables,
       );
       if (isConnected) {
         connected.add(device);

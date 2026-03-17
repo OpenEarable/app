@@ -15,12 +15,12 @@ class SelectEarableView extends StatefulWidget {
     Wearable,
     SensorConfigurationProvider,
   ) startApp;
-  final List<String> supportedDevicePrefixes;
+  final List<AppSupportOption> supportedDevices;
 
   const SelectEarableView({
     super.key,
     required this.startApp,
-    this.supportedDevicePrefixes = const [],
+    this.supportedDevices = const [],
   });
 
   @override
@@ -44,8 +44,8 @@ class _SelectEarableViewState extends State<SelectEarableView> {
           final compatibleWearables = wearablesProvider.wearables
               .where(
                 (wearable) => wearableIsCompatibleWithApp(
-                  wearableName: wearable.name,
-                  supportedDevicePrefixes: widget.supportedDevicePrefixes,
+                  wearable: wearable,
+                  supportedDevices: widget.supportedDevices,
                 ),
               )
               .toList(growable: false);
