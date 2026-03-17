@@ -59,6 +59,10 @@ final List<AppSupportOption> _heartSupportedDevices = [
     label: 'OpenRing',
     requirement: AppRequirement.nameStartsWith('OpenRing'),
   ),
+  AppSupportOption(
+    label: "PPG",
+    requirement: AppRequirement.capability<SensorManager>(sensorManagerHasPpg),
+  ),
 ];
 
 Sensor? _findOpticalTemperatureSensor(List<Sensor> sensors) {
