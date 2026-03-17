@@ -1,7 +1,30 @@
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 
+typedef SensorMatcher = bool Function(Sensor sensor);
+
+const accelerometerSensorAliases = ['accelerometer', 'accel', 'acc'];
+const ppgSensorAliases = ['photoplethysmography', 'ppg', 'pulse'];
+
 String _sensorSearchText(Sensor sensor) {
   return '${sensor.sensorName} ${sensor.chartTitle}'.toLowerCase();
+}
+
+bool sensorMatchesAliases(Sensor sensor, Iterable<String> aliases) {
+  final searchText = _sensorSearchText(sensor);
+  return aliases.map((alias) => alias.toLowerCase()).any(searchText.contains);
+}
+
+Sensor? findSensor(
+  Iterable<Sensor> sensors,
+  SensorMatcher matcher,
+) {
+  for (final sensor in sensors) {
+    if (matcher(sensor)) {
+      return sensor;
+    }
+  }
+
+  return null;
 }
 
 /// Returns the first sensor whose name or chart title contains any of
@@ -13,67 +36,14 @@ Sensor? findSensorByAliases(
   Iterable<Sensor> sensors,
   Iterable<String> aliases,
 ) {
-  final normalizedAliases =
-      aliases.map((alias) => alias.toLowerCase()).toList();
-  for (final sensor in sensors) {
-    final text = _sensorSearchText(sensor);
-    if (normalizedAliases.any(text.contains)) {
-      return sensor;
-    }
-  }
-
-  return null;
-}
-
-/// Returns whether [sensorManager] exposes a sensor whose name or chart title
-/// contains any of [aliases].
-bool sensorManagerHasSensorByAliases(
-  SensorManager sensorManager,
-  Wearable wearable,
-  Iterable<String> aliases,
-) {
-  return findSensorByAliases(sensorManager.sensors, aliases) != null;
+  return findSensor(sensors, (sensor) => sensorMatchesAliases(sensor, aliases));
 }
 
 /// Returns the first sensor that looks like an accelerometer.
 Sensor? findAccelerometerSensor(Iterable<Sensor> sensors) {
-  return findSensorByAliases(sensors, const ['accelerometer', 'accel', 'acc']);
+  return findSensorByAliases(sensors, accelerometerSensorAliases);
 }
 
 Sensor? findPpgSensor(Iterable<Sensor> sensors) {
-  return findSensorByAliases(
-    sensors,
-    [
-      'photoplethysmography',
-      'ppg',
-      'pulse',
-    ],
-  );
-}
-
-/// Returns whether [sensorManager] exposes an accelerometer-like sensor.
-bool sensorManagerHasAccelerometer(
-  SensorManager sensorManager,
-  Wearable wearable,
-) {
-  return sensorManagerHasSensorByAliases(
-    sensorManager,
-    wearable,
-    const ['accelerometer', 'accel', 'acc'],
-  );
-}
-
-bool sensorManagerHasPpg(
-  SensorManager sensorManager,
-  Wearable wearable,
-) {
-  return sensorManagerHasSensorByAliases(
-    sensorManager,
-    wearable,
-    const [
-      'photoplethysmography',
-      'ppg',
-      'pulse',
-    ],
-  );
+  return findSensorByAliases(sensors, ppgSensorAliases);
 }

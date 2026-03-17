@@ -1,6 +1,29 @@
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:open_wearable/apps/widgets/app_compatibility.dart';
+import 'package:open_wearable/apps/models/app_compatibility.dart';
+
+class _FakeSensor extends Sensor<SensorDoubleValue> {
+  const _FakeSensor({
+    required super.sensorName,
+    required super.chartTitle,
+  }) : super(shortChartTitle: 'fake');
+
+  @override
+  List<String> get axisNames => const ['x'];
+
+  @override
+  List<String> get axisUnits => const ['u'];
+
+  @override
+  Stream<SensorDoubleValue> get sensorStream => Stream.empty();
+}
+
+class _FakeSensorManager implements SensorManager {
+  @override
+  final List<Sensor> sensors;
+
+  const _FakeSensorManager(this.sensors);
+}
 
 class _FakeCapability {
   final String mode;
@@ -135,6 +158,55 @@ void main() {
     expect(
       wearableIsCompatibleWithApp(
         wearable: rightWearable,
+        supportedDevices: [supportedDevice],
+      ),
+      isFalse,
+    );
+  });
+
+  test('supports matching sensors without explicit SensorManager requirement',
+      () {
+    final compatibleWearable = _FakeWearable(
+      name: 'OpenEarable-2',
+      deviceId: 'oe-3',
+    )..registerCapability<SensorManager>(
+        const _FakeSensorManager([
+          _FakeSensor(
+            sensorName: 'accel',
+            chartTitle: 'Acceleration',
+          ),
+        ]),
+      );
+    final incompatibleWearable = _FakeWearable(
+      name: 'OpenEarable-2',
+      deviceId: 'oe-4',
+    )..registerCapability<SensorManager>(
+        const _FakeSensorManager([
+          _FakeSensor(
+            sensorName: 'gyroscope',
+            chartTitle: 'Gyro',
+          ),
+        ]),
+      );
+
+    final supportedDevice = AppSupportOption(
+      label: 'OpenEarable',
+      requirement: AppRequirement.allOf([
+        AppRequirement.nameStartsWith('OpenEarable'),
+        AppRequirement.hasSensorByAliases(['accelerometer', 'accel', 'acc']),
+      ]),
+    );
+
+    expect(
+      wearableIsCompatibleWithApp(
+        wearable: compatibleWearable,
+        supportedDevices: [supportedDevice],
+      ),
+      isTrue,
+    );
+    expect(
+      wearableIsCompatibleWithApp(
+        wearable: incompatibleWearable,
         supportedDevices: [supportedDevice],
       ),
       isFalse,

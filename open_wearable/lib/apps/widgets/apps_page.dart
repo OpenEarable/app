@@ -40,6 +40,7 @@ class AppInfo {
 }
 
 const Color _appAccentColor = Color(0xFF9A6F6B);
+
 final List<AppSupportOption> _postureSupportedDevices = [
   const AppSupportOption(
     label: 'OpenEarable',
@@ -48,9 +49,10 @@ final List<AppSupportOption> _postureSupportedDevices = [
   AppSupportOption(
     label: "Accelerometer",
     requirement:
-        AppRequirement.capability<SensorManager>(sensorManagerHasAccelerometer),
+        AppRequirement.hasSensorByAliases(accelerometerSensorAliases),
   ),
 ];
+
 final List<AppSupportOption> _heartSupportedDevices = [
   const AppSupportOption(
     label: 'OpenEarable',
@@ -62,7 +64,7 @@ final List<AppSupportOption> _heartSupportedDevices = [
   ),
   AppSupportOption(
     label: "PPG",
-    requirement: AppRequirement.capability<SensorManager>(sensorManagerHasPpg),
+    requirement: AppRequirement.hasSensorByAliases(ppgSensorAliases),
   ),
 ];
 
