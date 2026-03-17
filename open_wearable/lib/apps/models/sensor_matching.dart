@@ -62,3 +62,18 @@ bool sensorManagerHasAccelerometer(
     const ['accelerometer', 'accel', 'acc'],
   );
 }
+
+bool sensorManagerHasPpg(
+  SensorManager sensorManager,
+  Wearable wearable,
+) {
+  return sensorManagerHasSensorByAliases(
+    sensorManager,
+    wearable,
+    const [
+      'photoplethysmography',
+      'ppg',
+      'pulse',
+    ],
+  );
+}
