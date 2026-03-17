@@ -6,7 +6,7 @@ import 'package:open_wearable/apps/heart_tracker/widgets/heart_tracker_page.dart
 import 'package:open_wearable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_wearable/apps/models/sensor_matching.dart';
 import 'package:open_wearable/apps/posture_tracker/view/posture_tracker_view.dart';
-import 'package:open_wearable/apps/widgets/app_compatibility.dart';
+import 'package:open_wearable/apps/models/app_compatibility.dart';
 import 'package:open_wearable/apps/widgets/select_earable_view.dart';
 import 'package:open_wearable/apps/widgets/app_tile.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
