@@ -34,32 +34,35 @@ class SensorRecorderProvider with ChangeNotifier {
   String? get currentDirectory => _currentDirectory;
   DateTime? get recordingStart => _recordingStart;
 
-  void startRecording(String dirname) async {
-    _isRecording = true;
+  Future<void> startRecording(String dirname) async {
+    if (_isRecording) {
+      return;
+    }
+
     _currentDirectory = dirname;
     _recordingStart = DateTime.now();
 
-    for (Wearable wearable in _recorders.keys) {
-      await _startRecorderForWearable(wearable, dirname);
+    try {
+      for (Wearable wearable in _recorders.keys) {
+        await _startRecorderForWearable(wearable, dirname);
+      }
+      _isRecording = true;
+      notifyListeners();
+    } catch (e, st) {
+      logger.e('Failed to start recording: $e\n$st');
+      _stopAllRecorderStreams();
+      _currentDirectory = null;
+      _recordingStart = null;
+      _isRecording = false;
+      notifyListeners();
+      rethrow;
     }
-
-    notifyListeners();
   }
 
   void stopRecording() {
     _isRecording = false;
     _recordingStart = null;
-    for (Wearable wearable in _recorders.keys) {
-      for (Sensor sensor in _recorders[wearable]!.keys) {
-        Recorder? recorder = _recorders[wearable]?[sensor];
-        if (recorder != null) {
-          recorder.stop();
-          logger.i(
-            'Stopped recording for ${wearable.name} - ${sensor.sensorName}',
-          );
-        }
-      }
-    }
+    _stopAllRecorderStreams();
     notifyListeners();
   }
 
@@ -169,6 +172,21 @@ class SensorRecorderProvider with ChangeNotifier {
         '${resumed ? 'Resumed' : 'Started'} recording for '
         '${wearable.name} - ${sensor.sensorName} to ${file.path}',
       );
+    }
+  }
+
+  void _stopAllRecorderStreams() {
+    for (Wearable wearable in _recorders.keys) {
+      for (Sensor sensor in _recorders[wearable]!.keys) {
+        final recorder = _recorders[wearable]?[sensor];
+        if (recorder == null) {
+          continue;
+        }
+        recorder.stop();
+        logger.i(
+          'Stopped recording for ${wearable.name} - ${sensor.sensorName}',
+        );
+      }
     }
   }
 
