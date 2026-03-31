@@ -188,7 +188,10 @@ class SensorRecorderProvider with ChangeNotifier {
     }
   }
 
-  void startRecording(String dirname) async {
+  Future<void> startRecording(String dirname) async {
+    if (_isRecording) {
+      return;
+    }
     _isRecording = true;
     _currentDirectory = dirname;
     _recordingStart = DateTime.now();
@@ -566,6 +569,7 @@ class SensorRecorderProvider with ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     // Stop streaming
     stopBLEMicrophoneStream();
 
