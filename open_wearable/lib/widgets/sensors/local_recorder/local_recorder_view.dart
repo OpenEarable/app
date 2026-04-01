@@ -260,8 +260,13 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
       if (!proceed) return;
     }
 
-    recorder.startRecording(dir);
-    await _listRecordings();
+    try {
+      await recorder.startRecording(dir);
+      await _listRecordings();
+    } catch (e) {
+      _logger.e('Error starting recording: $e');
+      await _showErrorDialog('Failed to start recording: $e');
+    }
   }
 
   Future<void> _openRecordingFile(File file) async {
