@@ -411,12 +411,19 @@ class WearablesProvider with ChangeNotifier {
   /// Non-blocking for the caller.
   Future<void> _checkForNewerFirmwareAsync(DeviceFirmwareVersion dev) async {
     try {
-      logger.d('Checking for newer firmware for ${(dev as Wearable).name}');
+      final wearable = dev as Wearable;
+      if (!wearable.hasCapability<FotaManager>()) {
+        logger.d(
+          'Skipping firmware update availability check for ${wearable.name}: no FOTA capability registered',
+        );
+        return;
+      }
+
+      logger.d('Checking for newer firmware for ${wearable.name}');
 
       final currentVersion = await dev.readDeviceFirmwareVersion();
       if (currentVersion == null || currentVersion.isEmpty) {
-        logger
-            .d('Could not read firmware version for ${(dev as Wearable).name}');
+        logger.d('Could not read firmware version for ${wearable.name}');
         return;
       }
 
@@ -430,18 +437,18 @@ class WearablesProvider with ChangeNotifier {
         currentVersion,
       )) {
         logger.i(
-          'Newer firmware available for ${(dev as Wearable).name}: $currentVersion -> $latestVersion',
+          'Newer firmware available for ${wearable.name}: $currentVersion -> $latestVersion',
         );
         _emitWearableEvent(
           NewFirmwareAvailableEvent(
-            wearable: dev as Wearable,
+            wearable: wearable,
             currentVersion: currentVersion,
             latestVersion: latestVersion,
           ),
         );
       } else {
         logger.d(
-          'Firmware is up to date for ${(dev as Wearable).name}: $currentVersion',
+          'Firmware is up to date for ${wearable.name}: $currentVersion',
         );
       }
     } catch (e, st) {
