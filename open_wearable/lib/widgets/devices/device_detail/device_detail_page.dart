@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
@@ -38,6 +40,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
     'edu.kit.teco.open_wearable/system_settings',
   );
 
+  StreamSubscription<List<Type>>? _capabilitySubscription;
   Future<Object?>? _deviceIdentifierFuture;
   Future<Object?>? _firmwareVersionFuture;
   Future<FirmwareSupportStatus>? _firmwareSupportFuture;
@@ -46,6 +49,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
   @override
   void initState() {
     super.initState();
+    _attachCapabilityListener();
     _prepareAsyncData();
   }
 
@@ -53,10 +57,27 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
   void didUpdateWidget(covariant DeviceDetailPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.device != widget.device) {
+      _capabilitySubscription?.cancel();
+      _attachCapabilityListener();
       _prepareAsyncData();
     }
   }
 
+  /// Rebuilds the page when new capabilities are registered after the page has
+  /// already been opened.
+  void _attachCapabilityListener() {
+    _capabilitySubscription =
+        widget.device.capabilityRegistered.listen((addedCapabilities) {
+      if (!mounted || addedCapabilities.isEmpty) {
+        return;
+      }
+
+      setState(_prepareAsyncData);
+    });
+  }
+
+  /// Refreshes per-device metadata futures based on currently available
+  /// capabilities.
   void _prepareAsyncData() {
     _deviceIdentifierFuture = widget.device.hasCapability<DeviceIdentifier>()
         ? widget.device
@@ -78,6 +99,9 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
   bool get _opensBluetoothScreenDirectly {
     return defaultTargetPlatform == TargetPlatform.android;
   }
+
+  /// Returns whether the device currently exposes the new FOTA capability.
+  bool get _supportsFota => widget.device.hasCapability<FotaManager>();
 
   Future<void> _openBluetoothSettings() async {
     bool opened = false;
@@ -170,11 +194,22 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
   }
 
   void _openFirmwareUpdate() {
+    if (!_supportsFota) {
+      return;
+    }
+
     Provider.of<FirmwareUpdateRequestProvider>(
       context,
       listen: false,
     ).setSelectedPeripheral(widget.device);
     context.push('/fota');
+  }
+
+  @override
+  void dispose() {
+    _capabilitySubscription?.cancel();
+    _capabilitySubscription = null;
+    super.dispose();
   }
 
   @override
@@ -383,9 +418,11 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
             DetailInfoRow(
               label: 'Firmware Version',
               value: _buildFirmwareVersionValue(),
-              trailing: FirmwareTableUpdateHint(
-                onTap: _openFirmwareUpdate,
-              ),
+              trailing: _supportsFota
+                  ? FirmwareTableUpdateHint(
+                      onTap: _openFirmwareUpdate,
+                    )
+                  : null,
               showDivider: hasHardware,
             ),
           if (hasHardware)
