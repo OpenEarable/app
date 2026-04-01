@@ -52,6 +52,7 @@ class WearableConnector {
   // final Map<DiscoveredDevice, Wearable> _connectedDevices = {};
 
   final WearableManager _wm;
+  final Set<String> _trackedWearableIds = <String>{};
 
   final _events = StreamController<WearableEvent>.broadcast();
   Stream<WearableEvent> get events => _events.stream;
@@ -70,8 +71,14 @@ class WearableConnector {
   }
 
   void _handleConnection(Wearable wearable) {
+    if (_trackedWearableIds.contains(wearable.deviceId)) {
+      return;
+    }
+    _trackedWearableIds.add(wearable.deviceId);
+
     //_connectedDevices[device] = wearable;
     wearable.addDisconnectListener(() {
+      _trackedWearableIds.remove(wearable.deviceId);
       _events.add(
         WearableDisconnectedEvent(
           DisconnectReason.system,
