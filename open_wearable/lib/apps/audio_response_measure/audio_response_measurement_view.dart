@@ -256,6 +256,7 @@ class _AudioResponseMeasurementViewState extends State<AudioResponseMeasurementV
     final int quality = (result['quality'] as int?) ?? -1;
 
     final double meanMagnitude = (result['mean_magnitude'] as double?) ?? -1;
+    // ignore: unused_local_variable
     final int numPeaks = (result['num_peaks'] as int?) ?? -1;
 
     final List<dynamic> pointsDyn = (result['points'] as List?) ?? const [];
