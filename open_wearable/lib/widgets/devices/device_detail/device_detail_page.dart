@@ -104,6 +104,10 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
   /// Returns whether the device currently exposes the new FOTA capability.
   bool get _supportsFota => widget.device.hasCapability<FotaManager>();
 
+  /// Returns whether the device can report firmware image slot metadata.
+  bool get _supportsFotaSlotInfo =>
+      widget.device.hasCapability<FotaSlotInfoCapability>();
+
   Future<void> _openBluetoothSettings() async {
     bool opened = false;
     try {
@@ -206,6 +210,15 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
     context.push('/fota');
   }
 
+  /// Opens the detailed image-slot page for the current device.
+  void _openFotaSlotsPage() {
+    if (!_supportsFotaSlotInfo) {
+      return;
+    }
+
+    context.push('/fota/slots', extra: widget.device);
+  }
+
   @override
   void dispose() {
     _capabilitySubscription?.cancel();
@@ -240,6 +253,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
           ),
         ),
       _buildInfoCard(context),
+      if (_supportsFotaSlotInfo) _buildFotaDetailsCard(),
       if (widget.device.hasCapability<StatusLed>() &&
           widget.device.hasCapability<RgbLed>())
         AppSectionCard(
@@ -436,6 +450,19 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
               showDivider: false,
             ),
         ],
+      ),
+    );
+  }
+
+  /// Builds the entry card for the dedicated FOTA image-slot page.
+  Widget _buildFotaDetailsCard() {
+    return AppSectionCard(
+      title: 'Firmware Update',
+      subtitle: 'Inspect the device-reported image slots and boot flags.',
+      child: NavigationSurface(
+        title: 'Image Slots',
+        subtitle: 'Show detailed information about the firmware image slots.',
+        onTap: _openFotaSlotsPage,
       ),
     );
   }
