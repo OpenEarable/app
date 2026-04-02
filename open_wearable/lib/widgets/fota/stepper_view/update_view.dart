@@ -31,10 +31,14 @@ class UpdateStepView extends StatefulWidget {
 
 class _UpdateStepViewState extends State<UpdateStepView> {
   static const Color _successGreen = Color(0xFF2E7D32);
+  static const int _resetValidateLoopTransitionThreshold = 3;
 
   bool _lastReportedRunning = false;
   bool _startRequested = false;
   bool _verificationBannerShown = false;
+  bool _loopWarningHandled = false;
+  String? _lastResetValidateStage;
+  int _resetValidateLoopTransitions = 0;
 
   @override
   void initState() {
@@ -86,6 +90,11 @@ class _UpdateStepViewState extends State<UpdateStepView> {
     return BlocConsumer<UpdateBloc, UpdateState>(
       listener: (context, state) async {
         _reportRunningState(_isUpdateInProgress(state));
+        final updateProvider = context.read<FirmwareUpdateRequestProvider>();
+        await _maybeShowLoopWarning(
+          state: state,
+          updateProvider: updateProvider,
+        );
         if (state is UpdateFirmwareStateHistory &&
             state.isComplete &&
             state.history.isNotEmpty &&
@@ -94,7 +103,6 @@ class _UpdateStepViewState extends State<UpdateStepView> {
             return;
           }
           _verificationBannerShown = true;
-          final updateProvider = context.read<FirmwareUpdateRequestProvider>();
           final armedVerification = await FotaPostUpdateVerificationCoordinator
               .instance
               .armFromUpdateRequest(
@@ -132,6 +140,142 @@ class _UpdateStepViewState extends State<UpdateStepView> {
       return !state.isComplete;
     }
     return true;
+  }
+
+  /// Shows a one-time warning when the update appears to restart image uploads
+  /// more often than the selected firmware package should require.
+  Future<void> _maybeShowLoopWarning({
+    required UpdateState state,
+    required FirmwareUpdateRequestProvider updateProvider,
+  }) async {
+    if (_loopWarningHandled || !_isUpdateInProgress(state)) {
+      return;
+    }
+
+    final currentState = state is UpdateFirmwareStateHistory
+        ? state.currentState
+        : state is UpdateFirmware
+            ? state
+            : null;
+    final stage = currentState?.stage;
+
+    if (_looksLikeResetValidateLoop(stage)) {
+      await _showLoopWarningDialog(
+        updateProvider: updateProvider,
+        details:
+            'The update appears to be bouncing between reset and validate. This can mean the wearable is stuck in a FOTA loop and there may be a problem.',
+      );
+      return;
+    }
+
+    if (currentState is! UpdateProgressFirmware) {
+      return;
+    }
+
+    final expectedImageCount =
+        _expectedImageCount(updateProvider.updateParameters);
+    final suspectedLoopThreshold = expectedImageCount;
+    if (currentState.imageNumber <= suspectedLoopThreshold) {
+      return;
+    }
+
+    await _showLoopWarningDialog(
+      updateProvider: updateProvider,
+      details:
+          'The update appears to be repeating image uploads more often than expected. This can mean the wearable is stuck in a FOTA loop and there may be a problem.',
+    );
+  }
+
+  /// Tracks repeated `Reset <-> Validate` oscillation and returns true when the
+  /// update appears stuck between those two states.
+  bool _looksLikeResetValidateLoop(String? stage) {
+    final normalizedStage = stage?.trim().toLowerCase();
+    final isLoopStage =
+        normalizedStage == 'reset' || normalizedStage == 'validate';
+
+    if (!isLoopStage) {
+      _lastResetValidateStage = null;
+      _resetValidateLoopTransitions = 0;
+      return false;
+    }
+
+    if (_lastResetValidateStage == null) {
+      _lastResetValidateStage = normalizedStage;
+      return false;
+    }
+
+    if (_lastResetValidateStage == normalizedStage) {
+      return false;
+    }
+
+    _lastResetValidateStage = normalizedStage;
+    _resetValidateLoopTransitions++;
+
+    return _resetValidateLoopTransitions >=
+        _resetValidateLoopTransitionThreshold;
+  }
+
+  /// Presents the generic loop warning and optionally links to slot info.
+  Future<void> _showLoopWarningDialog({
+    required FirmwareUpdateRequestProvider updateProvider,
+    required String details,
+  }) async {
+    _loopWarningHandled = true;
+    final wearable = updateProvider.selectedWearable;
+    final supportsSlotInfo =
+        wearable?.hasCapability<FotaSlotInfoCapability>() ?? false;
+
+    final action = await showPlatformDialog<_LoopWarningAction>(
+      context: context,
+      builder: (_) => PlatformAlertDialog(
+        title: const Text('Firmware update may be stuck'),
+        content: Text(
+          '$details\n\n'
+          '${supportsSlotInfo ? 'You can inspect the reported image slots for recovery hints, or ignore this warning and continue waiting.' : 'You can ignore this warning and continue waiting.'}',
+        ),
+        actions: <Widget>[
+          PlatformDialogAction(
+            child: const Text('Ignore'),
+            onPressed: () =>
+                Navigator.of(context).pop(_LoopWarningAction.ignore),
+          ),
+          if (supportsSlotInfo)
+            PlatformDialogAction(
+              cupertino: (_, __) => CupertinoDialogActionData(
+                isDefaultAction: true,
+              ),
+              child: const Text('Open Image Slots'),
+              onPressed: () =>
+                  Navigator.of(context).pop(_LoopWarningAction.openSlots),
+            ),
+        ],
+      ),
+    );
+
+    if (!mounted ||
+        action != _LoopWarningAction.openSlots ||
+        wearable == null ||
+        !supportsSlotInfo) {
+      return;
+    }
+
+    context.read<UpdateBloc>().add(AbortUpdate());
+    context.push('/fota/slots', extra: wearable);
+  }
+
+  /// Estimates how many image uploads the current firmware package should need.
+  int _expectedImageCount(FirmwareUpdateRequest request) {
+    if (request is SingleImageFirmwareUpdateRequest) {
+      return 1;
+    }
+    if (request is MultiImageFirmwareUpdateRequest) {
+      final imageCount = request.firmwareImages?.length;
+      if (imageCount != null && imageCount > 0) {
+        return imageCount;
+      }
+      return 2;
+    }
+    return 1;
   }
 
   /// Requests explicit confirmation before aborting an active update.
@@ -541,4 +685,9 @@ class _VerificationWarningPanelState extends State<_VerificationWarningPanel> {
       ),
     );
   }
+}
+
+enum _LoopWarningAction {
+  ignore,
+  openSlots,
 }
