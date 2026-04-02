@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/models/fota_post_update_verification.dart';
@@ -133,6 +134,59 @@ class _UpdateStepViewState extends State<UpdateStepView> {
     return true;
   }
 
+  /// Requests explicit confirmation before aborting an active update.
+  Future<void> _confirmAbortUpdate(BuildContext context) async {
+    final updateBloc = this.context.read<UpdateBloc>();
+    final shouldAbort = await showPlatformDialog<bool>(
+      context: context,
+      builder: (_) => PlatformAlertDialog(
+        title: const Text('Abort firmware update?'),
+        content: const Text(
+          'Aborting a firmware update can leave the device in an incomplete state until the update is started again.\n\nDo you want to abort the update now?',
+        ),
+        actions: <Widget>[
+          PlatformDialogAction(
+            child: const Text('Keep Updating'),
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+          PlatformDialogAction(
+            cupertino: (_, __) => CupertinoDialogActionData(
+              isDestructiveAction: true,
+            ),
+            child: const Text('Abort Update'),
+            onPressed: () => Navigator.of(context).pop(true),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted || shouldAbort != true) {
+      return;
+    }
+
+    updateBloc.add(AbortUpdate());
+  }
+
+  /// Builds the destructive abort action shown while an update is active.
+  Widget _abortButton(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () => _confirmAbortUpdate(context),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: colorScheme.error,
+          side: BorderSide(
+            color: colorScheme.error.withValues(alpha: 0.55),
+          ),
+        ),
+        icon: const Icon(Icons.cancel_outlined, size: 18),
+        label: const Text('Abort Update'),
+      ),
+    );
+  }
+
   Widget _buildInitial(
     BuildContext context,
     FirmwareUpdateRequest request,
@@ -151,6 +205,8 @@ class _UpdateStepViewState extends State<UpdateStepView> {
         _firmwareInfoCard(context, firmware),
         const SizedBox(height: 12),
         _buildPendingState(context, 'Starting update...'),
+        const SizedBox(height: 12),
+        _abortButton(context),
       ],
     );
   }
@@ -211,6 +267,10 @@ class _UpdateStepViewState extends State<UpdateStepView> {
         ],
         if (currentState != null) ...[
           _currentStatePanel(context, state),
+          const SizedBox(height: 10),
+        ],
+        if (!state.isComplete) ...[
+          _abortButton(context),
           const SizedBox(height: 10),
         ],
         if (showSuccessMessage) ...[
