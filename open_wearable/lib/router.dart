@@ -4,6 +4,7 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/widgets/devices/connect_devices_page.dart';
 import 'package:open_wearable/widgets/devices/device_detail/device_detail_page.dart';
 import 'package:open_wearable/widgets/fota/firmware_update.dart';
+import 'package:open_wearable/widgets/fota/fota_slots_page.dart';
 import 'package:open_wearable/widgets/fota/fota_warning_page.dart';
 import 'package:open_wearable/widgets/home_page.dart';
 import 'package:open_wearable/widgets/logging/log_files_screen.dart';
@@ -179,6 +180,18 @@ final GoRouter router = GoRouter(
           );
         },
       ),
+    ),
+    GoRoute(
+      path: '/fota/slots',
+      name: 'fota/slots',
+      builder: (context, state) {
+        final device = state.extra;
+        if (device is! Wearable) {
+          return const HomePage();
+        }
+
+        return FotaSlotsPage(device: device);
+      },
     ),
     GoRoute(
       path: '/view',
