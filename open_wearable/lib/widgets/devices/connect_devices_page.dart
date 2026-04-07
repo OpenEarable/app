@@ -69,14 +69,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
 
     final availableDevices = _scanSnapshot.discoveredDevices
         .where((device) => !connectedDeviceIds.contains(device.id))
-        .toList()
-      ..sort((a, b) {
-        final nameCompare = _deviceName(a)
-            .toLowerCase()
-            .compareTo(_deviceName(b).toLowerCase());
-        if (nameCompare != 0) return nameCompare;
-        return a.id.compareTo(b.id);
-      });
+        .toList();
 
     return PlatformScaffold(
       appBar: PlatformAppBar(
