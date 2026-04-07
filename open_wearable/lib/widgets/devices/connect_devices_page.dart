@@ -291,16 +291,24 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
   }
 
   Widget _buildTrailingWidget(DiscoveredDevice device) {
-    if (_connectingDevices[device.id] == true) {
-      return SizedBox(
-        height: 24,
-        width: 24,
-        child: PlatformCircularProgressIndicator(),
-      );
-    }
-    return PlatformTextButton(
-      onPressed: () => _connectToDevice(device, context),
-      child: const Text('Connect'),
+    return SizedBox(
+      width: 90,
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: _connectingDevices[device.id] == true
+            ? const Padding(
+                padding: EdgeInsets.only(right: 16),
+                child: SizedBox(
+                  height: 24,
+                  width: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            : PlatformTextButton(
+                onPressed: () => _connectToDevice(device, context),
+                child: const Text('Connect'),
+              ),
+      ),
     );
   }
 
