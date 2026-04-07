@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
+import 'package:open_wearable/models/connect_devices_scan_session.dart';
 import 'package:open_wearable/models/device_name_formatter.dart';
 import 'package:open_wearable/models/wearable_display_group.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
@@ -26,19 +27,28 @@ class ConnectDevicesPage extends StatefulWidget {
 
 class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
   final WearableManager _wearableManager = WearableManager();
-  StreamSubscription<DiscoveredDevice>? _scanSubscription;
-  Timer? _scanIndicatorTimer;
-
-  final List<DiscoveredDevice> _discoveredDevices = [];
   final Map<String, bool> _connectingDevices = {};
 
-  bool _isScanning = false;
-  DateTime? _lastScanStartedAt;
+  late ConnectDevicesScanSnapshot _scanSnapshot;
+  late final VoidCallback _scanSnapshotListener;
 
   @override
   void initState() {
     super.initState();
-    _startScanning();
+    _scanSnapshot = ConnectDevicesScanSession.snapshot;
+    _scanSnapshotListener = () {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _scanSnapshot = ConnectDevicesScanSession.snapshot;
+      });
+    };
+
+    ConnectDevicesScanSession.notifier.addListener(_scanSnapshotListener);
+    if (!_scanSnapshot.isScanning) {
+      unawaited(ConnectDevicesScanSession.startScanning(clearPrevious: true));
+    }
   }
 
   @override
@@ -57,7 +67,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
           .toList(),
     );
 
-    final availableDevices = _discoveredDevices
+    final availableDevices = _scanSnapshot.discoveredDevices
         .where((device) => !connectedDeviceIds.contains(device.id))
         .toList()
       ..sort((a, b) {
@@ -74,21 +84,24 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
         trailingActions: [
           const AppBarRecordingIndicator(),
           PlatformIconButton(
-            icon: _isScanning
+            icon: _scanSnapshot.isScanning
                 ? const SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.bluetooth_searching),
-            onPressed:
-                _isScanning ? null : () => _startScanning(clearPrevious: true),
+            onPressed: _scanSnapshot.isScanning
+                ? null
+                : () => ConnectDevicesScanSession.startScanning(
+                      clearPrevious: true,
+                    ),
           ),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          await _startScanning(clearPrevious: true);
+          await ConnectDevicesScanSession.startScanning(clearPrevious: true);
         },
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -139,10 +152,10 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
             if (availableDevices.isEmpty)
               _buildEmptyCard(
                 context,
-                title: _isScanning
+                title: _scanSnapshot.isScanning
                     ? 'Scanning for devices...'
                     : 'No devices found yet',
-                subtitle: _isScanning
+                subtitle: _scanSnapshot.isScanning
                     ? 'Make sure your wearable is turned on and nearby.'
                     : 'Press scan again or pull to refresh.',
               )
@@ -163,13 +176,15 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
               ),
             const SizedBox(height: 10),
             PlatformElevatedButton(
-              onPressed: _isScanning
+              onPressed: _scanSnapshot.isScanning
                   ? null
-                  : () => _startScanning(clearPrevious: true),
+                  : () => ConnectDevicesScanSession.startScanning(
+                        clearPrevious: true,
+                      ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (_isScanning)
+                  if (_scanSnapshot.isScanning)
                     const SizedBox(
                       width: 16,
                       height: 16,
@@ -178,7 +193,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                   else
                     const Icon(Icons.bluetooth_searching),
                   const SizedBox(width: 8),
-                  Text(_isScanning ? 'Scanning...' : 'Scan Again'),
+                  Text(_scanSnapshot.isScanning ? 'Scanning...' : 'Scan Again'),
                 ],
               ),
             ),
@@ -193,11 +208,12 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
     required int connectedCount,
     required int discoveredCount,
   }) {
-    final statusText =
-        _isScanning ? 'Scanning for nearby devices' : 'Ready to scan';
-    final helperText = _lastScanStartedAt == null
+    final statusText = _scanSnapshot.isScanning
+        ? 'Scanning for nearby devices'
+        : 'Ready to scan';
+    final helperText = _scanSnapshot.lastScanStartedAt == null
         ? 'Use Scan to discover nearby wearables.'
-        : 'Last scan: ${_formatScanTime(_lastScanStartedAt!)}';
+        : 'Last scan: ${_formatScanTime(_scanSnapshot.lastScanStartedAt!)}';
 
     return Card(
       child: Padding(
@@ -208,7 +224,9 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
             Row(
               children: [
                 Icon(
-                  _isScanning ? Icons.radar : Icons.bluetooth_searching,
+                  _scanSnapshot.isScanning
+                      ? Icons.radar
+                      : Icons.bluetooth_searching,
                   color: Theme.of(context).colorScheme.primary,
                 ),
                 const SizedBox(width: 8),
@@ -307,78 +325,6 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
     return '${elapsed.inHours}h ago';
   }
 
-  void _stopScanning({
-    bool clearDiscovered = false,
-    bool updateUi = true,
-  }) {
-    _scanIndicatorTimer?.cancel();
-    _scanIndicatorTimer = null;
-    _scanSubscription?.cancel();
-    _scanSubscription = null;
-
-    if (!updateUi || !mounted) {
-      _isScanning = false;
-      if (clearDiscovered) {
-        _discoveredDevices.clear();
-      }
-      return;
-    }
-
-    setState(() {
-      _isScanning = false;
-      if (clearDiscovered) {
-        _discoveredDevices.clear();
-      }
-    });
-  }
-
-  Future<void> _startScanning({bool clearPrevious = false}) async {
-    _scanIndicatorTimer?.cancel();
-
-    if (mounted) {
-      setState(() {
-        if (clearPrevious) {
-          _discoveredDevices.clear();
-        }
-        _isScanning = true;
-        _lastScanStartedAt = DateTime.now();
-      });
-    }
-
-    await _scanSubscription?.cancel();
-    _scanSubscription = _wearableManager.scanStream.listen(
-      (incomingDevice) {
-        if (incomingDevice.name.isEmpty) return;
-
-        if (_discoveredDevices
-            .any((device) => device.id == incomingDevice.id)) {
-          return;
-        }
-
-        logger.d('Discovered device: ${incomingDevice.name}');
-        if (mounted) {
-          setState(() {
-            _discoveredDevices.add(incomingDevice);
-          });
-        }
-      },
-      onError: (error, stackTrace) {
-        logger.w('Device scan stream error: $error\n$stackTrace');
-        _stopScanning();
-      },
-    );
-
-    try {
-      await _wearableManager.startScan();
-    } catch (error, stackTrace) {
-      logger.w('Failed to start scan: $error\n$stackTrace');
-      _stopScanning();
-      return;
-    }
-
-    _scanIndicatorTimer = Timer(const Duration(seconds: 8), _stopScanning);
-  }
-
   Future<void> _connectToDevice(
     DiscoveredDevice device,
     BuildContext context,
@@ -392,22 +338,14 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
     try {
       final connector = context.read<WearableConnector>();
       await connector.connect(device);
-      if (mounted) {
-        setState(() {
-          _discoveredDevices.removeWhere((d) => d.id == device.id);
-        });
-      }
+      ConnectDevicesScanSession.removeDiscoveredDevice(device.id);
     } catch (e, stackTrace) {
       if (_isAlreadyConnectedError(e, device)) {
         logger.i(
           'Device ${device.id} already connected. Refreshing connected devices.',
         );
         await _pullConnectedSystemDevices();
-        if (mounted) {
-          setState(() {
-            _discoveredDevices.removeWhere((d) => d.id == device.id);
-          });
-        }
+        ConnectDevicesScanSession.removeDiscoveredDevice(device.id);
         return;
       }
 
@@ -461,7 +399,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
 
   @override
   void dispose() {
-    _stopScanning(updateUi: false);
+    ConnectDevicesScanSession.notifier.removeListener(_scanSnapshotListener);
     super.dispose();
   }
 }
