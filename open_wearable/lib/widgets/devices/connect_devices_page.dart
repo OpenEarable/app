@@ -94,7 +94,9 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          await ConnectDevicesScanSession.startScanning(clearPrevious: true);
+          if (!_scanSnapshot.isScanning) {
+            await ConnectDevicesScanSession.startScanning(clearPrevious: true);
+          }
         },
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
