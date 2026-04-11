@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
+import 'package:universal_ble/universal_ble.dart';
 import 'package:open_wearable/models/connect_devices_scan_session.dart';
 import 'package:open_wearable/models/device_name_formatter.dart';
 import 'package:open_wearable/models/wearable_display_group.dart';
@@ -337,15 +338,27 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
     setState(() {
       _connectingDevices[device.id] = true;
     });
+    final connector = context.read<WearableConnector>();
 
     try {
-      final connector = context.read<WearableConnector>();
       await connector.connect(device);
       ConnectDevicesScanSession.removeDiscoveredDevice(device.id);
     } catch (e, stackTrace) {
       if (_isAlreadyConnectedError(e, device)) {
         logger.i(
-          'Device ${device.id} already connected. Refreshing connected devices.',
+          'Device ${device.id} already connected. Attempting stale-connection recovery.',
+        );
+        final recovered = await _recoverFromStaleConnectionState(
+          device: device,
+          connector: connector,
+        );
+        if (recovered) {
+          ConnectDevicesScanSession.removeDiscoveredDevice(device.id);
+          return;
+        }
+
+        logger.i(
+          'Stale-connection recovery failed for ${device.id}. Refreshing connected system devices.',
         );
         await _pullConnectedSystemDevices();
         ConnectDevicesScanSession.removeDiscoveredDevice(device.id);
@@ -397,6 +410,60 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
       await context.read<WearableConnector>().connectToSystemDevices();
     } catch (error, stackTrace) {
       logger.w('Failed to pull connected system devices: $error\n$stackTrace');
+    }
+  }
+
+  Future<bool> _recoverFromStaleConnectionState({
+    required DiscoveredDevice device,
+    required WearableConnector connector,
+  }) async {
+    try {
+      await UniversalBle.disconnect(device.id);
+    } catch (error, stackTrace) {
+      logger.d(
+        'Low-level disconnect attempt for ${device.id} failed during stale recovery: $error\n$stackTrace',
+      );
+    }
+
+    if (await _retryConnectorConnect(device: device, connector: connector)) {
+      return true;
+    }
+
+    try {
+      await UniversalBle.connect(device.id);
+      await UniversalBle.connectionStream(device.id)
+          .firstWhere((isConnected) => isConnected)
+          .timeout(Duration(seconds: 2));
+    } catch (error, stackTrace) {
+      logger.d(
+        'Low-level connect probe for ${device.id} did not complete during stale recovery: $error\n$stackTrace',
+      );
+    } finally {
+      try {
+        await UniversalBle.disconnect(device.id);
+      } catch (error, stackTrace) {
+        logger.d(
+          'Low-level disconnect probe for ${device.id} failed during stale recovery: $error\n$stackTrace',
+        );
+      }
+    }
+
+    await Future<void>.delayed(Duration(milliseconds: 250));
+    return _retryConnectorConnect(device: device, connector: connector);
+  }
+
+  Future<bool> _retryConnectorConnect({
+    required DiscoveredDevice device,
+    required WearableConnector connector,
+  }) async {
+    try {
+      await connector.connect(device);
+      return true;
+    } catch (error, stackTrace) {
+      logger.d(
+        'Connector retry for ${device.id} failed during stale recovery: $error\n$stackTrace',
+      );
+      return false;
     }
   }
 

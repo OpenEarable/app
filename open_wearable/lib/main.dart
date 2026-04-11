@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
+import 'package:universal_ble/universal_ble.dart';
 import 'package:open_wearable/models/app_background_execution_bridge.dart';
 import 'package:open_wearable/models/app_launch_session.dart';
 import 'package:open_wearable/models/app_shutdown_settings.dart';
@@ -67,7 +68,9 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   late final StreamSubscription _unsupportedFirmwareSub;
   late final StreamSubscription _wearableEventSub;
+  late final StreamSubscription<AvailabilityState> _bleAvailabilitySub;
   late final BluetoothAutoConnector _autoConnector;
+  late final WearableConnector _wearableConnector;
   late final Future<SharedPreferences> _prefsFuture;
   late final StreamSubscription _wearableProvEventSub;
   late final WearablesProvider _wearablesProvider;
@@ -79,6 +82,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   bool _backgroundExecutionRequestedForShutdown = false;
   bool _backgroundExecutionRequestedForRecording = false;
   bool _isBackgroundExecutionActive = false;
+  bool _isBluetoothPoweredOn = true;
 
   static const Duration _closeShutdownGracePeriod = Duration(
     seconds: 10,
@@ -216,7 +220,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       );
     });
 
-    final WearableConnector connector = context.read<WearableConnector>();
+    _wearableConnector = context.read<WearableConnector>();
 
     _autoConnector = BluetoothAutoConnector(
       navStateGetter: () => rootNavigatorKey.currentState,
@@ -227,8 +231,17 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     AutoConnectPreferences.autoConnectEnabledListenable.addListener(
       _syncAutoConnectorWithSetting,
     );
+    _bleAvailabilitySub = UniversalBle.availabilityStream.listen(
+      _handleBleAvailabilityChanged,
+      onError: (error, stackTrace) {
+        logger.w(
+          'Failed to observe Bluetooth availability updates: $error\n$stackTrace',
+        );
+      },
+    );
+    unawaited(_syncInitialBluetoothAvailability());
 
-    _wearableEventSub = connector.events.listen((event) {
+    _wearableEventSub = _wearableConnector.events.listen((event) {
       if (event is WearableConnectEvent) {
         _handleWearableConnected(event.wearable);
       }
@@ -238,11 +251,59 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   }
 
   void _syncAutoConnectorWithSetting() {
-    if (AutoConnectPreferences.autoConnectEnabled) {
+    if (AutoConnectPreferences.autoConnectEnabled && _isBluetoothPoweredOn) {
       _autoConnector.start();
       return;
     }
     _autoConnector.stop();
+  }
+
+  Future<void> _syncInitialBluetoothAvailability() async {
+    try {
+      final state = await UniversalBle.getBluetoothAvailabilityState();
+      if (!mounted) {
+        return;
+      }
+      _handleBleAvailabilityChanged(state);
+    } catch (error, stackTrace) {
+      logger.w(
+        'Failed to read initial Bluetooth availability state: $error\n$stackTrace',
+      );
+    }
+  }
+
+  void _handleBleAvailabilityChanged(AvailabilityState state) {
+    final wasPoweredOn = _isBluetoothPoweredOn;
+    _isBluetoothPoweredOn = state == AvailabilityState.poweredOn;
+
+    if (_isBluetoothPoweredOn) {
+      if (!wasPoweredOn) {
+        logger.i('Bluetooth powered on. Resuming connection flows.');
+      }
+      _syncAutoConnectorWithSetting();
+      return;
+    }
+
+    _autoConnector.stop();
+
+    if (state == AvailabilityState.poweredOff) {
+      logger.i('Bluetooth powered off. Clearing connected wearable UI state.');
+      _wearableConnector.clearTrackedConnections();
+      _removeAllConnectedWearablesFromUiState();
+    }
+  }
+
+  void _removeAllConnectedWearablesFromUiState() {
+    final connectedWearables =
+        List<Wearable>.from(_wearablesProvider.wearables);
+    if (connectedWearables.isEmpty) {
+      return;
+    }
+
+    for (final wearable in connectedWearables) {
+      _wearablesProvider.removeWearable(wearable);
+      _sensorRecorderProvider.removeWearable(wearable);
+    }
   }
 
   void _handleWearableConnected(Wearable wearable) {
@@ -620,6 +681,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void dispose() {
     _unsupportedFirmwareSub.cancel();
     _wearableEventSub.cancel();
+    _bleAvailabilitySub.cancel();
     _wearableProvEventSub.cancel();
     AutoConnectPreferences.autoConnectEnabledListenable.removeListener(
       _syncAutoConnectorWithSetting,
