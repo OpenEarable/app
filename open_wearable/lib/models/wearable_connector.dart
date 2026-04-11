@@ -70,6 +70,20 @@ class WearableConnector {
     connectedWearables.forEach(_handleConnection);
   }
 
+  /// Clears local connection bookkeeping.
+  ///
+  /// Useful when the platform Bluetooth adapter is powered off and the
+  /// platform stack does not emit per-device disconnect callbacks.
+  void clearTrackedConnections({Iterable<String>? deviceIds}) {
+    if (deviceIds == null) {
+      _trackedWearableIds.clear();
+      return;
+    }
+    for (final id in deviceIds) {
+      _trackedWearableIds.remove(id);
+    }
+  }
+
   void _handleConnection(Wearable wearable) {
     if (_trackedWearableIds.contains(wearable.deviceId)) {
       return;
