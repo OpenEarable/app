@@ -85,7 +85,7 @@ class NavigationSurface extends StatelessWidget {
         child: Ink(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+            color: colorScheme.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: colorScheme.outlineVariant.withValues(alpha: 0.55),
