@@ -303,6 +303,7 @@ class BluetoothAutoConnector {
         return;
       }
       if (!hasPerm) {
+        logger.w('Bluetooth permissions not granted. Showing permissions dialog.');
         if (!_askedPermissionsThisSession) {
           _askedPermissionsThisSession = true;
           _showPermissionsDialog();
