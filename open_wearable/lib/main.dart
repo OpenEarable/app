@@ -8,6 +8,8 @@ import 'package:universal_ble/universal_ble.dart';
 import 'package:open_wearable/models/app_background_execution_bridge.dart';
 import 'package:open_wearable/models/app_launch_session.dart';
 import 'package:open_wearable/models/app_shutdown_settings.dart';
+import 'package:open_wearable/models/app_upgrade_coordinator.dart';
+import 'package:open_wearable/models/app_upgrade_highlight.dart';
 import 'package:open_wearable/models/auto_connect_preferences.dart';
 import 'package:open_wearable/models/log_file_manager.dart';
 import 'package:open_wearable/models/fota_post_update_verification.dart';
@@ -20,6 +22,7 @@ import 'package:open_wearable/widgets/app_banner.dart';
 import 'package:open_wearable/widgets/global_app_banner_overlay.dart';
 import 'package:open_wearable/widgets/app_toast.dart';
 import 'package:open_wearable/widgets/fota/fota_verification_banner.dart';
+import 'package:open_wearable/widgets/updates/app_upgrade_page.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -75,6 +78,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   late final StreamSubscription _wearableProvEventSub;
   late final WearablesProvider _wearablesProvider;
   late final SensorRecorderProvider _sensorRecorderProvider;
+  final AppUpgradeCoordinator _appUpgradeCoordinator = AppUpgradeCoordinator();
   bool _closingSensorShutdownInProgress = false;
   bool _shouldCloseOpenScreensOnResume = false;
   Timer? _pendingCloseShutdownTimer;
@@ -248,6 +252,40 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     });
 
     _syncAutoConnectorWithSetting();
+    unawaited(_presentPendingUpgradeHighlight());
+  }
+
+  /// Presents the current version's upgrade highlight when required.
+  Future<void> _presentPendingUpgradeHighlight() async {
+    final AppUpgradeHighlight? highlight =
+        await _appUpgradeCoordinator.loadPendingHighlight();
+    if (!mounted || highlight == null) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final NavigatorState? navigator = rootNavigatorKey.currentState;
+      if (!mounted || navigator == null) {
+        return;
+      }
+
+      await navigator.push<void>(
+        MaterialPageRoute<void>(
+          fullscreenDialog: true,
+          builder: (_) => AppUpgradePage(
+            highlight: highlight,
+            onContinue: () {
+              rootNavigatorKey.currentState?.pop();
+            },
+          ),
+        ),
+      );
+
+      if (!mounted) {
+        return;
+      }
+      await _appUpgradeCoordinator.acknowledgeVersion(highlight.version);
+    });
   }
 
   void _syncAutoConnectorWithSetting() {
