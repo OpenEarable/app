@@ -23,9 +23,10 @@ class PackageInfoAppVersionProvider implements AppVersionProvider {
 
 /// Decides whether a post-upgrade announcement should be shown.
 ///
-/// Fresh installs are seeded with the current version and do not show any
-/// upgrade UI. Existing installs only show content when the current version has
-/// a registered highlight and differs from the last acknowledged version.
+/// Fresh installs show content only when the installed version exactly matches
+/// a registered highlight. Existing installs only show content when the current
+/// version has a registered highlight and differs from the last acknowledged
+/// version.
 class AppUpgradeCoordinator {
   /// Creates an upgrade coordinator.
   const AppUpgradeCoordinator({
@@ -41,20 +42,31 @@ class AppUpgradeCoordinator {
   Future<AppUpgradeHighlight?> loadPendingHighlight() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String currentVersion = await _versionProvider.getVersion();
+    final AppUpgradeHighlight? currentHighlight = AppUpgradeRegistry.forVersion(
+      currentVersion,
+    );
     final String? acknowledgedVersion = prefs.getString(
       acknowledgedVersionKey,
     );
 
     if (acknowledgedVersion == null) {
-      await prefs.setString(acknowledgedVersionKey, currentVersion);
-      return null;
+      if (currentHighlight == null) {
+        await prefs.setString(acknowledgedVersionKey, currentVersion);
+        return null;
+      }
+      return currentHighlight;
     }
 
     if (acknowledgedVersion == currentVersion) {
       return null;
     }
 
-    return AppUpgradeRegistry.forVersion(currentVersion);
+    if (currentHighlight == null) {
+      await prefs.setString(acknowledgedVersionKey, currentVersion);
+      return null;
+    }
+
+    return currentHighlight;
   }
 
   /// Marks [version] as acknowledged so its upgrade page is not shown again.
