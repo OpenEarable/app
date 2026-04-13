@@ -58,6 +58,7 @@ dependencies:
   http: ^1.6.0
   audioplayers: ^6.6.0
   wakelock_plus: ^1.4.0
+  package_info_plus: ^9.0.0
 
 dev_dependencies:
   flutter_test:
