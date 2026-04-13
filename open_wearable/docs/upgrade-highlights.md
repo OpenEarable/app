@@ -1,6 +1,6 @@
 # Upgrade Highlights
 
-This document explains how to customize the post-upgrade "What's new" page that is shown once after a qualifying app update.
+This document explains how to customize the post-upgrade "What's new" page that is shown once after a qualifying app update or eligible first install.
 
 ## Files Involved
 
@@ -21,9 +21,10 @@ This document explains how to customize the post-upgrade "What's new" page that 
 
 1. On launch, `AppUpgradeCoordinator` reads the installed app version via `package_info_plus`.
 2. It compares that version with the last acknowledged version stored in `SharedPreferences`.
-3. If the current version has a matching entry in `AppUpgradeRegistry`, the page is shown once.
-4. When the user continues, that version is marked as acknowledged and is not shown again.
-5. Fresh installs do not show the page, because there is no upgrade path yet.
+3. If the current version exactly matches an entry in `AppUpgradeRegistry`, the page is eligible to be shown.
+4. On first install, the page is shown only when the installed version exactly matches a registered highlight.
+5. On upgrade, the page is shown only when the new version exactly matches a registered highlight and differs from the acknowledged version.
+6. When the user continues, that version is marked as acknowledged and is not shown again.
 
 ## Update Content For The Current Version
 
@@ -106,11 +107,11 @@ This keeps the architecture clean:
 Use the manual route:
 
 - `/whats-new`
-  - Opens the latest configured release page.
-- `/whats-new?version=1.0.14`
+  - Opens the release highlight history page.
+- `/whats-new?version=1.1.0`
   - Opens the page for a specific registered version.
 
-There is also a Settings entry called `What's new` that opens the latest page.
+There is also a Settings entry called `Release highlights` that opens the history page.
 
 ## Recommended Editing Checklist
 
