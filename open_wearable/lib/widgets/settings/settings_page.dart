@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
+import 'package:open_wearable/models/app_upgrade_registry.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:open_wearable/widgets/app_toast.dart';
@@ -38,6 +39,13 @@ class SettingsPage extends StatelessWidget {
       body: ListView(
         padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
         children: [
+          if (AppUpgradeRegistry.latest != null)
+            _QuickActionTile(
+              icon: Icons.auto_awesome_rounded,
+              title: 'Release highlights',
+              subtitle: 'Browse the latest and older app upgrade pages',
+              onTap: () => context.push('/whats-new'),
+            ),
           _QuickActionTile(
             icon: Icons.tune_rounded,
             title: 'General settings',

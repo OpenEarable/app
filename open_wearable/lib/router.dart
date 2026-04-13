@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/models/app_upgrade_registry.dart';
 import 'package:open_wearable/widgets/devices/connect_devices_page.dart';
 import 'package:open_wearable/widgets/devices/device_detail/device_detail_page.dart';
 import 'package:open_wearable/widgets/fota/firmware_update.dart';
@@ -10,10 +11,12 @@ import 'package:open_wearable/widgets/home_page.dart';
 import 'package:open_wearable/widgets/logging/log_files_screen.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_all_recordings_page.dart';
 import 'package:open_wearable/widgets/settings/general_settings_page.dart';
+import 'package:open_wearable/widgets/updates/app_upgrade_history_page.dart';
 import 'dart:io' show Platform;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:open_wearable/widgets/updates/app_upgrade_page.dart';
 
 /// Global navigator key for go_router
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -134,6 +137,21 @@ final GoRouter router = GoRouter(
       path: '/settings/general',
       name: 'settings/general',
       builder: (context, state) => const GeneralSettingsPage(),
+    ),
+    GoRoute(
+      path: '/whats-new',
+      name: 'whats-new',
+      builder: (context, state) {
+        final String? version = state.uri.queryParameters['version'];
+        if (version == null || version.isEmpty) {
+          return const AppUpgradeHistoryPage();
+        }
+        final highlight = AppUpgradeRegistry.forVersion(version);
+        if (highlight == null) {
+          return const AppUpgradeHistoryPage();
+        }
+        return AppUpgradePage(highlight: highlight);
+      },
     ),
     GoRoute(
       path: '/settings/app-close',
