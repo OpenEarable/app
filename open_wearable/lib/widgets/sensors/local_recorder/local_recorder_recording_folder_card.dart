@@ -89,21 +89,41 @@ class LocalRecorderRecordingFolderCard extends StatelessWidget {
                           color: colorScheme.error,
                         ),
                       ),
-                      Icon(
-                        isExpanded ? Icons.expand_less : Icons.expand_more,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
+                      if (!selectionMode)
+                        SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: Center(
+                            child: Icon(
+                              isExpanded
+                                  ? Icons.expand_less
+                                  : Icons.expand_more,
+                              size: 24,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
                       if (selectionMode && onSelectionToggle != null)
-                        IconButton(
-                          tooltip: isSelected ? 'Deselect' : 'Select',
-                          onPressed: onSelectionToggle,
-                          icon: Icon(
-                            isSelected
-                                ? Icons.check_circle
-                                : Icons.radio_button_unchecked,
-                            color: isSelected
-                                ? colorScheme.primary
-                                : colorScheme.onSurfaceVariant,
+                        SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: IconButton(
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints.tightFor(
+                              width: 24,
+                              height: 24,
+                            ),
+                            iconSize: 24,
+                            tooltip: isSelected ? 'Deselect' : 'Select',
+                            onPressed: onSelectionToggle,
+                            icon: Icon(
+                              isSelected
+                                  ? Icons.check_circle
+                                  : Icons.radio_button_unchecked,
+                              color: isSelected
+                                  ? colorScheme.primary
+                                  : colorScheme.onSurfaceVariant,
+                            ),
                           ),
                         ),
                     ],

@@ -213,8 +213,13 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
       if (!proceed) return;
     }
 
-    recorder.startRecording(dir);
-    await _listRecordings();
+    try {
+      recorder.startRecording(dir);
+      await _listRecordings();
+    } catch (e) {
+      _logger.e('Error starting recording: $e');
+      await _showErrorDialog('Failed to start recording: $e');
+    }
   }
 
   Future<void> _openRecordingFile(File file) async {
@@ -243,72 +248,70 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
           top: false,
           child: RefreshIndicator(
             onRefresh: _listRecordings,
-            child: Padding(
-              padding: SensorPageSpacing.pageHeaderPadding,
-              child: ListView(
-                children: [
-                  LocalRecorderRecordingCard(
-                    isRecording: isRecording,
-                    hasSensorsConnected: recorder.hasSensorsConnected,
-                    canStartRecording: canStartRecording,
-                    isHandlingStopAction: _isHandlingStopAction,
-                    elapsedRecordingLabel: _formatDuration(_elapsedRecording),
-                    onStartRecording: () => _startRecording(recorder),
-                    onStopAndTurnOff: () => _handleStopRecording(
-                      recorder,
-                      mode: _StopRecordingMode.stopAndTurnOffSensors,
-                    ),
-                    onStopRecordingOnly: () => _handleStopRecording(
-                      recorder,
-                      mode: _StopRecordingMode.stopOnly,
-                    ),
+            child: ListView(
+              padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
+              children: [
+                LocalRecorderRecordingCard(
+                  isRecording: isRecording,
+                  hasSensorsConnected: recorder.hasSensorsConnected,
+                  canStartRecording: canStartRecording,
+                  isHandlingStopAction: _isHandlingStopAction,
+                  elapsedRecordingLabel: _formatDuration(_elapsedRecording),
+                  onStartRecording: () => _startRecording(recorder),
+                  onStopAndTurnOff: () => _handleStopRecording(
+                    recorder,
+                    mode: _StopRecordingMode.stopAndTurnOffSensors,
                   ),
-                  const SizedBox(height: SensorPageSpacing.sectionGap),
-                  Text("Recordings",
-                      style: Theme.of(context).textTheme.titleMedium),
-                  if (!hasRecordings) const LocalRecorderEmptyStateCard(),
-                  if (latestRecording != null)
-                    LocalRecorderRecordingFolderCard(
-                      folder: latestRecording,
-                      isCurrentRecording: isRecording,
-                      isExpanded: _expandedFolders.contains(
-                        latestRecording.path,
-                      ),
-                      files: _expandedFolders.contains(latestRecording.path)
-                          ? _getFilesInFolder(latestRecording)
-                          : const <File>[],
-                      updatedLabel:
-                          'Updated ${localRecorderFormatDateTime(latestRecording.statSync().changed)}',
-                      onToggleExpanded: () {
-                        setState(() {
-                          if (_expandedFolders.contains(latestRecording.path)) {
-                            _expandedFolders.remove(latestRecording.path);
-                          } else {
-                            _expandedFolders.add(latestRecording.path);
-                          }
-                        });
-                      },
-                      onShareFolder: () => _shareFolder(latestRecording),
-                      onDeleteFolder: () async {
-                        final deleted =
-                            await _confirmAndDeleteRecording(latestRecording);
-                        if (!deleted) return;
-                        setState(() {
+                  onStopRecordingOnly: () => _handleStopRecording(
+                    recorder,
+                    mode: _StopRecordingMode.stopOnly,
+                  ),
+                ),
+                const SizedBox(height: SensorPageSpacing.sectionGap),
+                Text("Recordings",
+                    style: Theme.of(context).textTheme.titleMedium),
+                if (!hasRecordings) const LocalRecorderEmptyStateCard(),
+                if (latestRecording != null)
+                  LocalRecorderRecordingFolderCard(
+                    folder: latestRecording,
+                    isCurrentRecording: isRecording,
+                    isExpanded: _expandedFolders.contains(
+                      latestRecording.path,
+                    ),
+                    files: _expandedFolders.contains(latestRecording.path)
+                        ? _getFilesInFolder(latestRecording)
+                        : const <File>[],
+                    updatedLabel:
+                        'Updated ${localRecorderFormatDateTime(latestRecording.statSync().changed)}',
+                    onToggleExpanded: () {
+                      setState(() {
+                        if (_expandedFolders.contains(latestRecording.path)) {
                           _expandedFolders.remove(latestRecording.path);
-                        });
-                      },
-                      onShareFile: _shareFile,
-                      onOpenFile: _openRecordingFile,
-                      formatFileSize: localRecorderFormatFileSize,
-                    ),
-                  LocalRecorderSeeAllRecordingsTile(
-                    recordingCount: _recordings.length,
-                    onTap: () => _openAllRecordingsPage(
-                      isRecording: isRecording,
-                    ),
+                        } else {
+                          _expandedFolders.add(latestRecording.path);
+                        }
+                      });
+                    },
+                    onShareFolder: () => _shareFolder(latestRecording),
+                    onDeleteFolder: () async {
+                      final deleted =
+                          await _confirmAndDeleteRecording(latestRecording);
+                      if (!deleted) return;
+                      setState(() {
+                        _expandedFolders.remove(latestRecording.path);
+                      });
+                    },
+                    onShareFile: _shareFile,
+                    onOpenFile: _openRecordingFile,
+                    formatFileSize: localRecorderFormatFileSize,
                   ),
-                ],
-              ),
+                LocalRecorderSeeAllRecordingsTile(
+                  recordingCount: _recordings.length,
+                  onTap: () => _openAllRecordingsPage(
+                    isRecording: isRecording,
+                  ),
+                ),
+              ],
             ),
           ),
         );

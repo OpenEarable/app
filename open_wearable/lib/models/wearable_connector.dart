@@ -52,6 +52,7 @@ class WearableConnector {
   // final Map<DiscoveredDevice, Wearable> _connectedDevices = {};
 
   final WearableManager _wm;
+  final Set<String> _trackedWearableIds = <String>{};
 
   final _events = StreamController<WearableEvent>.broadcast();
   Stream<WearableEvent> get events => _events.stream;
@@ -69,9 +70,29 @@ class WearableConnector {
     connectedWearables.forEach(_handleConnection);
   }
 
+  /// Clears local connection bookkeeping.
+  ///
+  /// Useful when the platform Bluetooth adapter is powered off and the
+  /// platform stack does not emit per-device disconnect callbacks.
+  void clearTrackedConnections({Iterable<String>? deviceIds}) {
+    if (deviceIds == null) {
+      _trackedWearableIds.clear();
+      return;
+    }
+    for (final id in deviceIds) {
+      _trackedWearableIds.remove(id);
+    }
+  }
+
   void _handleConnection(Wearable wearable) {
+    if (_trackedWearableIds.contains(wearable.deviceId)) {
+      return;
+    }
+    _trackedWearableIds.add(wearable.deviceId);
+
     //_connectedDevices[device] = wearable;
     wearable.addDisconnectListener(() {
+      _trackedWearableIds.remove(wearable.deviceId);
       _events.add(
         WearableDisconnectedEvent(
           DisconnectReason.system,

@@ -24,6 +24,7 @@ import 'logger.dart';
 /// - `start()` / `stop()` lifecycle control and `onWearableConnected` callback.
 class BluetoothAutoConnector {
   static const Duration _scanRetryInterval = Duration(seconds: 3);
+  static const Duration _iosScanRestartDelay = Duration(seconds: 1);
 
   final NavigatorState? Function() navStateGetter;
   final WearableManager wearableManager;
@@ -46,6 +47,10 @@ class BluetoothAutoConnector {
   final Set<String> _connectedDeviceIds = <String>{};
   final Map<String, int> _connectedNameCounts = <String, int>{};
   final Set<String> _pendingDeviceIds = <String>{};
+  final Set<String> _disconnectListenerAttachedIds = <String>{};
+
+  DateTime? _lastScanStoppedAt;
+  bool _isStartingScan = false;
 
   BluetoothAutoConnector({
     required this.navStateGetter,
@@ -60,6 +65,7 @@ class BluetoothAutoConnector {
     _connectedDeviceIds.clear();
     _connectedNameCounts.clear();
     _pendingDeviceIds.clear();
+    _disconnectListenerAttachedIds.clear();
 
     // Load the last connected names
     await _reloadTargetNames(token: token, reloadPrefs: false);
@@ -91,7 +97,9 @@ class BluetoothAutoConnector {
     _preferencesSubscription = null;
     _isAttemptingConnection = false;
     _isConnecting = false;
+    _isStartingScan = false;
     _pendingDeviceIds.clear();
+    _disconnectListenerAttachedIds.clear();
     _scanRetryTimer?.cancel();
     _scanRetryTimer = null;
     _stopScanning();
@@ -238,22 +246,44 @@ class BluetoothAutoConnector {
     // Stop scanning immediately when a successful connection is made
     _stopScanning();
 
-    // Set up the disconnect listener to trigger a scan for the saved name.
-    wearable.addDisconnectListener(() async {
-      if (token != _sessionToken) {
-        return;
-      }
-      logger.i(
-        "Device ${wearable.name} disconnected. Initiating reconnection scan.",
-      );
-      _markDisconnected(deviceId: wearable.deviceId, deviceName: wearable.name);
+    // Set up one disconnect listener per device id to avoid reconnection storms.
+    if (_disconnectListenerAttachedIds.add(wearable.deviceId)) {
+      wearable.addDisconnectListener(() async {
+        if (token != _sessionToken) {
+          return;
+        }
+        logger.i(
+          "Device ${wearable.name} disconnected. Initiating reconnection scan.",
+        );
+        _disconnectListenerAttachedIds.remove(wearable.deviceId);
+        _markDisconnected(
+          deviceId: wearable.deviceId,
+          deviceName: wearable.name,
+        );
 
-      await _syncTargetsWithPreferences(token: token);
+        await _syncTargetsWithPreferences(token: token);
 
-      if (_hasUnconnectedTargets()) {
-        _attemptConnection();
-      }
-    });
+        if (_hasUnconnectedTargets()) {
+          await _attemptConnection();
+        }
+      });
+    }
+  }
+
+  Future<void> _applyIosScanCooldownIfNeeded() async {
+    if (!Platform.isIOS) {
+      return;
+    }
+    final stoppedAt = _lastScanStoppedAt;
+    if (stoppedAt == null) {
+      return;
+    }
+
+    final elapsed = DateTime.now().difference(stoppedAt);
+    if (elapsed >= _iosScanRestartDelay) {
+      return;
+    }
+    await Future.delayed(_iosScanRestartDelay - elapsed);
   }
 
   Future<void> _attemptConnection({int? token}) async {
@@ -291,7 +321,15 @@ class BluetoothAutoConnector {
 
       if (_targetNames.isNotEmpty && _hasUnconnectedTargets()) {
         _setupScanListener();
-        await wearableManager.startScan();
+        if (!_isStartingScan) {
+          _isStartingScan = true;
+          try {
+            await _applyIosScanCooldownIfNeeded();
+            await wearableManager.startScan();
+          } finally {
+            _isStartingScan = false;
+          }
+        }
       }
     } catch (error, stackTrace) {
       logger.w('Auto-connect attempt failed: $error\n$stackTrace');
@@ -354,7 +392,7 @@ class BluetoothAutoConnector {
   }
 
   Future<void> _restartScanIfNeeded() async {
-    if (_isConnecting || _isAttemptingConnection) {
+    if (_isConnecting || _isAttemptingConnection || _isStartingScan) {
       return;
     }
     if (_scanSubscription != null) {
@@ -365,7 +403,13 @@ class BluetoothAutoConnector {
     }
     try {
       _setupScanListener();
-      await wearableManager.startScan();
+      _isStartingScan = true;
+      try {
+        await _applyIosScanCooldownIfNeeded();
+        await wearableManager.startScan();
+      } finally {
+        _isStartingScan = false;
+      }
     } catch (error, stackTrace) {
       logger.w('Failed to restart auto-connect scan: $error\n$stackTrace');
       _stopScanning();
@@ -373,6 +417,7 @@ class BluetoothAutoConnector {
   }
 
   void _stopScanning() {
+    _lastScanStoppedAt = DateTime.now();
     _scanSubscription?.cancel();
     _scanSubscription = null;
   }

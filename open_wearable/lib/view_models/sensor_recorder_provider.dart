@@ -189,8 +189,20 @@ class SensorRecorderProvider with ChangeNotifier {
     _currentDirectory = dirname;
     _recordingStart = DateTime.now();
 
-    for (Wearable wearable in _recorders.keys) {
-      await _startRecorderForWearable(wearable, dirname);
+    try {
+      for (Wearable wearable in _recorders.keys) {
+        await _startRecorderForWearable(wearable, dirname);
+      }
+      _isRecording = true;
+      notifyListeners();
+    } catch (e, st) {
+      logger.e('Failed to start recording: $e\n$st');
+      _stopAllRecorderStreams();
+      _currentDirectory = null;
+      _recordingStart = null;
+      _isRecording = false;
+      notifyListeners();
+      rethrow;
     }
 
     await _startAudioRecording(
@@ -424,13 +436,31 @@ class SensorRecorderProvider with ChangeNotifier {
 
       File file = await recorder.start(
         filepath: filepath,
-        inputStream: SensorStreams.shared(sensor),
+        inputStream: SensorStreams.shared(
+          wearable: wearable,
+          sensor: sensor,
+        ),
       );
 
       logger.i(
         '${resumed ? 'Resumed' : 'Started'} recording for '
         '${wearable.name} - ${sensor.sensorName} to ${file.path}',
       );
+    }
+  }
+
+  void _stopAllRecorderStreams() {
+    for (Wearable wearable in _recorders.keys) {
+      for (Sensor sensor in _recorders[wearable]!.keys) {
+        final recorder = _recorders[wearable]?[sensor];
+        if (recorder == null) {
+          continue;
+        }
+        recorder.stop();
+        logger.i(
+          'Stopped recording for ${wearable.name} - ${sensor.sensorName}',
+        );
+      }
     }
   }
 

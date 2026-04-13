@@ -36,6 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   open_file: ^3.3.2
   open_earable_flutter: ^2.3.4
+  universal_ble: ^0.21.1
   flutter_platform_widgets: ^9.0.0
   provider: ^6.1.2
   logger: ^2.5.0
@@ -56,6 +57,8 @@ dependencies:
   go_router: ^14.6.2
   http: ^1.6.0
   record: ^6.1.2
+  audioplayers: ^6.6.0
+  wakelock_plus: ^1.4.0
 
 dev_dependencies:
   flutter_test:
