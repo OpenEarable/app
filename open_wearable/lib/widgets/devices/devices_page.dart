@@ -9,6 +9,8 @@ import 'package:open_wearable/widgets/common/no_devices_prompt.dart';
 import 'package:open_wearable/widgets/devices/connect_devices_page.dart';
 import 'package:open_wearable/widgets/devices/device_detail/audio_mode_widget.dart';
 import 'package:open_wearable/widgets/devices/device_detail/device_detail_page.dart';
+import 'package:open_wearable/widgets/devices/device_detail/microphone_selection_widget.dart';
+import 'package:open_wearable/widgets/devices/device_detail/stereo_pair_option_selector.dart';
 import 'package:open_wearable/widgets/devices/device_status_pills.dart';
 import 'package:open_wearable/widgets/devices/wearable_icon.dart';
 import 'package:open_wearable/widgets/recording_activity_indicator.dart';
@@ -670,10 +672,26 @@ class _PairedDeviceSheet extends StatelessWidget {
     return null;
   }
 
+  bool _supportsStereoMicrophoneSelection(Wearable device) {
+    return device.hasCapability<StereoDevice>() &&
+        device.hasCapability<MicrophoneManager>();
+  }
+
+  Wearable? _resolveMicrophoneSelectionDevice() {
+    if (_supportsStereoMicrophoneSelection(leftDevice)) {
+      return leftDevice;
+    }
+    if (_supportsStereoMicrophoneSelection(rightDevice)) {
+      return rightDevice;
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final listeningModeDevice = _resolveListeningModeDevice();
+    final microphoneSelectionDevice = _resolveMicrophoneSelectionDevice();
 
     return DraggableScrollableSheet(
       expand: false,
@@ -747,12 +765,30 @@ class _PairedDeviceSheet extends StatelessWidget {
                       'pair_audio_${leftDevice.deviceId}_${rightDevice.deviceId}',
                     ),
                     device: listeningModeDevice,
-                    applyScope: AudioModeApplyScope.pairOnly,
+                    applyScope: StereoPairApplyScope.pairOnly,
                   ),
                 ] else ...[
                   const SizedBox(height: 10),
                   Text(
                     'Listening mode is not available for this stereo pair.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+                if (microphoneSelectionDevice != null) ...[
+                  const SizedBox(height: 12),
+                  MicrophoneSelectionWidget(
+                    key: ValueKey(
+                      'pair_microphone_${leftDevice.deviceId}_${rightDevice.deviceId}',
+                    ),
+                    device: microphoneSelectionDevice,
+                    applyScope: StereoPairApplyScope.pairOnly,
+                  ),
+                ] else ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    'LE Audio microphone selection is not available for this stereo pair.',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),

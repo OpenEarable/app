@@ -20,6 +20,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'rgb_control.dart';
 import 'microphone_selection_widget.dart';
 import 'status_led_widget.dart';
+import 'stereo_pair_option_selector.dart';
 
 /// A page that displays the details of a device.
 ///
@@ -188,7 +189,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: AudioModeWidget(
               device: widget.device,
-              applyScope: AudioModeApplyScope.individualOnly,
+              applyScope: StereoPairApplyScope.individualOnly,
             ),
           ),
         ),
@@ -198,7 +199,8 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: MicrophoneSelectionWidget(
-              device: widget.device.requireCapability<MicrophoneManager>(),
+              device: widget.device,
+              applyScope: StereoPairApplyScope.individualOnly,
             ),
           ),
         ),
