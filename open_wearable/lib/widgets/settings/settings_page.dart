@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:open_wearable/widgets/app_toast.dart';
 import 'package:open_wearable/widgets/recording_activity_indicator.dart';
@@ -61,14 +62,27 @@ class SettingsPage extends StatelessWidget {
   }
 }
 
-class _AboutPage extends StatelessWidget {
+class _AboutPage extends StatefulWidget {
   const _AboutPage();
+
+  @override
+  State<_AboutPage> createState() => _AboutPageState();
+}
+
+class _AboutPageState extends State<_AboutPage> {
+  late final Future<PackageInfo> _packageInfoFuture;
 
   static final Uri _repoUri = Uri.parse('https://github.com/OpenEarable/app');
   static final Uri _tecoUri = Uri.parse('https://teco.edu');
   static final Uri _openWearablesUri = Uri.parse('https://openwearables.com');
   static const String _aboutAttribution =
       'The OpenWearables App is developed and maintained by the TECO research group at the Karlsruhe Institute of Technology and OpenWearables GmbH.';
+
+  @override
+  void initState() {
+    super.initState();
+    _packageInfoFuture = PackageInfo.fromPlatform();
+  }
 
   Future<void> _openExternalUrl(
     BuildContext context, {
@@ -130,6 +144,46 @@ class _AboutPage extends StatelessWidget {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 10),
+                  FutureBuilder<PackageInfo>(
+                    future: _packageInfoFuture,
+                    builder: (context, snapshot) {
+                      final String versionLabel = snapshot.hasData
+                          ? 'Version ${snapshot.data!.version} (${snapshot.data!.buildNumber})'
+                          : 'Version';
+
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colorScheme.primaryContainer.withValues(
+                            alpha: 0.4,
+                          ),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.new_releases_outlined,
+                              size: 16,
+                              color: colorScheme.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              versionLabel,
+                              style: theme.textTheme.labelLarge?.copyWith(
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 10),
                   Text(
