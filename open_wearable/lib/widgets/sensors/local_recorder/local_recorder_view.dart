@@ -315,8 +315,10 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
                   ),
                 ),
                 const SizedBox(height: SensorPageSpacing.sectionGap),
-                Text("Recordings",
-                    style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  "Recordings",
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 if (!hasRecordings) const LocalRecorderEmptyStateCard(),
                 if (latestRecording != null)
                   LocalRecorderRecordingFolderCard(
