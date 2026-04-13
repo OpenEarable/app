@@ -456,14 +456,10 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
 
   /// Builds the entry card for the dedicated FOTA image-slot page.
   Widget _buildFotaDetailsCard() {
-    return AppSectionCard(
-      title: 'Firmware Update',
-      subtitle: 'Inspect the device-reported image slots and boot flags.',
-      child: NavigationSurface(
-        title: 'Image Slots',
-        subtitle: 'Show detailed information about the firmware image slots.',
-        onTap: _openFotaSlotsPage,
-      ),
+    return NavigationSurface(
+      title: 'FOTA Image Slots',
+      subtitle: 'Show detailed information about the firmware image slots.',
+      onTap: _openFotaSlotsPage,
     );
   }
 
