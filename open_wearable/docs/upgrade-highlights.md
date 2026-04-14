@@ -107,11 +107,11 @@ This keeps the architecture clean:
 Use the manual route:
 
 - `/whats-new`
-  - Opens the release highlight history page.
+  - Opens the release history page.
 - `/whats-new?version=1.1.0`
   - Opens the page for a specific registered version.
 
-There is also a Settings entry called `Release highlights` that opens the history page.
+There is also a Settings entry called `Release history` that opens the history page.
 
 ## Recommended Editing Checklist
 
