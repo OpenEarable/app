@@ -235,11 +235,23 @@ void dismissFotaVerificationBannerById(
   _pruneMissingFotaVerificationBannerKeys(controller);
 
   final key = _activeFotaVerificationBannerKeys.remove(verificationId);
-  if (key == null) {
+  if (key != null) {
+    controller.hideBannerByKey(key);
+    _fotaVerificationDeadlinesById.remove(verificationId);
     return;
   }
 
-  controller.hideBannerByKey(key);
+  final fallbackPrefix = 'fota_verification_banner_${verificationId}_';
+  final fallbackKey = controller.activeBanners
+      .map((banner) => banner.key)
+      .whereType<ValueKey<String>>()
+      .firstWhere(
+        (candidate) => candidate.value.startsWith(fallbackPrefix),
+        orElse: () => const ValueKey<String>(''),
+      );
+  if (fallbackKey.value.isNotEmpty) {
+    controller.hideBannerByKey(fallbackKey);
+  }
   _fotaVerificationDeadlinesById.remove(verificationId);
 }
 

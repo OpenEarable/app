@@ -36,8 +36,10 @@ class _UpdateStepViewState extends State<UpdateStepView> {
   bool _lastReportedRunning = false;
   bool _startRequested = false;
   bool _verificationBannerShown = false;
+  bool _isVerificationPending = false;
   bool _loopWarningHandled = false;
   String? _lastResetValidateStage;
+  StreamSubscription<Set<String>>? _verificationPendingSubscription;
   int _resetValidateLoopTransitions = 0;
 
   @override
@@ -63,6 +65,7 @@ class _UpdateStepViewState extends State<UpdateStepView> {
 
   @override
   void dispose() {
+    _verificationPendingSubscription?.cancel();
     if (_lastReportedRunning) {
       widget.onUpdateRunningChanged?.call(false);
     }
@@ -114,6 +117,7 @@ class _UpdateStepViewState extends State<UpdateStepView> {
           if (!mounted || armedVerification == null) {
             return;
           }
+          _bindVerificationLifecycle(armedVerification.verificationId);
           showFotaVerificationBanner(
             this.context,
             verificationId: armedVerification.verificationId,
@@ -140,6 +144,25 @@ class _UpdateStepViewState extends State<UpdateStepView> {
       return !state.isComplete;
     }
     return true;
+  }
+
+  /// Subscribes the page-level success panel to the coordinator entry created
+  /// for this update so it disappears immediately after reconnect validation.
+  void _bindVerificationLifecycle(String verificationId) {
+    _verificationPendingSubscription?.cancel();
+    _isVerificationPending = FotaPostUpdateVerificationCoordinator.instance
+        .isVerificationPending(verificationId);
+    _verificationPendingSubscription = FotaPostUpdateVerificationCoordinator
+        .instance.pendingVerificationIds
+        .listen((pendingIds) {
+      final isPending = pendingIds.contains(verificationId);
+      if (!mounted || _isVerificationPending == isPending) {
+        return;
+      }
+      setState(() {
+        _isVerificationPending = isPending;
+      });
+    });
   }
 
   /// Shows a one-time warning when the update appears to restart image uploads
@@ -417,7 +440,7 @@ class _UpdateStepViewState extends State<UpdateStepView> {
           _abortButton(context),
           const SizedBox(height: 10),
         ],
-        if (showSuccessMessage) ...[
+        if (showSuccessMessage && _isVerificationPending) ...[
           _successPanel(context),
           const SizedBox(height: 10),
         ],
