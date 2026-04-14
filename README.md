@@ -17,6 +17,10 @@ To get started with the OpenEarable App, you need to have the following:
 - An OpenEarable device with the newest firmware
 - A working flutter installation
 
+## Contributing
+
+Contributor expectations and workflow rules are documented in [CONTRIBUTING.md](./CONTRIBUTING.md).
+
 ### Run the app
 1. Clone this repository
     ```
@@ -38,4 +42,3 @@ To get started with the OpenEarable App, you need to have the following:
     flutter run --release
     ```
     and select your phone as the target device from the list of connected devices.
-
