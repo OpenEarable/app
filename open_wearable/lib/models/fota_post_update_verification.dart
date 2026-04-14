@@ -60,7 +60,18 @@ class FotaPostUpdateVerificationCoordinator {
   static const Duration _maxPendingAge = Duration(minutes: 20);
 
   final Map<String, _PendingPostUpdateVerification> _pendingById = {};
+  final StreamController<Set<String>> _pendingIdsController =
+      StreamController<Set<String>>.broadcast();
   int _nextVerificationId = 0;
+
+  /// Emits the current set of active verification ids whenever it changes.
+  Stream<Set<String>> get pendingVerificationIds =>
+      _pendingIdsController.stream;
+
+  /// Returns whether the given verification is still awaiting reconnect
+  /// confirmation.
+  bool isVerificationPending(String verificationId) =>
+      _pendingById.containsKey(verificationId);
 
   Future<ArmedFotaPostUpdateVerification?> armFromUpdateRequest({
     required FirmwareUpdateRequest request,
@@ -111,6 +122,7 @@ class FotaPostUpdateVerificationCoordinator {
       expectedFirmwareVersion: expectedFirmwareVersion,
       armedAt: DateTime.now(),
     );
+    _publishPendingIds();
 
     return ArmedFotaPostUpdateVerification(
       verificationId: verificationId,
@@ -156,6 +168,7 @@ class FotaPostUpdateVerificationCoordinator {
         );
 
     _pendingById.remove(pending.verificationId);
+    _publishPendingIds();
 
     final displayName = pending.displayWearableName ??
         _displayName(wearable.name) ??
@@ -380,9 +393,19 @@ class FotaPostUpdateVerificationCoordinator {
     }
 
     final now = DateTime.now();
+    final removed = <String>[];
     _pendingById.removeWhere(
-      (_, pending) => now.difference(pending.armedAt) > _maxPendingAge,
+      (_, pending) {
+        final isExpired = now.difference(pending.armedAt) > _maxPendingAge;
+        if (isExpired) {
+          removed.add(pending.verificationId);
+        }
+        return isExpired;
+      },
     );
+    if (removed.isNotEmpty) {
+      _publishPendingIds();
+    }
   }
 
   void _removeConflictingPending({
@@ -394,9 +417,11 @@ class FotaPostUpdateVerificationCoordinator {
       return;
     }
 
+    final removed = <String>[];
     _pendingById.removeWhere((_, pending) {
       if (expectedDeviceId != null &&
           pending.expectedDeviceId == expectedDeviceId) {
+        removed.add(pending.verificationId);
         return true;
       }
 
@@ -406,11 +431,21 @@ class FotaPostUpdateVerificationCoordinator {
           expectedName != null &&
           sameName &&
           sameSide) {
+        removed.add(pending.verificationId);
         return true;
       }
 
       return false;
     });
+    if (removed.isNotEmpty) {
+      _publishPendingIds();
+    }
+  }
+
+  /// Publishes a defensive copy so listeners can react to verification
+  /// completion without mutating coordinator state.
+  void _publishPendingIds() {
+    _pendingIdsController.add(Set<String>.unmodifiable(_pendingById.keys));
   }
 
   String? _extractExpectedFirmwareVersion(SelectedFirmware? firmware) {
