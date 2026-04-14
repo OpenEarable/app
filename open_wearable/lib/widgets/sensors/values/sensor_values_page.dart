@@ -4,10 +4,12 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/models/app_shutdown_settings.dart';
 import 'package:open_wearable/models/wearable_display_group.dart';
 import 'package:open_wearable/view_models/sensor_data_provider.dart';
+import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 import 'package:open_wearable/widgets/sensors/values/sensor_value_card.dart';
 import 'package:provider/provider.dart';
+import 'dart:io';
 
 class SensorValuesPage extends StatefulWidget {
   final Map<(Wearable, Sensor), SensorDataProvider>? sharedProviders;
@@ -30,8 +32,40 @@ class _SensorValuesPageState extends State<SensorValuesPage>
 
   bool get _ownsProviders => widget.sharedProviders == null;
 
+  String? _errorMessage;
+  bool _isInitializing = true;
+
   @override
   bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    if (Platform.isAndroid) {
+      _checkStreamingStatus();
+    }
+  }
+
+  void _checkStreamingStatus() {
+    final recorderProvider =
+        Provider.of<SensorRecorderProvider>(context, listen: false);
+    if (!recorderProvider.isBLEMicrophoneStreamingEnabled) {
+      if (mounted) {
+        setState(() {
+          _isInitializing = false;
+          _errorMessage =
+              'BLE microphone streaming not enabled. Enable it in sensor configuration.';
+        });
+      }
+    } else {
+      if (mounted) {
+        setState(() {
+          _isInitializing = false;
+          _errorMessage = null;
+        });
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -56,8 +90,28 @@ class _SensorValuesPageState extends State<SensorValuesPage>
           builder: (context, hideCardsWithoutLiveData, __) {
             final shouldHideCardsWithoutLiveData =
                 hideCardsWithoutLiveData && !disableLiveDataGraphs;
-            return Consumer<WearablesProvider>(
-              builder: (context, wearablesProvider, child) {
+            return Consumer2<WearablesProvider, SensorRecorderProvider>(
+              builder: (context, wearablesProvider, recorderProvider, child) {
+                if (Platform.isAndroid && mounted) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!recorderProvider.isBLEMicrophoneStreamingEnabled &&
+                        _errorMessage == null &&
+                        !recorderProvider.isRecording) {
+                      setState(() {
+                        _errorMessage =
+                            'BLE microphone streaming not enabled. Enable it in sensor configuration.';
+                      });
+                    } else if (recorderProvider
+                            .isBLEMicrophoneStreamingEnabled &&
+                        _errorMessage != null &&
+                        _errorMessage!
+                            .contains('BLE microphone streaming not enabled')) {
+                      setState(() {
+                        _errorMessage = null;
+                      });
+                    }
+                  });
+                }
                 return FutureBuilder<List<WearableDisplayGroup>>(
                   future: buildWearableDisplayGroups(
                     wearablesProvider.wearables,
@@ -100,6 +154,7 @@ class _SensorValuesPageState extends State<SensorValuesPage>
                               hasAnySensors: hasAnySensors,
                               hideCardsWithoutLiveData:
                                   shouldHideCardsWithoutLiveData,
+                              recorderProvider: recorderProvider,
                             );
                           } else {
                             return _buildLargeScreenLayout(
@@ -108,6 +163,7 @@ class _SensorValuesPageState extends State<SensorValuesPage>
                               hasAnySensors: hasAnySensors,
                               hideCardsWithoutLiveData:
                                   shouldHideCardsWithoutLiveData,
+                              recorderProvider: recorderProvider,
                             );
                           }
                         },
@@ -267,6 +323,7 @@ class _SensorValuesPageState extends State<SensorValuesPage>
     List<Widget> charts, {
     required bool hasAnySensors,
     required bool hideCardsWithoutLiveData,
+    required SensorRecorderProvider recorderProvider,
   }) {
     if (charts.isEmpty) {
       final emptyState = _resolveEmptyState(
@@ -284,9 +341,74 @@ class _SensorValuesPageState extends State<SensorValuesPage>
       );
     }
 
-    return ListView(
+    final showRecorderWaveform = recorderProvider.isRecording;
+
+    return Padding(
       padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
-      children: charts,
+      child: ListView(
+        children: [
+          // Android microphone waveform and error
+          if (Platform.isAndroid) ...[
+            // Waveform card
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          showRecorderWaveform
+                              ? Icons.fiber_manual_record
+                              : Icons.mic,
+                          color:
+                              showRecorderWaveform ? Colors.red : Colors.blue,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          showRecorderWaveform
+                              ? 'AUDIO WAVEFORM (Recording)'
+                              : 'AUDIO WAVEFORM',
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 100,
+                      child: _isInitializing
+                          ? const Center(child: CircularProgressIndicator())
+                          : CustomPaint(
+                              painter: WaveformPainter(
+                                  recorderProvider.waveformData),
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Error message
+            if (_errorMessage != null) ...[
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    _errorMessage!,
+                    style:
+                        TextStyle(color: Theme.of(context).colorScheme.error),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ],
+          // Sensor charts
+          ...charts,
+        ],
+      ),
     );
   }
 
@@ -295,27 +417,98 @@ class _SensorValuesPageState extends State<SensorValuesPage>
     List<Widget> charts, {
     required bool hasAnySensors,
     required bool hideCardsWithoutLiveData,
+    required SensorRecorderProvider recorderProvider,
   }) {
     final emptyState = _resolveEmptyState(
       hasAnySensors: hasAnySensors,
       hideCardsWithoutLiveData: hideCardsWithoutLiveData,
     );
+    final showRecorderWaveform = recorderProvider.isRecording;
 
-    return GridView.builder(
+    return Padding(
       padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
-      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 500,
-        childAspectRatio: 1.5,
-        crossAxisSpacing: SensorPageSpacing.gridGap,
-        mainAxisSpacing: SensorPageSpacing.gridGap,
+      child: SingleChildScrollView(
+        child: Column(
+          children: [
+            // Android microphone waveform and error (top priority)
+            if (Platform.isAndroid) ...[
+              // Waveform card
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            showRecorderWaveform
+                                ? Icons.fiber_manual_record
+                                : Icons.mic,
+                            color:
+                                showRecorderWaveform ? Colors.red : Colors.blue,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            showRecorderWaveform
+                                ? 'Audio waveform (Recording)'
+                                : 'Audio waveform',
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 80,
+                        child: _isInitializing
+                            ? const Center(child: CircularProgressIndicator())
+                            : CustomPaint(
+                                painter: WaveformPainter(
+                                    recorderProvider.waveformData),
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              if (_errorMessage != null) ...[
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      _errorMessage!,
+                      style:
+                          TextStyle(color: Theme.of(context).colorScheme.error),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+            ],
+            const SizedBox(height: 16),
+            // Sensor charts grid
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 500,
+                childAspectRatio: 1.5,
+                crossAxisSpacing: SensorPageSpacing.gridGap,
+                mainAxisSpacing: SensorPageSpacing.gridGap,
+              ),
+              itemCount: charts.isEmpty ? 1 : charts.length,
+              itemBuilder: (context, index) {
+                if (charts.isEmpty) {
+                  return _buildEmptyStateCard(context, emptyState);
+                }
+                return charts[index];
+              },
+            ),
+          ],
+        ),
       ),
-      itemCount: charts.isEmpty ? 1 : charts.length,
-      itemBuilder: (context, index) {
-        if (charts.isEmpty) {
-          return _buildEmptyStateCard(context, emptyState);
-        }
-        return charts[index];
-      },
     );
   }
 
@@ -434,4 +627,84 @@ class _SensorValuesEmptyState {
     required this.subtitle,
     this.removeCardBackground = false,
   });
+}
+
+// Custom waveform painter with vertical bars
+class WaveformPainter extends CustomPainter {
+  final List<double> waveformData;
+  final Color waveColor;
+  final double spacing;
+  final double waveThickness;
+  final bool showMiddleLine;
+
+  WaveformPainter(
+    this.waveformData, {
+    this.waveColor = Colors.blue,
+    this.spacing = 4.0,
+    this.waveThickness = 3.0,
+    this.showMiddleLine = true,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (waveformData.isEmpty) return;
+
+    final double height = size.height;
+    final double centerY = height / 2;
+
+    // Draw middle line first (behind the bars)
+    if (showMiddleLine) {
+      final centerLinePaint = Paint()
+        ..color = Colors.grey.withAlpha(75)
+        ..strokeWidth = 1.0;
+      canvas.drawLine(
+        Offset(0, centerY),
+        Offset(size.width, centerY),
+        centerLinePaint,
+      );
+    }
+
+    // Paint for the vertical bars
+    final paint = Paint()
+      ..color = waveColor
+      ..strokeWidth = waveThickness
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+
+    // Calculate how many bars can fit in the available width
+    final maxBars = (size.width / spacing).floor();
+    final startIndex =
+        waveformData.length > maxBars ? waveformData.length - maxBars : 0;
+
+    // Calculate starting position (always start at 0 or align right)
+    final visibleData = waveformData.sublist(startIndex);
+    final totalWaveformWidth = visibleData.length * spacing;
+    final startX = size.width - totalWaveformWidth;
+
+    // Draw each amplitude value as a vertical bar
+    for (int i = 0; i < visibleData.length; i++) {
+      final x = startX + (i * spacing);
+      final amplitude = visibleData[i];
+
+      // Scale amplitude to fit within the canvas height
+      final barHeight = amplitude * centerY * 0.8;
+
+      // Draw top half of the bar (above center line)
+      final topY = centerY - barHeight;
+      final bottomY = centerY + barHeight;
+
+      // Draw the vertical line from top to bottom
+      canvas.drawLine(
+        Offset(x, topY),
+        Offset(x, bottomY),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant WaveformPainter oldDelegate) {
+    return oldDelegate.waveformData.length != waveformData.length ||
+        oldDelegate.waveColor != waveColor;
+  }
 }
