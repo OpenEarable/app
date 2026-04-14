@@ -30,6 +30,7 @@ class AppUpgradeHighlight {
     required this.heroDescription,
     required this.features,
     this.accentColor,
+    this.useHeroGradient = true,
   });
 
   /// App version for which the content should be shown.
@@ -52,4 +53,7 @@ class AppUpgradeHighlight {
 
   /// Optional accent color used to tint the hero surface.
   final Color? accentColor;
+
+  /// Whether the hero card uses the tinted gradient treatment.
+  final bool useHeroGradient;
 }

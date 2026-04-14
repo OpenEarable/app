@@ -97,7 +97,8 @@ final List<AppInfo> _apps = [
             wearable.requireCapability<SensorManager>(),
             sensorConfigProvider,
             wearable.hasCapability<StereoDevice>() &&
-                await wearable.requireCapability<StereoDevice>().position == DevicePosition.left,
+                await wearable.requireCapability<StereoDevice>().position ==
+                    DevicePosition.left,
           ),
         );
       },
@@ -279,6 +280,7 @@ class _AppsHeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final connectedLabel = connectedDevices == 1 ? 'wearable' : 'wearables';
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -345,7 +347,7 @@ class _AppsHeroCard extends StatelessWidget {
                 icon: Icons.widgets_outlined,
               ),
               _HeroStatPill(
-                label: '$connectedDevices wearables connected',
+                label: '$connectedDevices $connectedLabel connected',
                 icon: Icons.link_rounded,
               ),
             ],

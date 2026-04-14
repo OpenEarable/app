@@ -12,13 +12,14 @@ class AppUpgradeRegistry {
     AppUpgradeHighlight(
       version: '1.1.0',
       eyebrow: 'Welcome to our new look!',
-      title: 'A cleaner, more capable OpenWearables app',
+      title: 'A cleaner,\nmore capable OpenWearables app',
       summary:
           'Refined navigation, stronger device flows, and sharper tooling.',
       heroDescription:
           'This release brings a more structured app experience across overview, devices, sensors, and settings, '
           'while making room for richer workflows in future updates.',
       accentColor: Color(0xFF8F6A67),
+      useHeroGradient: false,
       features: <AppUpgradeFeatureHighlight>[
         AppUpgradeFeatureHighlight(
           icon: Icons.space_dashboard_rounded,
@@ -29,9 +30,9 @@ class AppUpgradeRegistry {
         AppUpgradeFeatureHighlight(
           icon: Icons.earbuds_rounded,
           title: 'Stereo devices',
-          description: 
-            'Device pairs like earables can now be displayed as a stereo pair, making it easier to '
-            'manage and interact with them.',
+          description:
+              'Device pairs like earables can now be displayed as a stereo pair, making it easier to '
+              'manage and interact with them.',
         ),
         AppUpgradeFeatureHighlight(
           icon: Icons.devices_rounded,
