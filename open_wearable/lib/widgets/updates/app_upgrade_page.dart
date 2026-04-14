@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_wearable/models/app_upgrade_highlight.dart';
 
+const double _upgradeCardSpacing = 8;
+
 /// Full-screen page that presents a custom "what's new" experience.
 class AppUpgradePage extends StatelessWidget {
   /// Creates the post-upgrade page.
@@ -47,14 +49,6 @@ class AppUpgradePage extends StatelessWidget {
               return Stack(
                 children: <Widget>[
                   Positioned(
-                    top: -40,
-                    right: -20,
-                    child: _GlowOrb(
-                      color: accentColor.withValues(alpha: 0.16),
-                      size: 220,
-                    ),
-                  ),
-                  Positioned(
                     top: 120,
                     left: -50,
                     child: _GlowOrb(
@@ -67,10 +61,10 @@ class AppUpgradePage extends StatelessWidget {
                     children: <Widget>[
                       Align(
                         alignment: Alignment.centerRight,
-                        child: TextButton.icon(
+                        child: IconButton(
+                          tooltip: 'Close',
                           onPressed: dismiss,
-                          icon: const Icon(Icons.close_rounded),
-                          label: const Text('Skip'),
+                          icon: const Icon(Icons.close_rounded, size: 20),
                         ),
                       ),
                       ConstrainedBox(
@@ -117,19 +111,18 @@ class _CompactUpgradeLayout extends StatelessWidget {
     return Column(
       children: <Widget>[
         _UpgradeHeroCard(highlight: highlight, accentColor: accentColor),
-        const SizedBox(height: 16),
+        const SizedBox(height: _upgradeCardSpacing),
         ...highlight.features.map(
           (AppUpgradeFeatureHighlight feature) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.only(bottom: _upgradeCardSpacing),
             child: _UpgradeFeatureCard(
               feature: feature,
               accentColor: accentColor,
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: _upgradeCardSpacing),
         _UpgradeFooter(
-          featureCount: highlight.features.length,
           onContinue: onContinue,
         ),
       ],
@@ -170,7 +163,7 @@ class _WideUpgradeLayout extends StatelessWidget {
             expanded: true,
           ),
         ),
-        const SizedBox(width: 18),
+        const SizedBox(width: _upgradeCardSpacing),
         Expanded(
           flex: 12,
           child: Column(
@@ -180,13 +173,12 @@ class _WideUpgradeLayout extends StatelessWidget {
                 childAspectRatio: 1.12,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
+                mainAxisSpacing: _upgradeCardSpacing,
+                crossAxisSpacing: _upgradeCardSpacing,
                 children: featureCards,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: _upgradeCardSpacing),
               _UpgradeFooter(
-                featureCount: highlight.features.length,
                 onContinue: onContinue,
               ),
             ],
@@ -217,16 +209,18 @@ class _UpgradeHeroCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: Container(
         constraints: BoxConstraints(minHeight: expanded ? 520 : 0),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: <Color>[
-              accentColor.withValues(alpha: 0.20),
-              colorScheme.surface,
-            ],
-          ),
-        ),
+        decoration: highlight.useHeroGradient
+            ? BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: <Color>[
+                    accentColor.withValues(alpha: 0.20),
+                    colorScheme.surface,
+                  ],
+                ),
+              )
+            : null,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(22, 22, 22, 22),
           child: Column(
@@ -246,6 +240,10 @@ class _UpgradeHeroCard extends StatelessWidget {
                         Text(
                           highlight.title,
                           style: theme.textTheme.headlineMedium?.copyWith(
+                            fontSize:
+                                (theme.textTheme.headlineMedium?.fontSize ??
+                                        28) -
+                                    2,
                             fontWeight: FontWeight.w800,
                             height: 1.05,
                           ),
@@ -255,7 +253,6 @@ class _UpgradeHeroCard extends StatelessWidget {
                           highlight.summary,
                           style: theme.textTheme.titleMedium?.copyWith(
                             color: colorScheme.onSurfaceVariant,
-                            fontWeight: FontWeight.w600,
                             height: 1.25,
                           ),
                         ),
@@ -351,55 +348,21 @@ class _UpgradeFeatureCard extends StatelessWidget {
 
 class _UpgradeFooter extends StatelessWidget {
   const _UpgradeFooter({
-    required this.featureCount,
     required this.onContinue,
   });
 
-  final int featureCount;
   final VoidCallback? onContinue;
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final ColorScheme colorScheme = theme.colorScheme;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
-        child: Row(
-          children: <Widget>[
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    'Ready to explore?',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '$featureCount update highlights are ready. Continue into the app when you are done.',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 16),
-            Flexible(
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: FilledButton.icon(
-                  onPressed: onContinue,
-                  icon: const Icon(Icons.arrow_forward_rounded),
-                  label: const Text('Continue'),
-                ),
-              ),
-            ),
-          ],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
+      child: SizedBox(
+        width: double.infinity,
+        child: FilledButton.icon(
+          onPressed: onContinue,
+          icon: const Icon(Icons.arrow_forward_rounded),
+          label: const Text('Continue'),
         ),
       ),
     );
@@ -479,25 +442,11 @@ class _HeroAppIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ColorScheme colorScheme = Theme.of(context).colorScheme;
-
-    return Container(
+    return SizedBox(
       width: 84,
       height: 84,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(26),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: <Color>[
-            accentColor.withValues(alpha: 0.22),
-            colorScheme.secondaryContainer.withValues(alpha: 0.76),
-          ],
-        ),
-      ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(42),
         child: Image.asset(
           'android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png',
           fit: BoxFit.cover,

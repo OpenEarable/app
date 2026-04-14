@@ -39,13 +39,6 @@ class SettingsPage extends StatelessWidget {
       body: ListView(
         padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
         children: [
-          if (AppUpgradeRegistry.latest != null)
-            _QuickActionTile(
-              icon: Icons.auto_awesome_rounded,
-              title: 'Release highlights',
-              subtitle: 'Browse the latest and older app upgrade pages',
-              onTap: () => context.push('/whats-new'),
-            ),
           _QuickActionTile(
             icon: Icons.tune_rounded,
             title: 'General settings',
@@ -58,6 +51,13 @@ class SettingsPage extends StatelessWidget {
             subtitle: 'View, share, and remove diagnostic logs',
             onTap: onLogsRequested,
           ),
+          if (AppUpgradeRegistry.latest != null)
+            _QuickActionTile(
+              icon: Icons.auto_awesome_rounded,
+              title: 'Release history',
+              subtitle: 'Browse app releases',
+              onTap: () => context.push('/whats-new'),
+            ),
           _QuickActionTile(
             icon: Icons.info_outline_rounded,
             title: 'About',
