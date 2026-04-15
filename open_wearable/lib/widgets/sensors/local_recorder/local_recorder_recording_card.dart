@@ -41,12 +41,12 @@ class LocalRecorderRecordingCard extends StatelessWidget {
         ? 'Recording in progress'
         : hasSensorsConnected
             ? 'Ready to record'
-            : 'No active sensors';
+            : 'No sensors connected';
     final statusSubtitle = isRecording
         ? 'Capturing live Bluetooth sensor data.'
         : hasSensorsConnected
             ? 'Start a session to capture live Bluetooth sensor data.'
-            : 'Connect a wearable and enable sensors to start recording.';
+            : 'Connect a wearable with sensors to start recording.';
 
     return Card(
       child: Padding(
