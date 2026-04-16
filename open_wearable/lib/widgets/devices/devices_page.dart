@@ -3,6 +3,7 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 
 import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/models/wearable_connector.dart';
 import 'package:open_wearable/models/wearable_display_group.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/common/no_devices_prompt.dart';
@@ -28,13 +29,10 @@ class DevicesPage extends StatefulWidget {
 }
 
 class _DevicesPageState extends State<DevicesPage> {
-  Future<void> _refreshSystemDevices(
-    WearablesProvider wearablesProvider,
-  ) async {
-    final wearables = await WearableManager().connectToSystemDevices();
-    for (final wearable in wearables) {
-      wearablesProvider.addWearable(wearable);
-    }
+  /// Refreshes the page from system-connected devices through the shared
+  /// connection facade so app-wide connection side effects remain centralized.
+  Future<void> _refreshSystemDevices(BuildContext context) async {
+    await context.read<WearableConnector>().connectToSystemDevices();
   }
 
   @override
@@ -81,7 +79,7 @@ class _DevicesPageState extends State<DevicesPage> {
   ) {
     if (wearablesProvider.wearables.isEmpty) {
       return RefreshIndicator(
-        onRefresh: () => _refreshSystemDevices(wearablesProvider),
+        onRefresh: () => _refreshSystemDevices(context),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
@@ -120,7 +118,7 @@ class _DevicesPageState extends State<DevicesPage> {
         );
 
         return RefreshIndicator(
-          onRefresh: () => _refreshSystemDevices(wearablesProvider),
+          onRefresh: () => _refreshSystemDevices(context),
           child: Padding(
             padding: const EdgeInsets.all(10),
             child: ListView.builder(
