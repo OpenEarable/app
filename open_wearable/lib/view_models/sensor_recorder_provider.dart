@@ -17,12 +17,15 @@ import '../models/sensor_streams.dart';
 /// - Builds/owns per-wearable recorder maps.
 /// - Starts/stops all active recorder streams.
 /// - Keeps recording behavior consistent across wearable reconnects.
+/// - Synchronizes recorder registration with the connected wearable set.
 ///
 /// Provides:
 /// - Recording status (`isRecording`, `recordingStart`, etc.).
 /// - Recorder access used by recorder UI pages.
 class SensorRecorderProvider with ChangeNotifier {
   final Map<Wearable, Map<Sensor, Recorder>> _recorders = {};
+  Future<void> _pendingSynchronization = Future<void>.value();
+  bool _disposed = false;
 
   bool _isRecording = false;
   bool _hasSensorsConnected = false;
@@ -113,6 +116,40 @@ class SensorRecorderProvider with ChangeNotifier {
     _updateConnected();
   }
 
+  /// Reconciles recorder state with the current connected wearable set.
+  ///
+  /// This keeps recorder registration derived from the authoritative
+  /// [WearablesProvider] connection state instead of relying on each caller to
+  /// remember a second side effect.
+  void synchronizeConnectedWearables(Iterable<Wearable> wearables) {
+    final desiredById = <String, Wearable>{
+      for (final wearable in wearables) wearable.deviceId: wearable,
+    };
+
+    _pendingSynchronization = _pendingSynchronization.then((_) async {
+      if (_disposed) {
+        return;
+      }
+
+      final existingById = <String, Wearable>{
+        for (final wearable in _recorders.keys) wearable.deviceId: wearable,
+      };
+
+      for (final entry in existingById.entries) {
+        if (!desiredById.containsKey(entry.key)) {
+          removeWearable(entry.value);
+        }
+      }
+
+      for (final entry in desiredById.entries) {
+        final existing = existingById[entry.key];
+        if (existing == null || !identical(existing, entry.value)) {
+          await addWearable(entry.value);
+        }
+      }
+    });
+  }
+
   void removeWearable(Wearable wearable) {
     _disposeWearable(wearable);
     _recorders.remove(wearable);
@@ -195,6 +232,7 @@ class SensorRecorderProvider with ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     for (final wearable in _recorders.keys.toList()) {
       _disposeWearable(wearable);
     }

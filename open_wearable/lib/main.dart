@@ -46,8 +46,15 @@ void main() async {
         ChangeNotifierProvider(
           create: (context) => FirmwareUpdateRequestProvider(),
         ),
-        ChangeNotifierProvider(
+        ChangeNotifierProxyProvider<WearablesProvider, SensorRecorderProvider>(
           create: (context) => SensorRecorderProvider(),
+          update: (context, wearablesProvider, recorderProvider) {
+            final provider = recorderProvider ?? SensorRecorderProvider();
+            provider.synchronizeConnectedWearables(
+              wearablesProvider.wearables,
+            );
+            return provider;
+          },
         ),
         Provider.value(value: WearableConnector()),
         ChangeNotifierProvider(
@@ -340,13 +347,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
     for (final wearable in connectedWearables) {
       _wearablesProvider.removeWearable(wearable);
-      _sensorRecorderProvider.removeWearable(wearable);
     }
   }
 
   void _handleWearableConnected(Wearable wearable) {
     _wearablesProvider.addWearable(wearable);
-    _sensorRecorderProvider.addWearable(wearable);
     _maybeFinalizePostUpdateVerification(wearable);
   }
 
