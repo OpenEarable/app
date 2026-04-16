@@ -190,7 +190,7 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
                                       size: 18,
                                     ),
                                     title: const Text(
-                                      'Keep app in foreground',
+                                      'Keep screen awake',
                                     ),
                                     subtitle: const Text(
                                       'Prevents the device screen from sleeping while this app is active',
