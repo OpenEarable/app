@@ -321,16 +321,7 @@ class BluetoothAutoConnector {
       }
 
       if (_targetNames.isNotEmpty && _hasUnconnectedTargets()) {
-        _setupScanListener();
-        if (!_isStartingScan) {
-          _isStartingScan = true;
-          try {
-            await _applyIosScanCooldownIfNeeded();
-            await wearableManager.startScan();
-          } finally {
-            _isStartingScan = false;
-          }
-        }
+        await _startAutoConnectScan();
       }
     } catch (error, stackTrace) {
       logger.w('Auto-connect attempt failed: $error\n$stackTrace');
@@ -403,16 +394,59 @@ class BluetoothAutoConnector {
       return;
     }
     try {
-      _setupScanListener();
-      _isStartingScan = true;
-      try {
-        await _applyIosScanCooldownIfNeeded();
-        await wearableManager.startScan();
-      } finally {
-        _isStartingScan = false;
-      }
+      await _startAutoConnectScan();
     } catch (error, stackTrace) {
       logger.w('Failed to restart auto-connect scan: $error\n$stackTrace');
+      _stopScanning();
+    }
+  }
+
+  /// Starts the BLE scan used by the auto-connect flow.
+  ///
+  /// When permissions have just been granted, the caller can skip the internal
+  /// permission check to continue directly with scanning.
+  Future<void> _startAutoConnectScan({
+    bool checkAndRequestPermissions = true,
+  }) async {
+    logger.d("Starting auto-connect scan...");
+    _setupScanListener();
+    if (_isStartingScan) {
+      return;
+    }
+
+    _isStartingScan = true;
+    try {
+      await _applyIosScanCooldownIfNeeded();
+      await wearableManager.startScan(
+        checkAndRequestPermissions: checkAndRequestPermissions,
+      );
+    } finally {
+      _isStartingScan = false;
+    }
+  }
+
+  /// Restarts the auto-connect flow immediately after permissions are granted.
+  Future<void> _resumeAutoConnectAfterPermissionsGranted({
+    required int token,
+  }) async {
+    logger.d("Resuming auto-connect after permissions granted...");
+    await _syncTargetsWithPreferences(token: token);
+    if (token != _sessionToken) {
+      logger.w("Session token mismatch after permissions granted. Aborting auto-connect resume.");
+      return;
+    }
+    if (_targetNames.isEmpty || !_hasUnconnectedTargets()) {
+      logger.w("No unconnected targets after permissions granted. Skipping auto-connect resume.");
+      return;
+    }
+
+    try {
+      await _startAutoConnectScan(checkAndRequestPermissions: false);
+    } catch (error, stackTrace) {
+      logger.w(
+        'Failed to resume auto-connect after granting permissions: '
+        '$error\n$stackTrace',
+      );
       _stopScanning();
     }
   }
@@ -423,32 +457,60 @@ class BluetoothAutoConnector {
     _scanSubscription = null;
   }
 
+  /// Shows the permission rationale dialog and requests permissions afterwards.
+  ///
+  /// The OS permission prompt is intentionally deferred until the user dismisses
+  /// the explanatory dialog so the request sequence stays predictable.
   void _showPermissionsDialog() {
     final nav = navStateGetter();
     final navCtx = nav?.context;
     if (nav == null || navCtx == null) return;
 
-    // Fire-and-forget; no async/await needed here
-    nav.push(
-      DialogRoute<void>(
-        context: navCtx,
-        barrierDismissible: true,
-        builder: (_) => PlatformAlertDialog(
-          title: PlatformText("Permissions Required"),
-          content: PlatformText(
-            "This app requires Bluetooth and Location permissions to function properly.\n"
-            "Location access is needed for Bluetooth scanning to work. Please enable both "
-            "Bluetooth and Location services and grant the necessary permissions.\n"
-            "No data will be collected or sent to any server and will remain only on your device.",
-          ),
-          actions: [
-            PlatformDialogAction(
-              onPressed: nav.pop,
-              child: PlatformText("OK"),
+    final token = _sessionToken;
+
+    unawaited(
+      nav
+          .push(
+            DialogRoute<void>(
+              context: navCtx,
+              barrierDismissible: true,
+              builder: (_) => PlatformAlertDialog(
+                title: PlatformText("Permissions Required"),
+                content: PlatformText(
+                  "This app requires Bluetooth and Location permissions to function properly.\n"
+                  "Location access is needed for Bluetooth scanning to work. Please enable both "
+                  "Bluetooth and Location services and grant the necessary permissions.\n"
+                  "No data will be collected or sent to any server and will remain only on your device.",
+                ),
+                actions: [
+                  PlatformDialogAction(
+                    onPressed: nav.pop,
+                    child: PlatformText("OK"),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
-      ),
+          )
+          .then((_) async {
+            if (token != _sessionToken) {
+              return;
+            }
+
+            final permissionsGranted =
+                await WearableManager.checkAndRequestPermissions();
+            if (token != _sessionToken) {
+              return;
+            }
+
+            if (!permissionsGranted) {
+              logger.w(
+                'Bluetooth permissions still not granted after dialog dismissal.',
+              );
+              return;
+            }
+
+            await _resumeAutoConnectAfterPermissionsGranted(token: token);
+          }),
     );
   }
 }
