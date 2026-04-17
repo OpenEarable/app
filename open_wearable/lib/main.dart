@@ -94,7 +94,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   bool _backgroundExecutionRequestedForRecording = false;
   bool _isBackgroundExecutionActive = false;
   bool _isBluetoothPoweredOn = true;
-  bool _isRefreshingSystemDevices = false;
 
   static const Duration _closeShutdownGracePeriod = Duration(
     seconds: 10,
@@ -304,27 +303,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     _autoConnector.stop();
   }
 
-  /// Pulls devices that are already connected at the system level into the app.
-  ///
-  /// This runs separately from [BluetoothAutoConnector] so system-connected
-  /// devices do not depend on the remembered-target auto-connect policy.
-  Future<void> _refreshSystemConnectedDevicesIfNeeded() async {
-    if (!_isBluetoothPoweredOn || _isRefreshingSystemDevices) {
-      return;
-    }
-
-    _isRefreshingSystemDevices = true;
-    try {
-      await _wearableConnector.connectToSystemDevices();
-    } catch (error, stackTrace) {
-      logger.w(
-        'Failed to refresh system-connected devices: $error\n$stackTrace',
-      );
-    } finally {
-      _isRefreshingSystemDevices = false;
-    }
-  }
-
   Future<void> _syncInitialBluetoothAvailability() async {
     try {
       final state = await UniversalBle.getBluetoothAvailabilityState();
@@ -348,7 +326,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         logger.i('Bluetooth powered on. Resuming connection flows.');
       }
       _syncAutoConnectorWithSetting();
-      unawaited(_refreshSystemConnectedDevicesIfNeeded());
       return;
     }
 
@@ -533,7 +510,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       _closingSensorShutdownInProgress = false;
       _closeOpenScreensAfterSensorShutdownIfNeeded();
       _syncAutoConnectorWithSetting();
-      unawaited(_refreshSystemConnectedDevicesIfNeeded());
     } else if (state == AppLifecycleState.inactive) {
       _backgroundEnteredAt ??= DateTime.now();
       if (_sensorRecorderProvider.isRecording) {
