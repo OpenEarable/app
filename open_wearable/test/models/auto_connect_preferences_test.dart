@@ -9,6 +9,7 @@ void main() {
     setUp(() async {
       SharedPreferences.setMockInitialValues(<String, Object>{});
       await AutoConnectPreferences.loadAutoConnectEnabled();
+      await AutoConnectPreferences.loadRememberedDeviceNames();
     });
 
     test('rememberDeviceName stores normalized names and keeps duplicates',
@@ -111,6 +112,42 @@ void main() {
       final forgetChange = AutoConnectPreferences.changes.first;
       await AutoConnectPreferences.forgetDeviceName(prefs, 'OpenEarable 9');
       await expectLater(forgetChange, completes);
+    });
+
+    test('loadRememberedDeviceNames normalizes values into the cache',
+        () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        AutoConnectPreferences.connectedDeviceNamesKey: <String>[
+          ' OpenEarable 2 ',
+          '',
+          'OpenEarable 3',
+        ],
+      });
+
+      final rememberedNames =
+          await AutoConnectPreferences.loadRememberedDeviceNames();
+
+      expect(rememberedNames, <String>['OpenEarable 2', 'OpenEarable 3']);
+      expect(
+        AutoConnectPreferences.rememberedDeviceNames,
+        <String>['OpenEarable 2', 'OpenEarable 3'],
+      );
+    });
+
+    test('remember and forget keep remembered-device notifier in sync',
+        () async {
+      final prefs = await SharedPreferences.getInstance();
+
+      expect(AutoConnectPreferences.rememberedDeviceNames, isEmpty);
+
+      await AutoConnectPreferences.rememberDeviceName(prefs, 'OpenEarable 9');
+      expect(
+        AutoConnectPreferences.rememberedDeviceNames,
+        <String>['OpenEarable 9'],
+      );
+
+      await AutoConnectPreferences.forgetDeviceName(prefs, 'OpenEarable 9');
+      expect(AutoConnectPreferences.rememberedDeviceNames, isEmpty);
     });
 
     test('auto-connect enabled defaults to true when no value is stored',
