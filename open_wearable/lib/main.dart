@@ -28,6 +28,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'models/bluetooth_auto_connector.dart';
+import 'models/auto_connector/system_auto_connector.dart';
 import 'models/logger.dart';
 import 'models/permissions_handler.dart';
 import 'view_models/app_banner_controller.dart';
@@ -91,6 +92,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   late final StreamSubscription _wearableEventSub;
   late final StreamSubscription<AvailabilityState> _bleAvailabilitySub;
   late final BluetoothAutoConnector _autoConnector;
+  late final SystemAutoConnector _systemAutoConnector;
   late final WearableConnector _wearableConnector;
   late final Future<SharedPreferences> _prefsFuture;
   late final StreamSubscription _wearableProvEventSub;
@@ -254,6 +256,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       permissionsHandler: permissionsHandler,
       prefsFuture: _prefsFuture,
     );
+    _systemAutoConnector = SystemAutoConnector(
+      connector: _wearableConnector,
+      wearableManager: WearableManager(),
+      permissionsHandler: permissionsHandler,
+    );
     AutoConnectPreferences.autoConnectEnabledListenable.addListener(
       _syncAutoConnectorWithSetting,
     );
@@ -313,9 +320,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void _syncAutoConnectorWithSetting() {
     if (AutoConnectPreferences.autoConnectEnabled && _isBluetoothPoweredOn) {
       _autoConnector.start();
+      _systemAutoConnector.start();
       return;
     }
     _autoConnector.stop();
+    _systemAutoConnector.stop();
   }
 
   Future<void> _syncInitialBluetoothAvailability() async {
@@ -751,6 +760,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     _setBackgroundExecutionForShutdown(false);
     _setBackgroundExecutionForRecording(false);
     _autoConnector.stop();
+    _systemAutoConnector.stop();
     super.dispose();
   }
 
