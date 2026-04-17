@@ -10,6 +10,7 @@ import 'package:open_wearable/widgets/fota/fota_warning_page.dart';
 import 'package:open_wearable/widgets/home_page.dart';
 import 'package:open_wearable/widgets/logging/log_files_screen.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_all_recordings_page.dart';
+import 'package:open_wearable/widgets/settings/auto_connector_settings_page.dart';
 import 'package:open_wearable/widgets/settings/general_settings_page.dart';
 import 'package:open_wearable/widgets/updates/app_upgrade_history_page.dart';
 import 'dart:io' show Platform;
@@ -137,6 +138,11 @@ final GoRouter router = GoRouter(
       path: '/settings/general',
       name: 'settings/general',
       builder: (context, state) => const GeneralSettingsPage(),
+    ),
+    GoRoute(
+      path: '/settings/auto-connector',
+      name: 'settings/auto-connector',
+      builder: (context, state) => const AutoConnectorSettingsPage(),
     ),
     GoRoute(
       path: '/whats-new',

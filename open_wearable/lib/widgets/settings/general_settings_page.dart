@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:open_wearable/models/auto_connect_preferences.dart';
 import 'package:open_wearable/models/app_shutdown_settings.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 
@@ -14,6 +13,7 @@ class GeneralSettingsPage extends StatefulWidget {
 class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
   bool _isSaving = false;
 
+  /// Persists whether sensors should be disabled after app close.
   Future<void> _setShutOffSensorsOnClose(bool enabled) async {
     if (_isSaving) {
       return;
@@ -74,26 +74,6 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
     }
   }
 
-  Future<void> _setAutoConnectEnabled(bool enabled) async {
-    if (_isSaving) {
-      return;
-    }
-
-    setState(() {
-      _isSaving = true;
-    });
-
-    try {
-      await AutoConnectPreferences.saveAutoConnectEnabled(enabled);
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSaving = false;
-        });
-      }
-    }
-  }
-
   Future<void> _setKeepAppInForeground(bool enabled) async {
     if (_isSaving) {
       return;
@@ -134,140 +114,107 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
                 builder: (context, hideLiveGraphsWithoutDataEnabled, ___) {
                   return ValueListenableBuilder<bool>(
                     valueListenable:
-                        AutoConnectPreferences.autoConnectEnabledListenable,
-                    builder: (context, autoConnectEnabled, ____) {
-                      return ValueListenableBuilder<bool>(
-                        valueListenable:
-                            AppShutdownSettings.keepAppInForegroundListenable,
-                        builder: (context, keepAppInForeground, _____) {
-                          return ListView(
-                            padding:
-                                SensorPageSpacing.pagePaddingWithBottomInset(
-                              context,
-                            ),
-                            children: [
-                              _buildSectionHeader(
-                                context,
-                                title: 'Connectivity',
-                                description:
-                                    'Manage how devices reconnect in the background',
-                              ),
-                              _buildSettingGroup(
-                                [
-                                  SwitchListTile.adaptive(
-                                    value: autoConnectEnabled,
-                                    onChanged: _isSaving
-                                        ? null
-                                        : _setAutoConnectEnabled,
-                                    secondary: const Icon(
-                                      Icons.bluetooth_searching_rounded,
-                                      size: 18,
-                                    ),
-                                    title: const Text(
-                                      'Enable Bluetooth auto-connect',
-                                    ),
-                                    subtitle: const Text(
-                                      'Automatically reconnect remembered devices in the background',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              _buildSectionHeader(
-                                context,
-                                title: 'Display',
-                                description:
-                                    'Keep the screen active while the app is open',
-                              ),
-                              _buildSettingGroup(
-                                [
-                                  SwitchListTile.adaptive(
-                                    value: keepAppInForeground,
-                                    onChanged: _isSaving
-                                        ? null
-                                        : _setKeepAppInForeground,
-                                    secondary: const Icon(
-                                      Icons.screen_lock_portrait_rounded,
-                                      size: 18,
-                                    ),
-                                    title: const Text(
-                                      'Keep screen awake',
-                                    ),
-                                    subtitle: const Text(
-                                      'Prevents the device screen from sleeping while this app is active',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              _buildSectionHeader(
-                                context,
-                                title: 'App lifecycle',
-                                description:
-                                    'Control what happens to sensors when the app goes to the background',
-                              ),
-                              _buildSettingGroup(
-                                [
-                                  SwitchListTile.adaptive(
-                                    value: shutOffOnCloseEnabled,
-                                    onChanged: _isSaving
-                                        ? null
-                                        : _setShutOffSensorsOnClose,
-                                    secondary: const Icon(
-                                      Icons.power_settings_new_rounded,
-                                      size: 18,
-                                    ),
-                                    title: const Text(
-                                      'Disable all sensors on app close',
-                                    ),
-                                    subtitle: const Text(
-                                      'Turns configurable sensors off after 10s in background when possible',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              _buildSectionHeader(
-                                context,
-                                title: 'Live data',
-                                description:
-                                    'Adjust graph visibility and update behavior in Sensors › Live Data',
-                              ),
-                              _buildSettingGroup(
-                                [
-                                  SwitchListTile.adaptive(
-                                    value: disableLiveGraphsEnabled,
-                                    onChanged: _isSaving
-                                        ? null
-                                        : _setDisableLiveDataGraphs,
-                                    secondary: const Icon(
-                                      Icons.area_chart_rounded,
-                                      size: 18,
-                                    ),
-                                    title:
-                                        const Text('Disable live data graphs'),
-                                    subtitle: const Text(
-                                      'Stop live chart updates in the Sensors › Live Data views',
-                                    ),
-                                  ),
-                                  SwitchListTile.adaptive(
-                                    value: hideLiveGraphsWithoutDataEnabled,
-                                    onChanged: _isSaving
-                                        ? null
-                                        : _setHideLiveDataGraphsWithoutData,
-                                    secondary: const Icon(
-                                      Icons.sensors_off_rounded,
-                                      size: 18,
-                                    ),
-                                    title: const Text(
-                                      'Hide live data graphs without data',
-                                    ),
-                                    subtitle: const Text(
-                                      'Hides live data graphs in Sensors › Live Data until samples arrive',
-                                    ),
-                                  ),
-                                ],
+                        AppShutdownSettings.keepAppInForegroundListenable,
+                    builder: (context, keepAppInForeground, ____) {
+                      return ListView(
+                        padding: SensorPageSpacing.pagePaddingWithBottomInset(
+                          context,
+                        ),
+                        children: [
+                          _buildSectionHeader(
+                            context,
+                            title: 'Display',
+                            description:
+                                'Keep the screen active while the app is open',
+                          ),
+                          _buildSettingGroup(
+                            [
+                              SwitchListTile.adaptive(
+                                value: keepAppInForeground,
+                                onChanged:
+                                    _isSaving ? null : _setKeepAppInForeground,
+                                secondary: const Icon(
+                                  Icons.screen_lock_portrait_rounded,
+                                  size: 18,
+                                ),
+                                title: const Text(
+                                  'Keep screen awake',
+                                ),
+                                subtitle: const Text(
+                                  'Prevents the device screen from sleeping while this app is active',
+                                ),
                               ),
                             ],
-                          );
-                        },
+                          ),
+                          _buildSectionHeader(
+                            context,
+                            title: 'App lifecycle',
+                            description:
+                                'Control what happens to sensors when the app goes to the background',
+                          ),
+                          _buildSettingGroup(
+                            [
+                              SwitchListTile.adaptive(
+                                value: shutOffOnCloseEnabled,
+                                onChanged: _isSaving
+                                    ? null
+                                    : _setShutOffSensorsOnClose,
+                                secondary: const Icon(
+                                  Icons.power_settings_new_rounded,
+                                  size: 18,
+                                ),
+                                title: const Text(
+                                  'Disable all sensors on app close',
+                                ),
+                                subtitle: const Text(
+                                  'Turns configurable sensors off after 10s in background when possible',
+                                ),
+                              ),
+                            ],
+                          ),
+                          _buildSectionHeader(
+                            context,
+                            title: 'Live data',
+                            description:
+                                'Adjust graph visibility and update behavior in Sensors › Live Data',
+                          ),
+                          _buildSettingGroup(
+                            [
+                              SwitchListTile.adaptive(
+                                value: disableLiveGraphsEnabled,
+                                onChanged: _isSaving
+                                    ? null
+                                    : _setDisableLiveDataGraphs,
+                                secondary: const Icon(
+                                  Icons.area_chart_rounded,
+                                  size: 18,
+                                ),
+                                title: const Text(
+                                  'Disable live data graphs',
+                                ),
+                                subtitle: const Text(
+                                  'Stop live chart updates in the Sensors › Live Data views',
+                                ),
+                              ),
+                              SwitchListTile.adaptive(
+                                value: hideLiveGraphsWithoutDataEnabled,
+                                onChanged: _isSaving
+                                    ? null
+                                    : _setHideLiveDataGraphsWithoutData,
+                                secondary: const Icon(
+                                  Icons.sensors_off_rounded,
+                                  size: 18,
+                                ),
+                                title: const Text(
+                                  'Hide live data graphs without data',
+                                ),
+                                subtitle: const Text(
+                                  'Hides live data graphs in Sensors › Live Data until samples arrive',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       );
                     },
                   );
@@ -280,6 +227,7 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
     );
   }
 
+  /// Renders a labeled settings section heading.
   Widget _buildSectionHeader(
     BuildContext context, {
     required String title,
@@ -309,6 +257,7 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
     );
   }
 
+  /// Groups related settings rows into a single card.
   Widget _buildSettingGroup(List<Widget> tiles) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),

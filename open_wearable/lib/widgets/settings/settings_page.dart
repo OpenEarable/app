@@ -15,12 +15,14 @@ class SettingsPage extends StatelessWidget {
   final VoidCallback onLogsRequested;
   final VoidCallback onConnectRequested;
   final VoidCallback onGeneralSettingsRequested;
+  final VoidCallback onAutoConnectorSettingsRequested;
 
   const SettingsPage({
     super.key,
     required this.onLogsRequested,
     required this.onConnectRequested,
     required this.onGeneralSettingsRequested,
+    required this.onAutoConnectorSettingsRequested,
   });
 
   @override
@@ -44,6 +46,12 @@ class SettingsPage extends StatelessWidget {
             title: 'General settings',
             subtitle: 'Manage app-wide behavior',
             onTap: onGeneralSettingsRequested,
+          ),
+          _QuickActionTile(
+            icon: Icons.bluetooth_searching_rounded,
+            title: 'Auto connector',
+            subtitle: 'Manage Bluetooth auto-connect and saved devices',
+            onTap: onAutoConnectorSettingsRequested,
           ),
           _QuickActionTile(
             icon: Icons.receipt_long,
