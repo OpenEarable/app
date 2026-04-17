@@ -2,8 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
-import 'logger.dart';
 
+import 'logger.dart';
+import 'permissions_handler.dart';
+
+/// Immutable scan state consumed by the connect-devices UI.
 class ConnectDevicesScanSnapshot {
   final bool isScanning;
   final DateTime? lastScanStartedAt;
@@ -35,10 +38,15 @@ class ConnectDevicesScanSnapshot {
   }
 }
 
+/// Shared scan coordinator for the connect-devices flow.
+///
+/// The session owns the discovery scan lifecycle and ensures permissions are
+/// granted before any BLE scan begins.
 class ConnectDevicesScanSession {
   static const Duration _scanIndicatorDuration = Duration(seconds: 8);
 
   static final WearableManager _wearableManager = WearableManager();
+  static PermissionsHandler? _permissionsHandler;
   static final ValueNotifier<ConnectDevicesScanSnapshot> notifier =
       ValueNotifier<ConnectDevicesScanSnapshot>(
     ConnectDevicesScanSnapshot.initial(),
@@ -51,7 +59,20 @@ class ConnectDevicesScanSession {
 
   static ConnectDevicesScanSnapshot get snapshot => notifier.value;
 
+  /// Injects the shared permissions handler used by the scan session.
+  static void configure({required PermissionsHandler permissionsHandler}) {
+    _permissionsHandler = permissionsHandler;
+  }
+
+  /// Starts a BLE discovery scan after ensuring runtime permissions exist.
   static Future<void> startScanning({bool clearPrevious = false}) async {
+    final permissionsHandler = _permissionsHandler;
+    if (permissionsHandler == null) {
+      throw StateError(
+        'ConnectDevicesScanSession.configure must be called before scanning.',
+      );
+    }
+
     final scanToken = ++_scanToken;
     await _cancelScanResources();
 
@@ -101,7 +122,14 @@ class ConnectDevicesScanSession {
       if (scanToken != _scanToken) {
         return;
       }
-      await _wearableManager.startScan();
+      final permissionsGranted =
+          await permissionsHandler.ensureBluetoothPermissions();
+      if (!permissionsGranted || scanToken != _scanToken) {
+        await stopScanning();
+        return;
+      }
+
+      await _wearableManager.startScan(checkAndRequestPermissions: false);
     } catch (error, stackTrace) {
       logger.w('Failed to start scan: $error\n$stackTrace');
       await stopScanning();

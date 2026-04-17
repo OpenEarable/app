@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 
+import 'permissions_handler.dart';
+
 /// Base event type emitted by [WearableConnector].
 abstract class WearableEvent {
   final Wearable wearable;
@@ -52,12 +54,17 @@ class WearableConnector {
   // final Map<DiscoveredDevice, Wearable> _connectedDevices = {};
 
   final WearableManager _wm;
+  final PermissionsHandler _permissionsHandler;
   final Set<String> _trackedWearableIds = <String>{};
 
   final _events = StreamController<WearableEvent>.broadcast();
   Stream<WearableEvent> get events => _events.stream;
 
-  WearableConnector([WearableManager? wm]) : _wm = wm ?? WearableManager();
+  WearableConnector({
+    WearableManager? wearableManager,
+    required PermissionsHandler permissionsHandler,
+  }) : _wm = wearableManager ?? WearableManager(),
+       _permissionsHandler = permissionsHandler;
 
   Future<Wearable> connect(DiscoveredDevice device) async {
     final wearable = await _wm.connectToDevice(device);
@@ -65,7 +72,14 @@ class WearableConnector {
     return wearable;
   }
 
+  /// Connects to already paired system devices after permissions are ensured.
   Future<void> connectToSystemDevices() async {
+    final permissionsGranted =
+        await _permissionsHandler.ensureBluetoothPermissions();
+    if (!permissionsGranted) {
+      return;
+    }
+
     List<Wearable> connectedWearables = await _wm.connectToSystemDevices();
     connectedWearables.forEach(_handleConnection);
   }

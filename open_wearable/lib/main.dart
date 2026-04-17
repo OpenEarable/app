@@ -11,6 +11,7 @@ import 'package:open_wearable/models/app_shutdown_settings.dart';
 import 'package:open_wearable/models/app_upgrade_coordinator.dart';
 import 'package:open_wearable/models/app_upgrade_highlight.dart';
 import 'package:open_wearable/models/auto_connect_preferences.dart';
+import 'package:open_wearable/models/connect_devices_scan_session.dart';
 import 'package:open_wearable/models/log_file_manager.dart';
 import 'package:open_wearable/models/fota_post_update_verification.dart';
 import 'package:open_wearable/models/wearable_connector.dart'
@@ -28,6 +29,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'models/bluetooth_auto_connector.dart';
 import 'models/logger.dart';
+import 'models/permissions_handler.dart';
 import 'view_models/app_banner_controller.dart';
 import 'view_models/wearables_provider.dart';
 
@@ -56,9 +58,18 @@ void main() async {
             return provider;
           },
         ),
-        Provider.value(value: WearableConnector()),
         ChangeNotifierProvider(
           create: (context) => AppBannerController(),
+        ),
+        Provider<PermissionsHandler>(
+          create: (context) => PermissionsHandler(
+            navigatorGetter: () => rootNavigatorKey.currentState,
+          ),
+        ),
+        Provider<WearableConnector>(
+          create: (context) => WearableConnector(
+            permissionsHandler: context.read<PermissionsHandler>(),
+          ),
         ),
         ChangeNotifierProvider.value(value: logFileManager),
       ],
@@ -232,12 +243,16 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     });
 
     _wearableConnector = context.read<WearableConnector>();
+    final permissionsHandler = context.read<PermissionsHandler>();
+    ConnectDevicesScanSession.configure(
+      permissionsHandler: permissionsHandler,
+    );
 
     _autoConnector = BluetoothAutoConnector(
-      navStateGetter: () => rootNavigatorKey.currentState,
+      connector: _wearableConnector,
       wearableManager: WearableManager(),
+      permissionsHandler: permissionsHandler,
       prefsFuture: _prefsFuture,
-      onWearableConnected: _handleWearableConnected,
     );
     AutoConnectPreferences.autoConnectEnabledListenable.addListener(
       _syncAutoConnectorWithSetting,

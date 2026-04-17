@@ -1,19 +1,20 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
+import 'package:open_wearable/models/auto_connector/auto_connector.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'auto_connect_preferences.dart';
 import 'logger.dart';
+import 'permissions_handler.dart';
+import 'wearable_connector.dart';
 
 /// Background reconnect orchestrator for remembered Bluetooth wearables.
 ///
 /// Needs:
 /// - `WearableManager` scanning/connection APIs.
 /// - `AutoConnectPreferences` values and change stream.
-/// - Navigation access for permission dialogs.
+/// - A shared [PermissionsHandler] for BLE access coordination.
 ///
 /// Does:
 /// - Tracks target wearable names from preferences.
@@ -22,14 +23,13 @@ import 'logger.dart';
 ///
 /// Provides:
 /// - `start()` / `stop()` lifecycle control and `onWearableConnected` callback.
-class BluetoothAutoConnector {
+class BluetoothAutoConnector extends AutoConnector {
   static const Duration _scanRetryInterval = Duration(seconds: 3);
   static const Duration _iosScanRestartDelay = Duration(seconds: 1);
 
-  final NavigatorState? Function() navStateGetter;
   final WearableManager wearableManager;
+  final PermissionsHandler permissionsHandler;
   final Future<SharedPreferences> prefsFuture;
-  final void Function(Wearable wearable) onWearableConnected;
 
   StreamSubscription<Wearable>? _connectSubscription;
   StreamSubscription<DiscoveredDevice>? _scanSubscription;
@@ -38,7 +38,6 @@ class BluetoothAutoConnector {
 
   bool _isConnecting = false;
   bool _isAttemptingConnection = false;
-  bool _askedPermissionsThisSession = false;
   int _sessionToken = 0;
 
   // Names to look for during scanning
@@ -53,12 +52,13 @@ class BluetoothAutoConnector {
   bool _isStartingScan = false;
 
   BluetoothAutoConnector({
-    required this.navStateGetter,
+    required WearableConnector connector,
     required this.wearableManager,
+    required this.permissionsHandler,
     required this.prefsFuture,
-    required this.onWearableConnected,
-  });
+  }) : super(connector);
 
+  @override
   void start() async {
     final token = ++_sessionToken;
     _stopInternal();
@@ -85,6 +85,7 @@ class BluetoothAutoConnector {
     _attemptConnection(token: token);
   }
 
+  @override
   void stop() {
     _sessionToken++;
     _stopInternal();
@@ -297,18 +298,14 @@ class BluetoothAutoConnector {
 
     _isAttemptingConnection = true;
     if (!Platform.isIOS) {
-      final hasPerm = await wearableManager.hasPermissions();
+      final permissionsGranted =
+          await permissionsHandler.ensureBluetoothPermissions();
       if (activeToken != _sessionToken) {
         _isAttemptingConnection = false;
         return;
       }
-      if (!hasPerm) {
-        logger.w('Bluetooth permissions not granted. Showing permissions dialog.');
-        if (!_askedPermissionsThisSession) {
-          _askedPermissionsThisSession = true;
-          _showPermissionsDialog();
-        }
-        logger.w('Skipping auto-connect: no permissions granted yet.');
+      if (!permissionsGranted) {
+        logger.w('Skipping auto-connect: Bluetooth permissions are unavailable.');
         _isAttemptingConnection = false;
         return;
       }
@@ -321,16 +318,7 @@ class BluetoothAutoConnector {
       }
 
       if (_targetNames.isNotEmpty && _hasUnconnectedTargets()) {
-        _setupScanListener();
-        if (!_isStartingScan) {
-          _isStartingScan = true;
-          try {
-            await _applyIosScanCooldownIfNeeded();
-            await wearableManager.startScan();
-          } finally {
-            _isStartingScan = false;
-          }
-        }
+        await _startAutoConnectScan();
       }
     } catch (error, stackTrace) {
       logger.w('Auto-connect attempt failed: $error\n$stackTrace');
@@ -366,12 +354,11 @@ class BluetoothAutoConnector {
         "Match found for ${device.name}. Connecting using rotating ID: ${device.id}",
       );
 
-      wearableManager.connectToDevice(device).then((wearable) {
+      connect(device).then((wearable) {
         _markConnected(
           deviceId: wearable.deviceId,
           deviceName: wearable.name,
         );
-        onWearableConnected(wearable);
       }).catchError((error, stackTrace) {
         final message = _deviceErrorMessageSafe(error, device);
         if (_isAlreadyConnectedMessage(message)) {
@@ -403,17 +390,28 @@ class BluetoothAutoConnector {
       return;
     }
     try {
-      _setupScanListener();
-      _isStartingScan = true;
-      try {
-        await _applyIosScanCooldownIfNeeded();
-        await wearableManager.startScan();
-      } finally {
-        _isStartingScan = false;
-      }
+      await _startAutoConnectScan();
     } catch (error, stackTrace) {
       logger.w('Failed to restart auto-connect scan: $error\n$stackTrace');
       _stopScanning();
+    }
+  }
+
+  /// Starts the BLE scan used by the auto-connect flow.
+  Future<void> _startAutoConnectScan() async {
+    logger.d("Starting auto-connect scan...");
+    _setupScanListener();
+    if (_isStartingScan) {
+      logger.i("Scan start already in progress. Skipping redundant start call.");
+      return;
+    }
+
+    _isStartingScan = true;
+    try {
+      await _applyIosScanCooldownIfNeeded();
+      await wearableManager.startScan(checkAndRequestPermissions: false);
+    } finally {
+      _isStartingScan = false;
     }
   }
 
@@ -421,34 +419,5 @@ class BluetoothAutoConnector {
     _lastScanStoppedAt = DateTime.now();
     _scanSubscription?.cancel();
     _scanSubscription = null;
-  }
-
-  void _showPermissionsDialog() {
-    final nav = navStateGetter();
-    final navCtx = nav?.context;
-    if (nav == null || navCtx == null) return;
-
-    // Fire-and-forget; no async/await needed here
-    nav.push(
-      DialogRoute<void>(
-        context: navCtx,
-        barrierDismissible: true,
-        builder: (_) => PlatformAlertDialog(
-          title: PlatformText("Permissions Required"),
-          content: PlatformText(
-            "This app requires Bluetooth and Location permissions to function properly.\n"
-            "Location access is needed for Bluetooth scanning to work. Please enable both "
-            "Bluetooth and Location services and grant the necessary permissions.\n"
-            "No data will be collected or sent to any server and will remain only on your device.",
-          ),
-          actions: [
-            PlatformDialogAction(
-              onPressed: nav.pop,
-              child: PlatformText("OK"),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
