@@ -341,6 +341,18 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
     final connector = context.read<WearableConnector>();
 
     try {
+      final isSystemDevice = await connector.isSystemDevice(device);
+      if (isSystemDevice) {
+        final connected = await connector.connectSystemDevice(device);
+        if (!connected) {
+          throw StateError(
+            'The device is paired in the system Bluetooth settings but could not be connected through the system connection path.',
+          );
+        }
+        ConnectDevicesScanSession.removeDiscoveredDevice(device.id);
+        return;
+      }
+
       await connector.connect(device);
       ConnectDevicesScanSession.removeDiscoveredDevice(device.id);
     } catch (e, stackTrace) {

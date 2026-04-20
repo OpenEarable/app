@@ -235,12 +235,22 @@ class BluetoothAutoConnector extends AutoConnector {
     if (token != _sessionToken) {
       return;
     }
+    final isSystemManagedDevice = await isSystemDeviceId(wearable.deviceId);
+    if (token != _sessionToken) {
+      return;
+    }
+    if (isSystemManagedDevice) {
+      await AutoConnectPreferences.forgetAllDeviceNameOccurrences(
+        prefs,
+        wearable.name,
+      );
+    }
     final rememberedCount = AutoConnectPreferences.countRememberedDeviceName(
       prefs,
       wearable.name,
     );
     final connectedCount = _connectedNameCounts[wearable.name] ?? 0;
-    if (connectedCount > rememberedCount) {
+    if (!isSystemManagedDevice && connectedCount > rememberedCount) {
       await AutoConnectPreferences.rememberDeviceName(prefs, wearable.name);
     }
 
@@ -330,12 +340,18 @@ class BluetoothAutoConnector extends AutoConnector {
   void _setupScanListener() {
     if (_scanSubscription != null) return;
 
-    _scanSubscription = wearableManager.scanStream.listen((device) {
+    _scanSubscription = wearableManager.scanStream.listen((device) async {
       if (_isConnecting) return;
 
       final normalizedId = _normalizeDeviceId(device.id);
       if (_pendingDeviceIds.contains(normalizedId) ||
           _connectedDeviceIds.contains(normalizedId)) {
+        return;
+      }
+      if (await isSystemDeviceId(device.id)) {
+        logger.i(
+          'Skipping Bluetooth auto-connect for system-paired device ${device.name} (${device.id}).',
+        );
         return;
       }
       final requiredConnections = _requiredConnectionsForName(device.name);

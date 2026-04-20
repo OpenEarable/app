@@ -159,6 +159,37 @@ class AutoConnectPreferences {
     }
   }
 
+  /// Removes every remembered entry for the provided device name.
+  ///
+  /// This is used when a device must no longer be managed by the Bluetooth
+  /// auto-connector at all, for example after it becomes a system-paired
+  /// device that should only reconnect through the system connector.
+  static Future<void> forgetAllDeviceNameOccurrences(
+    SharedPreferences prefs,
+    String deviceName,
+  ) async {
+    final normalizedName = deviceName.trim();
+    if (normalizedName.isEmpty) {
+      return;
+    }
+
+    final names = readRememberedDeviceNames(prefs);
+    final updatedNames =
+        names.where((name) => name != normalizedName).toList(growable: false);
+    if (updatedNames.length == names.length) {
+      return;
+    }
+
+    final success = await prefs.setStringList(
+      connectedDeviceNamesKey,
+      updatedNames,
+    );
+    if (success) {
+      _setRememberedDeviceNames(updatedNames);
+      _changesController.add(null);
+    }
+  }
+
   static void _setAutoConnectEnabled(bool enabled) {
     if (_autoConnectEnabledNotifier.value == enabled) {
       return;
