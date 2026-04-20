@@ -70,6 +70,35 @@ void main() {
       );
     });
 
+    test(
+        'forgetAllDeviceNameOccurrences removes every matching remembered name',
+        () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        AutoConnectPreferences.connectedDeviceNamesKey: <String>[
+          'OpenEarable 2',
+          'OpenEarable 3',
+          'OpenEarable 2',
+          'OpenEarable 4',
+        ],
+      });
+
+      final prefs = await SharedPreferences.getInstance();
+
+      await AutoConnectPreferences.forgetAllDeviceNameOccurrences(
+        prefs,
+        ' OpenEarable 2 ',
+      );
+
+      expect(
+        prefs.getStringList(AutoConnectPreferences.connectedDeviceNamesKey),
+        <String>['OpenEarable 3', 'OpenEarable 4'],
+      );
+      expect(
+        AutoConnectPreferences.rememberedDeviceNames,
+        <String>['OpenEarable 3', 'OpenEarable 4'],
+      );
+    });
+
     test('countRememberedDeviceName returns normalized occurrence counts',
         () async {
       SharedPreferences.setMockInitialValues(<String, Object>{
