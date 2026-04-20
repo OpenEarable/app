@@ -155,7 +155,7 @@ class _HomePageState extends State<HomePage> {
             NavigationRail(
               selectedIndex: _selectedIndex,
               onDestinationSelected: (index) => _selectSection(context, index),
-              labelType: NavigationRailLabelType.all,
+              labelType: useExtendedRail ? null : NavigationRailLabelType.all,
               extended: useExtendedRail,
               leading: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 20),
