@@ -244,7 +244,10 @@ class SensorRecorderProvider with ChangeNotifier {
     required Sensor sensor,
     required String dirname,
   }) async {
-    final base = '${wearable.name}_${sensor.sensorName}';
+    final base = await _recordingFilenameStem(
+      wearable: wearable,
+      sensor: sensor,
+    );
     var name = base;
     var counter = 1;
 
@@ -254,6 +257,36 @@ class SensorRecorderProvider with ChangeNotifier {
     }
 
     return '$dirname/$name.csv';
+  }
+
+  /// Builds the exported filename stem for a wearable sensor recording.
+  ///
+  /// Stereo-capable devices include their side marker so left/right files stay
+  /// distinguishable in shared recording folders.
+  Future<String> _recordingFilenameStem({
+    required Wearable wearable,
+    required Sensor sensor,
+  }) async {
+    if (!wearable.hasCapability<StereoDevice>()) {
+      return '${wearable.name}_${sensor.sensorName}';
+    }
+    final stereoPositionLabel = await _stereoPositionLabel(
+      wearable.requireCapability<StereoDevice>(),
+    );
+    if (stereoPositionLabel != null) {
+      return '${wearable.name}-$stereoPositionLabel-${sensor.sensorName}';
+    }
+    return '${wearable.name}_${sensor.sensorName}';
+  }
+
+  /// Returns the short stereo side label used in exported filenames.
+  Future<String?> _stereoPositionLabel(StereoDevice wearable) async {
+    final position = await wearable.position;
+    return switch (position) {
+      DevicePosition.left => 'L',
+      DevicePosition.right => 'R',
+      _ => null,
+    };
   }
 
   void _stopAllRecorderStreams() {
