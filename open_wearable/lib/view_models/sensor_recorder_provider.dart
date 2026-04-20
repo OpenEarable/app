@@ -24,6 +24,7 @@ import '../models/sensor_streams.dart';
 /// - Recorder access used by recorder UI pages.
 class SensorRecorderProvider with ChangeNotifier {
   final Map<Wearable, Map<Sensor, Recorder>> _recorders = {};
+  final Map<String, String> _recordingFilepathsBySensorIdentity = {};
   Future<void> _pendingSynchronization = Future<void>.value();
   bool _disposed = false;
 
@@ -42,6 +43,7 @@ class SensorRecorderProvider with ChangeNotifier {
       return;
     }
 
+    _recordingFilepathsBySensorIdentity.clear();
     _currentDirectory = dirname;
     _recordingStart = DateTime.now();
 
@@ -54,6 +56,7 @@ class SensorRecorderProvider with ChangeNotifier {
     } catch (e, st) {
       logger.e('Failed to start recording: $e\n$st');
       _stopAllRecorderStreams();
+      _recordingFilepathsBySensorIdentity.clear();
       _currentDirectory = null;
       _recordingStart = null;
       _isRecording = false;
@@ -65,6 +68,7 @@ class SensorRecorderProvider with ChangeNotifier {
   void stopRecording() {
     _isRecording = false;
     _recordingStart = null;
+    _recordingFilepathsBySensorIdentity.clear();
     _stopAllRecorderStreams();
     notifyListeners();
   }
@@ -189,16 +193,20 @@ class SensorRecorderProvider with ChangeNotifier {
       Recorder? recorder = _recorders[wearable]?[sensor];
       if (recorder == null) continue;
 
-      String base = '${wearable.name}_${sensor.sensorName}';
-      String name = base;
-      int counter = 1;
-
-      while (await File('$dirname/$name.csv').exists()) {
-        name = '${base}_$counter';
-        counter++;
-      }
-
-      final filepath = '$dirname/$name.csv';
+      final sensorIdentity = _sensorRecordingIdentity(
+        wearable: wearable,
+        sensor: sensor,
+      );
+      final existingFilepath =
+          _recordingFilepathsBySensorIdentity[sensorIdentity];
+      final append = resumed && existingFilepath != null;
+      final filepath = existingFilepath ??
+          await _createRecordingFilepath(
+            wearable: wearable,
+            sensor: sensor,
+            dirname: dirname,
+          );
+      _recordingFilepathsBySensorIdentity[sensorIdentity] = filepath;
 
       File file = await recorder.start(
         filepath: filepath,
@@ -206,6 +214,7 @@ class SensorRecorderProvider with ChangeNotifier {
           wearable: wearable,
           sensor: sensor,
         ),
+        append: append,
       );
 
       logger.i(
@@ -213,6 +222,38 @@ class SensorRecorderProvider with ChangeNotifier {
         '${wearable.name} - ${sensor.sensorName} to ${file.path}',
       );
     }
+  }
+
+  /// Builds a stable per-device/per-sensor identity for the current session.
+  ///
+  /// Reconnects replace the [Wearable] and [Sensor] object instances, so file
+  /// reuse must be keyed by semantic sensor identity instead of object
+  /// identity.
+  String _sensorRecordingIdentity({
+    required Wearable wearable,
+    required Sensor sensor,
+  }) {
+    final axisNames = sensor.axisNames.join(',');
+    final axisUnits = sensor.axisUnits.join(',');
+    return '${wearable.deviceId}|${sensor.runtimeType}|${sensor.sensorName}|$axisNames|$axisUnits';
+  }
+
+  /// Resolves a new file path for a sensor without overwriting prior exports.
+  Future<String> _createRecordingFilepath({
+    required Wearable wearable,
+    required Sensor sensor,
+    required String dirname,
+  }) async {
+    final base = '${wearable.name}_${sensor.sensorName}';
+    var name = base;
+    var counter = 1;
+
+    while (await File('$dirname/$name.csv').exists()) {
+      name = '${base}_$counter';
+      counter++;
+    }
+
+    return '$dirname/$name.csv';
   }
 
   void _stopAllRecorderStreams() {
@@ -236,6 +277,7 @@ class SensorRecorderProvider with ChangeNotifier {
     for (final wearable in _recorders.keys.toList()) {
       _disposeWearable(wearable);
     }
+    _recordingFilepathsBySensorIdentity.clear();
     _recorders.clear();
     super.dispose();
   }
