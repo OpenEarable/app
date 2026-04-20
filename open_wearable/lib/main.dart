@@ -27,7 +27,7 @@ import 'package:open_wearable/widgets/updates/app_upgrade_page.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'models/bluetooth_auto_connector.dart';
+import 'models/auto_connector/bluetooth_auto_connector.dart';
 import 'models/auto_connector/system_auto_connector.dart';
 import 'models/logger.dart';
 import 'models/permissions_handler.dart';

@@ -4,10 +4,10 @@ import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 import 'package:open_wearable/models/auto_connector/auto_connector.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'auto_connect_preferences.dart';
-import 'logger.dart';
-import 'permissions_handler.dart';
-import 'wearable_connector.dart';
+import '../auto_connect_preferences.dart';
+import '../logger.dart';
+import '../permissions_handler.dart';
+import '../wearable_connector.dart';
 
 /// Background reconnect orchestrator for remembered Bluetooth wearables.
 ///
