@@ -6,7 +6,11 @@ import 'package:path_provider/path_provider.dart';
 
 import 'local_recorder_models.dart';
 
-Future<Directory> _ensureIOSDirectory() async {
+/// Helper to get the base name of a file or directory across platforms.
+String localRecorderBasename(String path) => path.split(RegExp(r'[\\/]+')).last;
+
+/// Standardizes access to the recordings root for Apple platforms (iOS & macOS).
+Future<Directory> _getAppleRecordingsDirectory() async {
   final appDocDir = await getApplicationDocumentsDirectory();
   final dirPath = '${appDocDir.path}/Recordings';
   final dir = Directory(dirPath);
@@ -18,34 +22,37 @@ Future<Directory> _ensureIOSDirectory() async {
   return dir;
 }
 
+Future<Directory?> _getRecordingsRootDirectory() async {
+  if (kIsWeb) return null;
+
+  if (Platform.isAndroid) {
+    return getExternalStorageDirectory();
+  }
+
+  if (Platform.isIOS || Platform.isMacOS) {
+    return _getAppleRecordingsDirectory();
+  }
+
+  return null;
+}
+
 Future<String?> pickRecordingDirectory() async {
   if (kIsWeb) return null;
 
   final recordingName =
-      'OpenWearable_Recording_${DateTime.now().toIso8601String()}';
+      'OpenWearable_Recording_${DateTime.now().toIso8601String().replaceAll(':', '-')}';
 
-  if (Platform.isAndroid) {
-    final appDir = await getExternalStorageDirectory();
-    if (appDir == null) return null;
+  final rootDir = await _getRecordingsRootDirectory();
+  if (rootDir == null) return null;
 
-    final dirPath = '${appDir.path}/$recordingName';
-    final dir = Directory(dirPath);
-    if (!await dir.exists()) {
-      await dir.create(recursive: true);
-    }
-    return dirPath;
+  final dirPath = '${rootDir.path}/$recordingName';
+  final dir = Directory(dirPath);
+
+  if (!await dir.exists()) {
+    await dir.create(recursive: true);
   }
 
-  if (Platform.isIOS) {
-    final dirPath = '${(await _ensureIOSDirectory()).path}/$recordingName';
-    final dir = Directory(dirPath);
-    if (!await dir.exists()) {
-      await dir.create(recursive: true);
-    }
-    return dirPath;
-  }
-
-  return null;
+  return dirPath;
 }
 
 Future<List<LocalRecorderRecordingFolder>> listRecordingFolders() async {
@@ -84,17 +91,6 @@ Future<Uint8List> readRecordingFileBytes(LocalRecorderRecordingFile file) {
 
 Future<String> readRecordingFileText(LocalRecorderRecordingFile file) {
   return File(file.path).readAsString();
-}
-
-Future<Directory?> _getRecordingsRootDirectory() async {
-  if (kIsWeb) return null;
-  if (Platform.isAndroid) {
-    return getExternalStorageDirectory();
-  }
-  if (Platform.isIOS) {
-    return _ensureIOSDirectory();
-  }
-  return null;
 }
 
 LocalRecorderRecordingFolder _directoryToFolder(Directory directory) {
