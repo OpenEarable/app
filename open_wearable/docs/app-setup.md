@@ -84,7 +84,7 @@ Two layers are used:
 
 - `WearableConnector` (`lib/models/wearable_connector.dart`)
   - Direct connection API and event stream for connect/disconnect events.
-- `BluetoothAutoConnector` (`lib/models/bluetooth_auto_connector.dart`)
+- `BluetoothAutoConnector` (`lib/models/auto_connector/bluetooth_auto_connector.dart`)
   - Reconnect workflow based on remembered device names and user preference.
 
 `MyApp` subscribes to connector/provider event streams to:

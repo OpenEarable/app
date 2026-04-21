@@ -11,6 +11,7 @@ import 'package:open_wearable/models/app_shutdown_settings.dart';
 import 'package:open_wearable/models/app_upgrade_coordinator.dart';
 import 'package:open_wearable/models/app_upgrade_highlight.dart';
 import 'package:open_wearable/models/auto_connect_preferences.dart';
+import 'package:open_wearable/models/connect_devices_scan_session.dart';
 import 'package:open_wearable/models/log_file_manager.dart';
 import 'package:open_wearable/models/fota_post_update_verification.dart';
 import 'package:open_wearable/models/wearable_connector.dart'
@@ -26,8 +27,10 @@ import 'package:open_wearable/widgets/updates/app_upgrade_page.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'models/bluetooth_auto_connector.dart';
+import 'models/auto_connector/bluetooth_auto_connector.dart';
+import 'models/auto_connector/system_auto_connector.dart';
 import 'models/logger.dart';
+import 'models/permissions_handler.dart';
 import 'view_models/app_banner_controller.dart';
 import 'view_models/wearables_provider.dart';
 
@@ -56,9 +59,18 @@ void main() async {
             return provider;
           },
         ),
-        Provider.value(value: WearableConnector()),
         ChangeNotifierProvider(
           create: (context) => AppBannerController(),
+        ),
+        Provider<PermissionsHandler>(
+          create: (context) => PermissionsHandler(
+            navigatorGetter: () => rootNavigatorKey.currentState,
+          ),
+        ),
+        Provider<WearableConnector>(
+          create: (context) => WearableConnector(
+            permissionsHandler: context.read<PermissionsHandler>(),
+          ),
         ),
         ChangeNotifierProvider.value(value: logFileManager),
       ],
@@ -80,6 +92,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   late final StreamSubscription _wearableEventSub;
   late final StreamSubscription<AvailabilityState> _bleAvailabilitySub;
   late final BluetoothAutoConnector _autoConnector;
+  late final SystemAutoConnector _systemAutoConnector;
   late final WearableConnector _wearableConnector;
   late final Future<SharedPreferences> _prefsFuture;
   late final StreamSubscription _wearableProvEventSub;
@@ -232,12 +245,21 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     });
 
     _wearableConnector = context.read<WearableConnector>();
+    final permissionsHandler = context.read<PermissionsHandler>();
+    ConnectDevicesScanSession.configure(
+      permissionsHandler: permissionsHandler,
+    );
 
     _autoConnector = BluetoothAutoConnector(
-      navStateGetter: () => rootNavigatorKey.currentState,
+      connector: _wearableConnector,
       wearableManager: WearableManager(),
+      permissionsHandler: permissionsHandler,
       prefsFuture: _prefsFuture,
-      onWearableConnected: _handleWearableConnected,
+    );
+    _systemAutoConnector = SystemAutoConnector(
+      connector: _wearableConnector,
+      wearableManager: WearableManager(),
+      permissionsHandler: permissionsHandler,
     );
     AutoConnectPreferences.autoConnectEnabledListenable.addListener(
       _syncAutoConnectorWithSetting,
@@ -298,9 +320,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void _syncAutoConnectorWithSetting() {
     if (AutoConnectPreferences.autoConnectEnabled && _isBluetoothPoweredOn) {
       _autoConnector.start();
+      _systemAutoConnector.start();
       return;
     }
     _autoConnector.stop();
+    _systemAutoConnector.stop();
   }
 
   Future<void> _syncInitialBluetoothAvailability() async {
@@ -736,6 +760,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     _setBackgroundExecutionForShutdown(false);
     _setBackgroundExecutionForRecording(false);
     _autoConnector.stop();
+    _systemAutoConnector.stop();
     super.dispose();
   }
 

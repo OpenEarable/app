@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 
+import 'permissions_handler.dart';
+
 /// Base event type emitted by [WearableConnector].
 abstract class WearableEvent {
   final Wearable wearable;
@@ -52,12 +54,20 @@ class WearableConnector {
   // final Map<DiscoveredDevice, Wearable> _connectedDevices = {};
 
   final WearableManager _wm;
+  final PermissionsHandler _permissionsHandler;
   final Set<String> _trackedWearableIds = <String>{};
 
   final _events = StreamController<WearableEvent>.broadcast();
   Stream<WearableEvent> get events => _events.stream;
 
-  WearableConnector([WearableManager? wm]) : _wm = wm ?? WearableManager();
+  WearableConnector({
+    WearableManager? wearableManager,
+    required PermissionsHandler permissionsHandler,
+  }) : _wm = wearableManager ?? WearableManager(),
+       _permissionsHandler = permissionsHandler;
+
+  /// Normalizes a device id for stable set membership and comparisons.
+  String _normalizeDeviceId(String deviceId) => deviceId.trim().toUpperCase();
 
   Future<Wearable> connect(DiscoveredDevice device) async {
     final wearable = await _wm.connectToDevice(device);
@@ -65,7 +75,74 @@ class WearableConnector {
     return wearable;
   }
 
+  /// Returns the normalized ids of devices currently paired at the OS level.
+  Future<Set<String>> getSystemDeviceIds({
+    bool checkAndRequestPermissions = false,
+  }) async {
+    final systemDevices = await _wm.getSystemDevices(
+      checkAndRequestPermissions: checkAndRequestPermissions,
+    );
+    return systemDevices
+        .map((device) => _normalizeDeviceId(device.id))
+        .toSet();
+  }
+
+  /// Returns whether the provided discovered device is already OS-paired.
+  Future<bool> isSystemDevice(
+    DiscoveredDevice device, {
+    bool checkAndRequestPermissions = false,
+  }) {
+    return isSystemDeviceId(
+      device.id,
+      checkAndRequestPermissions: checkAndRequestPermissions,
+    );
+  }
+
+  /// Returns whether the provided device id is already OS-paired.
+  Future<bool> isSystemDeviceId(
+    String deviceId, {
+    bool checkAndRequestPermissions = false,
+  }) async {
+    final normalizedId = _normalizeDeviceId(deviceId);
+    final systemDeviceIds = await getSystemDeviceIds(
+      checkAndRequestPermissions: checkAndRequestPermissions,
+    );
+    return systemDeviceIds.contains(normalizedId);
+  }
+
+  /// Connects all currently available system devices and reports whether the
+  /// provided device id was among the connected system wearables.
+  ///
+  /// The underlying library exposes system-device connection as a bulk action,
+  /// so this helper keeps the "connect a paired device through the system path"
+  /// behavior centralized in this facade.
+  Future<bool> connectSystemDevice(DiscoveredDevice device) async {
+    final permissionsGranted =
+        await _permissionsHandler.ensureBluetoothPermissions();
+    if (!permissionsGranted) {
+      return false;
+    }
+
+    final normalizedId = _normalizeDeviceId(device.id);
+    final connectedWearables = await _wm.connectToSystemDevices();
+    var connectedRequestedDevice = false;
+    for (final wearable in connectedWearables) {
+      if (_normalizeDeviceId(wearable.deviceId) == normalizedId) {
+        connectedRequestedDevice = true;
+      }
+      _handleConnection(wearable);
+    }
+    return connectedRequestedDevice;
+  }
+
+  /// Connects to already paired system devices after permissions are ensured.
   Future<void> connectToSystemDevices() async {
+    final permissionsGranted =
+        await _permissionsHandler.ensureBluetoothPermissions();
+    if (!permissionsGranted) {
+      return;
+    }
+
     List<Wearable> connectedWearables = await _wm.connectToSystemDevices();
     connectedWearables.forEach(_handleConnection);
   }
