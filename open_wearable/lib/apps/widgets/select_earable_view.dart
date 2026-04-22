@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
-import 'package:open_wearable/apps/widgets/app_compatibility.dart';
+import 'package:open_wearable/apps/models/app_compatibility.dart';
 import 'package:open_wearable/models/device_name_formatter.dart';
 import 'package:open_wearable/models/wearable_display_group.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
@@ -15,12 +15,12 @@ class SelectEarableView extends StatefulWidget {
     Wearable,
     SensorConfigurationProvider,
   ) startApp;
-  final List<String> supportedDevicePrefixes;
+  final List<AppSupportOption> supportedDevices;
 
   const SelectEarableView({
     super.key,
     required this.startApp,
-    this.supportedDevicePrefixes = const [],
+    this.supportedDevices = const [],
   });
 
   @override
@@ -44,8 +44,8 @@ class _SelectEarableViewState extends State<SelectEarableView> {
           final compatibleWearables = wearablesProvider.wearables
               .where(
                 (wearable) => wearableIsCompatibleWithApp(
-                  wearableName: wearable.name,
-                  supportedDevicePrefixes: widget.supportedDevicePrefixes,
+                  wearable: wearable,
+                  supportedDevices: widget.supportedDevices,
                 ),
               )
               .toList(growable: false);

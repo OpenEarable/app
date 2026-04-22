@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/apps/audio_response_measure/audio_response_measurement_view.dart';
 import 'package:open_wearable/apps/heart_tracker/widgets/heart_tracker_page.dart';
 import 'package:open_wearable/apps/posture_tracker/model/earable_attitude_tracker.dart';
+import 'package:open_wearable/apps/models/sensor_matching.dart';
 import 'package:open_wearable/apps/posture_tracker/view/posture_tracker_view.dart';
-import 'package:open_wearable/apps/widgets/app_compatibility.dart';
+import 'package:open_wearable/apps/models/app_compatibility.dart';
 import 'package:open_wearable/apps/widgets/select_earable_view.dart';
 import 'package:open_wearable/apps/widgets/app_tile.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
@@ -17,7 +19,7 @@ class AppInfo {
   final String logoPath;
   final String title;
   final String description;
-  final List<String> supportedDevices;
+  final List<AppSupportOption> supportedDevices;
   final Color accentColor;
   final Widget widget;
   final double? svgIconInset;
@@ -38,12 +40,27 @@ class AppInfo {
 }
 
 const Color _appAccentColor = Color(0xFF9A6F6B);
-const List<String> _postureSupportedDevices = [
-  "OpenEarable",
+
+final List<AppSupportOption> _postureSupportedDevices = [
+  AppSupportOption(
+    label: "Accelerometer",
+    requirement:
+        AppRequirement.hasSensorByAliases(accelerometerSensorAliases),
+  ),
 ];
-const List<String> _heartSupportedDevices = [
-  "OpenEarable",
-  "OpenRing",
+
+final List<AppSupportOption> _heartSupportedDevices = [
+  AppSupportOption(
+    label: "PPG",
+    requirement: AppRequirement.hasSensorByAliases(ppgSensorAliases),
+  ),
+];
+
+final List<AppSupportOption> _audioResponseSupportedDevices = [
+  AppSupportOption(
+    label: "Audio Device",
+    requirement: AppRequirement.hasCapability<AudioResponseManager>(),
+  ),
 ];
 
 Sensor? _findOpticalTemperatureSensor(List<Sensor> sensors) {
@@ -90,7 +107,7 @@ final List<AppInfo> _apps = [
     supportedDevices: _postureSupportedDevices,
     accentColor: _appAccentColor,
     widget: SelectEarableView(
-      supportedDevicePrefixes: _postureSupportedDevices,
+      supportedDevices: _postureSupportedDevices,
       startApp: (wearable, sensorConfigProvider) async {
         return PostureTrackerView(
           EarableAttitudeTracker(
@@ -111,21 +128,11 @@ final List<AppInfo> _apps = [
     supportedDevices: _heartSupportedDevices,
     accentColor: _appAccentColor,
     widget: SelectEarableView(
-      supportedDevicePrefixes: _heartSupportedDevices,
+      supportedDevices: _heartSupportedDevices,
       startApp: (wearable, _) async {
         if (wearable.hasCapability<SensorManager>()) {
           final sensors = wearable.requireCapability<SensorManager>().sensors;
-          Sensor? ppgSensor;
-          for (final sensor in sensors) {
-            final text =
-                '${sensor.sensorName} ${sensor.chartTitle}'.toLowerCase();
-            if (text.contains('photoplethysmography') ||
-                text.contains('ppg') ||
-                text.contains('pulse')) {
-              ppgSensor = sensor;
-              break;
-            }
-          }
+          final ppgSensor = findPpgSensor(sensors);
 
           if (ppgSensor == null) {
             return PlatformScaffold(
@@ -138,15 +145,7 @@ final List<AppInfo> _apps = [
             );
           }
 
-          Sensor? accelerometerSensor;
-          for (final sensor in sensors) {
-            final text =
-                '${sensor.sensorName} ${sensor.chartTitle}'.toLowerCase();
-            if (text.contains('accelerometer') || text.contains('acc')) {
-              accelerometerSensor = sensor;
-              break;
-            }
-          }
+          final accelerometerSensor = findAccelerometerSensor(sensors);
           final opticalTemperatureSensor =
               _findOpticalTemperatureSensor(sensors);
 
@@ -168,19 +167,42 @@ final List<AppInfo> _apps = [
       },
     ),
   ),
+  AppInfo(
+    logoPath: "",
+    title: "Audio Response",
+    description: "Measure and store audio responses",
+    supportedDevices: _audioResponseSupportedDevices,
+    accentColor: _appAccentColor,
+    widget: SelectEarableView(
+      supportedDevices: _audioResponseSupportedDevices,
+      startApp: (wearable, _) async {
+        if (wearable is AudioResponseManager) {
+          return AudioResponseMeasurementView(manager: wearable as AudioResponseManager);
+        } else {
+          return PlatformScaffold(
+            appBar: PlatformAppBar(
+              title: PlatformText("Audio Response Measurement"),
+            ),
+            body: Center(
+              child: PlatformText("Audio Response Measurement not supported on this device."),
+            ),
+          );
+        }
+      },
+    ),
+  ),
 ];
 
 int getAvailableAppsCount() => _apps.length;
 
 int getCompatibleAppsCountForWearables(Iterable<Wearable> wearables) {
-  final names = wearables.map((wearable) => wearable.name).toList();
-  if (names.isEmpty) return 0;
+  if (wearables.isEmpty) return 0;
 
   return _apps.where((app) {
-    return names.any(
-      (name) => wearableIsCompatibleWithApp(
-        wearableName: name,
-        supportedDevicePrefixes: app.supportedDevices,
+    return wearables.any(
+      (wearable) => wearableIsCompatibleWithApp(
+        wearable: wearable,
+        supportedDevices: app.supportedDevices,
       ),
     );
   }).length;
@@ -193,17 +215,14 @@ class AppsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final connectedWearables = context.watch<WearablesProvider>().wearables;
     final connectedCount = connectedWearables.length;
-    final connectedWearableNames = connectedWearables
-        .map((wearable) => wearable.name)
-        .toList(growable: false);
 
     final enabledApps = <_AppListEntry>[];
     final disabledApps = <_AppListEntry>[];
     for (final app in _apps) {
-      final isEnabled = connectedWearableNames.any(
-        (wearableName) => wearableIsCompatibleWithApp(
-          wearableName: wearableName,
-          supportedDevicePrefixes: app.supportedDevices,
+      final isEnabled = connectedWearables.any(
+        (wearable) => wearableIsCompatibleWithApp(
+          wearable: wearable,
+          supportedDevices: app.supportedDevices,
         ),
       );
       final entry = _AppListEntry(app: app, isEnabled: isEnabled);
@@ -249,7 +268,7 @@ class AppsPage extends StatelessWidget {
             (entry) => AppTile(
               app: entry.app,
               isEnabled: entry.isEnabled,
-              connectedWearableNames: connectedWearableNames,
+              connectedWearables: connectedWearables,
             ),
           ),
         ],
