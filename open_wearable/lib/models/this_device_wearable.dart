@@ -545,17 +545,23 @@ class DeviceSensorFrequencyValue extends SensorFrequencyConfigurationValue {
   static List<DeviceSensorFrequencyValue> defaults() {
     return [
       off(),
+      fromHz(1),
       normal(),
-      DeviceSensorFrequencyValue(
-        frequencyHz: 15,
-      ),
-      DeviceSensorFrequencyValue(
-        frequencyHz: 30,
-      ),
-      DeviceSensorFrequencyValue(
-        frequencyHz: 50,
-      ),
+      fromHz(10),
+      fromHz(15),
+      fromHz(20),
+      fromHz(30),
+      fromHz(50),
+      fromHz(60),
+      fromHz(100),
+      fromHz(200),
     ];
+  }
+
+  static DeviceSensorFrequencyValue fromHz(double frequencyHz) {
+    return DeviceSensorFrequencyValue(
+      frequencyHz: frequencyHz,
+    );
   }
 
   static String _formatKey(double frequencyHz) {
