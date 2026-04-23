@@ -55,9 +55,6 @@ PODS:
     - Flutter
   - package_info_plus (0.4.5):
     - Flutter
-  - path_provider_foundation (0.0.1):
-    - Flutter
-    - FlutterMacOS
   - permission_handler_apple (9.3.0):
     - Flutter
   - SDWebImage (5.21.5):
@@ -92,7 +89,6 @@ DEPENDENCIES:
   - mcumgr_flutter (from `.symlinks/plugins/mcumgr_flutter/ios`)
   - open_file_ios (from `.symlinks/plugins/open_file_ios/ios`)
   - package_info_plus (from `.symlinks/plugins/package_info_plus/ios`)
-  - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
   - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
   - sensors_plus (from `.symlinks/plugins/sensors_plus/ios`)
   - share_plus (from `.symlinks/plugins/share_plus/ios`)
@@ -131,8 +127,6 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/open_file_ios/ios"
   package_info_plus:
     :path: ".symlinks/plugins/package_info_plus/ios"
-  path_provider_foundation:
-    :path: ".symlinks/plugins/path_provider_foundation/darwin"
   permission_handler_apple:
     :path: ".symlinks/plugins/permission_handler_apple/ios"
   sensors_plus:
@@ -161,7 +155,6 @@ SPEC CHECKSUMS:
   mcumgr_flutter: 969e99cc15e9fe658242669ce1075bf4612aef8a
   open_file_ios: 46184d802ee7959203f6392abcfa0dd49fdb5be0
   package_info_plus: af8e2ca6888548050f16fa2f1938db7b5a5df499
-  path_provider_foundation: bb55f6dbba17d0dccd6737fe6f7f34fbd0376880
   permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
   SDWebImage: e9c98383c7572d713c1a0d7dd2783b10599b9838
   sensors_plus: 6a11ed0c2e1d0bd0b20b4029d3bad27d96e0c65b
