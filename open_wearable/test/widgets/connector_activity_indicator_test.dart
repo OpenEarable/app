@@ -38,4 +38,62 @@ void main() {
     await tester.pump();
     expect(find.text('Connector'), findsNothing);
   });
+
+  testWidgets('compacts after delay and expands again on tap', (tester) async {
+    final statusNotifier = ValueNotifier<ConnectorRuntimeStatus>(
+      const ConnectorRuntimeStatus.running(),
+    );
+    addTearDown(statusNotifier.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ConnectorActivityIndicator(
+            statusListenable: statusNotifier,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Connector'), findsOneWidget);
+
+    await tester.pump(ConnectorActivityIndicator.expandedDuration);
+
+    expect(find.text('Connector'), findsNothing);
+    expect(find.byIcon(Icons.hub_rounded), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.hub_rounded));
+    await tester.pump();
+
+    expect(find.text('Connector'), findsOneWidget);
+
+    await tester.pump(ConnectorActivityIndicator.expandedDuration);
+
+    expect(find.text('Connector'), findsNothing);
+    expect(find.byIcon(Icons.hub_rounded), findsOneWidget);
+  });
+
+  testWidgets('opens connector settings on long press', (tester) async {
+    var settingsOpenCount = 0;
+    final statusNotifier = ValueNotifier<ConnectorRuntimeStatus>(
+      const ConnectorRuntimeStatus.running(),
+    );
+    addTearDown(statusNotifier.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ConnectorActivityIndicator(
+            statusListenable: statusNotifier,
+            onOpenSettings: () => settingsOpenCount += 1,
+          ),
+        ),
+      ),
+    );
+
+    await tester.longPress(find.byIcon(Icons.hub_rounded));
+    await tester.pump();
+
+    expect(settingsOpenCount, 1);
+  });
 }
