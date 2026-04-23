@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:open_wearable/models/connector_settings.dart';
 import 'package:open_wearable/widgets/connector_activity_indicator.dart';
+import 'package:open_wearable/widgets/connector_branding.dart';
 
 void main() {
   testWidgets('shows only while connector runtime is active', (tester) async {
@@ -60,9 +61,9 @@ void main() {
     await tester.pump(ConnectorActivityIndicator.expandedDuration);
 
     expect(find.text('Connector'), findsNothing);
-    expect(find.byIcon(Icons.hub_rounded), findsOneWidget);
+    expect(find.byIcon(ConnectorBranding.icon), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.hub_rounded));
+    await tester.tap(find.byIcon(ConnectorBranding.icon));
     await tester.pump();
 
     expect(find.text('Connector'), findsOneWidget);
@@ -70,7 +71,7 @@ void main() {
     await tester.pump(ConnectorActivityIndicator.expandedDuration);
 
     expect(find.text('Connector'), findsNothing);
-    expect(find.byIcon(Icons.hub_rounded), findsOneWidget);
+    expect(find.byIcon(ConnectorBranding.icon), findsOneWidget);
   });
 
   testWidgets('opens connector settings on long press', (tester) async {
@@ -91,7 +92,7 @@ void main() {
       ),
     );
 
-    await tester.longPress(find.byIcon(Icons.hub_rounded));
+    await tester.longPress(find.byIcon(ConnectorBranding.icon));
     await tester.pump();
 
     expect(settingsOpenCount, 1);

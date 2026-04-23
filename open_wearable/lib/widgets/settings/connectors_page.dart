@@ -3,6 +3,7 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_wearable/models/connector_settings.dart';
 import 'package:open_wearable/models/network/device_ip_address.dart';
 import 'package:open_wearable/widgets/app_toast.dart';
+import 'package:open_wearable/widgets/connector_branding.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 
 class ConnectorsPage extends StatefulWidget {
@@ -266,7 +267,7 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
   Widget build(BuildContext context) {
     return PlatformScaffold(
       appBar: PlatformAppBar(
-        title: const Text('Connectors'),
+        title: const Text(ConnectorBranding.pluralLabel),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -283,7 +284,7 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
                           SensorPageSpacing.pagePaddingWithBottomInset(context),
                       children: [
                         Text(
-                          'Connectors',
+                          ConnectorBranding.pluralLabel,
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         const SizedBox(height: 4),
@@ -355,7 +356,7 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
                   ),
                   alignment: Alignment.center,
                   child: Icon(
-                    Icons.cable_rounded,
+                    ConnectorBranding.icon,
                     size: 18,
                     color: statusColor,
                   ),
@@ -533,7 +534,7 @@ class _StatusChip extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.circle, size: 10, color: foreground),
+          Icon(ConnectorBranding.icon, size: 14, color: foreground),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
