@@ -39,7 +39,7 @@ class ConnectorActivityIndicator extends StatelessWidget {
         return Padding(
           padding: const EdgeInsets.fromLTRB(10, 6, 10, 0),
           child: Align(
-            alignment: AlignmentDirectional.topEnd,
+            alignment: AlignmentDirectional.topCenter,
             child: Semantics(
               label: label,
               liveRegion: true,
