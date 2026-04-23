@@ -71,6 +71,12 @@ class ConnectorRuntimeStatus {
 
   const ConnectorRuntimeStatus.error(this.message)
       : state = ConnectorRuntimeState.error;
+
+  /// Whether the connector is currently enabled and participating in runtime
+  /// work.
+  bool get isActive =>
+      state == ConnectorRuntimeState.starting ||
+      state == ConnectorRuntimeState.running;
 }
 
 /// Loads, normalizes, persists, and applies connector settings.
