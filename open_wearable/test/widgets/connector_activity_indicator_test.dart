@@ -29,6 +29,10 @@ void main() {
     statusNotifier.value = const ConnectorRuntimeStatus.running();
     await tester.pump();
     expect(find.text('Connector'), findsOneWidget);
+    expect(
+      tester.getCenter(find.text('Connector')).dx,
+      closeTo(tester.getSize(find.byType(MaterialApp)).width / 2, 60),
+    );
 
     statusNotifier.value = const ConnectorRuntimeStatus.error('failed');
     await tester.pump();
