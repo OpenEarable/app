@@ -344,11 +344,31 @@ class WearablesProvider with ChangeNotifier {
           config.values.isNotEmpty) {
         notifier.addSensorConfiguration(
           config,
-          config.values.first,
+          _initialSensorConfigurationValue(config),
           markPending: false,
         );
       }
     }
+  }
+
+  /// Returns the best initial value for a sensor configuration.
+  ///
+  /// Some local configuration implementations expose a `currentValue` before
+  /// the provider subscribes to configuration reports. Prefer that value so the
+  /// UI and pending-apply state start from the device's actual configuration.
+  SensorConfigurationValue _initialSensorConfigurationValue(
+    SensorConfiguration config,
+  ) {
+    final dynamic configDynamic = config;
+    try {
+      final currentValue = configDynamic.currentValue;
+      if (currentValue is SensorConfigurationValue) {
+        return currentValue;
+      }
+    } catch (_) {
+      // Fall back to the first advertised value below.
+    }
+    return config.values.first;
   }
 
   /// Attempts to pair a stereo device with a matching partner among the

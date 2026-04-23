@@ -498,7 +498,7 @@ class DeviceSensorConfiguration
   DeviceSensorConfiguration({
     required super.name,
     required this.onChange,
-  })  : _currentValue = DeviceSensorFrequencyValue.normal(),
+  })  : _currentValue = DeviceSensorFrequencyValue.off(),
         super(
           values: DeviceSensorFrequencyValue.defaults(),
           offValue: DeviceSensorFrequencyValue.off(),
