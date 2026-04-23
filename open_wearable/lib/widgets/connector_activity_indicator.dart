@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_wearable/models/connector_settings.dart';
 import 'package:open_wearable/router.dart';
+import 'package:open_wearable/widgets/connector_branding.dart';
 
 /// Compact global status chip shown while an external connector is active.
 class ConnectorActivityIndicator extends StatefulWidget {
@@ -196,14 +197,14 @@ class _ConnectorActivityIndicatorState
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                Icons.hub_rounded,
+                                ConnectorBranding.icon,
                                 size: 14,
                                 color: foregroundColor,
                               ),
                               if (_isExpanded) ...[
                                 const SizedBox(width: 6),
                                 Text(
-                                  'Connector',
+                                  ConnectorBranding.label,
                                   style: Theme.of(context)
                                           .textTheme
                                           .labelSmall
