@@ -308,7 +308,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
   Widget _buildHeaderCard(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final hasWearableIcon = widget.device.getWearableIconPath() != null;
+    final hasWearableIcon = WearableIcon.hasIcon(widget.device);
 
     final statusPills = buildDeviceStatusPills(
       wearable: widget.device,
