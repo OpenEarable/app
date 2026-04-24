@@ -5,8 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'package:path_provider/path_provider.dart';
 
-class _CustomLogFilter extends LogFilter {
-  _CustomLogFilter(this._minLevel);
+class _CustomLibLogFilter extends LogFilter {
+  _CustomLibLogFilter(this._minLevel);
 
   final Level _minLevel;
 
@@ -23,6 +23,17 @@ class _CustomLogFilter extends LogFilter {
         (msg.toLowerCase().contains('sensor data') &&
             event.level == Level.trace) ||
         (msg.toLowerCase().contains('parsed') && event.level == Level.trace));
+  }
+}
+
+class _CustomAppLogFilter extends LogFilter {
+  _CustomAppLogFilter(this._minLevel);
+
+  final Level _minLevel;
+
+  @override
+  bool shouldLog(LogEvent event) {
+    return event.level.index >= _minLevel.index;
   }
 }
 
@@ -75,7 +86,8 @@ class LogFileManager with ChangeNotifier {
       printer = LogfmtPrinter();
     }
 
-    final libFilter = _CustomLogFilter(level);
+    final appFilter = _CustomAppLogFilter(level);
+    final libFilter = _CustomLibLogFilter(level);
     LogOutput? fileOutput;
     String logDirPath = '';
 
@@ -112,6 +124,7 @@ class LogFileManager with ChangeNotifier {
     // ------------------------
     final logger = Logger(
       level: level,
+      filter: appFilter,
       printer: PrefixPrinter(
         printer,
         trace: '[APP] TRACE',
