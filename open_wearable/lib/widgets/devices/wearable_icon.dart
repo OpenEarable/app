@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/models/this_device_wearable.dart';
 
 /// Reusable wearable icon renderer with optional stereo-side resolution.
 class WearableIcon extends StatefulWidget {
@@ -22,6 +23,29 @@ class WearableIcon extends StatefulWidget {
     this.fit = BoxFit.contain,
     this.fallback,
   });
+
+  /// Returns whether [wearable] can render either a custom asset or a built-in
+  /// Flutter icon through this widget.
+  static bool hasIcon(
+    Wearable wearable, {
+    WearableIconVariant variant = WearableIconVariant.single,
+  }) {
+    if (wearable is ThisDeviceWearable) {
+      return true;
+    }
+
+    final variantPath = wearable.getWearableIconPath(variant: variant);
+    if (variantPath != null && variantPath.isNotEmpty) {
+      return true;
+    }
+
+    if (variant != WearableIconVariant.single) {
+      final fallbackPath = wearable.getWearableIconPath();
+      return fallbackPath != null && fallbackPath.isNotEmpty;
+    }
+
+    return false;
+  }
 
   @override
   State<WearableIcon> createState() => _WearableIconState();
@@ -91,7 +115,21 @@ class _WearableIconState extends State<WearableIcon> {
     return widget.fallback ?? const SizedBox.shrink();
   }
 
+  Widget _buildStandardIcon() {
+    return FittedBox(
+      fit: widget.fit,
+      child: Icon(
+        Icons.smartphone,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+    );
+  }
+
   Widget _buildIcon(WearableIconVariant variant) {
+    if (widget.wearable is ThisDeviceWearable) {
+      return _buildStandardIcon();
+    }
+
     final path = _resolveIconPath(variant);
     if (path == null) {
       return _buildFallback();

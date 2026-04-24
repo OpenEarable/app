@@ -267,8 +267,7 @@ class DeviceRow extends StatelessWidget {
     final pairKey = group.stereoPairKey;
     final knownIconVariant = _resolveWearableIconVariant();
     final hasWearableIcon = showWearableIcon &&
-        (primary.getWearableIconPath(variant: knownIconVariant)?.isNotEmpty ??
-            false);
+        WearableIcon.hasIcon(primary, variant: knownIconVariant);
     final topRightIdentifierLabel = _buildTopRightIdentifierLabel();
     final statusPills = _buildDeviceStatusPills(
       primary,
