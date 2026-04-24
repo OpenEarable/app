@@ -432,12 +432,7 @@ class _SelectableWearableCard extends StatelessWidget {
   }
 
   bool _hasWearableIcon(WearableIconVariant initialVariant) {
-    final variantPath = wearable.getWearableIconPath(variant: initialVariant);
-    if (variantPath != null && variantPath.isNotEmpty) {
-      return true;
-    }
-    final fallbackPath = wearable.getWearableIconPath();
-    return fallbackPath != null && fallbackPath.isNotEmpty;
+    return WearableIcon.hasIcon(wearable, variant: initialVariant);
   }
 
   List<Widget> _buildDeviceStatusPills() {
