@@ -9,6 +9,8 @@ import 'package:sensors_plus/sensors_plus.dart';
 
 import 'logger.dart';
 
+/// Represents the phone, tablet, desktop, or browser running the app as a
+/// wearable-like device with locally available sensors.
 class ThisDeviceWearable extends Wearable
     implements
         SensorManager,
@@ -31,12 +33,15 @@ class ThisDeviceWearable extends Wearable
 
   final WearableDisconnectNotifier _disconnectNotifier;
 
+  /// Creates a host-device wearable from an already resolved device profile.
   ThisDeviceWearable._({
     required super.disconnectNotifier,
     required this.deviceProfile,
   })  : _disconnectNotifier = disconnectNotifier,
         super(name: deviceProfile.displayName);
 
+  /// Builds the host-device wearable and registers every sensor that produces
+  /// at least one sample on the current platform.
   static Future<ThisDeviceWearable> create({
     required WearableDisconnectNotifier disconnectNotifier,
   }) async {
@@ -74,102 +79,109 @@ class ThisDeviceWearable extends Wearable
   }
 
   Future<void> _initSensors() async {
-    if (await _isSensorAvailable<GyroscopeEvent>(gyroscopeEventStream())) {
-      final gyroConfig = DeviceSensorConfiguration(
-        name: 'Gyroscope',
-        onChange: _emitSensorConfigurationChange,
-      );
-      sensorConfigurations.add(gyroConfig);
-      _emitSensorConfigurationChange(gyroConfig, gyroConfig.currentValue);
-      sensors.add(
-        ThisDeviceSensor<GyroscopeEvent>(
-          config: gyroConfig,
-          sensorName: 'Gyroscope',
-          chartTitle: 'Gyroscope',
-          shortChartTitle: 'Gyro',
-          axisNames: ['X', 'Y', 'Z'],
-          axisUnits: ['rad/s', 'rad/s', 'rad/s'],
-          valueExtractor: (event) => SensorDoubleValue(
-            values: [event.x, event.y, event.z],
-            timestamp: event.timestamp.millisecondsSinceEpoch,
-          ),
-          sensorStreamProvider: gyroscopeEventStream,
-        ),
-      );
-    }
-    if (await _isSensorAvailable<AccelerometerEvent>(
-      accelerometerEventStream(),
-    )) {
-      final accelConfig = DeviceSensorConfiguration(
-        name: 'Accelerometer',
-        onChange: _emitSensorConfigurationChange,
-      );
-      sensorConfigurations.add(accelConfig);
-      _emitSensorConfigurationChange(accelConfig, accelConfig.currentValue);
-      sensors.add(
-        ThisDeviceSensor<AccelerometerEvent>(
-          config: accelConfig,
-          sensorName: 'Accelerometer',
-          chartTitle: 'Accelerometer',
-          shortChartTitle: 'Accel',
-          axisNames: ['X', 'Y', 'Z'],
-          axisUnits: ['m/s²', 'm/s²', 'm/s²'],
-          valueExtractor: (event) => SensorDoubleValue(
-            values: [event.x, event.y, event.z],
-            timestamp: event.timestamp.millisecondsSinceEpoch,
-          ),
-          sensorStreamProvider: accelerometerEventStream,
-        ),
-      );
-    }
-    if (await _isSensorAvailable(magnetometerEventStream())) {
-      final magConfig = DeviceSensorConfiguration(
-        name: 'Magnetometer',
-        onChange: _emitSensorConfigurationChange,
-      );
-      sensorConfigurations.add(magConfig);
-      _emitSensorConfigurationChange(magConfig, magConfig.currentValue);
-      sensors.add(
-        ThisDeviceSensor<MagnetometerEvent>(
-          config: magConfig,
-          sensorName: 'Magnetometer',
-          chartTitle: 'Magnetometer',
-          shortChartTitle: 'Mag',
-          axisNames: ['X', 'Y', 'Z'],
-          axisUnits: ['µT', 'µT', 'µT'],
-          valueExtractor: (event) => SensorDoubleValue(
-            values: [event.x, event.y, event.z],
-            timestamp: event.timestamp.millisecondsSinceEpoch,
-          ),
-          sensorStreamProvider: magnetometerEventStream,
-        ),
-      );
-    }
-    if (await _isSensorAvailable(barometerEventStream())) {
-      final baroConfig = DeviceSensorConfiguration(
-        name: 'Barometer',
-        onChange: _emitSensorConfigurationChange,
-      );
-      sensorConfigurations.add(baroConfig);
-      _emitSensorConfigurationChange(baroConfig, baroConfig.currentValue);
-      sensors.add(
-        ThisDeviceSensor<BarometerEvent>(
-          config: baroConfig,
-          sensorName: 'Barometer',
-          chartTitle: 'Barometer',
-          shortChartTitle: 'Baro',
-          axisNames: ['Pressure'],
-          axisUnits: ['hPa'],
-          valueExtractor: (event) => SensorDoubleValue(
-            values: [event.pressure],
-            timestamp: event.timestamp.millisecondsSinceEpoch,
-          ),
-          sensorStreamProvider: barometerEventStream,
-        ),
-      );
-    }
+    await _registerSensorIfAvailable<GyroscopeEvent>(
+      sensorName: 'Gyroscope',
+      chartTitle: 'Gyroscope',
+      shortChartTitle: 'Gyro',
+      axisNames: ['X', 'Y', 'Z'],
+      axisUnits: ['rad/s', 'rad/s', 'rad/s'],
+      valueExtractor: (event) => SensorDoubleValue(
+        values: [event.x, event.y, event.z],
+        timestamp: event.timestamp.millisecondsSinceEpoch,
+      ),
+      sensorStreamProvider: gyroscopeEventStream,
+    );
+    await _registerSensorIfAvailable<AccelerometerEvent>(
+      sensorName: 'Accelerometer',
+      chartTitle: 'Accelerometer',
+      shortChartTitle: 'Accel',
+      axisNames: ['X', 'Y', 'Z'],
+      axisUnits: ['m/s²', 'm/s²', 'm/s²'],
+      valueExtractor: (event) => SensorDoubleValue(
+        values: [event.x, event.y, event.z],
+        timestamp: event.timestamp.millisecondsSinceEpoch,
+      ),
+      sensorStreamProvider: accelerometerEventStream,
+    );
+    await _registerSensorIfAvailable<UserAccelerometerEvent>(
+      sensorName: 'User Accelerometer',
+      chartTitle: 'User Accelerometer',
+      shortChartTitle: 'User Accel',
+      axisNames: ['X', 'Y', 'Z'],
+      axisUnits: ['m/s²', 'm/s²', 'm/s²'],
+      valueExtractor: (event) => SensorDoubleValue(
+        values: [event.x, event.y, event.z],
+        timestamp: event.timestamp.millisecondsSinceEpoch,
+      ),
+      sensorStreamProvider: userAccelerometerEventStream,
+    );
+    await _registerSensorIfAvailable<MagnetometerEvent>(
+      sensorName: 'Magnetometer',
+      chartTitle: 'Magnetometer',
+      shortChartTitle: 'Mag',
+      axisNames: ['X', 'Y', 'Z'],
+      axisUnits: ['µT', 'µT', 'µT'],
+      valueExtractor: (event) => SensorDoubleValue(
+        values: [event.x, event.y, event.z],
+        timestamp: event.timestamp.millisecondsSinceEpoch,
+      ),
+      sensorStreamProvider: magnetometerEventStream,
+    );
+    await _registerSensorIfAvailable<BarometerEvent>(
+      sensorName: 'Barometer',
+      chartTitle: 'Barometer',
+      shortChartTitle: 'Baro',
+      axisNames: ['Pressure'],
+      axisUnits: ['hPa'],
+      valueExtractor: (event) => SensorDoubleValue(
+        values: [event.pressure],
+        timestamp: event.timestamp.millisecondsSinceEpoch,
+      ),
+      sensorStreamProvider: barometerEventStream,
+    );
   }
 
+  Future<void> _registerSensorIfAvailable<SensorEvent>({
+    required String sensorName,
+    required String chartTitle,
+    required String shortChartTitle,
+    required List<String> axisNames,
+    required List<String> axisUnits,
+    required SensorDoubleValue Function(SensorEvent event) valueExtractor,
+    required Stream<SensorEvent> Function({required Duration samplingPeriod})
+        sensorStreamProvider,
+  }) async {
+    final availabilityProbe = sensorStreamProvider(
+      samplingPeriod: SensorInterval.normalInterval,
+    );
+    if (!await _isSensorAvailable<SensorEvent>(availabilityProbe)) {
+      logger.w("Sensor '$sensorName' is not available on this device.");
+      return;
+    }
+
+    final config = DeviceSensorConfiguration(
+      name: sensorName,
+      onChange: _emitSensorConfigurationChange,
+    );
+    sensorConfigurations.add(config);
+    _emitSensorConfigurationChange(config, config.currentValue);
+    sensors.add(
+      ThisDeviceSensor<SensorEvent>(
+        config: config,
+        sensorName: sensorName,
+        chartTitle: chartTitle,
+        shortChartTitle: shortChartTitle,
+        axisNames: axisNames,
+        axisUnits: axisUnits,
+        valueExtractor: valueExtractor,
+        sensorStreamProvider: sensorStreamProvider,
+      ),
+    );
+  }
+
+  /// Returns whether the platform emitted a sample before the availability
+  /// timeout. Missing hardware, unsupported platforms, and permission failures
+  /// are treated as unavailable so the app does not show dead sensors.
   static Future<bool> _isSensorAvailable<T>(Stream<T> stream) async {
     try {
       await stream.first.timeout(const Duration(milliseconds: 800));
@@ -208,6 +220,7 @@ class ThisDeviceWearable extends Wearable
   VersionConstraint get supportedFirmwareRange => VersionConstraint.any;
 }
 
+/// Static metadata for the device running the app.
 class DeviceProfile {
   final String displayName;
   final String deviceId;
@@ -216,6 +229,7 @@ class DeviceProfile {
   final String? osVersion;
   final String? platform;
 
+  /// Creates a host device metadata snapshot.
   const DeviceProfile({
     required this.displayName,
     required this.deviceId,
@@ -225,6 +239,8 @@ class DeviceProfile {
     this.platform,
   });
 
+  /// Reads platform-specific device information and falls back to a generic
+  /// profile when a platform does not expose one.
   static Future<DeviceProfile> fetch() async {
     final deviceInfo = DeviceInfoPlugin();
     try {
@@ -410,6 +426,7 @@ String? _joinNonEmpty(List<String?> parts) {
   return cleaned.join(' ');
 }
 
+/// Adapts a `sensors_plus` event stream to the OpenEarable sensor interface.
 class ThisDeviceSensor<SensorEvent> extends Sensor<SensorDoubleValue> {
   final DeviceSensorConfiguration config;
   late final StreamController<SensorDoubleValue> _controller;
@@ -418,6 +435,7 @@ class ThisDeviceSensor<SensorEvent> extends Sensor<SensorDoubleValue> {
       _sensorStreamProvider;
   final SensorDoubleValue Function(SensorEvent event) _valueExtractor;
 
+  /// Creates a sensor adapter for a single host-device sensor stream.
   ThisDeviceSensor({
     required super.sensorName,
     required super.chartTitle,
@@ -486,6 +504,7 @@ class ThisDeviceSensor<SensorEvent> extends Sensor<SensorDoubleValue> {
   }
 }
 
+/// Frequency configuration shared by host-device sensor streams.
 class DeviceSensorConfiguration
     extends SensorFrequencyConfiguration<DeviceSensorFrequencyValue> {
   final void Function(
@@ -495,6 +514,7 @@ class DeviceSensorConfiguration
 
   DeviceSensorFrequencyValue _currentValue;
 
+  /// Creates a frequency configuration with the standard host-device values.
   DeviceSensorConfiguration({
     required super.name,
     required this.onChange,
@@ -506,6 +526,7 @@ class DeviceSensorConfiguration
 
   DeviceSensorFrequencyValue get currentValue => _currentValue;
 
+  /// Emits every frequency value applied to this host-device sensor.
   Stream<DeviceSensorFrequencyValue> get changes => _changesController.stream;
 
   final StreamController<DeviceSensorFrequencyValue> _changesController =
@@ -519,6 +540,7 @@ class DeviceSensorConfiguration
   }
 }
 
+/// Sampling frequency option for host-device sensors.
 class DeviceSensorFrequencyValue extends SensorFrequencyConfigurationValue {
   DeviceSensorFrequencyValue({
     required super.frequencyHz,
@@ -527,8 +549,10 @@ class DeviceSensorFrequencyValue extends SensorFrequencyConfigurationValue {
           key: key ?? _formatKey(frequencyHz),
         );
 
+  /// Whether this value disables sampling for the sensor.
   bool get isOff => frequencyHz <= 0;
 
+  /// Creates the disabled sampling option.
   static DeviceSensorFrequencyValue off() {
     return DeviceSensorFrequencyValue(
       frequencyHz: 0,
@@ -536,12 +560,14 @@ class DeviceSensorFrequencyValue extends SensorFrequencyConfigurationValue {
     );
   }
 
+  /// Creates the default interactive sampling option.
   static DeviceSensorFrequencyValue normal() {
     return DeviceSensorFrequencyValue(
       frequencyHz: 5,
     );
   }
 
+  /// Returns the standard frequency choices shown for host-device sensors.
   static List<DeviceSensorFrequencyValue> defaults() {
     return [
       off(),
@@ -558,6 +584,7 @@ class DeviceSensorFrequencyValue extends SensorFrequencyConfigurationValue {
     ];
   }
 
+  /// Creates a sampling option for the provided frequency.
   static DeviceSensorFrequencyValue fromHz(double frequencyHz) {
     return DeviceSensorFrequencyValue(
       frequencyHz: frequencyHz,
