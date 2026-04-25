@@ -14,6 +14,8 @@ const int _sensorsIndex = 2;
 const int _sectionCount = 5;
 
 const double _largeScreenBreakpoint = 960;
+const String _appIconAsset =
+    'android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png';
 
 class HomePage extends StatefulWidget {
   final int initialSectionIndex;
@@ -159,15 +161,7 @@ class _HomePageState extends State<HomePage> {
               extended: useExtendedRail,
               leading: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 20),
-                child: useExtendedRail
-                    ? Text(
-                        'OpenWearable',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      )
-                    : Icon(
-                        Icons.watch,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
+                child: _AppRailLogo(extended: useExtendedRail),
               ),
               destinations: _destinations
                   .map(
@@ -250,4 +244,43 @@ class _HomeDestination {
     required this.icon,
     required this.selectedIcon,
   });
+}
+
+class _AppRailLogo extends StatelessWidget {
+  final bool extended;
+
+  const _AppRailLogo({
+    required this.extended,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Image.asset(
+        _appIconAsset,
+        width: 32,
+        height: 32,
+        fit: BoxFit.cover,
+        filterQuality: FilterQuality.medium,
+        semanticLabel: 'OpenWearable app icon',
+      ),
+    );
+
+    if (!extended) {
+      return icon;
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        icon,
+        const SizedBox(width: 12),
+        Text(
+          'OpenWearable',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+      ],
+    );
+  }
 }
