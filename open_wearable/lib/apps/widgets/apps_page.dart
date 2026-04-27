@@ -9,6 +9,7 @@ import 'package:open_wearable/apps/widgets/app_compatibility.dart';
 import 'package:open_wearable/apps/widgets/select_earable_view.dart';
 import 'package:open_wearable/apps/widgets/app_tile.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
+import 'package:open_wearable/widgets/connector_activity_indicator.dart';
 import 'package:open_wearable/widgets/recording_activity_indicator.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 import 'package:provider/provider.dart';
@@ -220,6 +221,7 @@ class AppsPage extends StatelessWidget {
         title: PlatformText("Apps"),
         trailingActions: [
           const AppBarRecordingIndicator(),
+          const ConnectorActivityIndicator(),
           PlatformIconButton(
             icon: Icon(context.platformIcons.bluetooth),
             onPressed: () {

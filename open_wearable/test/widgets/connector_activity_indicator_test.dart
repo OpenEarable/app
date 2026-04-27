@@ -22,27 +22,27 @@ void main() {
     );
 
     expect(find.text('Connector'), findsNothing);
+    expect(find.byIcon(ConnectorBranding.icon), findsNothing);
 
     statusNotifier.value = const ConnectorRuntimeStatus.starting();
     await tester.pump();
-    expect(find.text('Connector'), findsOneWidget);
+    expect(find.text('Connector'), findsNothing);
+    expect(find.byIcon(ConnectorBranding.icon), findsOneWidget);
 
     statusNotifier.value = const ConnectorRuntimeStatus.running();
     await tester.pump();
-    expect(find.text('Connector'), findsOneWidget);
-    expect(
-      tester.getCenter(find.text('Connector')).dx,
-      closeTo(tester.getSize(find.byType(MaterialApp)).width / 2, 60),
-    );
+    expect(find.text('Connector'), findsNothing);
+    expect(find.byIcon(ConnectorBranding.icon), findsOneWidget);
 
     statusNotifier.value = const ConnectorRuntimeStatus.error('failed');
     await tester.pump();
     expect(find.text('Connector'), findsNothing);
+    expect(find.byIcon(ConnectorBranding.icon), findsNothing);
   });
 
-  testWidgets('compacts after delay and expands again on tap', (tester) async {
+  testWidgets('uses red styling when connector lacks Wi-Fi', (tester) async {
     final statusNotifier = ValueNotifier<ConnectorRuntimeStatus>(
-      const ConnectorRuntimeStatus.running(),
+      const ConnectorRuntimeStatus.running(hasReachableNetworkAddress: false),
     );
     addTearDown(statusNotifier.dispose);
 
@@ -56,25 +56,33 @@ void main() {
       ),
     );
 
-    expect(find.text('Connector'), findsOneWidget);
-
-    await tester.pump(ConnectorActivityIndicator.expandedDuration);
-
-    expect(find.text('Connector'), findsNothing);
-    expect(find.byIcon(ConnectorBranding.icon), findsOneWidget);
-
-    await tester.tap(find.byIcon(ConnectorBranding.icon));
-    await tester.pump();
-
-    expect(find.text('Connector'), findsOneWidget);
-
-    await tester.pump(ConnectorActivityIndicator.expandedDuration);
-
-    expect(find.text('Connector'), findsNothing);
-    expect(find.byIcon(ConnectorBranding.icon), findsOneWidget);
+    final icon = tester.widget<Icon>(find.byIcon(ConnectorBranding.icon));
+    expect(icon.color, ThemeData().colorScheme.error);
   });
 
-  testWidgets('opens connector settings on long press', (tester) async {
+  testWidgets('describes missing Wi-Fi in tooltip semantics', (tester) async {
+    final statusNotifier = ValueNotifier<ConnectorRuntimeStatus>(
+      const ConnectorRuntimeStatus.running(hasReachableNetworkAddress: false),
+    );
+    addTearDown(statusNotifier.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ConnectorActivityIndicator(
+            statusListenable: statusNotifier,
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      find.byTooltip('Connector active, Wi-Fi unavailable'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('opens connector settings on tap', (tester) async {
     var settingsOpenCount = 0;
     final statusNotifier = ValueNotifier<ConnectorRuntimeStatus>(
       const ConnectorRuntimeStatus.running(),
@@ -92,7 +100,7 @@ void main() {
       ),
     );
 
-    await tester.longPress(find.byIcon(ConnectorBranding.icon));
+    await tester.tap(find.byIcon(ConnectorBranding.icon));
     await tester.pump();
 
     expect(settingsOpenCount, 1);
