@@ -6,6 +6,7 @@ import 'package:open_wearable/models/network/device_ip_address.dart';
 import 'package:open_wearable/widgets/app_toast.dart';
 import 'package:open_wearable/widgets/connector_branding.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ConnectorsPage extends StatefulWidget {
   const ConnectorsPage({super.key});
@@ -15,6 +16,10 @@ class ConnectorsPage extends StatefulWidget {
 }
 
 class _ConnectorsPageState extends State<ConnectorsPage> {
+  static final Uri _webSocketDocumentationUri = Uri.parse(
+    'https://github.com/OpenEarable/app/blob/main/open_wearable/docs/connectors/websocket-ipc-api.md',
+  );
+
   late final TextEditingController _portController;
   late final TextEditingController _pathController;
   late final ValueListenable<ConnectorRuntimeStatus> _runtimeStatusListenable;
@@ -125,6 +130,23 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
         });
       }
     }
+  }
+
+  Future<void> _openWebSocketDocumentation() async {
+    final opened = await launchUrl(
+      _webSocketDocumentationUri,
+      mode: LaunchMode.externalApplication,
+    );
+    if (opened || !mounted) {
+      return;
+    }
+
+    AppToast.show(
+      context,
+      message: 'Could not open WebSocket connector documentation.',
+      type: AppToastType.error,
+      icon: Icons.link_off_rounded,
+    );
   }
 
   Future<void> _saveSettings() async {
@@ -414,6 +436,14 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
                         },
                 ),
               ],
+            ),
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: TextButton.icon(
+                onPressed: _openWebSocketDocumentation,
+                icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                label: const Text('View documentation'),
+              ),
             ),
             const SizedBox(height: 10),
             InputDecorator(
