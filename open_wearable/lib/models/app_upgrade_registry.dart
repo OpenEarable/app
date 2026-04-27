@@ -58,6 +58,51 @@ class AppUpgradeRegistry {
         ),
       ],
     ),
+    AppUpgradeHighlight(
+      version: '1.2.0',
+      eyebrow: 'OpenWearables 1.2.0',
+      title: 'Automate OpenWearables\nwith the new connector',
+      summary:
+          'Control the app over WebSocket and use your phone as a sensor source.',
+      heroDescription:
+          'OpenWearables now includes a connector that exposes app control through a WebSocket API. '
+          'The Python API builds on that connection, making scripted workflows, external tools, '
+          'and repeatable automation possible.',
+      accentColor: Color(0xFF2F7D6D),
+      useHeroGradient: false,
+      features: <AppUpgradeFeatureHighlight>[
+        AppUpgradeFeatureHighlight(
+          icon: Icons.hub_rounded,
+          title: 'Brand-new connector',
+          description:
+              'Control app behavior remotely through the WebSocket connector for automation and integration workflows.',
+        ),
+        AppUpgradeFeatureHighlight(
+          icon: Icons.code_rounded,
+          title: 'Python API support',
+          description:
+              'Use the Python API on top of the connector to script app interactions from external tools.',
+        ),
+        AppUpgradeFeatureHighlight(
+          icon: Icons.wifi_tethering_rounded,
+          title: 'Automation-ready access',
+          description:
+              'Build repeatable experiments, demos, and integrations without driving every action through the UI.',
+        ),
+        AppUpgradeFeatureHighlight(
+          icon: Icons.phone_iphone_rounded,
+          title: 'Phone as a sensor device',
+          description:
+              'Use the phone running the app as a local sensor source for supported motion data workflows.',
+        ),
+        AppUpgradeFeatureHighlight(
+          icon: Icons.tune_rounded,
+          title: 'Configurable local sensors',
+          description:
+              'Phone sensor streams support configurable sampling options and start with sampling disabled until selected.',
+        ),
+      ],
+    ),
   ];
 
   /// Returns the configured highlight for [version], if any.
