@@ -3,6 +3,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:open_wearable/models/network/device_ip_address.dart';
 import 'package:open_wearable/models/wearable_connector.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -51,32 +52,49 @@ enum ConnectorRuntimeState {
 class ConnectorRuntimeStatus {
   final ConnectorRuntimeState state;
   final String? message;
+  final bool hasReachableNetworkAddress;
+  final String? reachableNetworkAddress;
 
   const ConnectorRuntimeStatus({
     required this.state,
     this.message,
+    this.hasReachableNetworkAddress = true,
+    this.reachableNetworkAddress,
   });
 
   const ConnectorRuntimeStatus.disabled()
       : state = ConnectorRuntimeState.disabled,
-        message = null;
+        message = null,
+        hasReachableNetworkAddress = true,
+        reachableNetworkAddress = null;
 
   const ConnectorRuntimeStatus.starting()
       : state = ConnectorRuntimeState.starting,
-        message = null;
+        message = null,
+        hasReachableNetworkAddress = true,
+        reachableNetworkAddress = null;
 
-  const ConnectorRuntimeStatus.running()
-      : state = ConnectorRuntimeState.running,
+  const ConnectorRuntimeStatus.running({
+    this.hasReachableNetworkAddress = true,
+    this.reachableNetworkAddress,
+  })  : state = ConnectorRuntimeState.running,
         message = null;
 
   const ConnectorRuntimeStatus.error(this.message)
-      : state = ConnectorRuntimeState.error;
+      : state = ConnectorRuntimeState.error,
+        hasReachableNetworkAddress = true,
+        reachableNetworkAddress = null;
 
   /// Whether the connector is currently enabled and participating in runtime
   /// work.
   bool get isActive =>
       state == ConnectorRuntimeState.starting ||
       state == ConnectorRuntimeState.running;
+
+  /// Whether the active connector has enough runtime state to accept clients.
+  bool get isHealthy =>
+      state == ConnectorRuntimeState.starting ||
+      (state == ConnectorRuntimeState.running && hasReachableNetworkAddress);
 }
 
 /// Loads, normalizes, persists, and applies connector settings.
@@ -87,6 +105,7 @@ class ConnectorSettings {
   static const String _websocketPathKey = 'connector_websocket_path';
 
   static WebSocketIpcServer _webSocketServer = WebSocketIpcServer();
+  static Timer? _networkStatusRefreshTimer;
 
   static final ValueNotifier<WebSocketConnectorSettings>
       _webSocketSettingsNotifier = ValueNotifier<WebSocketConnectorSettings>(
@@ -127,6 +146,7 @@ class ConnectorSettings {
 
   /// Stops the running server and resets the runtime status.
   static Future<void> dispose() async {
+    _stopNetworkStatusRefresh();
     await _webSocketServer.stop();
     _setRuntimeStatus(const ConnectorRuntimeStatus.disabled());
   }
@@ -171,6 +191,7 @@ class ConnectorSettings {
     _setWebSocketSettings(normalized);
 
     if (!normalized.enabled) {
+      _stopNetworkStatusRefresh();
       await _webSocketServer.stop();
       _setRuntimeStatus(const ConnectorRuntimeStatus.disabled());
       return;
@@ -183,11 +204,43 @@ class ConnectorSettings {
         port: normalized.port,
         path: normalized.path,
       );
-      _setRuntimeStatus(const ConnectorRuntimeStatus.running());
+      await _refreshRunningNetworkStatus();
+      _startNetworkStatusRefresh();
     } catch (error) {
+      _stopNetworkStatusRefresh();
       _setRuntimeStatus(ConnectorRuntimeStatus.error(error.toString()));
       rethrow;
     }
+  }
+
+  /// Refreshes the running connector's local-network reachability state.
+  static Future<void> _refreshRunningNetworkStatus() async {
+    if (!_webSocketServer.isRunning) {
+      return;
+    }
+    final address = await resolveCurrentDeviceIpAddress();
+    _webSocketServer.updateAdvertisedHost(address);
+    _setRuntimeStatus(
+      ConnectorRuntimeStatus.running(
+        hasReachableNetworkAddress: address != null,
+        reachableNetworkAddress: address,
+      ),
+    );
+  }
+
+  /// Keeps connector health current when Wi-Fi or network interfaces change.
+  static void _startNetworkStatusRefresh() {
+    _stopNetworkStatusRefresh();
+    _networkStatusRefreshTimer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) => unawaited(_refreshRunningNetworkStatus()),
+    );
+  }
+
+  /// Stops periodic connector network-health checks.
+  static void _stopNetworkStatusRefresh() {
+    _networkStatusRefreshTimer?.cancel();
+    _networkStatusRefreshTimer = null;
   }
 
   /// Normalizes persisted settings into a valid runtime configuration.
