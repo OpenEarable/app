@@ -48,7 +48,7 @@ class ConnectorActivityIndicator extends StatelessWidget {
             status.isHealthy ? const Color(0xFF1E6A3A) : colorScheme.error;
         final label = status.isHealthy
             ? 'Connector active'
-            : 'Connector active, Wi-Fi unavailable';
+            : 'Connector active, network unavailable';
 
         return Padding(
           padding: const EdgeInsetsDirectional.only(end: 2),
