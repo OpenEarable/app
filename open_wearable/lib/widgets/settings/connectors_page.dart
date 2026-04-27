@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_wearable/models/connector_settings.dart';
 import 'package:open_wearable/models/network/device_ip_address.dart';
@@ -16,6 +17,7 @@ class ConnectorsPage extends StatefulWidget {
 class _ConnectorsPageState extends State<ConnectorsPage> {
   late final TextEditingController _portController;
   late final TextEditingController _pathController;
+  late final ValueListenable<ConnectorRuntimeStatus> _runtimeStatusListenable;
 
   bool _enabled = false;
   bool _isLoading = true;
@@ -29,14 +31,31 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
     super.initState();
     _portController = TextEditingController();
     _pathController = TextEditingController();
+    _runtimeStatusListenable =
+        ConnectorSettings.webSocketRuntimeStatusListenable;
+    _runtimeStatusListenable.addListener(_syncCurrentIpAddress);
     _loadSettings();
   }
 
   @override
   void dispose() {
+    _runtimeStatusListenable.removeListener(_syncCurrentIpAddress);
     _portController.dispose();
     _pathController.dispose();
     super.dispose();
+  }
+
+  void _syncCurrentIpAddress() {
+    final status = _runtimeStatusListenable.value;
+    if (status.state != ConnectorRuntimeState.running) {
+      return;
+    }
+    if (_currentIpAddress == status.reachableNetworkAddress) {
+      return;
+    }
+    setState(() {
+      _currentIpAddress = status.reachableNetworkAddress;
+    });
   }
 
   Future<void> _loadSettings() async {
@@ -275,8 +294,7 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
               valueListenable: ConnectorSettings.webSocketSettingsListenable,
               builder: (context, appliedSettings, _) {
                 return ValueListenableBuilder<ConnectorRuntimeStatus>(
-                  valueListenable:
-                      ConnectorSettings.webSocketRuntimeStatusListenable,
+                  valueListenable: _runtimeStatusListenable,
                   builder: (context, runtimeStatus, __) {
                     final pending = _hasPendingChanges(appliedSettings);
                     return ListView(
@@ -321,7 +339,8 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
   }) {
     final colorScheme = Theme.of(context).colorScheme;
     final statusColor = switch (runtimeStatus.state) {
-      ConnectorRuntimeState.running => const Color(0xFF1E6A3A),
+      ConnectorRuntimeState.running =>
+        runtimeStatus.isHealthy ? const Color(0xFF1E6A3A) : colorScheme.error,
       ConnectorRuntimeState.starting => colorScheme.primary,
       ConnectorRuntimeState.error => colorScheme.error,
       ConnectorRuntimeState.disabled => colorScheme.onSurfaceVariant,
@@ -502,10 +521,15 @@ class _StatusChip extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     final (title, detail, foreground) = switch (status.state) {
-      ConnectorRuntimeState.running => (
+      ConnectorRuntimeState.running when status.hasReachableNetworkAddress => (
           'Running',
           endpoint,
           const Color(0xFF1E6A3A),
+        ),
+      ConnectorRuntimeState.running => (
+          'Wi-Fi unavailable',
+          'Connector is on, but no local network address is available.',
+          colorScheme.error,
         ),
       ConnectorRuntimeState.starting => (
           'Starting',

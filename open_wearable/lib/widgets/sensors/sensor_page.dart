@@ -5,6 +5,7 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/view_models/sensor_data_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/common/no_devices_prompt.dart';
+import 'package:open_wearable/widgets/connector_activity_indicator.dart';
 import 'package:open_wearable/widgets/recording_activity_indicator.dart';
 import 'package:open_wearable/widgets/sensors/configuration/sensor_configuration_view.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_view.dart';
@@ -124,6 +125,7 @@ class _SensorPageState extends State<SensorPage>
                   title: PlatformText("Sensors"),
                   actions: [
                     const AppBarRecordingIndicator(),
+                    const ConnectorActivityIndicator(),
                     PlatformIconButton(
                       icon: Icon(context.platformIcons.bluetooth),
                       onPressed: () {
