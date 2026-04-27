@@ -68,7 +68,7 @@ class ThisDeviceWearable extends Wearable
     bool darkmode = false,
     WearableIconVariant variant = WearableIconVariant.single,
   }) {
-    return null;
+    return 'lib/assets/devices/phone-app.png';
   }
 
   void _emitSensorConfigurationChange(
