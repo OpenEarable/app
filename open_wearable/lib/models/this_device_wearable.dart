@@ -272,10 +272,12 @@ class DeviceProfile {
           logger.d("Fetched Android device info: $info");
           final displayName = _firstNonEmpty(
             [
-              _joinNonEmpty([info.brand, info.model]),
-              info.model,
-              info.device,
-              info.product,
+              _formatAndroidDeviceDisplayName(
+                _joinNonEmpty([info.brand, info.model]),
+              ),
+              _formatAndroidDeviceDisplayName(info.model),
+              _formatAndroidDeviceDisplayName(info.device),
+              _formatAndroidDeviceDisplayName(info.product),
             ],
             'Android Device',
           );
@@ -424,6 +426,49 @@ String? _joinNonEmpty(List<String?> parts) {
   }
   if (cleaned.isEmpty) return null;
   return cleaned.join(' ');
+}
+
+// Android's Build fields often expose manufacturer names in lowercase. Keep
+// model tokens intact and only normalize known brand/manufacturer tokens.
+String? _formatAndroidDeviceDisplayName(String? value) {
+  final trimmed = value?.trim();
+  if (trimmed == null || trimmed.isEmpty) {
+    return null;
+  }
+
+  return trimmed
+      .split(RegExp(r'\s+'))
+      .map(_formatAndroidDeviceDisplayNameWord)
+      .join(' ');
+}
+
+// Returns canonical UI casing for common Android manufacturer tokens.
+String _formatAndroidDeviceDisplayNameWord(String word) {
+  if (word.isEmpty || word != word.toLowerCase()) {
+    return word;
+  }
+
+  return switch (word) {
+    'google' => 'Google',
+    'samsung' => 'Samsung',
+    'oneplus' => 'OnePlus',
+    'xiaomi' => 'Xiaomi',
+    'huawei' => 'Huawei',
+    'honor' => 'Honor',
+    'motorola' => 'Motorola',
+    'sony' => 'Sony',
+    'oppo' => 'OPPO',
+    'vivo' => 'vivo',
+    'realme' => 'realme',
+    'nokia' => 'Nokia',
+    'fairphone' => 'Fairphone',
+    'nothing' => 'Nothing',
+    'asus' => 'ASUS',
+    'lenovo' => 'Lenovo',
+    'lg' => 'LG',
+    'htc' => 'HTC',
+    _ => word,
+  };
 }
 
 /// Adapts a `sensors_plus` event stream to the OpenEarable sensor interface.
