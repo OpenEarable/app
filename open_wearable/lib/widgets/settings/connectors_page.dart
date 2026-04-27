@@ -557,7 +557,7 @@ class _StatusChip extends StatelessWidget {
           const Color(0xFF1E6A3A),
         ),
       ConnectorRuntimeState.running => (
-          'Wi-Fi unavailable',
+          'Network unavailable',
           'Connector is on, but no local network address is available.',
           colorScheme.error,
         ),
