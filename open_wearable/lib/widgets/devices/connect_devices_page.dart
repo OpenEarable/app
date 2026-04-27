@@ -181,7 +181,9 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                       leading: Icon(
                         isThisDevice ? Icons.smartphone : Icons.bluetooth,
                       ),
-                      title: PlatformText(_deviceName(device)),
+                      title: PlatformText(
+                        _deviceName(device, isThisDevice: isThisDevice),
+                      ),
                       subtitle: PlatformText(device.id),
                       trailing: _buildTrailingWidget(
                         device,
@@ -342,10 +344,16 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
     );
   }
 
-  String _deviceName(DiscoveredDevice device) {
+  String _deviceName(DiscoveredDevice device, {required bool isThisDevice}) {
     final name = device.name.trim();
-    if (name.isEmpty) return 'Unnamed device';
-    return formatWearableDisplayName(name);
+    final displayName =
+        name.isEmpty ? 'Unnamed device' : formatWearableDisplayName(name);
+
+    if (isThisDevice) {
+      return '$displayName (this device)';
+    }
+
+    return displayName;
   }
 
   String _formatScanTime(DateTime startedAt) {
