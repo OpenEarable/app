@@ -2,8 +2,8 @@ import 'dart:io';
 
 /// Resolves the best client-reachable IPv4 address for the current device.
 ///
-/// The resolver prefers private LAN addresses on likely Wi-Fi or Ethernet
-/// interfaces and de-prioritizes VPN, hotspot, or peer-to-peer interfaces.
+/// The resolver returns private LAN addresses on likely Wi-Fi or Ethernet
+/// interfaces and rejects cellular, VPN, hotspot, or peer-to-peer interfaces.
 Future<String?> resolveCurrentDeviceIpAddressImpl() async {
   final interfaces = await NetworkInterface.list(
     type: InternetAddressType.IPv4,
@@ -11,7 +11,6 @@ Future<String?> resolveCurrentDeviceIpAddressImpl() async {
   );
 
   _ResolvedAddress? bestMatch;
-  _ResolvedAddress? fallback;
   for (final interface in interfaces) {
     for (final address in interface.addresses) {
       final host = address.address.trim();
@@ -23,14 +22,14 @@ Future<String?> resolveCurrentDeviceIpAddressImpl() async {
         score: _scoreInterfaceAddress(interface.name, host),
       );
       if (_isPrivateIpv4(host) &&
+          resolved.isLikelyLanAddress &&
           (bestMatch == null || resolved.score > bestMatch.score)) {
         bestMatch = resolved;
       }
-      fallback ??= resolved;
     }
   }
 
-  return (bestMatch ?? fallback)?.host;
+  return bestMatch?.host;
 }
 
 /// Returns whether [host] is within one of the standard private IPv4 ranges.
@@ -86,4 +85,6 @@ class _ResolvedAddress {
     required this.host,
     required this.score,
   });
+
+  bool get isLikelyLanAddress => score >= 100;
 }
