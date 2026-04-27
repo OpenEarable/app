@@ -8,6 +8,7 @@ import 'package:open_wearable/models/app_upgrade_registry.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:open_wearable/widgets/app_toast.dart';
+import 'package:open_wearable/widgets/connector_activity_indicator.dart';
 import 'package:open_wearable/widgets/connector_branding.dart';
 import 'package:open_wearable/widgets/recording_activity_indicator.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
@@ -33,6 +34,7 @@ class SettingsPage extends StatelessWidget {
         title: const Text('Settings'),
         trailingActions: [
           const AppBarRecordingIndicator(),
+          const ConnectorActivityIndicator(),
           PlatformIconButton(
             icon: Icon(context.platformIcons.bluetooth),
             onPressed: onConnectRequested,

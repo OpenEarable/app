@@ -5,6 +5,7 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/models/device_name_formatter.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
+import 'package:open_wearable/widgets/connector_activity_indicator.dart';
 import 'package:open_wearable/widgets/devices/device_detail/device_detail_page.dart';
 import 'package:open_wearable/widgets/recording_activity_indicator.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
@@ -31,6 +32,7 @@ class OverviewPage extends StatelessWidget {
         title: const Text('Overview'),
         trailingActions: [
           const AppBarRecordingIndicator(),
+          const ConnectorActivityIndicator(),
           PlatformIconButton(
             icon: Icon(context.platformIcons.bluetooth),
             onPressed: onConnectRequested,

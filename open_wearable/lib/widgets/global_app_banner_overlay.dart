@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../view_models/app_banner_controller.dart';
-import 'connector_activity_indicator.dart';
 
 class GlobalAppBannerOverlay extends StatelessWidget {
   final Widget child;
@@ -40,8 +39,6 @@ class GlobalAppBannerOverlay extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const ConnectorActivityIndicator(),
-                        const SizedBox(height: 6),
                         ...banners.map(
                           (banner) => Padding(
                             padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
@@ -55,16 +52,6 @@ class GlobalAppBannerOverlay extends StatelessWidget {
                         ),
                       ],
                     ),
-                  ),
-                ),
-              if (!hasBanners)
-                const Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: SafeArea(
-                    bottom: false,
-                    child: ConnectorActivityIndicator(),
                   ),
                 ),
             ],

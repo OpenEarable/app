@@ -7,6 +7,7 @@ import 'package:open_wearable/models/wearable_connector.dart';
 import 'package:open_wearable/models/wearable_display_group.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/common/no_devices_prompt.dart';
+import 'package:open_wearable/widgets/connector_activity_indicator.dart';
 import 'package:open_wearable/widgets/devices/connect_devices_page.dart';
 import 'package:open_wearable/widgets/devices/device_detail/audio_mode_widget.dart';
 import 'package:open_wearable/widgets/devices/device_detail/device_detail_page.dart';
@@ -61,6 +62,7 @@ class _DevicesPageState extends State<DevicesPage> {
         title: PlatformText("Devices"),
         trailingActions: [
           const AppBarRecordingIndicator(),
+          const ConnectorActivityIndicator(),
           PlatformIconButton(
             icon: Icon(context.platformIcons.bluetooth),
             onPressed: () {
