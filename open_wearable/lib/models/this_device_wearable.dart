@@ -79,18 +79,6 @@ class ThisDeviceWearable extends Wearable
   }
 
   Future<void> _initSensors() async {
-    await _registerSensorIfAvailable<GyroscopeEvent>(
-      sensorName: 'Gyroscope',
-      chartTitle: 'Gyroscope',
-      shortChartTitle: 'Gyro',
-      axisNames: ['X', 'Y', 'Z'],
-      axisUnits: ['rad/s', 'rad/s', 'rad/s'],
-      valueExtractor: (event) => SensorDoubleValue(
-        values: [event.x, event.y, event.z],
-        timestamp: event.timestamp.millisecondsSinceEpoch,
-      ),
-      sensorStreamProvider: gyroscopeEventStream,
-    );
     await _registerSensorIfAvailable<AccelerometerEvent>(
       sensorName: 'Accelerometer',
       chartTitle: 'Accelerometer',
@@ -114,6 +102,18 @@ class ThisDeviceWearable extends Wearable
         timestamp: event.timestamp.millisecondsSinceEpoch,
       ),
       sensorStreamProvider: userAccelerometerEventStream,
+    );
+    await _registerSensorIfAvailable<GyroscopeEvent>(
+      sensorName: 'Gyroscope',
+      chartTitle: 'Gyroscope',
+      shortChartTitle: 'Gyro',
+      axisNames: ['X', 'Y', 'Z'],
+      axisUnits: ['rad/s', 'rad/s', 'rad/s'],
+      valueExtractor: (event) => SensorDoubleValue(
+        values: [event.x, event.y, event.z],
+        timestamp: event.timestamp.millisecondsSinceEpoch,
+      ),
+      sensorStreamProvider: gyroscopeEventStream,
     );
     await _registerSensorIfAvailable<MagnetometerEvent>(
       sensorName: 'Magnetometer',
