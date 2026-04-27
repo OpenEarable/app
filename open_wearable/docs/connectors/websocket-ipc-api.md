@@ -2,6 +2,9 @@
 
 This document describes how to communicate with the OpenWearable WebSocket connector.
 
+Python clients can use the [`open-wearables`](https://pypi.org/project/open-wearables/)
+package instead of implementing the JSON WebSocket protocol directly.
+
 ## Endpoint
 
 Default endpoint:
