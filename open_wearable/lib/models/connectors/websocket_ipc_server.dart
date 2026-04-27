@@ -86,6 +86,11 @@ class WebSocketIpcServer implements CommandRuntime {
     );
   }
 
+  /// Updates the client-facing host advertised by command responses.
+  void updateAdvertisedHost(String? host) {
+    _advertisedHost = host?.trim().isEmpty ?? true ? null : host!.trim();
+  }
+
   /// Starts the server with the provided port and path.
   Future<void> start({
     required int port,
@@ -100,7 +105,7 @@ class WebSocketIpcServer implements CommandRuntime {
     );
 
     _httpServer = await HttpServer.bind(_host, _port, shared: true);
-    _advertisedHost = await resolveCurrentDeviceIpAddress();
+    updateAdvertisedHost(await resolveCurrentDeviceIpAddress());
     logger.i(
       '[connector.websocket] listening address=${_httpServer!.address.address} port=${_httpServer!.port} path=$_path advertised_endpoint=${advertisedEndpoint?.toString() ?? 'unavailable'}',
     );
