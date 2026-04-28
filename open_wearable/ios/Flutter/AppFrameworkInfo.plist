@@ -10,6 +10,8 @@
   <string>io.flutter.flutter.app</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
+  <key>MinimumOSVersion</key>
+  <string>13.0</string>
   <key>CFBundleName</key>
   <string>App</string>
   <key>CFBundlePackageType</key>
