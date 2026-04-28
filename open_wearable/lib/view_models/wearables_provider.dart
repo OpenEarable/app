@@ -6,7 +6,7 @@ import 'package:open_wearable/models/device_name_formatter.dart';
 import 'package:open_wearable/models/wearable_display_group.dart';
 import 'package:open_wearable/models/wearable_status_cache.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
-
+import 'package:open_earable_flutter/src/models/error/sensor_error.dart';
 import '../models/logger.dart';
 
 /// Event emitted when a newer firmware version is available for a wearable.
@@ -282,7 +282,7 @@ class WearablesProvider with ChangeNotifier {
         ),
       );
     }
-
+    _handleWearableErrors(wearable);
     // Disconnect listener (sync)
     wearable.addDisconnectListener(() {
       removeWearable(wearable);
@@ -564,4 +564,26 @@ class WearablesProvider with ChangeNotifier {
     unawaited(_wearableEventController.close());
     super.dispose();
   }
+  // Add this method to the WearablesProvider class
+void _handleWearableErrors(Wearable wearable) {
+  wearable.onError.listen((error) {
+    if (error is SensorError) {
+      _emitWearableEvent(
+        WearableErrorEvent(
+          wearable: wearable,
+          errorMessage: error.formattedMessage,
+          description: error.formattedMessage,
+        ),
+      );
+    } else {
+      _emitWearableEvent(
+        WearableErrorEvent(
+          wearable: wearable,
+          errorMessage: error.toString(),
+          description: error.toString(),
+        ),
+      );
+    }
+  });
+}
 }
