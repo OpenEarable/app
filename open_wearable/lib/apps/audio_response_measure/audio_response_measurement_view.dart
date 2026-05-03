@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
@@ -13,6 +15,45 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+
+// Target curve constants mirrored from firmware seal_check_service.c
+const List<double> _kTargetFrequencies = [
+  40.0,
+  60.0,
+  90.0,
+  135.0,
+  202.5,
+  303.75,
+  455.625,
+  683.4375,
+  1025.15625,
+];
+const List<double> _kTargetMagnitudes = [
+  0.90833731,
+  1.18334124,
+  1.38796968,
+  1.16634027,
+  0.85781358,
+  0.65981396,
+  0.84768657,
+  0.98236069,
+  1.00633671,
+];
+
+/// Returns the index in [_kTargetFrequencies] closest to [freqHz] on a log scale.
+int _closestTargetIndex(double freqHz) {
+  int best = 0;
+  double bestDist = double.infinity;
+  final logF = math.log(freqHz);
+  for (int i = 0; i < _kTargetFrequencies.length; i++) {
+    final dist = (logF - math.log(_kTargetFrequencies[i])).abs();
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = i;
+    }
+  }
+  return best;
+}
 
 class AudioResponseMeasurementView extends StatefulWidget {
   const AudioResponseMeasurementView({
@@ -38,6 +79,7 @@ class _AudioResponseMeasurementViewState extends State<AudioResponseMeasurementV
   Object? _error;
   StackTrace? _stack;
   Map<String, dynamic>? _result;
+  bool _showRawValues = false;
 
   @override
   void initState() {
@@ -254,74 +296,370 @@ class _AudioResponseMeasurementViewState extends State<AudioResponseMeasurementV
   Widget _buildResult(ThemeData theme, Map<String, dynamic> result) {
     final int version = (result['version'] as int?) ?? -1;
     final int quality = (result['quality'] as int?) ?? -1;
-
     final double meanMagnitude = (result['mean_magnitude'] as double?) ?? -1;
-    // ignore: unused_local_variable
-    final int numPeaks = (result['num_peaks'] as int?) ?? -1;
 
     final List<dynamic> pointsDyn = (result['points'] as List?) ?? const [];
-    final points = pointsDyn
+    final allPoints = pointsDyn
         .whereType<Map>()
         .map((m) => {
               'frequency_hz': (m['frequency_hz'] as num?)?.toDouble(),
               'frequency_raw_q12_4': (m['frequency_raw_q12_4'] as num?)?.toInt(),
               'magnitude': (m['magnitude'] as num?)?.toDouble(),
-            },)
-        .where((m) => m['frequency_hz'] != null && m['magnitude'] != null)
+            })
+        .where((m) =>
+            m['frequency_hz'] != null &&
+            m['magnitude'] != null &&
+            (m['frequency_hz'] as double) > 0.0)
         .toList();
 
-    // Sort by frequency (just in case)
-    points.sort((a, b) => (a['frequency_hz']!).compareTo(b['frequency_hz']!));
+    // Sort by frequency
+    allPoints.sort((a, b) =>
+        (a['frequency_hz'] as double).compareTo(b['frequency_hz'] as double));
 
-    return ListView(
+    // Normalize magnitudes by average peak magnitude
+    final double avgPeakMag = allPoints.isEmpty
+        ? 1.0
+        : allPoints.map((p) => p['magnitude'] as double).reduce((a, b) => a + b) /
+            allPoints.length;
+    final normMag = avgPeakMag == 0.0 ? 1.0 : avgPeakMag;
+
+    return Column(
       children: [
+        // Summary card
         Card(
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Wrap(
               runSpacing: 8,
-              spacing: 16,
+              spacing: 24,
               children: [
                 _kv(theme, 'Version', '$version'),
-                _kv(theme, 'Quality', '$quality'),
-                _kv(theme, 'Mean Magnitude', '$meanMagnitude'),
-                _kv(theme, 'Points', '${points.length}'),
+                _kv(theme, 'Quality', '$quality / 100'),
+                _kv(theme, 'Mean Magnitude', meanMagnitude.toStringAsFixed(1)),
+                _kv(theme, 'Points', '${allPoints.length}'),
               ],
             ),
           ),
         ),
-        const SizedBox(height: 12),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Text('Response points', style: theme.textTheme.titleMedium),
+        const SizedBox(height: 8),
+        // Chart
+        Expanded(
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 16, 16, 8),
+              child: _buildChart(theme, allPoints, normMag),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Raw values toggle button
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () => setState(() => _showRawValues = !_showRawValues),
+            icon: Icon(_showRawValues ? Icons.expand_less : Icons.expand_more),
+            label: Text(_showRawValues ? 'Hide raw values' : 'View raw values'),
+          ),
+        ),
+        // Raw values table
+        if (_showRawValues) ...[
+          const SizedBox(height: 8),
+          _buildRawValuesTable(theme, allPoints, normMag),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildChart(
+    ThemeData theme,
+    List<Map<String, dynamic>> points,
+    double normMag,
+  ) {
+    final colorScheme = theme.colorScheme;
+    final measuredColor = colorScheme.primary;
+    final targetColor = colorScheme.tertiary;
+
+    // Measured spots: x = log10(freq), y = normalizedMagnitude
+    final measuredSpots = points.map((p) {
+      final freq = p['frequency_hz']!;
+      final mag = p['magnitude']!;
+      return FlSpot(math.log(freq) / math.ln10, mag / normMag);
+    }).toList();
+
+    // Target spots
+    final targetSpots = List.generate(_kTargetFrequencies.length, (i) {
+      return FlSpot(
+        math.log(_kTargetFrequencies[i]) / math.ln10,
+        _kTargetMagnitudes[i],
+      );
+    });
+
+    // X axis ticks at target frequencies
+    final xTicks = _kTargetFrequencies
+        .map((f) => math.log(f) / math.ln10)
+        .toList();
+
+    final allYValues = [
+      ...measuredSpots.map((s) => s.y),
+      ..._kTargetMagnitudes,
+    ];
+    final maxY = allYValues.reduce(math.max);
+    final yMax = (maxY * 1.2).clamp(1.5, 2.5);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Legend
+        Row(
+          children: [
+            _legendDot(measuredColor, 'Measured'),
+            const SizedBox(width: 16),
+            _legendDash(targetColor, 'Target'),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: LineChart(
+            LineChartData(
+              minX: xTicks.first - 0.05,
+              maxX: xTicks.last + 0.05,
+              minY: 0,
+              maxY: yMax,
+              clipData: const FlClipData.all(),
+              lineBarsData: [
+                // Target line (dashed)
+                LineChartBarData(
+                  spots: targetSpots,
+                  color: targetColor,
+                  barWidth: 2,
+                  dotData: FlDotData(
+                    show: true,
+                    getDotPainter: (spot, percent, bar, index) =>
+                        FlDotCirclePainter(
+                      radius: 3,
+                      color: targetColor,
+                      strokeWidth: 0,
+                      strokeColor: Colors.transparent,
+                    ),
+                  ),
+                  dashArray: [6, 4],
+                  isCurved: true,
+                  curveSmoothness: 0.2,
+                  belowBarData: BarAreaData(show: false),
                 ),
-                const Divider(height: 1),
-                ...points.map((p) {
-                  final f = p['frequency_hz']!;
-                  final mag = p['magnitude']!;
-                  final raw = p['frequency_raw_q12_4'] as int?;
-
-                  final subtitle = raw == null
-                      ? 'magnitude (uint16 units)'
-                      : 'freq raw (Q12.4): $raw • magnitude (uint16 units)';
-
-                  return ListTile(
-                    dense: true,
-                    title: Text('${f.toStringAsFixed(2)} Hz'),
-                    trailing: Text(mag.toStringAsFixed(0)),
-                    subtitle: Text(subtitle),
-                  );
-                }),
+                // Measured line
+                if (measuredSpots.isNotEmpty)
+                  LineChartBarData(
+                    spots: measuredSpots,
+                    color: measuredColor,
+                    barWidth: 2.5,
+                    dotData: FlDotData(
+                      show: true,
+                      getDotPainter: (spot, percent, bar, index) =>
+                          FlDotCirclePainter(
+                        radius: 4,
+                        color: measuredColor,
+                        strokeWidth: 0,
+                        strokeColor: Colors.transparent,
+                      ),
+                    ),
+                    isCurved: true,
+                    curveSmoothness: 0.2,
+                    belowBarData: BarAreaData(show: false),
+                  ),
               ],
+              titlesData: FlTitlesData(
+                leftTitles: AxisTitles(
+                  axisNameWidget: Text(
+                    'Normalized magnitude',
+                    style: theme.textTheme.labelSmall,
+                  ),
+                  axisNameSize: 16,
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 36,
+                    interval: 0.5,
+                    getTitlesWidget: (value, meta) => SideTitleWidget(
+                      meta: meta,
+                      child: Text(
+                        value.toStringAsFixed(1),
+                        style: theme.textTheme.labelSmall,
+                      ),
+                    ),
+                  ),
+                ),
+                bottomTitles: AxisTitles(
+                  axisNameWidget: Text(
+                    'Frequency (Hz)',
+                    style: theme.textTheme.labelSmall,
+                  ),
+                  axisNameSize: 16,
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 32,
+                    getTitlesWidget: (value, meta) {
+                      // Show label only at target frequency positions
+                      final matchIdx = xTicks.indexWhere(
+                          (x) => (x - value).abs() < 0.001);
+                      if (matchIdx < 0) return const SizedBox.shrink();
+                      final freq = _kTargetFrequencies[matchIdx];
+                      final label = freq < 100
+                          ? freq.toStringAsFixed(0)
+                          : freq >= 1000
+                              ? '${(freq / 1000).toStringAsFixed(1)}k'
+                              : freq.toStringAsFixed(0);
+                      return SideTitleWidget(
+                        meta: meta,
+                        angle: -0.5,
+                        child: Text(
+                          label,
+                          style: theme.textTheme.labelSmall,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                topTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                rightTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+              ),
+              gridData: FlGridData(
+                show: true,
+                drawVerticalLine: true,
+                getDrawingVerticalLine: (value) => FlLine(
+                  color: theme.dividerColor.withAlpha(80),
+                  strokeWidth: 0.8,
+                ),
+                getDrawingHorizontalLine: (value) => FlLine(
+                  color: theme.dividerColor.withAlpha(80),
+                  strokeWidth: 0.8,
+                ),
+                verticalInterval: 0.01,
+                checkToShowVerticalLine: (value) =>
+                    xTicks.any((x) => (x - value).abs() < 0.001),
+              ),
+              borderData: FlBorderData(
+                show: true,
+                border: Border(
+                  bottom: BorderSide(color: theme.dividerColor),
+                  left: BorderSide(color: theme.dividerColor),
+                ),
+              ),
+              lineTouchData: LineTouchData(
+                touchTooltipData: LineTouchTooltipData(
+                  getTooltipItems: (touchedSpots) {
+                    return touchedSpots.map((s) {
+                      final freq = math.pow(10, s.x).toDouble();
+                      final isTarget = s.barIndex == 0;
+                      return LineTooltipItem(
+                        '${freq.toStringAsFixed(1)} Hz\n${s.y.toStringAsFixed(3)}',
+                        TextStyle(
+                          color: isTarget ? targetColor : measuredColor,
+                          fontSize: 12,
+                        ),
+                      );
+                    }).toList();
+                  },
+                ),
+              ),
             ),
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildRawValuesTable(
+    ThemeData theme,
+    List<Map<String, dynamic>> points,
+    double normMag,
+  ) {
+    if (points.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(8),
+        child: Text('No data points.'),
+      );
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Text('Raw values', style: theme.textTheme.titleMedium),
+            ),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                columnSpacing: 16,
+                headingRowHeight: 32,
+                dataRowMinHeight: 28,
+                dataRowMaxHeight: 36,
+                columns: const [
+                  DataColumn(label: Text('Freq (Hz)')),
+                  DataColumn(label: Text('Magnitude'), numeric: true),
+                  DataColumn(label: Text('Norm. Mag'), numeric: true),
+                  DataColumn(label: Text('Target Freq (Hz)')),
+                  DataColumn(label: Text('Target Mag'), numeric: true),
+                ],
+                rows: points.map((point) {
+                  final freq = point['frequency_hz']!;
+                  final mag = point['magnitude']!;
+                  final normM = mag / normMag;
+                  final tIdx = _closestTargetIndex(freq);
+                  final tFreq = _kTargetFrequencies[tIdx];
+                  final tMag = _kTargetMagnitudes[tIdx];
+
+                  return DataRow(cells: [
+                    DataCell(Text(freq.toStringAsFixed(2))),
+                    DataCell(Text(mag.toStringAsFixed(0))),
+                    DataCell(Text(normM.toStringAsFixed(3))),
+                    DataCell(Text(tFreq.toStringAsFixed(3))),
+                    DataCell(Text(tMag.toStringAsFixed(5))),
+                  ]);
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _legendDot(Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 4),
+        Text(label, style: const TextStyle(fontSize: 12)),
+      ],
+    );
+  }
+
+  Widget _legendDash(Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 20,
+          height: 2,
+          child: CustomPaint(
+            painter: _DashPainter(color: color),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(label, style: const TextStyle(fontSize: 12)),
       ],
     );
   }
@@ -336,4 +674,30 @@ class _AudioResponseMeasurementViewState extends State<AudioResponseMeasurementV
       ],
     );
   }
+}
+
+class _DashPainter extends CustomPainter {
+  final Color color;
+  const _DashPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2;
+    const dashWidth = 5.0;
+    const gap = 3.0;
+    double x = 0;
+    while (x < size.width) {
+      canvas.drawLine(
+        Offset(x, size.height / 2),
+        Offset((x + dashWidth).clamp(0, size.width), size.height / 2),
+        paint,
+      );
+      x += dashWidth + gap;
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashPainter old) => old.color != color;
 }
