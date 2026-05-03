@@ -239,38 +239,41 @@ class _AudioResponseMeasurementViewState
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: _isMeasuring ? null : _startMeasurement,
-                    icon: const Icon(Icons.play_arrow),
-                    label: Text(_isMeasuring ? 'Measuring…' : 'Measure'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: _isMeasuring ? null : _startMeasurement,
+                      icon: const Icon(Icons.play_arrow),
+                      label: Text(_isMeasuring ? 'Measuring…' : 'Measure'),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                OutlinedButton.icon(
-                  onPressed: (_isMeasuring || !_hasAnyResult)
-                      ? null
-                      : () async {
-                          final combined = {
-                            if (_leftResult != null) 'left': _leftResult!,
-                            if (_rightResult != null) 'right': _rightResult!,
-                          };
-                          final path =
-                              await _saveResultToDownloadsAsJson(combined);
-                          final msg = path == null
-                              ? 'Not saved — either not supported or you canceled.'
-                              : 'Saved to: $path';
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(msg)),
-                          );
-                        },
-                  icon: const Icon(Icons.download),
-                  label: const Text('Save JSON'),
-                ),
-              ],
+                  const SizedBox(width: 12),
+                  OutlinedButton.icon(
+                    onPressed: (_isMeasuring || !_hasAnyResult)
+                        ? null
+                        : () async {
+                            final combined = {
+                              if (_leftResult != null) 'left': _leftResult!,
+                              if (_rightResult != null) 'right': _rightResult!,
+                            };
+                            final path =
+                                await _saveResultToDownloadsAsJson(combined);
+                            final msg = path == null
+                                ? 'Not saved — either not supported or you canceled.'
+                                : 'Saved to: $path';
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(msg)),
+                            );
+                          },
+                    icon: const Icon(Icons.download),
+                    label: const Text('Save JSON'),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 16),
             Expanded(
@@ -387,28 +390,57 @@ class _AudioResponseMeasurementViewState
     final leftQuality = leftPoints.isNotEmpty ? _computeSealQuality(leftPoints) : null;
     final rightQuality = rightPoints.isNotEmpty ? _computeSealQuality(rightPoints) : null;
 
-    return Column(
-      children: [
-        // Summary card
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Wrap(
-              runSpacing: 8,
-              spacing: 24,
-              children: [
-                if (leftQuality != null)
-                  _kv(theme, 'Left Quality',
-                      '${leftQuality.round()} / 100'),
-                if (rightQuality != null)
-                  _kv(theme, 'Right Quality',
-                      '${rightQuality.round()} / 100'),
-              ],
-            ),
-          ),
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+        // Summary cards
+        Row(
+          children: [
+            if (leftQuality != null) ...[
+              Expanded(
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text('Left Quality',
+                            style: theme.textTheme.labelMedium),
+                        const SizedBox(height: 4),
+                        Text('${leftQuality.round()} / 100',
+                            style: theme.textTheme.titleLarge),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              if (rightQuality != null) const SizedBox(width: 8),
+            ],
+            if (rightQuality != null)
+              Expanded(
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text('Right Quality',
+                            style: theme.textTheme.labelMedium),
+                        const SizedBox(height: 4),
+                        Text('${rightQuality.round()} / 100',
+                            style: theme.textTheme.titleLarge),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
         const SizedBox(height: 8),
-        Expanded(
+        SizedBox(
+          height: 320,
           child: Card(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(8, 16, 16, 8),
@@ -431,6 +463,7 @@ class _AudioResponseMeasurementViewState
           _buildRawValuesTabs(theme, leftPoints, rightPoints, normMag),
         ],
       ],
+      ),
     );
   }
 
@@ -449,29 +482,31 @@ class _AudioResponseMeasurementViewState
     double _toDb(double mag) =>
         20.0 * math.log(mag / normMag) / math.ln10;
 
-    List<FlSpot> _toSpots(List<Map<String, dynamic>> pts) => pts
-        .map((p) => FlSpot(
-              math.log(p['frequency_hz'] as double) / math.ln10,
-              _toDb(p['magnitude'] as double),
-            ))
-        .toList();
+    // Use frequency INDEX (0–8) as X so fl_chart tick placement is trivial.
+    // Each index corresponds to _kTargetFrequencies[index].
+    List<FlSpot> _toSpots(List<Map<String, dynamic>> pts) {
+      final spots = <FlSpot>[];
+      for (final p in pts) {
+        final freq = p['frequency_hz'] as double;
+        if (freq <= 0) continue;
+        spots.add(FlSpot(
+          _closestTargetIndex(freq).toDouble(),
+          _toDb(p['magnitude'] as double),
+        ));
+      }
+      return spots;
+    }
 
     final leftSpots = _toSpots(leftPoints);
     final rightSpots = _toSpots(rightPoints);
 
-    // Target spots — target magnitudes are already normalised ratios
-    // Convert them to dB using normMag=1 reference (they're relative)
+    // Target spots at integer indices; dB re 1.0
     final targetSpots = List.generate(_kTargetFrequencies.length, (i) {
-      // Target mags are normalised, so "dB" relative to mean target
-      // Use fixed reference: dB re 1.0 (i.e. 20*log10(targetMag))
       return FlSpot(
-        math.log(_kTargetFrequencies[i]) / math.ln10,
+        i.toDouble(),
         20.0 * math.log(_kTargetMagnitudes[i]) / math.ln10,
       );
     });
-
-    final xTicks =
-        _kTargetFrequencies.map((f) => math.log(f) / math.ln10).toList();
 
     final allYValues = [
       ...leftSpots.map((s) => s.y),
@@ -559,8 +594,8 @@ class _AudioResponseMeasurementViewState
         Expanded(
           child: LineChart(
             LineChartData(
-              minX: xTicks.first - 0.05,
-              maxX: xTicks.last + 0.05,
+              minX: -0.5,
+              maxX: 8.5,
               minY: yMin,
               maxY: yMax,
               clipData: const FlClipData.all(),
@@ -574,7 +609,7 @@ class _AudioResponseMeasurementViewState
                   axisNameSize: 16,
                   sideTitles: SideTitles(
                     showTitles: true,
-                    reservedSize: 40,
+                    reservedSize: 52,
                     interval: 3,
                     getTitlesWidget: (value, meta) => SideTitleWidget(
                       meta: meta,
@@ -593,22 +628,26 @@ class _AudioResponseMeasurementViewState
                   axisNameSize: 16,
                   sideTitles: SideTitles(
                     showTitles: true,
-                    reservedSize: 32,
+                    reservedSize: 48,
+                    interval: 1.0,
                     getTitlesWidget: (value, meta) {
-                      final matchIdx = xTicks
-                          .indexWhere((x) => (x - value).abs() < 0.001);
-                      if (matchIdx < 0) return const SizedBox.shrink();
-                      final freq = _kTargetFrequencies[matchIdx];
-                      final label = freq < 100
-                          ? freq.toStringAsFixed(0)
-                          : freq >= 1000
-                              ? '${(freq / 1000).toStringAsFixed(1)}k'
-                              : freq.toStringAsFixed(0);
+                      final idx = value.round();
+                      if ((value - idx).abs() > 0.01 ||
+                          idx < 0 ||
+                          idx >= _kTargetFrequencies.length) {
+                        return const SizedBox.shrink();
+                      }
+                      final freq = _kTargetFrequencies[idx];
+                      final label = freq >= 1000
+                          ? '${(freq / 1000).toStringAsFixed(1)}k'
+                          : freq.toStringAsFixed(0);
                       return SideTitleWidget(
                         meta: meta,
-                        angle: -0.5,
-                        child: Text(label,
-                            style: theme.textTheme.labelSmall),
+                        angle: -math.pi / 3,
+                        child: Text(
+                          label,
+                          style: theme.textTheme.labelSmall,
+                        ),
                       );
                     },
                   ),
@@ -629,9 +668,13 @@ class _AudioResponseMeasurementViewState
                   color: theme.dividerColor.withAlpha(80),
                   strokeWidth: 0.8,
                 ),
-                verticalInterval: 0.01,
-                checkToShowVerticalLine: (value) =>
-                    xTicks.any((x) => (x - value).abs() < 0.001),
+                verticalInterval: 1.0,
+                checkToShowVerticalLine: (value) {
+                  final idx = value.round();
+                  return (value - idx).abs() < 0.01 &&
+                      idx >= 0 &&
+                      idx < _kTargetFrequencies.length;
+                },
               ),
               borderData: FlBorderData(
                 show: true,
@@ -642,9 +685,11 @@ class _AudioResponseMeasurementViewState
               ),
               lineTouchData: LineTouchData(
                 touchTooltipData: LineTouchTooltipData(
+                  getTooltipColor: (_) => Colors.grey.shade300,
                   getTooltipItems: (touchedSpots) {
                     return touchedSpots.map((s) {
-                      final freq = math.pow(10, s.x).toDouble();
+                      final idx = s.x.round().clamp(0, _kTargetFrequencies.length - 1);
+                      final freq = _kTargetFrequencies[idx];
                       final Color c;
                       final String sideLabel;
                       if (s.barIndex == 0) {
@@ -819,17 +864,6 @@ class _AudioResponseMeasurementViewState
         ),
         const SizedBox(width: 4),
         Text(label, style: const TextStyle(fontSize: 12)),
-      ],
-    );
-  }
-
-  Widget _kv(ThemeData theme, String k, String v) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(k, style: theme.textTheme.labelMedium),
-        Text(v, style: theme.textTheme.titleMedium),
       ],
     );
   }
