@@ -3,6 +3,7 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/apps/audio_response_measure/audio_response_measurement_view.dart';
+import 'package:open_wearable/apps/audio_response_measure/select_audio_response_pair_view.dart';
 import 'package:open_wearable/apps/heart_tracker/widgets/heart_tracker_page.dart';
 import 'package:open_wearable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_wearable/apps/models/sensor_matching.dart';
@@ -173,22 +174,10 @@ final List<AppInfo> _apps = [
     description: "Measure and store audio responses",
     supportedDevices: _audioResponseSupportedDevices,
     accentColor: _appAccentColor,
-    widget: SelectEarableView(
+    widget: SelectAudioResponsePairView(
       supportedDevices: _audioResponseSupportedDevices,
-      startApp: (wearable, _) async {
-        final manager = wearable.getCapability<AudioResponseManager>();
-        if (manager != null) {
-          return AudioResponseMeasurementView(manager: manager);
-        } else {
-          return PlatformScaffold(
-            appBar: PlatformAppBar(
-              title: PlatformText("Audio Response Measurement"),
-            ),
-            body: Center(
-              child: PlatformText("Audio Response Measurement not supported on this device."),
-            ),
-          );
-        }
+      startApp: (left, right) async {
+        return AudioResponseMeasurementView(left: left, right: right);
       },
     ),
   ),
