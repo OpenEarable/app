@@ -16,6 +16,44 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+// Firmware constants for seal quality computation (mirrored from seal_check_service.c)
+const double _kAvgMagnitude = 119.0;
+const double _kAvgSlope = -0.07382279460490486;
+
+/// Computes seal quality score (0–100) from measured peaks,
+/// replicating the firmware calculation in seal_check_service.c.
+double _computeSealQuality(List<Map<String, dynamic>> points) {
+  if (points.length < 2) return 0.0;
+  final mags = points.map((p) => p['magnitude'] as double).toList();
+  final freqs = points.map((p) => p['frequency_hz'] as double).toList();
+  final avgPeakMag = mags.reduce((a, b) => a + b) / mags.length;
+
+  // MSE: compare each measured peak (normalised) to closest target magnitude
+  double mse = 0.0;
+  for (int i = 0; i < points.length; i++) {
+    final tIdx = _closestTargetIndex(freqs[i]);
+    final err = mags[i] / avgPeakMag - _kTargetMagnitudes[tIdx];
+    mse += err * err;
+  }
+  mse /= points.length;
+
+  // Linear regression: magnitude vs ln(frequency)
+  final logFreqs = freqs.map((f) => math.log(f)).toList();
+  final meanLogFreq = logFreqs.reduce((a, b) => a + b) / logFreqs.length;
+  double num = 0.0, den = 0.0;
+  for (int i = 0; i < points.length; i++) {
+    final dLog = logFreqs[i] - meanLogFreq;
+    num += dLog * (mags[i] - avgPeakMag);
+    den += dLog * dLog;
+  }
+  final slope = den == 0 ? 0.0 : num / den;
+
+  final q = math.min(avgPeakMag / _kAvgMagnitude, 1.0) -
+      mse -
+      (slope / _kAvgMagnitude - _kAvgSlope);
+  return (q * 100.0).clamp(0.0, 100.0);
+}
+
 // Target curve constants mirrored from firmware seal_check_service.c
 const List<double> _kTargetFrequencies = [
   40.0,
@@ -346,9 +384,8 @@ class _AudioResponseMeasurementViewState
     final normMag =
         allMags.isEmpty ? 1.0 : allMags.reduce((a, b) => a + b) / allMags.length;
 
-    int _quality(Map<String, dynamic>? r) => (r?['quality'] as int?) ?? -1;
-    double _meanMag(Map<String, dynamic>? r) =>
-        (r?['mean_magnitude'] as double?) ?? -1;
+    final leftQuality = leftPoints.isNotEmpty ? _computeSealQuality(leftPoints) : null;
+    final rightQuality = rightPoints.isNotEmpty ? _computeSealQuality(rightPoints) : null;
 
     return Column(
       children: [
@@ -360,17 +397,12 @@ class _AudioResponseMeasurementViewState
               runSpacing: 8,
               spacing: 24,
               children: [
-                if (_leftResult != null) ...[
-                  _kv(theme, 'Left Quality', '${_quality(_leftResult)} / 100'),
-                  _kv(theme, 'Left Mean Mag',
-                      _meanMag(_leftResult).toStringAsFixed(1)),
-                ],
-                if (_rightResult != null) ...[
+                if (leftQuality != null)
+                  _kv(theme, 'Left Quality',
+                      '${leftQuality.round()} / 100'),
+                if (rightQuality != null)
                   _kv(theme, 'Right Quality',
-                      '${_quality(_rightResult)} / 100'),
-                  _kv(theme, 'Right Mean Mag',
-                      _meanMag(_rightResult).toStringAsFixed(1)),
-                ],
+                      '${rightQuality.round()} / 100'),
               ],
             ),
           ),
@@ -396,10 +428,7 @@ class _AudioResponseMeasurementViewState
         ),
         if (_showRawValues) ...[
           const SizedBox(height: 8),
-          if (leftPoints.isNotEmpty)
-            _buildRawValuesTable(theme, leftPoints, normMag, label: 'Left'),
-          if (rightPoints.isNotEmpty)
-            _buildRawValuesTable(theme, rightPoints, normMag, label: 'Right'),
+          _buildRawValuesTabs(theme, leftPoints, rightPoints, normMag),
         ],
       ],
     );
@@ -412,25 +441,32 @@ class _AudioResponseMeasurementViewState
     double normMag,
   ) {
     final colorScheme = theme.colorScheme;
-    final leftColor = colorScheme.primary;
+    const leftColor = Colors.blue;
     final rightColor = colorScheme.error;
     final targetColor = colorScheme.tertiary;
+
+    // Convert to dB: 20 * log10(mag / normMag)
+    double _toDb(double mag) =>
+        20.0 * math.log(mag / normMag) / math.ln10;
 
     List<FlSpot> _toSpots(List<Map<String, dynamic>> pts) => pts
         .map((p) => FlSpot(
               math.log(p['frequency_hz'] as double) / math.ln10,
-              (p['magnitude'] as double) / normMag,
+              _toDb(p['magnitude'] as double),
             ))
         .toList();
 
     final leftSpots = _toSpots(leftPoints);
     final rightSpots = _toSpots(rightPoints);
 
-    // Target spots
+    // Target spots — target magnitudes are already normalised ratios
+    // Convert them to dB using normMag=1 reference (they're relative)
     final targetSpots = List.generate(_kTargetFrequencies.length, (i) {
+      // Target mags are normalised, so "dB" relative to mean target
+      // Use fixed reference: dB re 1.0 (i.e. 20*log10(targetMag))
       return FlSpot(
         math.log(_kTargetFrequencies[i]) / math.ln10,
-        _kTargetMagnitudes[i],
+        20.0 * math.log(_kTargetMagnitudes[i]) / math.ln10,
       );
     });
 
@@ -440,10 +476,12 @@ class _AudioResponseMeasurementViewState
     final allYValues = [
       ...leftSpots.map((s) => s.y),
       ...rightSpots.map((s) => s.y),
-      ..._kTargetMagnitudes,
+      ...targetSpots.map((s) => s.y),
     ];
-    final maxY = allYValues.isEmpty ? 1.5 : allYValues.reduce(math.max);
-    final yMax = (maxY * 1.2).clamp(1.5, 2.5);
+    final rawMin = allYValues.isEmpty ? -10.0 : allYValues.reduce(math.min);
+    final rawMax = allYValues.isEmpty ? 6.0 : allYValues.reduce(math.max);
+    final yMin = ((rawMin - 3).floorToDouble()).clamp(-30.0, -3.0);
+    final yMax = ((rawMax + 3).ceilToDouble()).clamp(3.0, 15.0);
 
     final lineBars = <LineChartBarData>[
       // Target (dashed)
@@ -523,25 +561,25 @@ class _AudioResponseMeasurementViewState
             LineChartData(
               minX: xTicks.first - 0.05,
               maxX: xTicks.last + 0.05,
-              minY: 0,
+              minY: yMin,
               maxY: yMax,
               clipData: const FlClipData.all(),
               lineBarsData: lineBars,
               titlesData: FlTitlesData(
                 leftTitles: AxisTitles(
                   axisNameWidget: Text(
-                    'Normalized magnitude',
+                    'Magnitude (dB)',
                     style: theme.textTheme.labelSmall,
                   ),
                   axisNameSize: 16,
                   sideTitles: SideTitles(
                     showTitles: true,
-                    reservedSize: 36,
-                    interval: 0.5,
+                    reservedSize: 40,
+                    interval: 3,
                     getTitlesWidget: (value, meta) => SideTitleWidget(
                       meta: meta,
                       child: Text(
-                        value.toStringAsFixed(1),
+                        '${value.toStringAsFixed(0)} dB',
                         style: theme.textTheme.labelSmall,
                       ),
                     ),
@@ -620,7 +658,7 @@ class _AudioResponseMeasurementViewState
                         sideLabel = 'Right';
                       }
                       return LineTooltipItem(
-                        '$sideLabel\n${freq.toStringAsFixed(1)} Hz\n${s.y.toStringAsFixed(3)}',
+                        '$sideLabel\n${freq.toStringAsFixed(1)} Hz\n${s.y.toStringAsFixed(1)} dB',
                         TextStyle(color: c, fontSize: 12),
                       );
                     }).toList();
@@ -631,6 +669,61 @@ class _AudioResponseMeasurementViewState
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildRawValuesTabs(
+    ThemeData theme,
+    List<Map<String, dynamic>> leftPoints,
+    List<Map<String, dynamic>> rightPoints,
+    double normMag,
+  ) {
+    final tabs = <({String label, List<Map<String, dynamic>> points})>[];
+    if (leftPoints.isNotEmpty) tabs.add((label: 'Left', points: leftPoints));
+    if (rightPoints.isNotEmpty) tabs.add((label: 'Right', points: rightPoints));
+    if (tabs.isEmpty) return const SizedBox.shrink();
+
+    // Single side: show table directly without tabs
+    if (tabs.length == 1) {
+      return SizedBox(
+        height: 300,
+        child: _buildRawValuesTable(
+          theme,
+          tabs.first.points,
+          normMag,
+          label: tabs.first.label,
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 300,
+      child: DefaultTabController(
+        length: tabs.length,
+        child: Card(
+          child: Column(
+            children: [
+              TabBar(
+                tabs: tabs.map((t) => Tab(text: t.label)).toList(),
+              ),
+              Expanded(
+                child: TabBarView(
+                  children: tabs
+                      .map((t) => SingleChildScrollView(
+                            child: _buildRawValuesTable(
+                              theme,
+                              t.points,
+                              normMag,
+                              label: t.label,
+                            ),
+                          ))
+                      .toList(),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -670,24 +763,24 @@ class _AudioResponseMeasurementViewState
                 columns: const [
                   DataColumn(label: Text('Freq (Hz)')),
                   DataColumn(label: Text('Magnitude'), numeric: true),
-                  DataColumn(label: Text('Norm. Mag'), numeric: true),
+                  DataColumn(label: Text('dB'), numeric: true),
                   DataColumn(label: Text('Target Freq (Hz)')),
-                  DataColumn(label: Text('Target Mag'), numeric: true),
+                  DataColumn(label: Text('Target (dB)'), numeric: true),
                 ],
                 rows: points.map((point) {
-                  final freq = point['frequency_hz']!;
-                  final mag = point['magnitude']!;
-                  final normM = mag / normMag;
+                  final freq = point['frequency_hz'] as double;
+                  final mag = point['magnitude'] as double;
+                  final db = 20.0 * math.log(mag / normMag) / math.ln10;
                   final tIdx = _closestTargetIndex(freq);
                   final tFreq = _kTargetFrequencies[tIdx];
-                  final tMag = _kTargetMagnitudes[tIdx];
+                  final tDb = 20.0 * math.log(_kTargetMagnitudes[tIdx]) / math.ln10;
 
                   return DataRow(cells: [
                     DataCell(Text(freq.toStringAsFixed(2))),
                     DataCell(Text(mag.toStringAsFixed(0))),
-                    DataCell(Text(normM.toStringAsFixed(3))),
+                    DataCell(Text('${db.toStringAsFixed(1)} dB')),
                     DataCell(Text(tFreq.toStringAsFixed(3))),
-                    DataCell(Text(tMag.toStringAsFixed(5))),
+                    DataCell(Text('${tDb.toStringAsFixed(1)} dB')),
                   ]);
                 }).toList(),
               ),
