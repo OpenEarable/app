@@ -176,8 +176,9 @@ final List<AppInfo> _apps = [
     widget: SelectEarableView(
       supportedDevices: _audioResponseSupportedDevices,
       startApp: (wearable, _) async {
-        if (wearable is AudioResponseManager) {
-          return AudioResponseMeasurementView(manager: wearable as AudioResponseManager);
+        final manager = wearable.getCapability<AudioResponseManager>();
+        if (manager != null) {
+          return AudioResponseMeasurementView(manager: manager);
         } else {
           return PlatformScaffold(
             appBar: PlatformAppBar(
