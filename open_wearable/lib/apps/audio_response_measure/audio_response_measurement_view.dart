@@ -58,12 +58,15 @@ int _closestTargetIndex(double freqHz) {
 class AudioResponseMeasurementView extends StatefulWidget {
   const AudioResponseMeasurementView({
     super.key,
-    required this.manager,
+    this.left,
+    this.right,
     this.parameters = const {},
     this.title = 'Audio Response',
-  });
+  }) : assert(left != null || right != null,
+            'At least one of left or right must be provided');
 
-  final AudioResponseManager manager;
+  final AudioResponseManager? left;
+  final AudioResponseManager? right;
 
   /// Parameters passed to measureAudioResponse (can be empty)
   final Map<String, dynamic> parameters;
@@ -71,20 +74,25 @@ class AudioResponseMeasurementView extends StatefulWidget {
   final String title;
 
   @override
-  State<AudioResponseMeasurementView> createState() => _AudioResponseMeasurementViewState();
+  State<AudioResponseMeasurementView> createState() =>
+      _AudioResponseMeasurementViewState();
 }
 
-class _AudioResponseMeasurementViewState extends State<AudioResponseMeasurementView> {
+class _AudioResponseMeasurementViewState
+    extends State<AudioResponseMeasurementView> {
   bool _isMeasuring = false;
   Object? _error;
   StackTrace? _stack;
-  Map<String, dynamic>? _result;
+  Map<String, dynamic>? _leftResult;
+  Map<String, dynamic>? _rightResult;
   bool _showRawValues = false;
+
+  bool get _hasBothSides => widget.left != null && widget.right != null;
+  bool get _hasAnyResult => _leftResult != null || _rightResult != null;
 
   @override
   void initState() {
     super.initState();
-    // Measurement is triggered by user button press.
   }
 
   String _two(int v) => v.toString().padLeft(2, '0');
@@ -95,45 +103,32 @@ class _AudioResponseMeasurementViewState extends State<AudioResponseMeasurementV
   }
 
   Future<String?> _saveResultToDownloadsAsJson(Map<String, dynamic> result) async {
-    // Web: stub (no dart:html here; add conditional import helper if you want real downloads)
-    if (kIsWeb) {
-      return null;
-    }
+    if (kIsWeb) return null;
 
     final now = DateTime.now();
     final fileName = 'audio_response_${_timestampForFilename(now)}.json';
 
-    // Android: let user pick a target directory.
     if (Platform.isAndroid) {
       final dirPath = await FilePicker.platform.getDirectoryPath();
-      if (dirPath == null || dirPath.isEmpty) {
-        // User canceled.
-        return null;
-      }
+      if (dirPath == null || dirPath.isEmpty) return null;
       final String path = p.join(dirPath, fileName);
-      final encoder = const JsonEncoder.withIndent('  ');
-      final jsonStr = encoder.convert(result);
-      final file = File(path);
-      await file.writeAsString(jsonStr, flush: true);
+      await File(path).writeAsString(
+          const JsonEncoder.withIndent('  ').convert(result),
+          flush: true);
       return path;
     }
 
-    // iOS: save to Downloads if possible (fallback to app docs).
     Directory? downloads;
     try {
       downloads = await getDownloadsDirectory();
     } catch (_) {
       downloads = null;
     }
-
-    final Directory dir = downloads ?? await getApplicationDocumentsDirectory();
+    final dir = downloads ?? await getApplicationDocumentsDirectory();
     final String path = p.join(dir.path, fileName);
-
-    final encoder = const JsonEncoder.withIndent('  ');
-    final jsonStr = encoder.convert(result);
-
-    final file = File(path);
-    await file.writeAsString(jsonStr, flush: true);
+    await File(path).writeAsString(
+        const JsonEncoder.withIndent('  ').convert(result),
+        flush: true);
     return path;
   }
 
@@ -142,24 +137,42 @@ class _AudioResponseMeasurementViewState extends State<AudioResponseMeasurementV
       _isMeasuring = true;
       _error = null;
       _stack = null;
-      _result = null;
+      _leftResult = null;
+      _rightResult = null;
     });
 
     try {
-      final res = await widget.manager.measureAudioResponse(widget.parameters);
-      // final savedPath = await _saveResultToDownloadsAsJson(res);
+      // Run both sides in parallel
+      final futures = <Future<(bool isLeft, Map<String, dynamic> res)>>[];
+      if (widget.left != null) {
+        futures.add(widget.left!
+            .measureAudioResponse(widget.parameters)
+            .then((r) => (true, r)));
+      }
+      if (widget.right != null) {
+        futures.add(widget.right!
+            .measureAudioResponse(widget.parameters)
+            .then((r) => (false, r)));
+      }
+
+      final results = await Future.wait(futures);
       if (!mounted) return;
+
+      Map<String, dynamic>? leftRes;
+      Map<String, dynamic>? rightRes;
+      for (final (isLeft, res) in results) {
+        if (isLeft) {
+          leftRes = res;
+        } else {
+          rightRes = res;
+        }
+      }
+
       setState(() {
-        _result = res;
+        _leftResult = leftRes;
+        _rightResult = rightRes;
         _isMeasuring = false;
       });
-      if (!context.mounted) return;
-      // final msg = savedPath == null
-      //     ? 'Measured. (Not saved — either not supported or you canceled folder selection.)'
-      //     : 'Measured and saved to: $savedPath';
-      // ScaffoldMessenger.of(context).showSnackBar(
-      //   SnackBar(content: Text(msg)),
-      // );
     } catch (e, st) {
       if (!mounted) return;
       setState(() {
@@ -199,12 +212,17 @@ class _AudioResponseMeasurementViewState extends State<AudioResponseMeasurementV
                 ),
                 const SizedBox(width: 12),
                 OutlinedButton.icon(
-                  onPressed: (_isMeasuring || _result == null)
+                  onPressed: (_isMeasuring || !_hasAnyResult)
                       ? null
                       : () async {
-                          final path = await _saveResultToDownloadsAsJson(_result!);
+                          final combined = {
+                            if (_leftResult != null) 'left': _leftResult!,
+                            if (_rightResult != null) 'right': _rightResult!,
+                          };
+                          final path =
+                              await _saveResultToDownloadsAsJson(combined);
                           final msg = path == null
-                              ? 'Not saved — either not supported or you canceled folder selection.'
+                              ? 'Not saved — either not supported or you canceled.'
                               : 'Saved to: $path';
                           if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -222,8 +240,8 @@ class _AudioResponseMeasurementViewState extends State<AudioResponseMeasurementV
                   ? _buildLoading(theme)
                   : (_error != null)
                       ? _buildError(theme)
-                      : (_result != null)
-                          ? _buildResult(theme, _result!)
+                      : _hasAnyResult
+                          ? _buildResult(theme)
                           : Center(
                               child: Text(
                                 'Press “Measure” to start.',
@@ -245,7 +263,9 @@ class _AudioResponseMeasurementViewState extends State<AudioResponseMeasurementV
           const CircularProgressIndicator(),
           const SizedBox(height: 16),
           Text(
-            'Measuring frequency response…',
+            _hasBothSides
+                ? 'Measuring left + right…'
+                : 'Measuring frequency response…',
             style: theme.textTheme.titleMedium,
           ),
         ],
@@ -293,35 +313,42 @@ class _AudioResponseMeasurementViewState extends State<AudioResponseMeasurementV
     );
   }
 
-  Widget _buildResult(ThemeData theme, Map<String, dynamic> result) {
-    final int version = (result['version'] as int?) ?? -1;
-    final int quality = (result['quality'] as int?) ?? -1;
-    final double meanMagnitude = (result['mean_magnitude'] as double?) ?? -1;
+  Widget _buildResult(ThemeData theme) {
+    List<Map<String, dynamic>> _parsePoints(Map<String, dynamic>? result) {
+      if (result == null) return [];
+      final pointsDyn = (result['points'] as List?) ?? const [];
+      final pts = pointsDyn
+          .whereType<Map>()
+          .map((m) => {
+                'frequency_hz': (m['frequency_hz'] as num?)?.toDouble(),
+                'frequency_raw_q12_4': (m['frequency_raw_q12_4'] as num?)?.toInt(),
+                'magnitude': (m['magnitude'] as num?)?.toDouble(),
+              })
+          .where((m) =>
+              m['frequency_hz'] != null &&
+              m['magnitude'] != null &&
+              (m['frequency_hz'] as double) > 0.0)
+          .cast<Map<String, dynamic>>()
+          .toList();
+      pts.sort((a, b) =>
+          (a['frequency_hz'] as double).compareTo(b['frequency_hz'] as double));
+      return pts;
+    }
 
-    final List<dynamic> pointsDyn = (result['points'] as List?) ?? const [];
-    final allPoints = pointsDyn
-        .whereType<Map>()
-        .map((m) => {
-              'frequency_hz': (m['frequency_hz'] as num?)?.toDouble(),
-              'frequency_raw_q12_4': (m['frequency_raw_q12_4'] as num?)?.toInt(),
-              'magnitude': (m['magnitude'] as num?)?.toDouble(),
-            })
-        .where((m) =>
-            m['frequency_hz'] != null &&
-            m['magnitude'] != null &&
-            (m['frequency_hz'] as double) > 0.0)
-        .toList();
+    final leftPoints = _parsePoints(_leftResult);
+    final rightPoints = _parsePoints(_rightResult);
 
-    // Sort by frequency
-    allPoints.sort((a, b) =>
-        (a['frequency_hz'] as double).compareTo(b['frequency_hz'] as double));
+    // Compute a shared normalization factor (avg of all measured magnitudes)
+    final allMags = [
+      ...leftPoints.map((p) => p['magnitude'] as double),
+      ...rightPoints.map((p) => p['magnitude'] as double),
+    ];
+    final normMag =
+        allMags.isEmpty ? 1.0 : allMags.reduce((a, b) => a + b) / allMags.length;
 
-    // Normalize magnitudes by average peak magnitude
-    final double avgPeakMag = allPoints.isEmpty
-        ? 1.0
-        : allPoints.map((p) => p['magnitude'] as double).reduce((a, b) => a + b) /
-            allPoints.length;
-    final normMag = avgPeakMag == 0.0 ? 1.0 : avgPeakMag;
+    int _quality(Map<String, dynamic>? r) => (r?['quality'] as int?) ?? -1;
+    double _meanMag(Map<String, dynamic>? r) =>
+        (r?['mean_magnitude'] as double?) ?? -1;
 
     return Column(
       children: [
@@ -333,38 +360,46 @@ class _AudioResponseMeasurementViewState extends State<AudioResponseMeasurementV
               runSpacing: 8,
               spacing: 24,
               children: [
-                _kv(theme, 'Version', '$version'),
-                _kv(theme, 'Quality', '$quality / 100'),
-                _kv(theme, 'Mean Magnitude', meanMagnitude.toStringAsFixed(1)),
-                _kv(theme, 'Points', '${allPoints.length}'),
+                if (_leftResult != null) ...[
+                  _kv(theme, 'Left Quality', '${_quality(_leftResult)} / 100'),
+                  _kv(theme, 'Left Mean Mag',
+                      _meanMag(_leftResult).toStringAsFixed(1)),
+                ],
+                if (_rightResult != null) ...[
+                  _kv(theme, 'Right Quality',
+                      '${_quality(_rightResult)} / 100'),
+                  _kv(theme, 'Right Mean Mag',
+                      _meanMag(_rightResult).toStringAsFixed(1)),
+                ],
               ],
             ),
           ),
         ),
         const SizedBox(height: 8),
-        // Chart
         Expanded(
           child: Card(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(8, 16, 16, 8),
-              child: _buildChart(theme, allPoints, normMag),
+              child: _buildChart(theme, leftPoints, rightPoints, normMag),
             ),
           ),
         ),
         const SizedBox(height: 8),
-        // Raw values toggle button
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
             onPressed: () => setState(() => _showRawValues = !_showRawValues),
             icon: Icon(_showRawValues ? Icons.expand_less : Icons.expand_more),
-            label: Text(_showRawValues ? 'Hide raw values' : 'View raw values'),
+            label: Text(
+                _showRawValues ? 'Hide raw values' : 'View raw values'),
           ),
         ),
-        // Raw values table
         if (_showRawValues) ...[
           const SizedBox(height: 8),
-          _buildRawValuesTable(theme, allPoints, normMag),
+          if (leftPoints.isNotEmpty)
+            _buildRawValuesTable(theme, leftPoints, normMag, label: 'Left'),
+          if (rightPoints.isNotEmpty)
+            _buildRawValuesTable(theme, rightPoints, normMag, label: 'Right'),
         ],
       ],
     );
@@ -372,19 +407,24 @@ class _AudioResponseMeasurementViewState extends State<AudioResponseMeasurementV
 
   Widget _buildChart(
     ThemeData theme,
-    List<Map<String, dynamic>> points,
+    List<Map<String, dynamic>> leftPoints,
+    List<Map<String, dynamic>> rightPoints,
     double normMag,
   ) {
     final colorScheme = theme.colorScheme;
-    final measuredColor = colorScheme.primary;
+    final leftColor = colorScheme.primary;
+    final rightColor = colorScheme.error;
     final targetColor = colorScheme.tertiary;
 
-    // Measured spots: x = log10(freq), y = normalizedMagnitude
-    final measuredSpots = points.map((p) {
-      final freq = p['frequency_hz']!;
-      final mag = p['magnitude']!;
-      return FlSpot(math.log(freq) / math.ln10, mag / normMag);
-    }).toList();
+    List<FlSpot> _toSpots(List<Map<String, dynamic>> pts) => pts
+        .map((p) => FlSpot(
+              math.log(p['frequency_hz'] as double) / math.ln10,
+              (p['magnitude'] as double) / normMag,
+            ))
+        .toList();
+
+    final leftSpots = _toSpots(leftPoints);
+    final rightSpots = _toSpots(rightPoints);
 
     // Target spots
     final targetSpots = List.generate(_kTargetFrequencies.length, (i) {
@@ -394,26 +434,86 @@ class _AudioResponseMeasurementViewState extends State<AudioResponseMeasurementV
       );
     });
 
-    // X axis ticks at target frequencies
-    final xTicks = _kTargetFrequencies
-        .map((f) => math.log(f) / math.ln10)
-        .toList();
+    final xTicks =
+        _kTargetFrequencies.map((f) => math.log(f) / math.ln10).toList();
 
     final allYValues = [
-      ...measuredSpots.map((s) => s.y),
+      ...leftSpots.map((s) => s.y),
+      ...rightSpots.map((s) => s.y),
       ..._kTargetMagnitudes,
     ];
-    final maxY = allYValues.reduce(math.max);
+    final maxY = allYValues.isEmpty ? 1.5 : allYValues.reduce(math.max);
     final yMax = (maxY * 1.2).clamp(1.5, 2.5);
+
+    final lineBars = <LineChartBarData>[
+      // Target (dashed)
+      LineChartBarData(
+        spots: targetSpots,
+        color: targetColor,
+        barWidth: 2,
+        dotData: FlDotData(
+          show: true,
+          getDotPainter: (spot, percent, bar, index) => FlDotCirclePainter(
+            radius: 3,
+            color: targetColor,
+            strokeWidth: 0,
+            strokeColor: Colors.transparent,
+          ),
+        ),
+        dashArray: [6, 4],
+        isCurved: true,
+        curveSmoothness: 0.2,
+        belowBarData: BarAreaData(show: false),
+      ),
+      // Left
+      if (leftSpots.isNotEmpty)
+        LineChartBarData(
+          spots: leftSpots,
+          color: leftColor,
+          barWidth: 2.5,
+          dotData: FlDotData(
+            show: true,
+            getDotPainter: (spot, percent, bar, index) => FlDotCirclePainter(
+              radius: 4,
+              color: leftColor,
+              strokeWidth: 0,
+              strokeColor: Colors.transparent,
+            ),
+          ),
+          isCurved: true,
+          curveSmoothness: 0.2,
+          belowBarData: BarAreaData(show: false),
+        ),
+      // Right
+      if (rightSpots.isNotEmpty)
+        LineChartBarData(
+          spots: rightSpots,
+          color: rightColor,
+          barWidth: 2.5,
+          dotData: FlDotData(
+            show: true,
+            getDotPainter: (spot, percent, bar, index) => FlDotCirclePainter(
+              radius: 4,
+              color: rightColor,
+              strokeWidth: 0,
+              strokeColor: Colors.transparent,
+            ),
+          ),
+          isCurved: true,
+          curveSmoothness: 0.2,
+          belowBarData: BarAreaData(show: false),
+        ),
+    ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Legend
-        Row(
+        Wrap(
+          spacing: 16,
           children: [
-            _legendDot(measuredColor, 'Measured'),
-            const SizedBox(width: 16),
+            if (leftSpots.isNotEmpty) _legendDot(leftColor, 'Left'),
+            if (rightSpots.isNotEmpty) _legendDot(rightColor, 'Right'),
             _legendDash(targetColor, 'Target'),
           ],
         ),
@@ -426,48 +526,7 @@ class _AudioResponseMeasurementViewState extends State<AudioResponseMeasurementV
               minY: 0,
               maxY: yMax,
               clipData: const FlClipData.all(),
-              lineBarsData: [
-                // Target line (dashed)
-                LineChartBarData(
-                  spots: targetSpots,
-                  color: targetColor,
-                  barWidth: 2,
-                  dotData: FlDotData(
-                    show: true,
-                    getDotPainter: (spot, percent, bar, index) =>
-                        FlDotCirclePainter(
-                      radius: 3,
-                      color: targetColor,
-                      strokeWidth: 0,
-                      strokeColor: Colors.transparent,
-                    ),
-                  ),
-                  dashArray: [6, 4],
-                  isCurved: true,
-                  curveSmoothness: 0.2,
-                  belowBarData: BarAreaData(show: false),
-                ),
-                // Measured line
-                if (measuredSpots.isNotEmpty)
-                  LineChartBarData(
-                    spots: measuredSpots,
-                    color: measuredColor,
-                    barWidth: 2.5,
-                    dotData: FlDotData(
-                      show: true,
-                      getDotPainter: (spot, percent, bar, index) =>
-                          FlDotCirclePainter(
-                        radius: 4,
-                        color: measuredColor,
-                        strokeWidth: 0,
-                        strokeColor: Colors.transparent,
-                      ),
-                    ),
-                    isCurved: true,
-                    curveSmoothness: 0.2,
-                    belowBarData: BarAreaData(show: false),
-                  ),
-              ],
+              lineBarsData: lineBars,
               titlesData: FlTitlesData(
                 leftTitles: AxisTitles(
                   axisNameWidget: Text(
@@ -498,9 +557,8 @@ class _AudioResponseMeasurementViewState extends State<AudioResponseMeasurementV
                     showTitles: true,
                     reservedSize: 32,
                     getTitlesWidget: (value, meta) {
-                      // Show label only at target frequency positions
-                      final matchIdx = xTicks.indexWhere(
-                          (x) => (x - value).abs() < 0.001);
+                      final matchIdx = xTicks
+                          .indexWhere((x) => (x - value).abs() < 0.001);
                       if (matchIdx < 0) return const SizedBox.shrink();
                       final freq = _kTargetFrequencies[matchIdx];
                       final label = freq < 100
@@ -511,20 +569,16 @@ class _AudioResponseMeasurementViewState extends State<AudioResponseMeasurementV
                       return SideTitleWidget(
                         meta: meta,
                         angle: -0.5,
-                        child: Text(
-                          label,
-                          style: theme.textTheme.labelSmall,
-                        ),
+                        child: Text(label,
+                            style: theme.textTheme.labelSmall),
                       );
                     },
                   ),
                 ),
                 topTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
+                    sideTitles: SideTitles(showTitles: false)),
                 rightTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
+                    sideTitles: SideTitles(showTitles: false)),
               ),
               gridData: FlGridData(
                 show: true,
@@ -553,13 +607,21 @@ class _AudioResponseMeasurementViewState extends State<AudioResponseMeasurementV
                   getTooltipItems: (touchedSpots) {
                     return touchedSpots.map((s) {
                       final freq = math.pow(10, s.x).toDouble();
-                      final isTarget = s.barIndex == 0;
+                      final Color c;
+                      final String sideLabel;
+                      if (s.barIndex == 0) {
+                        c = targetColor;
+                        sideLabel = 'Target';
+                      } else if (leftSpots.isNotEmpty && s.barIndex == 1) {
+                        c = leftColor;
+                        sideLabel = 'Left';
+                      } else {
+                        c = rightColor;
+                        sideLabel = 'Right';
+                      }
                       return LineTooltipItem(
-                        '${freq.toStringAsFixed(1)} Hz\n${s.y.toStringAsFixed(3)}',
-                        TextStyle(
-                          color: isTarget ? targetColor : measuredColor,
-                          fontSize: 12,
-                        ),
+                        '$sideLabel\n${freq.toStringAsFixed(1)} Hz\n${s.y.toStringAsFixed(3)}',
+                        TextStyle(color: c, fontSize: 12),
                       );
                     }).toList();
                   },
@@ -575,8 +637,9 @@ class _AudioResponseMeasurementViewState extends State<AudioResponseMeasurementV
   Widget _buildRawValuesTable(
     ThemeData theme,
     List<Map<String, dynamic>> points,
-    double normMag,
-  ) {
+    double normMag, {
+    String label = '',
+  }) {
     if (points.isEmpty) {
       return const Padding(
         padding: EdgeInsets.all(8),
@@ -592,7 +655,10 @@ class _AudioResponseMeasurementViewState extends State<AudioResponseMeasurementV
           children: [
             Padding(
               padding: const EdgeInsets.all(8),
-              child: Text('Raw values', style: theme.textTheme.titleMedium),
+              child: Text(
+                label.isEmpty ? 'Raw values' : 'Raw values — $label',
+                style: theme.textTheme.titleMedium,
+              ),
             ),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
