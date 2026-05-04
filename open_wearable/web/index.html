@@ -15,25 +15,68 @@
     the `--base-href` argument provided to `flutter build`.
   -->
   <base href="$FLUTTER_BASE_HREF">
+  <script>
+    (function () {
+      const baseElement = document.querySelector('base');
+      if (!baseElement) return;
+
+      const rootRouteSegments = new Set([
+        'connect-devices',
+        'connectors',
+        'device-detail',
+        'fota',
+        'log-files',
+        'recordings',
+        'settings',
+        'view',
+        'whats-new',
+      ]);
+      const pathSegments = window.location.pathname.split('/').filter(Boolean);
+      const firstSegment = pathSegments[0] || '';
+      // Keep one build working at root domains and one-segment Pages subpaths.
+      const baseHref = firstSegment && !rootRouteSegments.has(firstSegment)
+        ? `/${firstSegment}/`
+        : '/';
+
+      baseElement.setAttribute('href', baseHref);
+      window.__openWearableBaseHref = baseHref;
+
+      function addLink(rel, href, options) {
+        const link = document.createElement('link');
+        link.rel = rel;
+        link.href = `${baseHref}${href}`;
+        if (options && options.sizes) {
+          link.sizes = options.sizes;
+        }
+        document.head.appendChild(link);
+      }
+
+      addLink('apple-touch-icon', 'icons/Icon-192.png');
+      addLink('icon', 'favicon.ico', { sizes: 'any' });
+      addLink('apple-touch-icon', 'apple-touch-icon.png');
+      addLink('manifest', 'manifest.json');
+    })();
+  </script>
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="A new Flutter project.">
 
-  <!-- iOS meta tags & icons -->
+  <!-- iOS meta tags -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="open_wearable">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
-
-  <!-- Favicon -->
-  <link rel="icon" href="favicon.ico" sizes="any">
-  <link rel="apple-touch-icon" href="apple-touch-icon.png">
 
   <title>OpenWearable | App</title>
-  <link rel="manifest" href="manifest.json">
 </head>
 <body>
-  <script src="flutter_bootstrap.js" async></script>
+  <script>
+    (function () {
+      const script = document.createElement('script');
+      script.src = `${window.__openWearableBaseHref || '/'}flutter_bootstrap.js`;
+      script.async = true;
+      document.body.appendChild(script);
+    })();
+  </script>
 </body>
 </html>

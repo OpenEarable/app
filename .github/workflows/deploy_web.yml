@@ -20,7 +20,7 @@ env:
   FLUTTER_PROJECT: open_wearable
   DEPLOY_REPOSITORY: OpenEarable/app-web-deployment
   DEPLOY_BRANCH: gh-pages
-  BASE_HREF: /app-web-deployment/
+  BASE_HREF: /
 
 jobs:
   build-and-deploy:
