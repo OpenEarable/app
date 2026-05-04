@@ -21,6 +21,7 @@ env:
   DEPLOY_REPOSITORY: OpenEarable/app-web-deployment
   DEPLOY_BRANCH: gh-pages
   BASE_HREF: /
+  CUSTOM_DOMAIN: app.openwearables.com
 
 jobs:
   build-and-deploy:
@@ -50,6 +51,7 @@ jobs:
       - name: Prepare GitHub Pages files
         working-directory: ${{ env.FLUTTER_PROJECT }}
         run: |
+          printf '%s\n' "${CUSTOM_DOMAIN}" > build/web/CNAME
           cp build/web/index.html build/web/404.html
           touch build/web/.nojekyll
 
