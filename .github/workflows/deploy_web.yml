@@ -1,0 +1,94 @@
+name: Deploy Flutter web
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/deploy_web.yml"
+      - "open_wearable/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-web-deployment
+  cancel-in-progress: true
+
+env:
+  FLUTTER_PROJECT: open_wearable
+  DEPLOY_REPOSITORY: OpenEarable/app-web-deployment
+  DEPLOY_BRANCH: gh-pages
+  BASE_HREF: /app-web-deployment/
+
+jobs:
+  build-and-deploy:
+    name: Build and publish static web app
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v6
+
+      - name: Install Flutter
+        run: |
+          git clone https://github.com/flutter/flutter.git --depth 1 -b stable "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+
+      - name: Show Flutter version
+        run: flutter --version
+
+      - name: Install dependencies
+        working-directory: ${{ env.FLUTTER_PROJECT }}
+        run: flutter pub get
+
+      - name: Build web bundle
+        working-directory: ${{ env.FLUTTER_PROJECT }}
+        run: flutter build web --release --base-href "${BASE_HREF}" --pwa-strategy=none
+
+      - name: Prepare GitHub Pages files
+        working-directory: ${{ env.FLUTTER_PROJECT }}
+        run: |
+          cp build/web/index.html build/web/404.html
+          touch build/web/.nojekyll
+
+      - name: Publish to deployment repository
+        env:
+          DEPLOY_TOKEN: ${{ secrets.APP_WEB_DEPLOYMENT_TOKEN }}
+        run: |
+          if [ -z "${DEPLOY_TOKEN}" ]; then
+            echo "::error::Missing APP_WEB_DEPLOYMENT_TOKEN secret."
+            echo "Create a fine-grained PAT with Contents: Read and write for ${DEPLOY_REPOSITORY} and save it as APP_WEB_DEPLOYMENT_TOKEN in this repository."
+            exit 1
+          fi
+
+          git config --global url."https://x-access-token:${DEPLOY_TOKEN}@github.com/".insteadOf "https://github.com/"
+
+          deploy_dir="$RUNNER_TEMP/app-web-deployment"
+          rm -rf "$deploy_dir"
+
+          if git ls-remote --exit-code --heads "https://github.com/${DEPLOY_REPOSITORY}.git" "${DEPLOY_BRANCH}" >/dev/null 2>&1; then
+            git clone --depth 1 --branch "${DEPLOY_BRANCH}" "https://github.com/${DEPLOY_REPOSITORY}.git" "$deploy_dir"
+          else
+            git clone --depth 1 "https://github.com/${DEPLOY_REPOSITORY}.git" "$deploy_dir"
+            cd "$deploy_dir"
+            git checkout --orphan "${DEPLOY_BRANCH}"
+            find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          fi
+
+          cd "$deploy_dir"
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -R "$GITHUB_WORKSPACE/${FLUTTER_PROJECT}/build/web/." .
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --all
+
+          if git diff --cached --quiet; then
+            echo "No deployment changes to publish."
+            exit 0
+          fi
+
+          git commit -m "Deploy OpenEarable web app from ${GITHUB_SHA}"
+          git push origin "${DEPLOY_BRANCH}"
