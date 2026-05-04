@@ -142,6 +142,7 @@ final GoRouter router = GoRouter(
     GoRoute(
       path: '/settings/connectors',
       name: 'settings/connectors',
+      redirect: (_, __) => kIsWeb ? '/settings/general' : null,
       builder: (context, state) => const ConnectorsPage(),
     ),
     GoRoute(
@@ -165,7 +166,8 @@ final GoRouter router = GoRouter(
     ),
     GoRoute(
       path: '/connectors',
-      redirect: (_, __) => '/settings/connectors',
+      redirect: (_, __) =>
+          kIsWeb ? '/settings/general' : '/settings/connectors',
     ),
     GoRoute(
       path: '/fota',

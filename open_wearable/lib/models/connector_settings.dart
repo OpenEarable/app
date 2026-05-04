@@ -104,7 +104,7 @@ class ConnectorSettings {
   static const String _websocketPortKey = 'connector_websocket_port';
   static const String _websocketPathKey = 'connector_websocket_path';
 
-  static WebSocketIpcServer _webSocketServer = WebSocketIpcServer();
+  static WebSocketIpcServer? _webSocketServer;
   static Timer? _networkStatusRefreshTimer;
 
   static final ValueNotifier<WebSocketConnectorSettings>
@@ -131,11 +131,14 @@ class ConnectorSettings {
   static ConnectorRuntimeStatus get currentWebSocketRuntimeStatus =>
       _webSocketRuntimeStatusNotifier.value;
 
+  /// Whether the WebSocket connector can run on the current platform.
+  static bool get isWebSocketConnectorSupported => !kIsWeb;
+
   /// Initializes the server runtime and applies persisted settings.
   static Future<void> initialize({
     WearableConnector? wearableConnector,
   }) async {
-    if (wearableConnector != null) {
+    if (isWebSocketConnectorSupported && wearableConnector != null) {
       _webSocketServer = WebSocketIpcServer(
         wearableConnector: wearableConnector,
       );
@@ -147,7 +150,8 @@ class ConnectorSettings {
   /// Stops the running server and resets the runtime status.
   static Future<void> dispose() async {
     _stopNetworkStatusRefresh();
-    await _webSocketServer.stop();
+    await _webSocketServer?.stop();
+    _webSocketServer = null;
     _setRuntimeStatus(const ConnectorRuntimeStatus.disabled());
   }
 
@@ -190,9 +194,19 @@ class ConnectorSettings {
     final normalized = _normalizeWebSocketSettings(settings);
     _setWebSocketSettings(normalized);
 
+    if (!isWebSocketConnectorSupported) {
+      _stopNetworkStatusRefresh();
+      await _webSocketServer?.stop();
+      _webSocketServer = null;
+      _setRuntimeStatus(const ConnectorRuntimeStatus.disabled());
+      return;
+    }
+
+    final server = _webSocketServer ??= WebSocketIpcServer();
+
     if (!normalized.enabled) {
       _stopNetworkStatusRefresh();
-      await _webSocketServer.stop();
+      await server.stop();
       _setRuntimeStatus(const ConnectorRuntimeStatus.disabled());
       return;
     }
@@ -200,7 +214,7 @@ class ConnectorSettings {
     _setRuntimeStatus(const ConnectorRuntimeStatus.starting());
 
     try {
-      await _webSocketServer.start(
+      await server.start(
         port: normalized.port,
         path: normalized.path,
       );
@@ -215,11 +229,12 @@ class ConnectorSettings {
 
   /// Refreshes the running connector's local-network reachability state.
   static Future<void> _refreshRunningNetworkStatus() async {
-    if (!_webSocketServer.isRunning) {
+    final server = _webSocketServer;
+    if (server == null || !server.isRunning) {
       return;
     }
     final address = await resolveCurrentDeviceIpAddress();
-    _webSocketServer.updateAdvertisedHost(address);
+    server.updateAdvertisedHost(address);
     _setRuntimeStatus(
       ConnectorRuntimeStatus.running(
         hasReachableNetworkAddress: address != null,
@@ -255,7 +270,7 @@ class ConnectorSettings {
     return settings.copyWith(
       port: port,
       path: path,
-      enabled: settings.enabled,
+      enabled: isWebSocketConnectorSupported && settings.enabled,
     );
   }
 

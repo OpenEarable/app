@@ -63,12 +63,13 @@ class SettingsPage extends StatelessWidget {
               subtitle: 'Browse app releases',
               onTap: () => context.push('/whats-new'),
             ),
-          _QuickActionTile(
-            icon: ConnectorBranding.icon,
-            title: ConnectorBranding.pluralLabel,
-            subtitle: 'Configure external API connectors',
-            onTap: onConnectorsRequested,
-          ),
+          if (!kIsWeb)
+            _QuickActionTile(
+              icon: ConnectorBranding.icon,
+              title: ConnectorBranding.pluralLabel,
+              subtitle: 'Configure external API connectors',
+              onTap: onConnectorsRequested,
+            ),
           _QuickActionTile(
             icon: Icons.info_outline_rounded,
             title: 'About',
