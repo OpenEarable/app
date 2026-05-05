@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -321,6 +320,10 @@ class SensorConfigurationView extends StatelessWidget {
       logger.d(
         "Applied ${primaryEntriesToApply.length} primary and ${mirroredEntriesToApply.length} mirrored sensor settings for ${target.primaryDevice.name}",
       );
+    }
+
+    if (!context.mounted) {
+      return;
     }
 
     if (actionableCount == 0) {
