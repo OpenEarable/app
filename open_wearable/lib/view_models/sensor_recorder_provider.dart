@@ -46,6 +46,14 @@ class SensorRecorderProvider with ChangeNotifier {
 
   final List<double> _waveformData = [];
   List<double> get waveformData => List.unmodifiable(_waveformData);
+  int _waveformRevision = 0;
+
+  /// Monotonically increases whenever a new audio amplitude sample is recorded.
+  ///
+  /// The waveform keeps a capped rolling buffer, so its list length stops
+  /// changing once the buffer is full. Consumers can use this revision to
+  /// repaint when fresh samples shift through the fixed-size window.
+  int get waveformRevision => _waveformRevision;
 
   InputDevice? _selectedBLEDevice;
 
@@ -130,13 +138,7 @@ class SensorRecorderProvider with ChangeNotifier {
       _amplitudeSub = _audioRecorder
           .onAmplitudeChanged(const Duration(milliseconds: 100))
           .listen((amp) {
-        final normalized = (amp.current + 50) / 50;
-        _waveformData.add(normalized.clamp(0.0, 2.0));
-
-        if (_waveformData.length > 100) {
-          _waveformData.removeAt(0);
-        }
-
+        _appendWaveformAmplitude(amp);
         notifyListeners();
       });
 
@@ -292,13 +294,7 @@ class SensorRecorderProvider with ChangeNotifier {
       _amplitudeSub = _audioRecorder
           .onAmplitudeChanged(const Duration(milliseconds: 100))
           .listen((amp) {
-        final normalized = (amp.current + 50) / 50;
-        _waveformData.add(normalized.clamp(0.0, 2.0));
-
-        if (_waveformData.length > 100) {
-          _waveformData.removeAt(0);
-        }
-
+        _appendWaveformAmplitude(amp);
         notifyListeners();
       });
     } catch (e) {
@@ -564,6 +560,17 @@ class SensorRecorderProvider with ChangeNotifier {
           'Stopped recording for ${wearable.name} - ${sensor.sensorName}',
         );
       }
+    }
+  }
+
+  /// Appends a normalized amplitude sample to the fixed-size waveform window.
+  void _appendWaveformAmplitude(Amplitude amplitude) {
+    final normalized = (amplitude.current + 50) / 50;
+    _waveformData.add(normalized.clamp(0.0, 2.0));
+    _waveformRevision++;
+
+    if (_waveformData.length > 100) {
+      _waveformData.removeAt(0);
     }
   }
 

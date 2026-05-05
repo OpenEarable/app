@@ -11,8 +11,6 @@ import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 import 'package:open_wearable/widgets/sensors/values/sensor_value_card.dart';
 import 'package:provider/provider.dart';
-import 'package:record/record.dart';
-import 'dart:async';
 
 class SensorValuesPage extends StatefulWidget {
   final Map<(Wearable, Sensor), SensorDataProvider>? sharedProviders;
@@ -35,16 +33,7 @@ class _SensorValuesPageState extends State<SensorValuesPage>
 
   bool get _ownsProviders => widget.sharedProviders == null;
 
-  // Audio State
-  late final AudioRecorder _audioRecorder;
-  bool _isPreviewRecording = false;
-  bool _isRecording = false;
   String? _errorMessage;
-  InputDevice? _selectedDevice;
-  StreamSubscription<RecordState>? _recordSub;
-  StreamSubscription<Amplitude>? _amplitudeSub;
-  RecordState _recordState = RecordState.stop;
-  final List<double> _waveformData = [];
 
   bool _isInitializing = true;
 
@@ -87,29 +76,6 @@ class _SensorValuesPageState extends State<SensorValuesPage>
         provider.dispose();
       }
       _ownedProviders.clear();
-      // Stop and clean up preview recording
-      if (Platform.isAndroid) {
-        if (_recordState != RecordState.stop) {
-          _audioRecorder.stop().then((tempPath) {
-            if (tempPath != null) {
-              try {
-                final file = File(tempPath);
-                file.exists().then((exists) {
-                  if (exists) {
-                    file.delete();
-                  }
-                });
-              } catch (e) {
-                //_logger.e("Error deleting temp preview file: $e");
-              }
-            }
-          });
-        }
-
-        _recordSub?.cancel();
-        _amplitudeSub?.cancel();
-        _audioRecorder.dispose();
-      }
     }
     super.dispose();
   }
@@ -372,7 +338,10 @@ class _SensorValuesPageState extends State<SensorValuesPage>
                   const SizedBox(height: 8),
                   CustomPaint(
                     size: const Size(double.infinity, 100),
-                    painter: WaveformPainter(recorderProvider.waveformData),
+                    painter: WaveformPainter(
+                      recorderProvider.waveformData,
+                      sampleRevision: recorderProvider.waveformRevision,
+                    ),
                   ),
                 ],
               ),
@@ -584,9 +553,10 @@ class _SensorValuesEmptyState {
   });
 }
 
-// Custom waveform painter with vertical bars
+/// Paints the live audio amplitude window as a horizontally scrolling waveform.
 class WaveformPainter extends CustomPainter {
   final List<double> waveformData;
+  final int sampleRevision;
   final Color waveColor;
   final double spacing;
   final double waveThickness;
@@ -594,6 +564,7 @@ class WaveformPainter extends CustomPainter {
 
   WaveformPainter(
     this.waveformData, {
+    required this.sampleRevision,
     this.waveColor = Colors.blue,
     this.spacing = 4.0,
     this.waveThickness = 3.0,
@@ -659,7 +630,8 @@ class WaveformPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant WaveformPainter oldDelegate) {
-    return oldDelegate.waveformData.length != waveformData.length ||
+    return oldDelegate.sampleRevision != sampleRevision ||
+        oldDelegate.waveformData.length != waveformData.length ||
         oldDelegate.waveColor != waveColor;
   }
 }
