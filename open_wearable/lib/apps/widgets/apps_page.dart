@@ -170,7 +170,7 @@ final List<AppInfo> _apps = [
     ),
   ),
   AppInfo(
-    logoPath: "",
+    logoPath: "lib/apps/audio_response_measure/assets/audio-response-icon.png",
     title: "Audio Response",
     description: "Measure and store audio responses",
     supportedDevices: _audioResponseSupportedDevices,

@@ -90,6 +90,7 @@ flutter:
   assets:
     - lib/apps/posture_tracker/assets/
     - lib/apps/heart_tracker/assets/
+    - lib/apps/audio_response_measure/assets/
     - lib/assets/devices/phone-app.png
     - android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
 
