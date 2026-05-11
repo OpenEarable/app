@@ -30,9 +30,9 @@
   - Constructor input: `Wearable device`.
   - `WearablesProvider` (for sensor shutdown/disconnect helper flow).
   - `FirmwareUpdateRequestProvider` (for preselecting FOTA target).
-  - Device capabilities to unlock sections (`AudioModeManager`, `RgbLed`, `StatusLed`, `Battery*`, etc.).
+  - Device capabilities to unlock sections (`AudioModeManager`, `PowerSavingModeManager`, `RgbLed`, `StatusLed`, `Battery*`, etc.).
 - Does:
-  - Shows detailed per-device controls and metadata.
+  - Shows detailed per-device controls and metadata, and pair-aware power saving mode selection when supported.
   - Handles disconnect flow and "forget" helper (system settings handoff).
   - Prepares firmware update target and navigates to FOTA flow.
 - Provides:

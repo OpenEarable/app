@@ -14,6 +14,7 @@ import 'package:open_wearable/widgets/app_toast.dart';
 import 'package:open_wearable/widgets/common/app_section_card.dart';
 import 'package:open_wearable/widgets/devices/device_detail/audio_mode_widget.dart';
 import 'package:open_wearable/widgets/devices/device_detail/device_detail_shared_widgets.dart';
+import 'package:open_wearable/widgets/devices/device_detail/power_saving_mode_widget.dart';
 import 'package:open_wearable/widgets/devices/device_status_pills.dart';
 import 'package:open_wearable/widgets/devices/wearable_icon.dart';
 import 'package:provider/provider.dart';
@@ -249,6 +250,17 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
             child: MicrophoneSelectionWidget(
               device: widget.device,
               applyScope: StereoPairApplyScope.individualOnly,
+            ),
+          ),
+        ),
+      if (widget.device.hasCapability<PowerSavingModeManager>())
+        Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: PowerSavingModeWidget(
+              device: widget.device,
+              applyScope: StereoPairApplyScope.userSelectable,
             ),
           ),
         ),
