@@ -25,6 +25,7 @@ class _FotaSlotsPageState extends State<FotaSlotsPage> {
       Uri.parse('https://boogie.github.io/mcumgr-web/');
 
   late Future<List<FirmwareSlotInfo>> _slotFuture;
+  String? _erasingSlotKey;
 
   @override
   void initState() {
@@ -58,6 +59,101 @@ class _FotaSlotsPageState extends State<FotaSlotsPage> {
       _slotFuture = future;
     });
     await future;
+  }
+
+  /// Confirms and erases the secondary firmware slot represented by [slot].
+  Future<void> _eraseFirmwareSlot(FirmwareSlotInfo slot) async {
+    if (!_canEraseSlot(slot) ||
+        _erasingSlotKey != null ||
+        !widget.device.hasCapability<FotaSlotInfoCapability>()) {
+      return;
+    }
+
+    final confirmed = await _confirmEraseSlot(slot);
+    if (!confirmed || !mounted) {
+      return;
+    }
+
+    final slotKey = _slotKey(slot);
+    setState(() {
+      _erasingSlotKey = slotKey;
+    });
+
+    try {
+      final capability =
+          widget.device.requireCapability<FotaSlotInfoCapability>();
+      await capability.eraseFirmwareSlot(channel: _eraseChannelFor(slot));
+
+      if (!mounted) {
+        return;
+      }
+
+      AppToast.show(
+        context,
+        message: 'Firmware slot ${slot.slot} erased.',
+        type: AppToastType.success,
+        icon: Icons.delete_sweep_rounded,
+      );
+
+      await _refreshSlots();
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      AppToast.show(
+        context,
+        message: 'Could not erase firmware slot ${slot.slot}.',
+        type: AppToastType.error,
+        icon: Icons.error_outline_rounded,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _erasingSlotKey = null;
+        });
+      }
+    }
+  }
+
+  /// Asks the user to confirm the destructive slot erase operation.
+  Future<bool> _confirmEraseSlot(FirmwareSlotInfo slot) async {
+    final result = await showPlatformDialog<bool>(
+      context: context,
+      builder: (_) => PlatformAlertDialog(
+        title: const Text('Erase Firmware Slot?'),
+        content: Text(
+          'This erases image ${slot.image}, slot ${slot.slot} from the '
+          'device. Use this only to recover from broken or stuck firmware '
+          'updates.',
+        ),
+        actions: <Widget>[
+          PlatformDialogAction(
+            child: const Text('Cancel'),
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+          PlatformDialogAction(
+            cupertino: (_, __) => CupertinoDialogActionData(
+              isDestructiveAction: true,
+            ),
+            child: const Text('Erase'),
+            onPressed: () => Navigator.of(context).pop(true),
+          ),
+        ],
+      ),
+    );
+
+    return result ?? false;
+  }
+
+  /// Returns whether the firmware backend should accept erasing [slot].
+  bool _canEraseSlot(FirmwareSlotInfo slot) {
+    return slot.slot > 0 && !slot.active;
+  }
+
+  /// Returns the raw mcumgr erase channel for the slot.
+  int? _eraseChannelFor(FirmwareSlotInfo slot) {
+    return slot.image == 0 ? null : slot.image;
   }
 
   /// Opens the external mcumgr web UI that can help erase image slots.
@@ -148,7 +244,13 @@ class _FotaSlotsPageState extends State<FotaSlotsPage> {
               for (var slotIndex = 0;
                   slotIndex < imageSlots.length;
                   slotIndex++) ...[
-                _SlotTile(slot: imageSlots[slotIndex]),
+                _SlotTile(
+                  slot: imageSlots[slotIndex],
+                  canErase: _canEraseSlot(imageSlots[slotIndex]),
+                  isErasing: _erasingSlotKey == _slotKey(imageSlots[slotIndex]),
+                  isEraseBusy: _erasingSlotKey != null,
+                  onErase: () => _eraseFirmwareSlot(imageSlots[slotIndex]),
+                ),
                 if (slotIndex < imageSlots.length - 1)
                   const SizedBox(height: SensorPageSpacing.sectionGap),
               ],
@@ -166,7 +268,10 @@ class _FotaSlotsPageState extends State<FotaSlotsPage> {
   }
 }
 
-/// Recovery card that points users to an external slot-erasing tool.
+/// Creates a stable UI key for state associated with one firmware slot.
+String _slotKey(FirmwareSlotInfo slot) => '${slot.image}:${slot.slot}';
+
+/// Recovery card that explains the in-app slot erasing action and fallback.
 class _SlotRecoveryCard extends StatelessWidget {
   final Future<void> Function() onOpenTool;
 
@@ -216,12 +321,12 @@ class _SlotRecoveryCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'A possible tool for this is mcumgr web. If the device is in a broken update state, erasing the slots can clear the image table and let you start the firmware update flow again.',
+            'Use the erase action on an inactive secondary slot above to clear the image table and let you start the firmware update flow again.',
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: 12),
           Text(
-            'Note: It may be necessary to remove the wearable from the app and settings in order to discover it in the mcumgr web tool.',
+            'If in-app erasing fails, mcumgr web can be used as a fallback. It may be necessary to remove the wearable from the app and settings in order to discover it there.',
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: 12),
@@ -396,9 +501,17 @@ class _SlotsErrorCard extends StatelessWidget {
 /// Visual card for one reported firmware slot.
 class _SlotTile extends StatelessWidget {
   final FirmwareSlotInfo slot;
+  final bool canErase;
+  final bool isErasing;
+  final bool isEraseBusy;
+  final VoidCallback onErase;
 
   const _SlotTile({
     required this.slot,
+    required this.canErase,
+    required this.isErasing,
+    required this.isEraseBusy,
+    required this.onErase,
   });
 
   @override
@@ -472,6 +585,13 @@ class _SlotTile extends StatelessWidget {
           _SlotMetadataRow(label: 'Image', value: '${slot.image}'),
           const SizedBox(height: 8),
           _SlotMetadataRow(label: 'Hash', value: _formatHash(slot.hashString)),
+          const SizedBox(height: 12),
+          _SlotEraseAction(
+            canErase: canErase,
+            isErasing: isErasing,
+            isEraseBusy: isEraseBusy,
+            onErase: onErase,
+          ),
         ],
       ),
     );
@@ -484,6 +604,83 @@ class _SlotTile extends StatelessWidget {
     }
 
     return '${hash.substring(0, 10)}...${hash.substring(hash.length - 8)}';
+  }
+}
+
+/// Destructive action surface for erasing an eligible firmware slot.
+class _SlotEraseAction extends StatelessWidget {
+  final bool canErase;
+  final bool isErasing;
+  final bool isEraseBusy;
+  final VoidCallback onErase;
+
+  const _SlotEraseAction({
+    required this.canErase,
+    required this.isErasing,
+    required this.isEraseBusy,
+    required this.onErase,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (!canErase) {
+      return _SlotEraseNotice(
+        icon: Icons.lock_outline_rounded,
+        text:
+            'This slot is protected because it is primary or active.',
+      );
+    }
+
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: isEraseBusy ? null : onErase,
+        icon: isErasing
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.delete_outline_rounded, size: 18),
+        label: Text(isErasing ? 'Erasing slot' : 'Erase slot'),
+      ),
+    );
+  }
+}
+
+/// Compact explanation for slots that cannot be erased safely.
+class _SlotEraseNotice extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _SlotEraseNotice({
+    required this.icon,
+    required this.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          icon,
+          size: 16,
+          color: colorScheme.onSurfaceVariant,
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+          ),
+        ),
+      ],
+    );
   }
 }
 
