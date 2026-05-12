@@ -35,6 +35,17 @@
 - Provides:
   - Detailed progress and outcome UI for the update process.
 
+## `FotaSlotsPage` (`lib/widgets/fota/fota_slots_page.dart`)
+- Needs:
+  - Constructor input: wearable with `FotaSlotInfoCapability`.
+- Does:
+  - Reads and groups reported MCUboot image slots by image index.
+  - Shows active, confirmed, pending, permanent, bootable, version, and hash metadata for each slot.
+  - Lets users confirm and erase eligible inactive secondary slots through `eraseFirmwareSlot`.
+  - Keeps protected slots read-only and offers mcumgr web as a fallback recovery tool.
+- Provides:
+  - Firmware slot inspection and recovery controls for stuck FOTA states.
+
 ## `LoggerScreen` (`lib/widgets/fota/logger_screen/logger_screen.dart`)
 - Needs:
   - Constructor input: `FirmwareUpdateLogger logger`.
