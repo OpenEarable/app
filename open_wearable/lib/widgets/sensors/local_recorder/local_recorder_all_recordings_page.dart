@@ -1,9 +1,7 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:open_file/open_file.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_file_actions.dart';
+import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_models.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_recording_folder_card.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_storage.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
@@ -25,7 +23,8 @@ class _LocalRecorderAllRecordingsPageState
     extends State<LocalRecorderAllRecordingsPage> {
   final Set<String> _expandedFolders = {};
   final Set<String> _selectedFolderPaths = {};
-  List<Directory> _recordings = <Directory>[];
+  List<LocalRecorderRecordingFolder> _recordings =
+      <LocalRecorderRecordingFolder>[];
   bool _isLoading = true;
   bool _isBusy = false;
   bool _isSelectionMode = false;
@@ -39,7 +38,7 @@ class _LocalRecorderAllRecordingsPageState
   }
 
   Future<void> _loadRecordings() async {
-    final recordings = await listRecordingDirectories();
+    final recordings = await listRecordingFolders();
     if (!mounted) return;
     setState(() {
       _recordings = recordings;
@@ -53,7 +52,7 @@ class _LocalRecorderAllRecordingsPageState
     });
   }
 
-  Future<void> _shareFolder(Directory folder) async {
+  Future<void> _shareFolder(LocalRecorderRecordingFolder folder) async {
     try {
       await localRecorderShareFolder(folder);
     } catch (e) {
@@ -61,7 +60,7 @@ class _LocalRecorderAllRecordingsPageState
     }
   }
 
-  Future<void> _shareFile(File file) async {
+  Future<void> _shareFile(LocalRecorderRecordingFile file) async {
     try {
       await localRecorderShareFile(file);
     } catch (e) {
@@ -69,11 +68,8 @@ class _LocalRecorderAllRecordingsPageState
     }
   }
 
-  Future<void> _openFile(File file) async {
-    final result = await localRecorderOpenRecordingFile(file);
-    if (result.type != ResultType.done) {
-      await _showErrorDialog('Could not open file: ${result.message}');
-    }
+  Future<void> _openFile(LocalRecorderRecordingFile file) async {
+    await localRecorderOpenRecordingFile(file);
   }
 
   Future<void> _shareSelectedFolders() async {
@@ -81,7 +77,8 @@ class _LocalRecorderAllRecordingsPageState
     setState(() => _isBusy = true);
     try {
       for (final path in _selectedFolderPaths) {
-        await localRecorderShareFolder(Directory(path));
+        final folder = _recordings.firstWhere((entry) => entry.path == path);
+        await localRecorderShareFolder(folder);
       }
     } catch (e) {
       await _showErrorDialog('Failed to share selected recordings: $e');
@@ -125,10 +122,7 @@ class _LocalRecorderAllRecordingsPageState
     setState(() => _isBusy = true);
     try {
       for (final path in _selectedFolderPaths.toList()) {
-        final folder = Directory(path);
-        if (await folder.exists()) {
-          await folder.delete(recursive: true);
-        }
+        await deleteRecordingFolder(path);
       }
       _selectedFolderPaths.clear();
       _isSelectionMode = false;
@@ -142,8 +136,8 @@ class _LocalRecorderAllRecordingsPageState
     }
   }
 
-  Future<void> _deleteSingleFolder(Directory folder) async {
-    final name = localRecorderBasename(folder.path);
+  Future<void> _deleteSingleFolder(LocalRecorderRecordingFolder folder) async {
+    final name = folder.name;
     final shouldDelete = await showPlatformDialog<bool>(
           context: context,
           builder: (_) => PlatformAlertDialog(
@@ -170,9 +164,7 @@ class _LocalRecorderAllRecordingsPageState
 
     if (!shouldDelete) return;
     try {
-      if (await folder.exists()) {
-        await folder.delete(recursive: true);
-      }
+      await deleteRecordingFolder(folder.path);
       if (!mounted) return;
       setState(() {
         _expandedFolders.remove(folder.path);
@@ -259,8 +251,8 @@ class _LocalRecorderAllRecordingsPageState
                   final isCurrent = widget.isRecording && index == 0;
                   final isExpanded = _expandedFolders.contains(folder.path);
                   final files = isExpanded
-                      ? listFilesInRecordingFolder(folder)
-                      : <File>[];
+                      ? folder.files
+                      : <LocalRecorderRecordingFile>[];
                   final isSelected = _selectedFolderPaths.contains(folder.path);
 
                   return LocalRecorderRecordingFolderCard(
@@ -269,7 +261,7 @@ class _LocalRecorderAllRecordingsPageState
                     isExpanded: isExpanded,
                     files: files,
                     updatedLabel:
-                        'Updated ${localRecorderFormatDateTime(folder.statSync().changed)}',
+                        'Updated ${localRecorderFormatDateTime(folder.updatedAt)}',
                     selectionMode: _selectionMode,
                     isSelected: isSelected,
                     onSelectionToggle: isCurrent

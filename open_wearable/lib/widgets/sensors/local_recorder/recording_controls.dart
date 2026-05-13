@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
-import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
+import 'package:open_wearable/view_models/sensor_recorder_provider_facade.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_dialogs.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_files.dart';

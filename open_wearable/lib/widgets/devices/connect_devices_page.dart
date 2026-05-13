@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
@@ -341,6 +342,9 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
     final connector = context.read<WearableConnector>();
 
     try {
+      if (_scanSnapshot.isScanning) {
+        await ConnectDevicesScanSession.stopScanning();
+      }
       await connector.connect(device);
       ConnectDevicesScanSession.removeDiscoveredDevice(device.id);
     } catch (e, stackTrace) {
@@ -417,6 +421,11 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
     required DiscoveredDevice device,
     required WearableConnector connector,
   }) async {
+    // Skip stale connection recovery on web platform
+    if (kIsWeb) {
+      return false;
+    }
+
     try {
       await UniversalBle.disconnect(device.id);
     } catch (error, stackTrace) {

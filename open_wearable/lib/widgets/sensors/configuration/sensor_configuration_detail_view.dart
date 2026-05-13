@@ -1,5 +1,5 @@
-import 'package:flutter/foundation.dart' show setEquals;
-import 'dart:io';
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, kIsWeb, setEquals;
 import 'package:flutter/material.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
@@ -40,8 +40,11 @@ class SensorConfigurationDetailView extends StatelessWidget {
         ? (sensorConfiguration as ConfigurableSensorConfiguration)
             .availableOptions
             .where((option) {
-            // If on Android, show everything.
-            if (Platform.isAndroid) return true;
+            // On Android and web, show everything. The iOS-specific stream/mic
+            // restriction only applies to native iOS builds.
+            if (kIsWeb || defaultTargetPlatform == TargetPlatform.android) {
+              return true;
+            }
 
             // If on iOS, hide 'microphone' + 'stream' combination
             final isMic =
