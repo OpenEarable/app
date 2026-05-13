@@ -1,15 +1,16 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:provider/provider.dart';
-import '../../../view_models/sensor_recorder_provider.dart';
+import '../../../view_models/sensor_recorder_provider_facade.dart';
 
 class BLEMicrophoneStreamingRow extends StatelessWidget {
   const BLEMicrophoneStreamingRow({super.key});
 
   @override
   Widget build(BuildContext context) {
-    if (!Platform.isAndroid) {
+    if (kIsWeb || !Platform.isAndroid) {
       return const SizedBox.shrink();
     }
 
