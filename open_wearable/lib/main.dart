@@ -18,7 +18,7 @@ import 'package:open_wearable/models/wearable_connector.dart'
     hide WearableEvent;
 import 'package:open_wearable/router.dart';
 import 'package:open_wearable/theme/app_theme.dart';
-import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
+import 'package:open_wearable/view_models/sensor_recorder_provider_facade.dart';
 import 'package:open_wearable/widgets/app_banner.dart';
 import 'package:open_wearable/widgets/global_app_banner_overlay.dart';
 import 'package:open_wearable/widgets/app_toast.dart';

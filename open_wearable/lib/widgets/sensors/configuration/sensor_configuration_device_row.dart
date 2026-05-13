@@ -6,6 +6,7 @@ import 'package:open_wearable/models/device_name_formatter.dart';
 import 'package:open_wearable/view_models/sensor_configuration_storage.dart';
 import 'package:open_wearable/view_models/sensor_profile_service.dart';
 import 'package:open_wearable/widgets/app_toast.dart';
+import 'package:open_wearable/widgets/devices/device_detail/stereo_pos_label.dart';
 import 'package:open_wearable/widgets/devices/stereo_position_badge.dart';
 import 'package:open_wearable/widgets/sensors/configuration/edge_recorder_prefix_row.dart';
 import 'package:open_wearable/widgets/sensors/configuration/save_config_row.dart';
@@ -139,6 +140,10 @@ class _SensorConfigurationDeviceRowState
                     child: tabBar,
                   ),
                 ],
+                if (device.hasCapability<StereoDevice>())
+                  StereoPosLabel(
+                    device: device.requireCapability<StereoDevice>(),
+                  ),
               ],
             ),
           ),

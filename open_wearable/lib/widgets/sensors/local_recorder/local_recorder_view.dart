@@ -1,16 +1,17 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
-import 'package:open_file/open_file.dart';
+import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_dialogs.dart';
 import 'package:provider/provider.dart';
-import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
+import 'package:open_wearable/view_models/sensor_recorder_provider_facade.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_empty_state_card.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_file_actions.dart';
+import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_files.dart';
+import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_models.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_recording_card.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_recording_folder_card.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_see_all_recordings_card.dart';
@@ -34,7 +35,7 @@ class LocalRecorderView extends StatefulWidget {
 }
 
 class _LocalRecorderViewState extends State<LocalRecorderView> {
-  List<FileSystemEntity> _recordings = [];
+  List<LocalRecorderRecordingFolder> _recordings = [];
   final Set<String> _expandedFolders = {}; // Track which folders are expanded
   Timer? _recordingTimer;
   Duration _elapsedRecording = Duration.zero;
@@ -69,21 +70,25 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
 
   /// Load the list of recording folders from the device's storage, filtering and sorting them appropriately.
   Future<void> _listRecordings() async {
-    final recordings = await listRecordingDirectories();
+    final recordings = await listRecordingFolders();
     if (!mounted) return;
     setState(() {
-      _recordings = recordings.cast<FileSystemEntity>();
+      _recordings = recordings;
     });
   }
 
-  List<File> _getFilesInFolder(Directory folder) {
-    return listFilesInRecordingFolder(folder);
+  List<LocalRecorderRecordingFile> _getFilesInFolder(
+    LocalRecorderRecordingFolder folder,
+  ) {
+    return folder.files;
   }
 
   /// Show a confirmation dialog before deleting a recording folder or file, and handle the deletion if confirmed.
-  Future<bool> _confirmAndDeleteRecording(FileSystemEntity entity) async {
+  Future<bool> _confirmAndDeleteRecording(
+    LocalRecorderRecordingFolder entity,
+  ) async {
     if (!mounted) return false;
-    final name = localRecorderBasename(entity.path);
+    final name = entity.name;
     final shouldDelete = await showPlatformDialog<bool>(
           context: context,
           builder: (_) => PlatformAlertDialog(
@@ -110,19 +115,13 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
 
     if (!shouldDelete) return false;
 
-    if (entity.existsSync()) {
-      try {
-        if (entity is Directory) {
-          entity.deleteSync(recursive: true);
-        } else {
-          entity.deleteSync();
-        }
-        _listRecordings();
-      } catch (e) {
-        _logger.e('Error deleting recording: $e');
-        _showErrorDialog('Failed to delete recording: $e');
-        return false;
-      }
+    try {
+      await deleteRecordingFolder(entity.path);
+      _listRecordings();
+    } catch (e) {
+      _logger.e('Error deleting recording: $e');
+      await _showErrorDialog('Failed to delete recording: $e');
+      return false;
     }
     return true;
   }
@@ -137,7 +136,7 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
     });
 
     try {
-      recorder.stopRecording();
+      recorder.stopRecording(mode == _StopRecordingMode.stopAndTurnOffSensors);
       if (mode == _StopRecordingMode.stopAndTurnOffSensors) {
         final wearablesProvider = context.read<WearablesProvider>();
         final futures = wearablesProvider.sensorConfigurationProviders.values
@@ -229,21 +228,29 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
     }
   }
 
-  Future<void> _shareFile(File file) async {
+  Future<void> _shareFile(LocalRecorderRecordingFile file) async {
     try {
       await localRecorderShareFile(file);
     } catch (e) {
       _logger.e('Error sharing file: $e');
-      await _showErrorDialog('Failed to share file: $e');
+      if (!mounted) return;
+      await LocalRecorderDialogs.showErrorDialog(
+        context,
+        'Failed to share file: $e',
+      );
     }
   }
 
-  Future<void> _shareFolder(Directory folder) async {
+  Future<void> _shareFolder(LocalRecorderRecordingFolder folder) async {
     try {
       await localRecorderShareFolder(folder);
     } catch (e) {
       _logger.e('Error sharing folder: $e');
-      await _showErrorDialog('Failed to share folder: $e');
+      if (!mounted) return;
+      await LocalRecorderDialogs.showErrorDialog(
+        context,
+        'Failed to share folder: $e',
+      );
     }
   }
 
@@ -254,7 +261,7 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
       return;
     }
 
-    if (!await isDirectoryEmpty(dir)) {
+    if (!await Files.isDirectoryEmpty(dir)) {
       if (!mounted) return;
       final proceed = await _askOverwriteConfirmation(context, dir);
       if (!proceed) return;
@@ -269,11 +276,8 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
     }
   }
 
-  Future<void> _openRecordingFile(File file) async {
-    final result = await localRecorderOpenRecordingFile(file);
-    if (result.type != ResultType.done) {
-      await _showErrorDialog('Could not open file: ${result.message}');
-    }
+  Future<void> _openRecordingFile(LocalRecorderRecordingFile file) async {
+    await localRecorderOpenRecordingFile(file);
   }
 
   Future<void> _openAllRecordingsPage({required bool isRecording}) async {
@@ -288,8 +292,7 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
         final isRecording = recorder.isRecording;
         final canStartRecording = recorder.hasSensorsConnected && !isRecording;
         final hasRecordings = _recordings.isNotEmpty;
-        final latestRecording =
-            hasRecordings ? _recordings.first as Directory : null;
+        final latestRecording = hasRecordings ? _recordings.first : null;
 
         return SafeArea(
           top: false,
@@ -324,22 +327,41 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
                   LocalRecorderRecordingFolderCard(
                     folder: latestRecording,
                     isCurrentRecording: isRecording,
-                    isExpanded: _expandedFolders.contains(
-                      latestRecording.path,
-                    ),
+                    isExpanded: _expandedFolders.contains(latestRecording.path),
                     files: _expandedFolders.contains(latestRecording.path)
                         ? _getFilesInFolder(latestRecording)
-                        : const <File>[],
+                        : const <LocalRecorderRecordingFile>[],
                     updatedLabel:
-                        'Updated ${localRecorderFormatDateTime(latestRecording.statSync().changed)}',
-                    onToggleExpanded: () {
-                      setState(() {
-                        if (_expandedFolders.contains(latestRecording.path)) {
-                          _expandedFolders.remove(latestRecording.path);
-                        } else {
-                          _expandedFolders.add(latestRecording.path);
+                        'Updated ${localRecorderFormatDateTime(latestRecording.updatedAt)}',
+                    onToggleExpanded: () async {
+                      final path = latestRecording.path;
+                      final isExpanding = !_expandedFolders.contains(path);
+
+                      if (isExpanding) {
+                        // 1. Fetch the absolute latest data from SharedPreferences
+                        final allFolders = await listRecordingFolders();
+
+                        // 2. Find the version of this folder that actually has the files populated
+                        final freshFolder = allFolders.firstWhere(
+                          (f) => f.path == path,
+                          orElse: () => latestRecording,
+                        );
+
+                        if (mounted) {
+                          setState(() {
+                            // 3. Update the files list in our current reference so the UI sees them
+                            latestRecording.files.clear();
+                            latestRecording.files.addAll(freshFolder.files);
+
+                            // 4. Mark as expanded
+                            _expandedFolders.add(path);
+                          });
                         }
-                      });
+                      } else {
+                        setState(() {
+                          _expandedFolders.remove(path);
+                        });
+                      }
                     },
                     onShareFolder: () => _shareFolder(latestRecording),
                     onDeleteFolder: () async {
