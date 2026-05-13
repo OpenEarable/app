@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../view_models/sensor_recorder_provider.dart';
+import '../view_models/sensor_recorder_provider_facade.dart';
 
 /// Shared pulse ticker so every recording indicator stays in sync.
 class _RecordingPulseTicker {

@@ -3,7 +3,7 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/models/device_name_formatter.dart';
-import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
+import 'package:open_wearable/view_models/sensor_recorder_provider_facade.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/connector_activity_indicator.dart';
 import 'package:open_wearable/widgets/devices/device_detail/device_detail_page.dart';

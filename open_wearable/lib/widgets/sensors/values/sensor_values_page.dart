@@ -1,12 +1,13 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/models/app_shutdown_settings.dart';
 import 'package:open_wearable/models/wearable_display_group.dart';
 import 'package:open_wearable/view_models/sensor_data_provider.dart';
-import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
+import 'package:open_wearable/view_models/sensor_recorder_provider_facade.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 import 'package:open_wearable/widgets/sensors/values/sensor_value_card.dart';
@@ -43,7 +44,7 @@ class _SensorValuesPageState extends State<SensorValuesPage>
   @override
   void initState() {
     super.initState();
-    if (Platform.isAndroid) {
+    if (!kIsWeb && Platform.isAndroid) {
       _checkStreamingStatus();
     }
   }
@@ -302,7 +303,7 @@ class _SensorValuesPageState extends State<SensorValuesPage>
 
   Widget _buildAudioUI(SensorRecorderProvider recorderProvider) {
     // If initializing, show a loading card
-    if (_isInitializing && Platform.isAndroid) {
+    if (!kIsWeb && _isInitializing && Platform.isAndroid) {
       return Card(
         child: Container(
           height: 100,
