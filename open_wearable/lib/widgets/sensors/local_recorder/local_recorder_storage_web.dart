@@ -61,7 +61,8 @@ Future<void> persistRecordingFolderFiles(
 }
 
 Future<Uint8List> readRecordingFileBytes(
-    LocalRecorderRecordingFile file) async {
+  LocalRecorderRecordingFile file,
+) async {
   final prefs = await SharedPreferences.getInstance();
   final folders = _readFolders(prefs);
   for (final folder in folders) {
