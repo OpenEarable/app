@@ -12,7 +12,9 @@ Future<void> localRecorderShareFile(LocalRecorderRecordingFile file) async {
   );
 }
 
-Future<void> localRecorderShareFolder(LocalRecorderRecordingFolder folder) async {
+Future<void> localRecorderShareFolder(
+  LocalRecorderRecordingFolder folder,
+) async {
   await SharePlus.instance.share(
     ShareParams(
       files: folder.files.map((entry) => XFile(entry.path)).toList(),
@@ -21,7 +23,9 @@ Future<void> localRecorderShareFolder(LocalRecorderRecordingFolder folder) async
   );
 }
 
-Future<void> localRecorderOpenRecordingFile(LocalRecorderRecordingFile file) async {
+Future<void> localRecorderOpenRecordingFile(
+  LocalRecorderRecordingFile file,
+) async {
   final result = await OpenFile.open(
     file.path,
     type: 'text/comma-separated-values',
