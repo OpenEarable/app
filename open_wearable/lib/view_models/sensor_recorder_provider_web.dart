@@ -81,6 +81,7 @@ class SensorRecorderProvider with ChangeNotifier {
     final folderPath = _currentDirectory;
     final sessions = _sessions.values.toList(growable: false);
     _sessions.clear();
+    await _cancelSensorSubscriptions(_sensorSubscriptions.keys);
 
     for (final session in sessions) {
       await session.dispose();
@@ -154,8 +155,8 @@ class SensorRecorderProvider with ChangeNotifier {
         .toList(growable: false);
     for (final key in sessionKeys) {
       unawaited(_sessions.remove(key)?.dispose());
-      _sensorSubscriptions.remove(key)?.cancel();
     }
+    unawaited(_cancelSensorSubscriptions(sessionKeys));
     _updateConnected();
   }
 
@@ -186,14 +187,25 @@ class SensorRecorderProvider with ChangeNotifier {
       );
       _sessions[key] = session;
 
-      final subscription = SensorStreams.shared(
+      _sensorSubscriptions[key] = SensorStreams.shared(
         wearable: wearable,
         sensor: sensor,
-      ).listen((sensorValue) {
-        session.append(sensorValue);
-      });
-      _sensorSubscriptions[key] = subscription;
+      ).listen(session.append);
     }
+  }
+
+  Future<void> _cancelSensorSubscriptions(Iterable<String> keys) async {
+    final subscriptions = <StreamSubscription<SensorValue>>[];
+    for (final key in keys.toList(growable: false)) {
+      final subscription = _sensorSubscriptions.remove(key);
+      if (subscription != null) {
+        subscriptions.add(subscription);
+      }
+    }
+
+    await Future.wait<void>(
+      subscriptions.map((subscription) => subscription.cancel()),
+    );
   }
 
   String _sensorRecordingKey({
@@ -232,10 +244,7 @@ class SensorRecorderProvider with ChangeNotifier {
 
   @override
   void dispose() {
-    for (final subscription in _sensorSubscriptions.values) {
-      subscription.cancel();
-    }
-    _sensorSubscriptions.clear();
+    unawaited(_cancelSensorSubscriptions(_sensorSubscriptions.keys));
     for (final session in _sessions.values) {
       unawaited(session.dispose());
     }
