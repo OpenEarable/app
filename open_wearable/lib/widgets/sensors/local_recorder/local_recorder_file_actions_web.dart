@@ -1,6 +1,7 @@
-import 'dart:html' as html;
+import 'dart:js_interop';
 
 import 'package:share_plus/share_plus.dart';
+import 'package:web/web.dart' as web;
 
 import 'local_recorder_models.dart';
 import 'local_recorder_storage.dart';
@@ -21,7 +22,9 @@ Future<void> localRecorderShareFile(LocalRecorderRecordingFile file) async {
   );
 }
 
-Future<void> localRecorderShareFolder(LocalRecorderRecordingFolder folder) async {
+Future<void> localRecorderShareFolder(
+  LocalRecorderRecordingFolder folder,
+) async {
   final files = <XFile>[];
   for (final file in folder.files) {
     final bytes = await readRecordingFileBytes(file);
@@ -42,9 +45,14 @@ Future<void> localRecorderShareFolder(LocalRecorderRecordingFolder folder) async
   );
 }
 
-Future<void> localRecorderOpenRecordingFile(LocalRecorderRecordingFile file) async {
+Future<void> localRecorderOpenRecordingFile(
+  LocalRecorderRecordingFile file,
+) async {
   final bytes = await readRecordingFileBytes(file);
-  final blob = html.Blob([bytes], file.mimeType);
-  final url = html.Url.createObjectUrlFromBlob(blob);
-  html.window.open(url, '_blank');
+  final blob = web.Blob(
+    <JSUint8Array>[bytes.toJS].toJS,
+    web.BlobPropertyBag(type: file.mimeType),
+  );
+  final url = web.URL.createObjectURL(blob);
+  web.window.open(url, '_blank');
 }
