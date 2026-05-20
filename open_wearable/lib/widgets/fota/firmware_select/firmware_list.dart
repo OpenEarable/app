@@ -135,7 +135,7 @@ class _FirmwareListState extends State<FirmwareList> {
 
     if (confirmed != true || !mounted) return;
 
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
+    FilePickerResult? result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['zip', 'bin'],
     );
