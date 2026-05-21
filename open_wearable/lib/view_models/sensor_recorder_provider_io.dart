@@ -6,6 +6,7 @@ import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
+import '../models/audio_input_source.dart';
 import '../models/logger.dart';
 import '../models/sensor_streams.dart';
 
@@ -38,30 +39,43 @@ class SensorRecorderProvider with ChangeNotifier {
   String? _currentDirectory;
   DateTime? _recordingStart;
   final AudioRecorder _audioRecorder = AudioRecorder();
+  static const Duration _audioInputRefreshInterval = Duration(seconds: 3);
   bool _isAudioRecording = false;
   String? _currentAudioPath;
   StreamSubscription<Amplitude>? _amplitudeSub;
+  Timer? _audioInputRefreshTimer;
+  List<InputDevice> _availableInputDevices = const [];
+  List<AudioInputSource> _audioInputSources = const [
+    AudioInputSource.systemDefault,
+  ];
+  AudioInputSource? _selectedAudioInputSource;
+  AudioInputSource? _appliedAudioInputSource;
 
   bool get isRecording => _isRecording;
   bool get hasSensorsConnected => _hasSensorsConnected;
   String? get currentDirectory => _currentDirectory;
   DateTime? get recordingStart => _recordingStart;
+  List<AudioInputSource> get audioInputSources =>
+      List.unmodifiable(_audioInputSources);
+  AudioInputSource? get selectedAudioInputSource => _selectedAudioInputSource;
+  AudioInputSource? get appliedAudioInputSource => _appliedAudioInputSource;
+  bool get isAudioInputEnabled =>
+      _appliedAudioInputSource != null ||
+      _isStreamingActive ||
+      _isAudioRecording;
+  bool get isAudioMonitoringActive => _isStreamingActive;
+  bool get isAudioInputSelectionPending => !_sameAudioInputSource(
+        _selectedAudioInputSource,
+        _appliedAudioInputSource,
+      );
 
   final List<double> _waveformData = [];
   final int _waveformRevision = 0;
   int get waveformRevision => _waveformRevision;
   List<double> get waveformData => List.unmodifiable(_waveformData);
 
-  InputDevice? _selectedBLEDevice;
-
-  /// Label for the currently selected BLE microphone input, when available.
-  String? get selectedBLEDeviceLabel => _selectedBLEDevice?.label;
-
   int _microphoneConfigurationRevision = 0;
   int get microphoneConfigurationRevision => _microphoneConfigurationRevision;
-
-  bool _isBLEMicrophoneStreamingEnabled = false;
-  bool get isBLEMicrophoneStreamingEnabled => _isBLEMicrophoneStreamingEnabled;
 
   void notifyMicrophoneConfigurationChanged() {
     _bumpMicrophoneConfigurationRevision();
@@ -82,50 +96,200 @@ class SensorRecorderProvider with ChangeNotifier {
   String? _streamingPath;
   bool _isStreamingActive = false;
 
-  Future<void> _selectBLEDevice() async {
+  /// Starts periodic microphone discovery while microphone settings UI exists.
+  void startAudioInputSourceRefresh() {
+    if (_audioInputRefreshTimer != null) {
+      return;
+    }
+    unawaited(refreshAudioInputSources());
+    _audioInputRefreshTimer = Timer.periodic(
+      _audioInputRefreshInterval,
+      (_) => unawaited(refreshAudioInputSources()),
+    );
+  }
+
+  /// Stops periodic microphone discovery when no UI needs it.
+  void stopAudioInputSourceRefresh() {
+    _audioInputRefreshTimer?.cancel();
+    _audioInputRefreshTimer = null;
+  }
+
+  /// Refreshes the platform microphone list used by the virtual microphone row.
+  Future<void> refreshAudioInputSources() async {
     try {
       final devices = await _audioRecorder.listInputDevices();
-
-      try {
-        _selectedBLEDevice = devices.firstWhere(
-          (device) =>
-              device.label.toLowerCase().contains('bluetooth') ||
-              device.label.toLowerCase().contains('ble') ||
-              device.label.toLowerCase().contains('headset') ||
-              device.label.toLowerCase().contains('openearable'),
-        );
-        logger.i("Selected audio input device: ${_selectedBLEDevice!.label}");
-      } catch (e) {
-        _selectedBLEDevice = null;
-        logger.w("No BLE headset found");
+      final uniqueDevices = <InputDevice>[];
+      final seenDeviceIds = <String>{};
+      for (final device in devices) {
+        if (seenDeviceIds.add(device.id)) {
+          uniqueDevices.add(device);
+        }
+      }
+      final nextSources = [
+        AudioInputSource.systemDefault,
+        ...uniqueDevices.map(
+          (device) => AudioInputSource(
+            id: device.id,
+            label: device.label,
+            kind: classifyAudioInputSourceLabel(device.label),
+          ),
+        ),
+      ];
+      if (!_sameInputDevices(_availableInputDevices, uniqueDevices) ||
+          !_sameAudioInputSources(_audioInputSources, nextSources)) {
+        _availableInputDevices = uniqueDevices;
+        _audioInputSources = nextSources;
+        notifyListeners();
       }
     } catch (e) {
-      logger.e("Error selecting BLE device: $e");
-      _selectedBLEDevice = null;
+      logger.e("Error listing audio input devices: $e");
     }
   }
 
-  Future<bool> startBLEMicrophoneStream() async {
-    if (!kIsWeb && !Platform.isAndroid) {
-      logger.w("BLE microphone streaming only supported on Android");
+  /// Selects the app-local microphone source used by local recordings.
+  ///
+  /// Passing `null` turns audio capture off while leaving wearable sensor
+  /// configuration untouched.
+  Future<void> selectAudioInputSource(AudioInputSource? source) async {
+    if (_isAudioRecording) {
+      logger.w("Cannot change audio input while recording is active");
+      return;
+    }
+
+    if (_sameAudioInputSource(_selectedAudioInputSource, source)) {
+      return;
+    }
+
+    _selectedAudioInputSource = source;
+    notifyListeners();
+  }
+
+  /// Enables or disables audio capture without changing the remembered source.
+  Future<void> setAudioInputEnabled(bool enabled) async {
+    if (enabled) {
+      _selectedAudioInputSource ??= AudioInputSource.systemDefault;
+      await refreshAudioInputSources();
+    } else {
+      await selectAudioInputSource(null);
+    }
+    notifyListeners();
+  }
+
+  InputDevice? _inputDeviceForSource(AudioInputSource source) {
+    if (source.isSystemDefault) {
+      return null;
+    }
+    for (final device in _availableInputDevices) {
+      if (device.id == source.id) {
+        return device;
+      }
+    }
+    return null;
+  }
+
+  bool _sameAudioInputSource(
+    AudioInputSource? left,
+    AudioInputSource? right,
+  ) {
+    if (left == null || right == null) {
+      return left == null && right == null;
+    }
+    return left.id == right.id;
+  }
+
+  bool _sameInputDevices(List<InputDevice> left, List<InputDevice> right) {
+    if (left.length != right.length) {
+      return false;
+    }
+    for (var i = 0; i < left.length; i++) {
+      if (left[i].id != right[i].id || left[i].label != right[i].label) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool _sameAudioInputSources(
+    List<AudioInputSource> left,
+    List<AudioInputSource> right,
+  ) {
+    if (left.length != right.length) {
+      return false;
+    }
+    for (var i = 0; i < left.length; i++) {
+      if (left[i] != right[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  Future<bool> startAudioMonitoring() async {
+    return _startAudioMonitoring();
+  }
+
+  Future<void> stopAudioMonitoring() async {
+    await _stopAudioMonitoring();
+  }
+
+  /// Applies the pending microphone selection to the live monitoring stream.
+  ///
+  /// Selecting a source in the sensor configuration tab only changes local
+  /// pending state. Calling this method mirrors the wearable profile apply
+  /// flow by starting or stopping the actual microphone stream.
+  Future<bool> applySelectedAudioInputSource() async {
+    if (_isAudioRecording) {
+      logger.w("Cannot apply audio input while recording is active");
+      return false;
+    }
+    if (!isAudioInputSelectionPending) {
       return false;
     }
 
+    final selectedSource = _selectedAudioInputSource;
+    if (selectedSource == null) {
+      await stopAudioMonitoring();
+      _appliedAudioInputSource = null;
+      _waveformData.clear();
+      notifyListeners();
+      return true;
+    }
+
     if (_isStreamingActive) {
-      logger.i("BLE microphone streaming already active");
+      await stopAudioMonitoring();
+    }
+    _appliedAudioInputSource = selectedSource;
+    final started = await startAudioMonitoring();
+    if (started) {
+      notifyListeners();
+    } else {
+      _appliedAudioInputSource = null;
+      notifyListeners();
+    }
+    return started;
+  }
+
+  Future<bool> _startAudioMonitoring() async {
+    if (_isStreamingActive) {
+      logger.i("Audio input monitoring already active");
       return true;
     }
 
     try {
+      final source = _appliedAudioInputSource;
+      if (source == null) {
+        logger.w("No audio input selected for monitoring");
+        return false;
+      }
       if (!await _audioRecorder.hasPermission()) {
-        logger.w("No microphone permission for streaming");
+        logger.w("No microphone permission for monitoring");
         return false;
       }
 
-      await _selectBLEDevice();
-
-      if (_selectedBLEDevice == null) {
-        logger.w("No BLE headset detected, cannot start streaming");
+      await refreshAudioInputSources();
+      final selectedDevice = _inputDeviceForSource(source);
+      if (!source.isSystemDefault && selectedDevice == null) {
+        logger.w("Selected audio input is unavailable: ${source.label}");
         return false;
       }
 
@@ -144,12 +308,11 @@ class SensorRecorderProvider with ChangeNotifier {
         sampleRate: 48000,
         bitRate: 768000,
         numChannels: 1,
-        device: _selectedBLEDevice,
+        device: selectedDevice,
       );
 
       await _audioRecorder.start(config, path: _streamingPath!);
       _isStreamingActive = true;
-      _isBLEMicrophoneStreamingEnabled = true;
 
       // Set up amplitude monitoring for waveform display
       _amplitudeSub?.cancel();
@@ -167,21 +330,20 @@ class SensorRecorderProvider with ChangeNotifier {
       });
 
       logger.i(
-        "BLE microphone streaming started with device: ${_selectedBLEDevice!.label}",
+        "Audio monitoring started with input: ${source.label}",
       );
       notifyListeners();
       return true;
     } catch (e) {
-      logger.e("Failed to start BLE microphone streaming: $e");
+      logger.e("Failed to start audio monitoring: $e");
       _isStreamingActive = false;
-      _isBLEMicrophoneStreamingEnabled = false;
       _streamingPath = null;
       notifyListeners();
       return false;
     }
   }
 
-  Future<void> stopBLEMicrophoneStream() async {
+  Future<void> _stopAudioMonitoring() async {
     if (!_isStreamingActive) {
       return;
     }
@@ -191,7 +353,6 @@ class SensorRecorderProvider with ChangeNotifier {
       _amplitudeSub?.cancel();
       _amplitudeSub = null;
       _isStreamingActive = false;
-      _isBLEMicrophoneStreamingEnabled = false;
       _waveformData.clear();
 
       // Clean up temporary streaming file
@@ -207,10 +368,10 @@ class SensorRecorderProvider with ChangeNotifier {
         _streamingPath = null;
       }
 
-      logger.i("BLE microphone streaming stopped");
+      logger.i("Audio monitoring stopped");
       notifyListeners();
     } catch (e) {
-      logger.e("Error stopping BLE microphone streaming: $e");
+      logger.e("Error stopping audio monitoring: $e");
     }
   }
 
@@ -239,20 +400,14 @@ class SensorRecorderProvider with ChangeNotifier {
       rethrow;
     }
 
-    await _startAudioRecording(
-      dirname,
-    );
+    await _startAudioRecording(dirname);
 
     notifyListeners();
   }
 
   Future<void> _startAudioRecording(String recordingFolderPath) async {
-    if (!kIsWeb && !Platform.isAndroid) return;
-
-    // Only start recording if BLE microphone streaming is enabled
-    if (!_isBLEMicrophoneStreamingEnabled) {
-      logger
-          .w("BLE microphone streaming not enabled, skipping audio recording");
+    final source = _appliedAudioInputSource;
+    if (source == null) {
       return;
     }
 
@@ -283,10 +438,12 @@ class SensorRecorderProvider with ChangeNotifier {
         return;
       }
 
-      await _selectBLEDevice();
-
-      if (_selectedBLEDevice == null) {
-        logger.w("No BLE headset detected, skipping audio recording");
+      await refreshAudioInputSources();
+      final selectedDevice = _inputDeviceForSource(source);
+      if (!source.isSystemDefault && selectedDevice == null) {
+        logger.w(
+          "Selected audio input is unavailable, skipping audio recording: ${source.label}",
+        );
         return;
       }
 
@@ -304,7 +461,7 @@ class SensorRecorderProvider with ChangeNotifier {
         sampleRate: 48000, // Set to 48kHz for BLE audio quality
         bitRate: 768000, // 16-bit * 48kHz * 1 channel = 768 kbps
         numChannels: 1,
-        device: _selectedBLEDevice,
+        device: selectedDevice,
       );
 
       await _audioRecorder.start(config, path: audioPath);
@@ -312,7 +469,7 @@ class SensorRecorderProvider with ChangeNotifier {
       _isAudioRecording = true;
 
       logger.i(
-        "Audio recording started: $_currentAudioPath with device: ${_selectedBLEDevice?.label ?? 'default'}",
+        "Audio recording started: $_currentAudioPath with input: ${source.label}",
       );
 
       _amplitudeSub = _audioRecorder
@@ -352,11 +509,16 @@ class SensorRecorderProvider with ChangeNotifier {
       logger.e("Error stopping audio recording: $e");
     }
 
-    // Restart streaming if it was enabled before recording
-    if (!turnOffMic &&
-        _isBLEMicrophoneStreamingEnabled &&
-        !_isStreamingActive) {
-      unawaited(startBLEMicrophoneStream());
+    if (turnOffMic) {
+      unawaited(() async {
+        await selectAudioInputSource(null);
+        await stopAudioMonitoring();
+        _appliedAudioInputSource = null;
+        _waveformData.clear();
+        notifyListeners();
+      }());
+    } else if (_selectedAudioInputSource != null) {
+      unawaited(applySelectedAudioInputSource());
     }
 
     notifyListeners();
@@ -596,8 +758,8 @@ class SensorRecorderProvider with ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
-    // Stop streaming
-    stopBLEMicrophoneStream();
+    stopAudioInputSourceRefresh();
+    stopAudioMonitoring();
 
     // Stop recording
     _audioRecorder.stop().then((_) {

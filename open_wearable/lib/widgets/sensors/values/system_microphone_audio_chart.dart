@@ -43,7 +43,7 @@ class _SystemMicrophoneAudioChartState
   Widget build(BuildContext context) {
     return Selector<SensorRecorderProvider, _AudioRecorderMetadata>(
       selector: (context, recorderProvider) => _AudioRecorderMetadata(
-        selectedInputLabel: recorderProvider.selectedBLEDeviceLabel,
+        selectedInputLabel: recorderProvider.appliedAudioInputSource?.label,
         microphoneConfigurationRevision:
             recorderProvider.microphoneConfigurationRevision,
       ),

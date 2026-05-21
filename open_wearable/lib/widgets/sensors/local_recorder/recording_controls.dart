@@ -61,7 +61,7 @@ class _RecordingControls extends State<RecordingControls> {
         final futures = wearablesProvider.sensorConfigurationProviders.values
             .map((provider) => provider.turnOffAllSensors());
         await Future.wait(futures);
-        await recorder.stopBLEMicrophoneStream();
+        await recorder.selectAudioInputSource(null);
       }
       await widget.updateRecordingsList();
     } catch (e) {
