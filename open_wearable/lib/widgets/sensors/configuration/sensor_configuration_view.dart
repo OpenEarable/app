@@ -278,6 +278,7 @@ class SensorConfigurationView extends StatelessWidget {
     final recorderProvider =
         Provider.of<SensorRecorderProvider>(context, listen: false);
     bool shouldEnableMicrophoneStreaming = false;
+    bool didApplyMicrophoneConfiguration = false;
 
     for (final target in targets) {
       final primaryEntriesToApply = _entriesToApplyForProvider(target.provider);
@@ -292,6 +293,7 @@ class SensorConfigurationView extends StatelessWidget {
         final SensorConfiguration config = entry.$1;
         final SensorConfigurationValue value = entry.$2;
         if (config.name.toLowerCase().contains('microphone')) {
+          didApplyMicrophoneConfiguration = true;
           final options =
               target.provider.getSelectedConfigurationOptions(config);
           if (options.any((opt) => opt is StreamSensorConfigOption)) {
@@ -306,6 +308,9 @@ class SensorConfigurationView extends StatelessWidget {
       for (final entry in mirroredEntriesToApply) {
         final SensorConfiguration config = entry.$1;
         final SensorConfigurationValue value = entry.$2;
+        if (config.name.toLowerCase().contains('microphone')) {
+          didApplyMicrophoneConfiguration = true;
+        }
         config.setConfiguration(value);
       }
 
@@ -320,6 +325,10 @@ class SensorConfigurationView extends StatelessWidget {
       logger.d(
         "Applied ${primaryEntriesToApply.length} primary and ${mirroredEntriesToApply.length} mirrored sensor settings for ${target.primaryDevice.name}",
       );
+    }
+
+    if (didApplyMicrophoneConfiguration) {
+      recorderProvider.notifyMicrophoneConfigurationChanged();
     }
 
     if (!context.mounted) {

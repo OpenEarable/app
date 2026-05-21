@@ -25,6 +25,9 @@ import '../models/sensor_streams.dart';
 /// - Recording status (`isRecording`, `recordingStart`, etc.).
 /// - Recorder access used by recorder UI pages.
 class SensorRecorderProvider with ChangeNotifier {
+  static const Duration _microphoneConfigurationSettleDelay =
+      Duration(milliseconds: 300);
+
   final Map<Wearable, Map<Sensor, Recorder>> _recorders = {};
   final Map<String, String> _recordingFilepathsBySensorIdentity = {};
   Future<void> _pendingSynchronization = Future<void>.value();
@@ -51,8 +54,29 @@ class SensorRecorderProvider with ChangeNotifier {
 
   InputDevice? _selectedBLEDevice;
 
+  /// Label for the currently selected BLE microphone input, when available.
+  String? get selectedBLEDeviceLabel => _selectedBLEDevice?.label;
+
+  int _microphoneConfigurationRevision = 0;
+  int get microphoneConfigurationRevision => _microphoneConfigurationRevision;
+
   bool _isBLEMicrophoneStreamingEnabled = false;
   bool get isBLEMicrophoneStreamingEnabled => _isBLEMicrophoneStreamingEnabled;
+
+  void notifyMicrophoneConfigurationChanged() {
+    _bumpMicrophoneConfigurationRevision();
+    Future<void>.delayed(_microphoneConfigurationSettleDelay, () {
+      if (_disposed) {
+        return;
+      }
+      _bumpMicrophoneConfigurationRevision();
+    });
+  }
+
+  void _bumpMicrophoneConfigurationRevision() {
+    _microphoneConfigurationRevision++;
+    notifyListeners();
+  }
 
   // Path for temporary streaming file
   String? _streamingPath;
@@ -133,7 +157,7 @@ class SensorRecorderProvider with ChangeNotifier {
           .onAmplitudeChanged(const Duration(milliseconds: 100))
           .listen((amp) {
         final normalized = (amp.current + 50) / 50;
-        _waveformData.add(normalized.clamp(0.0, 2.0));
+        _waveformData.add(normalized.clamp(0.0, 1.0));
 
         if (_waveformData.length > 100) {
           _waveformData.removeAt(0);
@@ -295,7 +319,7 @@ class SensorRecorderProvider with ChangeNotifier {
           .onAmplitudeChanged(const Duration(milliseconds: 100))
           .listen((amp) {
         final normalized = (amp.current + 50) / 50;
-        _waveformData.add(normalized.clamp(0.0, 2.0));
+        _waveformData.add(normalized.clamp(0.0, 1.0));
 
         if (_waveformData.length > 100) {
           _waveformData.removeAt(0);
