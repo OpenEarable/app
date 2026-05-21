@@ -8,6 +8,7 @@ import 'package:open_wearable/view_models/sensor_recorder_provider_facade.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/app_toast.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
+import 'package:open_wearable/widgets/sensors/configuration/microphone_configuration_card.dart';
 import 'package:open_wearable/widgets/sensors/configuration/sensor_configuration_device_row.dart';
 import 'package:provider/provider.dart';
 
@@ -35,11 +36,18 @@ class SensorConfigurationView extends StatelessWidget {
     WearablesProvider wearablesProvider,
   ) {
     if (wearablesProvider.wearables.isEmpty) {
-      return Center(
-        child: PlatformText(
-          "No devices connected",
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
+      return ListView(
+        padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
+        children: [
+          const MicrophoneConfigurationCard(),
+          const SizedBox(height: 12),
+          _buildApplyConfigButton(
+            context,
+            targets: const <_ConfigApplyTarget>[],
+          ),
+          const SizedBox(height: 12),
+          const Center(child: Text('No devices connected')),
+        ],
       );
     }
 
@@ -67,6 +75,7 @@ class SensorConfigurationView extends StatelessWidget {
           wearablesProvider: wearablesProvider,
         );
         final sections = <Widget>[
+          const MicrophoneConfigurationCard(),
           ...groups.map(
             (group) => _buildGroupConfigurationRow(
               group: group,
@@ -254,30 +263,10 @@ class SensorConfigurationView extends StatelessWidget {
     BuildContext context, {
     required List<_ConfigApplyTarget> targets,
   }) async {
-    if (targets.isEmpty) {
-      await showPlatformDialog<void>(
-        context: context,
-        builder: (dialogContext) => PlatformAlertDialog(
-          title: PlatformText('No configurable devices'),
-          content: PlatformText(
-            'Connect a wearable with configurable sensors to apply settings.',
-          ),
-          actions: [
-            PlatformDialogAction(
-              child: PlatformText('OK'),
-              onPressed: () => Navigator.of(dialogContext).pop(),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-
+    final recorderProvider = context.read<SensorRecorderProvider>();
+    final audioApplied = await recorderProvider.applySelectedAudioInputSource();
     int actionableCount = 0;
 
-    final recorderProvider =
-        Provider.of<SensorRecorderProvider>(context, listen: false);
-    bool shouldEnableMicrophoneStreaming = false;
     bool didApplyMicrophoneConfiguration = false;
 
     for (final target in targets) {
@@ -294,11 +283,6 @@ class SensorConfigurationView extends StatelessWidget {
         final SensorConfigurationValue value = entry.$2;
         if (config.name.toLowerCase().contains('microphone')) {
           didApplyMicrophoneConfiguration = true;
-          final options =
-              target.provider.getSelectedConfigurationOptions(config);
-          if (options.any((opt) => opt is StreamSensorConfigOption)) {
-            shouldEnableMicrophoneStreaming = true;
-          }
         }
         // Always push the selected canonical value to the primary device on
         // apply. This also heals primary-side drift/unknown states.
@@ -314,14 +298,6 @@ class SensorConfigurationView extends StatelessWidget {
         config.setConfiguration(value);
       }
 
-      if (shouldEnableMicrophoneStreaming &&
-          !recorderProvider.isBLEMicrophoneStreamingEnabled) {
-        await recorderProvider.startBLEMicrophoneStream();
-      } else if (!shouldEnableMicrophoneStreaming &&
-          recorderProvider.isBLEMicrophoneStreamingEnabled) {
-        await recorderProvider.stopBLEMicrophoneStream();
-      }
-
       logger.d(
         "Applied ${primaryEntriesToApply.length} primary and ${mirroredEntriesToApply.length} mirrored sensor settings for ${target.primaryDevice.name}",
       );
@@ -335,7 +311,7 @@ class SensorConfigurationView extends StatelessWidget {
       return;
     }
 
-    if (actionableCount == 0) {
+    if (actionableCount == 0 && !audioApplied) {
       AppToast.show(
         context,
         message: 'No pending sensor settings to apply.',
@@ -347,12 +323,25 @@ class SensorConfigurationView extends StatelessWidget {
 
     AppToast.show(
       context,
-      message: 'Sensor settings applied.',
+      message: actionConfigMessage(
+        appliedSensorSettings: actionableCount,
+        appliedAudioInput: audioApplied,
+      ),
       type: AppToastType.success,
       icon: Icons.check_circle_outline_rounded,
     );
 
     (onSetConfigPressed ?? () {})();
+  }
+
+  String actionConfigMessage({
+    required int appliedSensorSettings,
+    required bool appliedAudioInput,
+  }) {
+    if (appliedSensorSettings == 0 && appliedAudioInput) {
+      return 'Microphone setting applied.';
+    }
+    return 'Sensor settings applied.';
   }
 
   Widget _buildThroughputWarningBanner(BuildContext context) {
