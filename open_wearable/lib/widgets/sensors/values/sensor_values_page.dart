@@ -1,10 +1,12 @@
 import 'dart:io';
 
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/models/app_shutdown_settings.dart';
+import 'package:open_wearable/models/device_name_formatter.dart';
 import 'package:open_wearable/models/wearable_display_group.dart';
 import 'package:open_wearable/view_models/sensor_data_provider.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider_facade.dart';
@@ -27,48 +29,21 @@ class SensorValuesPage extends StatefulWidget {
 
 class _SensorValuesPageState extends State<SensorValuesPage>
     with AutomaticKeepAliveClientMixin<SensorValuesPage> {
+  static const Duration _audioMicrophoneSourcesRefreshInterval =
+      Duration(seconds: 5);
+
   final Map<(Wearable, Sensor), SensorDataProvider> _ownedProviders = {};
+  Future<List<_AudioMicrophoneSourceInfo>>? _audioMicrophoneSourcesFuture;
+  String? _audioMicrophoneSourcesCacheKey;
+  DateTime? _audioMicrophoneSourcesLastRefresh;
 
   Map<(Wearable, Sensor), SensorDataProvider> get _sensorDataProvider =>
       widget.sharedProviders ?? _ownedProviders;
 
   bool get _ownsProviders => widget.sharedProviders == null;
 
-  String? _errorMessage;
-
-  bool _isInitializing = true;
-
   @override
   bool get wantKeepAlive => true;
-
-  @override
-  void initState() {
-    super.initState();
-    if (!kIsWeb && Platform.isAndroid) {
-      _checkStreamingStatus();
-    }
-  }
-
-  void _checkStreamingStatus() {
-    final recorderProvider =
-        Provider.of<SensorRecorderProvider>(context, listen: false);
-    if (!recorderProvider.isBLEMicrophoneStreamingEnabled) {
-      if (mounted) {
-        setState(() {
-          _isInitializing = false;
-          _errorMessage =
-              'BLE microphone streaming not enabled. Enable it in sensor configuration.';
-        });
-      }
-    } else {
-      if (mounted) {
-        setState(() {
-          _isInitializing = false;
-          _errorMessage = null;
-        });
-      }
-    }
-  }
 
   @override
   void dispose() {
@@ -117,6 +92,16 @@ class _SensorValuesPageState extends State<SensorValuesPage>
                     );
                     final orderedWearables =
                         _orderedWearablesFromGroups(groups);
+                    final audioHeaderInfo = _resolveAudioHeaderInfo(
+                      groups: groups,
+                      recorderProvider: recorderProvider,
+                    );
+                    final audioMicrophoneSourcesFuture =
+                        _audioMicrophoneSourcesFutureFor(
+                      groups,
+                      microphoneConfigurationRevision:
+                          recorderProvider.microphoneConfigurationRevision,
+                    );
                     _ensureProviders(orderedWearables);
                     _cleanupProviders(orderedWearables);
 
@@ -135,6 +120,9 @@ class _SensorValuesPageState extends State<SensorValuesPage>
                               context,
                               charts,
                               recorderProvider,
+                              audioHeaderInfo: audioHeaderInfo,
+                              audioMicrophoneSourcesFuture:
+                                  audioMicrophoneSourcesFuture,
                               hasAnySensors: hasAnySensors,
                               hideCardsWithoutLiveData:
                                   shouldHideCardsWithoutLiveData,
@@ -144,6 +132,9 @@ class _SensorValuesPageState extends State<SensorValuesPage>
                               context,
                               charts,
                               recorderProvider,
+                              audioHeaderInfo: audioHeaderInfo,
+                              audioMicrophoneSourcesFuture:
+                                  audioMicrophoneSourcesFuture,
                               hasAnySensors: hasAnySensors,
                               hideCardsWithoutLiveData:
                                   shouldHideCardsWithoutLiveData,
@@ -301,87 +292,354 @@ class _SensorValuesPageState extends State<SensorValuesPage>
     return ordered;
   }
 
-  Widget _buildAudioUI(SensorRecorderProvider recorderProvider) {
-    // If initializing, show a loading card
-    if (!kIsWeb && _isInitializing && Platform.isAndroid) {
-      return Card(
-        child: Container(
-          height: 100,
-          alignment: Alignment.center,
-          child: const CircularProgressIndicator(),
+  _AudioHeaderInfo _resolveAudioHeaderInfo({
+    required List<WearableDisplayGroup> groups,
+    required SensorRecorderProvider recorderProvider,
+  }) {
+    final stereoBadgeLabel = _resolveAudioStereoBadgeLabel(groups);
+    final selectedInputLabel = recorderProvider.selectedBLEDeviceLabel;
+    final selectedInputName =
+        _formatAudioDeviceName(selectedInputLabel, allowGeneric: false);
+    if (selectedInputName != null) {
+      return _AudioHeaderInfo(
+        deviceName: selectedInputName,
+        stereoBadgeLabel: stereoBadgeLabel,
+      );
+    }
+
+    if (groups.isEmpty) {
+      return _AudioHeaderInfo(
+        deviceName: null,
+        stereoBadgeLabel: stereoBadgeLabel,
+      );
+    }
+
+    WearableDisplayGroup? combinedGroup;
+    for (final group in groups) {
+      if (group.isCombined) {
+        combinedGroup = group;
+        break;
+      }
+    }
+    final displayName = combinedGroup?.displayName ?? groups.first.displayName;
+    return _AudioHeaderInfo(
+      deviceName: _formatAudioDeviceName(displayName, allowGeneric: true),
+      stereoBadgeLabel: stereoBadgeLabel,
+    );
+  }
+
+  String? _resolveAudioStereoBadgeLabel(List<WearableDisplayGroup> groups) {
+    if (groups.any((group) => group.isCombined)) {
+      return 'L+R';
+    }
+
+    final sidesByPairKey = <String, Set<DevicePosition>>{};
+    DevicePosition? singleKnownSide;
+    for (final group in groups) {
+      if (group.primaryPosition != null) {
+        singleKnownSide ??= group.primaryPosition;
+      }
+      final pairKey = group.stereoPairKey;
+      final position = group.primaryPosition;
+      if (pairKey == null || position == null) {
+        continue;
+      }
+      sidesByPairKey.putIfAbsent(pairKey, () => <DevicePosition>{}).add(
+            position,
+          );
+    }
+
+    final hasConnectedPair = sidesByPairKey.values.any(
+      (positions) =>
+          positions.contains(DevicePosition.left) &&
+          positions.contains(DevicePosition.right),
+    );
+    if (hasConnectedPair) {
+      return 'L+R';
+    }
+
+    return switch (singleKnownSide) {
+      DevicePosition.left => 'L',
+      DevicePosition.right => 'R',
+      _ => null,
+    };
+  }
+
+  String? _formatAudioDeviceName(
+    String? rawName, {
+    required bool allowGeneric,
+  }) {
+    final trimmed = rawName?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      return null;
+    }
+
+    final lower = trimmed.toLowerCase();
+    if (!allowGeneric &&
+        (lower == 'bluetooth' ||
+            lower.contains('bluetooth sco') ||
+            lower.contains('default'))) {
+      return null;
+    }
+
+    final formatted = formatWearableDisplayName(trimmed);
+    final withoutSideSuffix = formatted
+        .replaceFirst(
+          RegExp(r'\s*\((left|right|l|r)\)$', caseSensitive: false),
+          '',
+        )
+        .replaceFirst(
+          RegExp(r'[\s_-]+(left|right|l|r)$', caseSensitive: false),
+          '',
+        )
+        .trim();
+
+    return withoutSideSuffix.isEmpty ? formatted : withoutSideSuffix;
+  }
+
+  Future<List<_AudioMicrophoneSourceInfo>> _resolveAudioMicrophoneSources(
+    List<WearableDisplayGroup> groups,
+  ) async {
+    final futures = <Future<_AudioMicrophoneSourceInfo?>>[];
+    final seenDeviceIds = <String>{};
+
+    void addCandidate(Wearable? wearable, DevicePosition? position) {
+      if (wearable == null || !seenDeviceIds.add(wearable.deviceId)) {
+        return;
+      }
+      futures.add(
+        _resolveAudioMicrophoneSource(
+          wearable: wearable,
+          position: position,
         ),
       );
     }
 
-    return Column(
-      children: [
-        if (recorderProvider.isBLEMicrophoneStreamingEnabled)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.fiber_manual_record,
-                        color: Colors.red,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'AUDIO WAVEFORM ${recorderProvider.isRecording ? "(RECORDING)" : ""}',
-                        style: Theme.of(context).textTheme.labelLarge,
-                      ),
-                    ],
+    for (final group in groups) {
+      final leftDevice = group.leftDevice;
+      final rightDevice = group.rightDevice;
+      addCandidate(leftDevice, DevicePosition.left);
+      addCandidate(rightDevice, DevicePosition.right);
+      if (leftDevice == null && rightDevice == null) {
+        addCandidate(group.primary, group.primaryPosition);
+      }
+    }
+
+    final resolvedSources = await Future.wait(futures);
+    final sources = resolvedSources
+        .whereType<_AudioMicrophoneSourceInfo>()
+        .toList(growable: false);
+    return sources..sort(_compareAudioMicrophoneSources);
+  }
+
+  Future<List<_AudioMicrophoneSourceInfo>> _audioMicrophoneSourcesFutureFor(
+    List<WearableDisplayGroup> groups, {
+    required int microphoneConfigurationRevision,
+  }) {
+    final cacheKey =
+        '${_audioMicrophoneSourcesKey(groups)}#$microphoneConfigurationRevision';
+    final now = DateTime.now();
+    final lastRefresh = _audioMicrophoneSourcesLastRefresh;
+    final cacheExpired = lastRefresh == null ||
+        now.difference(lastRefresh) > _audioMicrophoneSourcesRefreshInterval;
+
+    if (_audioMicrophoneSourcesFuture == null ||
+        _audioMicrophoneSourcesCacheKey != cacheKey ||
+        cacheExpired) {
+      _audioMicrophoneSourcesCacheKey = cacheKey;
+      _audioMicrophoneSourcesLastRefresh = now;
+      _audioMicrophoneSourcesFuture = _resolveAudioMicrophoneSources(groups);
+    }
+
+    return _audioMicrophoneSourcesFuture!;
+  }
+
+  String _audioMicrophoneSourcesKey(List<WearableDisplayGroup> groups) {
+    final parts = <String>[];
+    for (final group in groups) {
+      final leftDevice = group.leftDevice;
+      final rightDevice = group.rightDevice;
+      if (leftDevice != null) {
+        parts.add('${leftDevice.deviceId}:left');
+      }
+      if (rightDevice != null) {
+        parts.add('${rightDevice.deviceId}:right');
+      }
+      if (leftDevice == null && rightDevice == null) {
+        parts.add(
+          '${group.primary.deviceId}:${group.primaryPosition?.name ?? 'unknown'}',
+        );
+      }
+    }
+    return parts.join('|');
+  }
+
+  Future<_AudioMicrophoneSourceInfo?> _resolveAudioMicrophoneSource({
+    required Wearable wearable,
+    required DevicePosition? position,
+  }) async {
+    if (!wearable.hasCapability<MicrophoneManager>()) {
+      return null;
+    }
+
+    final resolvedPosition =
+        position ?? await _readAudioMicrophoneSourcePosition(wearable);
+    final sideLabel = _audioMicrophoneSourceSideLabel(resolvedPosition);
+    if (sideLabel == null) {
+      return null;
+    }
+
+    try {
+      final microphone =
+          await wearable.requireCapability<MicrophoneManager>().getMicrophone();
+      final microphoneLabel = _audioMicrophoneSourceLabel(microphone);
+      if (microphoneLabel == null) {
+        return null;
+      }
+      return _AudioMicrophoneSourceInfo(
+        sideLabel: sideLabel,
+        microphoneLabel: microphoneLabel,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<DevicePosition?> _readAudioMicrophoneSourcePosition(
+    Wearable wearable,
+  ) async {
+    if (!wearable.hasCapability<StereoDevice>()) {
+      return null;
+    }
+    try {
+      return await wearable.requireCapability<StereoDevice>().position;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  int _compareAudioMicrophoneSources(
+    _AudioMicrophoneSourceInfo a,
+    _AudioMicrophoneSourceInfo b,
+  ) {
+    return _audioMicrophoneSourceSortRank(a.sideLabel)
+        .compareTo(_audioMicrophoneSourceSortRank(b.sideLabel));
+  }
+
+  int _audioMicrophoneSourceSortRank(String sideLabel) {
+    return switch (sideLabel) {
+      'L' => 0,
+      'R' => 1,
+      _ => 2,
+    };
+  }
+
+  String? _audioMicrophoneSourceSideLabel(DevicePosition? position) {
+    return switch (position) {
+      DevicePosition.left => 'L',
+      DevicePosition.right => 'R',
+      _ => null,
+    };
+  }
+
+  String? _audioMicrophoneSourceLabel(Microphone microphone) {
+    final normalized = microphone.key.toLowerCase().replaceAll(
+          RegExp(r'[^a-z0-9]'),
+          '',
+        );
+    if (normalized.contains('inner') || normalized.contains('internal')) {
+      return 'Inner';
+    }
+    if (normalized.contains('outer') || normalized.contains('external')) {
+      return 'Outer';
+    }
+    return null;
+  }
+
+  Widget _buildAudioUI(
+    SensorRecorderProvider recorderProvider, {
+    required _AudioHeaderInfo audioHeaderInfo,
+    required Future<List<_AudioMicrophoneSourceInfo>>
+        audioMicrophoneSourcesFuture,
+  }) {
+    final hasHeaderMeta = audioHeaderInfo.deviceName != null ||
+        audioHeaderInfo.stereoBadgeLabel != null;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(10.0),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: PlatformText(
+                    'SYSTEM MICROPHONE',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                   ),
-                  const SizedBox(height: 8),
-                  CustomPaint(
-                    size: const Size(double.infinity, 100),
-                    painter: WaveformPainter(
-                      recorderProvider.waveformData,
-                      sampleRevision: recorderProvider.waveformRevision,
+                ),
+                if (hasHeaderMeta) ...[
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        if (audioHeaderInfo.deviceName != null)
+                          Flexible(
+                            child: PlatformText(
+                              audioHeaderInfo.deviceName!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.right,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ),
+                        if (audioHeaderInfo.stereoBadgeLabel != null) ...[
+                          const SizedBox(width: 8),
+                          _AudioStereoBadge(
+                            label: audioHeaderInfo.stereoBadgeLabel!,
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ],
+              ],
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 200,
+              child: _AudioLevelChart(
+                waveformData: recorderProvider.waveformData,
+                microphoneSourcesFuture: audioMicrophoneSourcesFuture,
               ),
             ),
-          )
-        else if (_errorMessage != null)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  const Icon(Icons.error_outline, color: Colors.red),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: PlatformText(
-                      _errorMessage!,
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        const SizedBox(height: 10),
-      ],
+          ],
+        ),
+      ),
     );
   }
+
+  bool _shouldShowSystemMicrophoneChart() => !kIsWeb && Platform.isAndroid;
 
   Widget _buildSmallScreenLayout(
     BuildContext context,
     List<Widget> charts,
     SensorRecorderProvider recorderProvider, {
+    required _AudioHeaderInfo audioHeaderInfo,
+    required Future<List<_AudioMicrophoneSourceInfo>>
+        audioMicrophoneSourcesFuture,
     required bool hasAnySensors,
     required bool hideCardsWithoutLiveData,
   }) {
     return ListView(
       padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
       children: [
-        _buildAudioUI(recorderProvider),
         ...charts,
         if (charts.isEmpty)
           Center(
@@ -393,6 +651,12 @@ class _SensorValuesPageState extends State<SensorValuesPage>
               ),
             ),
           ),
+        if (_shouldShowSystemMicrophoneChart())
+          _buildAudioUI(
+            recorderProvider,
+            audioHeaderInfo: audioHeaderInfo,
+            audioMicrophoneSourcesFuture: audioMicrophoneSourcesFuture,
+          ),
       ],
     );
   }
@@ -401,38 +665,46 @@ class _SensorValuesPageState extends State<SensorValuesPage>
     BuildContext context,
     List<Widget> charts,
     SensorRecorderProvider recorderProvider, {
+    required _AudioHeaderInfo audioHeaderInfo,
+    required Future<List<_AudioMicrophoneSourceInfo>>
+        audioMicrophoneSourcesFuture,
     required bool hasAnySensors,
     required bool hideCardsWithoutLiveData,
   }) {
+    final gridItems = <Widget>[
+      if (charts.isEmpty)
+        _buildEmptyStateCard(
+          context,
+          _resolveEmptyState(
+            hasAnySensors: hasAnySensors,
+            hideCardsWithoutLiveData: hideCardsWithoutLiveData,
+          ),
+        )
+      else
+        ...charts,
+      if (_shouldShowSystemMicrophoneChart())
+        _buildAudioUI(
+          recorderProvider,
+          audioHeaderInfo: audioHeaderInfo,
+          audioMicrophoneSourcesFuture: audioMicrophoneSourcesFuture,
+        ),
+    ];
+
     return SingleChildScrollView(
       padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
-      child: Column(
-        children: [
-          _buildAudioUI(recorderProvider),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 500,
-              childAspectRatio: 1.5,
-              crossAxisSpacing: SensorPageSpacing.gridGap,
-              mainAxisSpacing: SensorPageSpacing.gridGap,
-            ),
-            itemCount: charts.isEmpty ? 1 : charts.length,
-            itemBuilder: (context, index) {
-              if (charts.isEmpty) {
-                return _buildEmptyStateCard(
-                  context,
-                  _resolveEmptyState(
-                    hasAnySensors: hasAnySensors,
-                    hideCardsWithoutLiveData: hideCardsWithoutLiveData,
-                  ),
-                );
-              }
-              return charts[index];
-            },
-          ),
-        ],
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 500,
+          childAspectRatio: 1.5,
+          crossAxisSpacing: SensorPageSpacing.gridGap,
+          mainAxisSpacing: SensorPageSpacing.gridGap,
+        ),
+        itemCount: gridItems.length,
+        itemBuilder: (context, index) {
+          return gridItems[index];
+        },
       ),
     );
   }
@@ -554,85 +826,345 @@ class _SensorValuesEmptyState {
   });
 }
 
-/// Paints the live audio amplitude window as a horizontally scrolling waveform.
-class WaveformPainter extends CustomPainter {
-  final List<double> waveformData;
-  final int sampleRevision;
-  final Color waveColor;
-  final double spacing;
-  final double waveThickness;
-  final bool showMiddleLine;
+class _AudioHeaderInfo {
+  final String? deviceName;
+  final String? stereoBadgeLabel;
 
-  WaveformPainter(
-    this.waveformData, {
-    required this.sampleRevision,
-    this.waveColor = Colors.blue,
-    this.spacing = 4.0,
-    this.waveThickness = 3.0,
-    this.showMiddleLine = true,
+  const _AudioHeaderInfo({
+    required this.deviceName,
+    required this.stereoBadgeLabel,
+  });
+}
+
+class _AudioMicrophoneSourceInfo {
+  final String sideLabel;
+  final String microphoneLabel;
+
+  const _AudioMicrophoneSourceInfo({
+    required this.sideLabel,
+    required this.microphoneLabel,
+  });
+
+  String get label => '$microphoneLabel ($sideLabel)';
+}
+
+class _AudioStereoBadge extends StatelessWidget {
+  final String label;
+
+  const _AudioStereoBadge({
+    required this.label,
   });
 
   @override
-  void paint(Canvas canvas, Size size) {
-    if (waveformData.isEmpty) return;
-
-    final double height = size.height;
-    final double centerY = height / 2;
-
-    // Draw middle line first (behind the bars)
-    if (showMiddleLine) {
-      final centerLinePaint = Paint()
-        ..color = Colors.grey.withAlpha(75)
-        ..strokeWidth = 1.0;
-      canvas.drawLine(
-        Offset(0, centerY),
-        Offset(size.width, centerY),
-        centerLinePaint,
-      );
-    }
-
-    // Paint for the vertical bars
-    final paint = Paint()
-      ..color = waveColor
-      ..strokeWidth = waveThickness
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-
-    // Calculate how many bars can fit in the available width
-    final maxBars = (size.width / spacing).floor();
-    final startIndex =
-        waveformData.length > maxBars ? waveformData.length - maxBars : 0;
-
-    // Calculate starting position (always start at 0 or align right)
-    final visibleData = waveformData.sublist(startIndex);
-    final totalWaveformWidth = visibleData.length * spacing;
-    final startX = size.width - totalWaveformWidth;
-
-    // Draw each amplitude value as a vertical bar
-    for (int i = 0; i < visibleData.length; i++) {
-      final x = startX + (i * spacing);
-      final amplitude = visibleData[i];
-
-      // Scale amplitude to fit within the canvas height
-      final barHeight = amplitude * centerY * 0.8;
-
-      // Draw top half of the bar (above center line)
-      final topY = centerY - barHeight;
-      final bottomY = centerY + barHeight;
-
-      // Draw the vertical line from top to bottom
-      canvas.drawLine(
-        Offset(x, topY),
-        Offset(x, bottomY),
-        paint,
-      );
-    }
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: colorScheme.primary.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: colorScheme.primary.withValues(alpha: 0.24),
+        ),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: colorScheme.primary,
+              fontWeight: FontWeight.w700,
+            ),
+      ),
+    );
   }
+}
+
+class _AudioLevelChart extends StatelessWidget {
+  static const double _sampleIntervalSeconds = 0.1;
+  static const double _windowSeconds = 5;
+  static const int _maxSamples = 51;
+  static const double _maxAbsLevel = 100;
+
+  final List<double> waveformData;
+  final Future<List<_AudioMicrophoneSourceInfo>> microphoneSourcesFuture;
+
+  const _AudioLevelChart({
+    required this.waveformData,
+    required this.microphoneSourcesFuture,
+  });
 
   @override
-  bool shouldRepaint(covariant WaveformPainter oldDelegate) {
-    return oldDelegate.sampleRevision != sampleRevision ||
-        oldDelegate.waveformData.length != waveformData.length ||
-        oldDelegate.waveColor != waveColor;
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final bars = _buildBars(colorScheme.primary);
+
+    final chartData = LineChartData(
+      minX: -_windowSeconds,
+      maxX: 0,
+      minY: -_maxAbsLevel,
+      maxY: _maxAbsLevel,
+      lineTouchData: const LineTouchData(
+        enabled: false,
+        handleBuiltInTouches: false,
+      ),
+      gridData: FlGridData(
+        show: true,
+        drawVerticalLine: true,
+        getDrawingHorizontalLine: (_) => FlLine(
+          color: colorScheme.outline.withValues(alpha: 0.2),
+          strokeWidth: 1,
+        ),
+        getDrawingVerticalLine: (_) => FlLine(
+          color: colorScheme.outline.withValues(alpha: 0.2),
+          strokeWidth: 1,
+        ),
+      ),
+      titlesData: FlTitlesData(
+        leftTitles: AxisTitles(
+          axisNameWidget: PlatformText(
+            '%',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          axisNameSize: 16,
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: 34,
+            minIncluded: false,
+            maxIncluded: false,
+            getTitlesWidget: (value, meta) {
+              final isBoundaryTick = (value + _maxAbsLevel).abs() < 1e-6 ||
+                  (value - _maxAbsLevel).abs() < 1e-6;
+              if (isBoundaryTick) {
+                return const SizedBox.shrink();
+              }
+              return SideTitleWidget(
+                meta: meta,
+                space: 6,
+                child: SizedBox(
+                  width: 30,
+                  child: Text(
+                    _formatYAxisTick(value),
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.fade,
+                    textAlign: TextAlign.right,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        rightTitles: const AxisTitles(
+          sideTitles: SideTitles(showTitles: false),
+        ),
+        topTitles: const AxisTitles(
+          sideTitles: SideTitles(showTitles: false),
+        ),
+        bottomTitles: AxisTitles(
+          axisNameSize: 0,
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: 20,
+            interval: 1,
+            minIncluded: true,
+            maxIncluded: true,
+            getTitlesWidget: (value, meta) => SideTitleWidget(
+              meta: meta,
+              child: Text(
+                _formatXAxisTick(value),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+      borderData: FlBorderData(
+        show: true,
+        border: Border(
+          left: BorderSide(
+            color: colorScheme.outline.withValues(alpha: 0.28),
+          ),
+          bottom: BorderSide(
+            color: colorScheme.outline.withValues(alpha: 0.28),
+          ),
+        ),
+      ),
+      lineBarsData: bars,
+    );
+
+    return Column(
+      children: [
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(2, 2, 2, 0),
+            child: LineChart(
+              chartData,
+              duration: const Duration(milliseconds: 0),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: LayoutBuilder(
+            builder: (context, constraints) => Row(
+              children: [
+                Expanded(
+                  child: FutureBuilder<List<_AudioMicrophoneSourceInfo>>(
+                    future: microphoneSourcesFuture,
+                    builder: (context, snapshot) {
+                      final sources = snapshot.data ?? const [];
+                      if (sources.isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+                      final minChipWidth = constraints.maxWidth > 70
+                          ? constraints.maxWidth - 70
+                          : 0.0;
+                      return SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minWidth: minChipWidth,
+                          ),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: sources
+                                  .map(
+                                    (source) => Padding(
+                                      padding: const EdgeInsets.only(right: 6),
+                                      child: _AudioMicrophoneSourceChip(
+                                        label: source.label,
+                                      ),
+                                    ),
+                                  )
+                                  .toList(growable: false),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Time (s)',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<LineChartBarData> _buildBars(Color color) {
+    if (waveformData.isEmpty) {
+      return const <LineChartBarData>[];
+    }
+
+    final startIndex = waveformData.length > _maxSamples
+        ? waveformData.length - _maxSamples
+        : 0;
+    final visibleData = waveformData.sublist(startIndex);
+
+    return visibleData.asMap().entries.map((entry) {
+      final samplesFromNewest = visibleData.length - 1 - entry.key;
+      final x = -samplesFromNewest * _sampleIntervalSeconds;
+      final level = (entry.value * 100).clamp(0.0, _maxAbsLevel).toDouble();
+      return LineChartBarData(
+        spots: [
+          FlSpot(x, -level),
+          FlSpot(x, level),
+        ],
+        isCurved: false,
+        barWidth: 3,
+        color: color,
+        isStrokeCapRound: true,
+        dotData: const FlDotData(show: false),
+        belowBarData: BarAreaData(show: false),
+      );
+    }).toList(growable: false);
+  }
+
+  String _formatXAxisTick(double value) {
+    final rounded = value.roundToDouble();
+    if ((value - rounded).abs() < 0.05) {
+      return rounded.toInt().toString();
+    }
+    return value.toStringAsFixed(1);
+  }
+
+  String _formatYAxisTick(double value) {
+    final abs = value.abs();
+    if (abs >= 100) {
+      return value.toStringAsFixed(0);
+    }
+    if (abs >= 1) {
+      return value.toStringAsFixed(1).replaceFirst(RegExp(r'\.0$'), '');
+    }
+    return '0';
+  }
+}
+
+class _AudioMicrophoneSourceChip extends StatelessWidget {
+  final String label;
+
+  const _AudioMicrophoneSourceChip({
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final axisColor = colorScheme.primary;
+
+    return IgnorePointer(
+      child: FilterChip(
+        label: Text(
+          label,
+          style: theme.textTheme.labelMedium?.copyWith(
+            color: axisColor.withValues(alpha: 0.95),
+            fontWeight: FontWeight.w700,
+            fontSize: 10.5,
+          ),
+        ),
+        avatar: Container(
+          width: 7,
+          height: 7,
+          decoration: BoxDecoration(
+            color: axisColor,
+            shape: BoxShape.circle,
+          ),
+        ),
+        selected: true,
+        onSelected: (_) {},
+        showCheckmark: false,
+        visualDensity: const VisualDensity(
+          horizontal: -3,
+          vertical: -3,
+        ),
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        selectedColor: axisColor.withValues(alpha: 0.18),
+        backgroundColor: axisColor.withValues(alpha: 0.18),
+        side: BorderSide(
+          color: axisColor.withValues(alpha: 0.28),
+        ),
+      ),
+    );
   }
 }

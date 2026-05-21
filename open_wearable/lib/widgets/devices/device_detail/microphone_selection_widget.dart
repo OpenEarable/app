@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/view_models/sensor_recorder_provider_facade.dart';
+import 'package:provider/provider.dart';
 
 import 'stereo_pair_option_selector.dart';
 
@@ -30,6 +32,13 @@ class MicrophoneSelectionWidget extends StatelessWidget {
       readSelection: (manager) => manager.getMicrophone(),
       applySelection: (manager, microphone) async {
         manager.setMicrophone(microphone);
+        try {
+          context
+              .read<SensorRecorderProvider>()
+              .notifyMicrophoneConfigurationChanged();
+        } catch (_) {
+          // The selector can be embedded outside the recorder provider tree.
+        }
       },
       optionsFor: (manager) => manager.availableMicrophones,
       supportsOption: (manager, microphone) => manager.availableMicrophones.any(
