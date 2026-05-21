@@ -6,6 +6,7 @@ import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_models.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_storage_web.dart';
 
+import '../models/audio_input_source.dart';
 import '../models/logger.dart';
 import '../models/sensor_streams.dart';
 
@@ -22,35 +23,61 @@ class SensorRecorderProvider with ChangeNotifier {
   bool get hasSensorsConnected => _hasSensorsConnected;
   String? get currentDirectory => _currentDirectory;
   DateTime? get recordingStart => _recordingStart;
+  List<AudioInputSource> get audioInputSources => const [];
+  AudioInputSource? get selectedAudioInputSource => null;
+  AudioInputSource? get appliedAudioInputSource => null;
+  bool get isAudioInputEnabled => false;
+  bool get isAudioMonitoringActive => false;
+  bool get isAudioInputSelectionPending => false;
 
   final List<double> _waveformData = [];
   final int _waveformRevision = 0;
   int get waveformRevision => _waveformRevision;
   List<double> get waveformData => List.unmodifiable(_waveformData);
 
-  /// Web does not expose a selected BLE microphone input.
-  String? get selectedBLEDeviceLabel => null;
-
   int _microphoneConfigurationRevision = 0;
   int get microphoneConfigurationRevision => _microphoneConfigurationRevision;
-
-  bool _isBLEMicrophoneStreamingEnabled = false;
-  bool get isBLEMicrophoneStreamingEnabled => _isBLEMicrophoneStreamingEnabled;
 
   void notifyMicrophoneConfigurationChanged() {
     _microphoneConfigurationRevision++;
     notifyListeners();
   }
 
-  Future<bool> startBLEMicrophoneStream() async {
-    logger.w('BLE microphone streaming is not supported on web.');
+  Future<void> refreshAudioInputSources() async {
+    logger.w('Audio input selection is not supported on web yet.');
+  }
+
+  void startAudioInputSourceRefresh() {}
+
+  void stopAudioInputSourceRefresh() {}
+
+  Future<void> selectAudioInputSource(AudioInputSource? source) async {
+    if (source != null) {
+      logger.w('Audio input recording is not supported on web yet.');
+    }
+    _waveformData.clear();
+    notifyListeners();
+  }
+
+  Future<void> setAudioInputEnabled(bool enabled) async {
+    if (enabled) {
+      logger.w('Audio input recording is not supported on web yet.');
+    }
+    await selectAudioInputSource(null);
+  }
+
+  Future<bool> startAudioMonitoring() async {
+    logger.w('Audio input monitoring is not supported on web yet.');
     return false;
   }
 
-  Future<void> stopBLEMicrophoneStream() async {
-    _isBLEMicrophoneStreamingEnabled = false;
-    _waveformData.clear();
-    notifyListeners();
+  Future<void> stopAudioMonitoring() async {
+    await selectAudioInputSource(null);
+  }
+
+  Future<bool> applySelectedAudioInputSource() async {
+    logger.w('Audio input monitoring is not supported on web yet.');
+    return false;
   }
 
   Future<void> startRecording(String dirname) async {
@@ -117,10 +144,6 @@ class SensorRecorderProvider with ChangeNotifier {
     }
 
     _currentDirectory = null;
-
-    if (!turnOffMic && _isBLEMicrophoneStreamingEnabled) {
-      unawaited(startBLEMicrophoneStream());
-    }
 
     notifyListeners();
   }
