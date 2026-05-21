@@ -28,8 +28,19 @@ class SensorRecorderProvider with ChangeNotifier {
   int get waveformRevision => _waveformRevision;
   List<double> get waveformData => List.unmodifiable(_waveformData);
 
+  /// Web does not expose a selected BLE microphone input.
+  String? get selectedBLEDeviceLabel => null;
+
+  int _microphoneConfigurationRevision = 0;
+  int get microphoneConfigurationRevision => _microphoneConfigurationRevision;
+
   bool _isBLEMicrophoneStreamingEnabled = false;
   bool get isBLEMicrophoneStreamingEnabled => _isBLEMicrophoneStreamingEnabled;
+
+  void notifyMicrophoneConfigurationChanged() {
+    _microphoneConfigurationRevision++;
+    notifyListeners();
+  }
 
   Future<bool> startBLEMicrophoneStream() async {
     logger.w('BLE microphone streaming is not supported on web.');
