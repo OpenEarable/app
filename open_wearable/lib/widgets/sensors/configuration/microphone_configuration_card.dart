@@ -419,34 +419,3 @@ class _SourcePill extends StatelessWidget {
     );
   }
 }
-
-class _PendingStatePill extends StatelessWidget {
-  final Color accentColor;
-
-  const _PendingStatePill({required this.accentColor});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 22,
-      child: Container(
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: accentColor.withValues(alpha: 0.42),
-          ),
-        ),
-        child: Text(
-          'Pending',
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: accentColor,
-                fontWeight: FontWeight.w700,
-              ),
-        ),
-      ),
-    );
-  }
-}
