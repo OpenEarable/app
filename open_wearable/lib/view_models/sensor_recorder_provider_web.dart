@@ -31,8 +31,6 @@ class SensorRecorderProvider with ChangeNotifier {
   bool get isAudioInputSelectionPending => false;
 
   final List<double> _waveformData = [];
-  final int _waveformRevision = 0;
-  int get waveformRevision => _waveformRevision;
   List<double> get waveformData => List.unmodifiable(_waveformData);
 
   int _microphoneConfigurationRevision = 0;
@@ -108,7 +106,8 @@ class SensorRecorderProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void stopRecording(bool turnOffMic) async {
+  /// Stops active web recording sessions and persists their buffered data.
+  Future<void> stopRecording(bool turnOffMic) async {
     if (!_isRecording) {
       return;
     }

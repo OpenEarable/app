@@ -135,10 +135,15 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
       _isHandlingStopAction = true;
     });
 
+    final wearablesProvider = mode == _StopRecordingMode.stopAndTurnOffSensors
+        ? context.read<WearablesProvider>()
+        : null;
+
     try {
-      recorder.stopRecording(mode == _StopRecordingMode.stopAndTurnOffSensors);
-      if (mode == _StopRecordingMode.stopAndTurnOffSensors) {
-        final wearablesProvider = context.read<WearablesProvider>();
+      await recorder.stopRecording(
+        mode == _StopRecordingMode.stopAndTurnOffSensors,
+      );
+      if (wearablesProvider != null) {
         final futures = wearablesProvider.sensorConfigurationProviders.values
             .map((provider) => provider.turnOffAllSensors());
         await Future.wait(futures);

@@ -70,8 +70,6 @@ class SensorRecorderProvider with ChangeNotifier {
       );
 
   final List<double> _waveformData = [];
-  final int _waveformRevision = 0;
-  int get waveformRevision => _waveformRevision;
   List<double> get waveformData => List.unmodifiable(_waveformData);
 
   int _microphoneConfigurationRevision = 0;
@@ -89,7 +87,7 @@ class SensorRecorderProvider with ChangeNotifier {
 
   void _bumpMicrophoneConfigurationRevision() {
     _microphoneConfigurationRevision++;
-    notifyListeners();
+    _notifyListenersIfActive();
   }
 
   // Path for temporary streaming file
@@ -139,7 +137,7 @@ class SensorRecorderProvider with ChangeNotifier {
           !_sameAudioInputSources(_audioInputSources, nextSources)) {
         _availableInputDevices = uniqueDevices;
         _audioInputSources = nextSources;
-        notifyListeners();
+        _notifyListenersIfActive();
       }
     } catch (e) {
       logger.e("Error listing audio input devices: $e");
@@ -161,7 +159,7 @@ class SensorRecorderProvider with ChangeNotifier {
     }
 
     _selectedAudioInputSource = source;
-    notifyListeners();
+    _notifyListenersIfActive();
   }
 
   /// Enables or disables audio capture without changing the remembered source.
@@ -172,7 +170,7 @@ class SensorRecorderProvider with ChangeNotifier {
     } else {
       await selectAudioInputSource(null);
     }
-    notifyListeners();
+    _notifyListenersIfActive();
   }
 
   InputDevice? _inputDeviceForSource(AudioInputSource source) {
@@ -248,23 +246,23 @@ class SensorRecorderProvider with ChangeNotifier {
 
     final selectedSource = _selectedAudioInputSource;
     if (selectedSource == null) {
-      await stopAudioMonitoring();
+      await _stopAudioMonitoring();
       _appliedAudioInputSource = null;
       _waveformData.clear();
-      notifyListeners();
+      _notifyListenersIfActive();
       return true;
     }
 
     if (_isStreamingActive) {
-      await stopAudioMonitoring();
+      await _stopAudioMonitoring(clearWaveform: false);
     }
     _appliedAudioInputSource = selectedSource;
     final started = await startAudioMonitoring();
     if (started) {
-      notifyListeners();
+      _notifyListenersIfActive();
     } else {
       _appliedAudioInputSource = null;
-      notifyListeners();
+      _notifyListenersIfActive();
     }
     return started;
   }
@@ -326,24 +324,28 @@ class SensorRecorderProvider with ChangeNotifier {
           _waveformData.removeAt(0);
         }
 
-        notifyListeners();
+        _notifyListenersIfActive();
       });
 
       logger.i(
         "Audio monitoring started with input: ${source.label}",
       );
-      notifyListeners();
+      _notifyListenersIfActive();
       return true;
     } catch (e) {
       logger.e("Failed to start audio monitoring: $e");
       _isStreamingActive = false;
       _streamingPath = null;
-      notifyListeners();
+      _notifyListenersIfActive();
       return false;
     }
   }
 
-  Future<void> _stopAudioMonitoring() async {
+  /// Stops the temporary monitoring session without changing the applied source.
+  Future<void> _stopAudioMonitoring({
+    bool clearWaveform = true,
+    bool notify = true,
+  }) async {
     if (!_isStreamingActive) {
       return;
     }
@@ -353,23 +355,15 @@ class SensorRecorderProvider with ChangeNotifier {
       _amplitudeSub?.cancel();
       _amplitudeSub = null;
       _isStreamingActive = false;
-      _waveformData.clear();
-
-      // Clean up temporary streaming file
-      if (_streamingPath != null) {
-        try {
-          final file = File(_streamingPath!);
-          if (await file.exists()) {
-            await file.delete();
-          }
-        } catch (e) {
-          // Ignore cleanup errors
-        }
-        _streamingPath = null;
+      if (clearWaveform) {
+        _waveformData.clear();
       }
+      await _deleteStreamingFile();
 
       logger.i("Audio monitoring stopped");
-      notifyListeners();
+      if (notify) {
+        _notifyListenersIfActive();
+      }
     } catch (e) {
       logger.e("Error stopping audio monitoring: $e");
     }
@@ -388,7 +382,7 @@ class SensorRecorderProvider with ChangeNotifier {
         await _startRecorderForWearable(wearable, dirname);
       }
       _isRecording = true;
-      notifyListeners();
+      _notifyListenersIfActive();
     } catch (e, st) {
       logger.e('Failed to start recording: $e\n$st');
       _stopAllRecorderStreams();
@@ -396,13 +390,13 @@ class SensorRecorderProvider with ChangeNotifier {
       _currentDirectory = null;
       _recordingStart = null;
       _isRecording = false;
-      notifyListeners();
+      _notifyListenersIfActive();
       rethrow;
     }
 
     await _startAudioRecording(dirname);
 
-    notifyListeners();
+    _notifyListenersIfActive();
   }
 
   Future<void> _startAudioRecording(String recordingFolderPath) async {
@@ -411,30 +405,15 @@ class SensorRecorderProvider with ChangeNotifier {
       return;
     }
 
-    // Stop streaming session before starting actual recording
-    if (_isStreamingActive) {
-      await _audioRecorder.stop();
-      _amplitudeSub?.cancel();
-      _amplitudeSub = null;
-      _isStreamingActive = false;
-
-      // Clean up temporary streaming file
-      if (_streamingPath != null) {
-        try {
-          final file = File(_streamingPath!);
-          if (await file.exists()) {
-            await file.delete();
-          }
-        } catch (e) {
-          // Ignore cleanup errors
-        }
-        _streamingPath = null;
-      }
+    final shouldRestoreMonitoring = _isStreamingActive;
+    if (shouldRestoreMonitoring) {
+      await _stopAudioMonitoring(clearWaveform: false, notify: false);
     }
 
     try {
       if (!await _audioRecorder.hasPermission()) {
         logger.w("No microphone permission for recording");
+        await _restoreAudioMonitoringIfNeeded(shouldRestoreMonitoring);
         return;
       }
 
@@ -444,12 +423,14 @@ class SensorRecorderProvider with ChangeNotifier {
         logger.w(
           "Selected audio input is unavailable, skipping audio recording: ${source.label}",
         );
+        await _restoreAudioMonitoringIfNeeded(shouldRestoreMonitoring);
         return;
       }
 
       const encoder = AudioEncoder.wav;
       if (!await _audioRecorder.isEncoderSupported(encoder)) {
         logger.w("WAV encoder not supported");
+        await _restoreAudioMonitoringIfNeeded(shouldRestoreMonitoring);
         return;
       }
 
@@ -482,15 +463,17 @@ class SensorRecorderProvider with ChangeNotifier {
           _waveformData.removeAt(0);
         }
 
-        notifyListeners();
+        _notifyListenersIfActive();
       });
     } catch (e) {
       logger.e("Failed to start audio recording: $e");
       _isAudioRecording = false;
+      await _restoreAudioMonitoringIfNeeded(shouldRestoreMonitoring);
     }
   }
 
-  void stopRecording(bool turnOffMic) async {
+  /// Stops active wearable and audio recording streams and finalizes files.
+  Future<void> stopRecording(bool turnOffMic) async {
     _isRecording = false;
     _recordingStart = null;
     _recordingFilepathsBySensorIdentity.clear();
@@ -510,18 +493,48 @@ class SensorRecorderProvider with ChangeNotifier {
     }
 
     if (turnOffMic) {
-      unawaited(() async {
-        await selectAudioInputSource(null);
-        await stopAudioMonitoring();
-        _appliedAudioInputSource = null;
-        _waveformData.clear();
-        notifyListeners();
-      }());
-    } else if (_selectedAudioInputSource != null) {
-      unawaited(applySelectedAudioInputSource());
+      await selectAudioInputSource(null);
+      await _stopAudioMonitoring();
+      _appliedAudioInputSource = null;
+      _waveformData.clear();
+      _notifyListenersIfActive();
+    } else if (_appliedAudioInputSource != null) {
+      await startAudioMonitoring();
     }
 
-    notifyListeners();
+    _notifyListenersIfActive();
+  }
+
+  /// Restarts monitoring when recording could not take over the audio input.
+  Future<void> _restoreAudioMonitoringIfNeeded(bool shouldRestore) async {
+    if (!shouldRestore || _disposed || _appliedAudioInputSource == null) {
+      return;
+    }
+    await _startAudioMonitoring();
+  }
+
+  /// Deletes the temporary file used by the live monitoring recorder session.
+  Future<void> _deleteStreamingFile() async {
+    final streamingPath = _streamingPath;
+    if (streamingPath == null) {
+      return;
+    }
+    _streamingPath = null;
+    try {
+      final file = File(streamingPath);
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } catch (e) {
+      logger.w("Failed to delete temporary audio monitoring file: $e");
+    }
+  }
+
+  /// Notifies listeners only while this provider is still mounted.
+  void _notifyListenersIfActive() {
+    if (!_disposed) {
+      notifyListeners();
+    }
   }
 
   Recorder? getRecorder(Wearable wearable, Sensor sensor) {
@@ -759,16 +772,21 @@ class SensorRecorderProvider with ChangeNotifier {
   void dispose() {
     _disposed = true;
     stopAudioInputSourceRefresh();
-    stopAudioMonitoring();
-
-    // Stop recording
-    _audioRecorder.stop().then((_) {
-      _audioRecorder.dispose();
-    }).catchError((e) {
-      logger.e("Error stopping audio in dispose: $e");
-    });
     _amplitudeSub?.cancel();
+    _amplitudeSub = null;
+    _isStreamingActive = false;
+    _isAudioRecording = false;
     _waveformData.clear();
+    unawaited(() async {
+      try {
+        await _audioRecorder.stop();
+        await _deleteStreamingFile();
+      } catch (e) {
+        logger.e("Error stopping audio in dispose: $e");
+      } finally {
+        await _audioRecorder.dispose();
+      }
+    }());
     for (final wearable in _recorders.keys.toList()) {
       _disposeWearable(wearable);
     }
