@@ -89,18 +89,19 @@ LocalRecorderRecordingFolder _createFolder({
 }) {
   final folderPath = path ?? 'web-${DateTime.now().microsecondsSinceEpoch}';
   final now = DateTime.now();
-  final recordingFiles = files
-      .map(
-        (file) => _WebRecordingFile(
-          path: '$folderPath/${file.name}',
-          name: file.name,
-          sizeBytes: utf8.encode(file.content).length,
-          updatedAt: now,
-          mimeType: file.mimeType,
-          contentBase64: base64Encode(utf8.encode(file.content)),
-        ),
-      )
-      .toList();
+  final recordingFiles = files.map(
+    (file) {
+      final bytes = file.bytes ?? Uint8List.fromList(utf8.encode(file.content));
+      return _WebRecordingFile(
+        path: '$folderPath/${file.name}',
+        name: file.name,
+        sizeBytes: bytes.length,
+        updatedAt: now,
+        mimeType: file.mimeType,
+        contentBase64: base64Encode(bytes),
+      );
+    },
+  ).toList();
 
   return LocalRecorderRecordingFolder(
     path: folderPath,

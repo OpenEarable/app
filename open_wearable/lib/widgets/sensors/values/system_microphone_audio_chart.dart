@@ -1,7 +1,4 @@
-import 'dart:io';
-
 import 'package:fl_chart/fl_chart.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
@@ -23,7 +20,7 @@ class SystemMicrophoneAudioChart extends StatefulWidget {
   });
 
   /// Whether the current platform can render the system microphone chart.
-  static bool get isSupported => !kIsWeb && Platform.isAndroid;
+  static bool get isSupported => true;
 
   @override
   State<SystemMicrophoneAudioChart> createState() =>

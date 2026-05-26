@@ -28,7 +28,7 @@ Future<void> localRecorderOpenRecordingFile(
 ) async {
   final result = await OpenFile.open(
     file.path,
-    type: 'text/comma-separated-values',
+    type: file.mimeType,
   );
 
   if (result.type != ResultType.done) {
