@@ -54,14 +54,15 @@ class _RecordingControls extends State<RecordingControls> {
       _isHandlingStopAction = true;
     });
 
+    final wearablesProvider =
+        turnOffSensors ? context.read<WearablesProvider>() : null;
+
     try {
-      recorder.stopRecording(turnOffSensors);
-      if (turnOffSensors) {
-        final wearablesProvider = context.read<WearablesProvider>();
+      await recorder.stopRecording(turnOffSensors);
+      if (wearablesProvider != null) {
         final futures = wearablesProvider.sensorConfigurationProviders.values
             .map((provider) => provider.turnOffAllSensors());
         await Future.wait(futures);
-        await recorder.selectAudioInputSource(null);
       }
       await widget.updateRecordingsList();
     } catch (e) {
