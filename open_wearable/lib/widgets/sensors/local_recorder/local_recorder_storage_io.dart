@@ -9,8 +9,8 @@ import 'local_recorder_models.dart';
 /// Helper to get the base name of a file or directory across platforms.
 String localRecorderBasename(String path) => path.split(RegExp(r'[\\/]+')).last;
 
-/// Standardizes access to the recordings root for Apple platforms (iOS & macOS).
-Future<Directory> _getAppleRecordingsDirectory() async {
+/// Standardizes access to the recordings root for app-sandboxed platforms.
+Future<Directory> _getAppRecordingsDirectory() async {
   final appDocDir = await getApplicationDocumentsDirectory();
   final dirPath = '${appDocDir.path}/Recordings';
   final dir = Directory(dirPath);
@@ -29,11 +29,14 @@ Future<Directory?> _getRecordingsRootDirectory() async {
     return getExternalStorageDirectory();
   }
 
-  if (Platform.isIOS || Platform.isMacOS) {
-    return _getAppleRecordingsDirectory();
+  if (Platform.isIOS ||
+      Platform.isMacOS ||
+      Platform.isLinux ||
+      Platform.isWindows) {
+    return _getAppRecordingsDirectory();
   }
 
-  return null;
+  return _getAppRecordingsDirectory();
 }
 
 Future<String?> pickRecordingDirectory() async {
@@ -103,6 +106,7 @@ LocalRecorderRecordingFolder _directoryToFolder(Directory directory) {
           name: localRecorderBasename(file.path),
           sizeBytes: file.lengthSync(),
           updatedAt: file.statSync().modified,
+          mimeType: _mimeTypeForPath(file.path),
         ),
       )
       .toList()
@@ -114,4 +118,15 @@ LocalRecorderRecordingFolder _directoryToFolder(Directory directory) {
     updatedAt: directory.statSync().changed,
     files: files,
   );
+}
+
+String _mimeTypeForPath(String path) {
+  final lower = path.toLowerCase();
+  if (lower.endsWith('.wav')) {
+    return 'audio/wav';
+  }
+  if (lower.endsWith('.csv')) {
+    return 'text/csv';
+  }
+  return 'application/octet-stream';
 }

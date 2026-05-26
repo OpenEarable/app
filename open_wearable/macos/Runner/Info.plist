@@ -26,6 +26,8 @@
 	<string>OpenWearable requires Bluetooth access to connect to your wearable device.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
 	<string>OpenWearable requires Bluetooth access to connect to your wearable device.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app records microphone audio with local sensor recording sessions.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>$(PRODUCT_COPYRIGHT)</string>
 	<key>NSMainNibFile</key>
