@@ -9,6 +9,8 @@ import 'package:record/record.dart';
 import '../models/audio_input_source.dart';
 import '../models/logger.dart';
 import '../models/sensor_streams.dart';
+import '../widgets/sensors/local_recorder/local_recorder_models.dart';
+import 'audio_input_controller.dart';
 
 /// Runtime recorder state for connected wearables and sensors.
 ///
@@ -33,44 +35,26 @@ class SensorRecorderProvider with ChangeNotifier {
   final Map<String, String> _recordingFilepathsBySensorIdentity = {};
   Future<void> _pendingSynchronization = Future<void>.value();
   bool _disposed = false;
+  late final AudioInputController _audioInput = AudioInputController(
+    platform: _IoAudioInputPlatform(),
+  )..addListener(_notifyListenersIfActive);
 
   bool _isRecording = false;
   bool _hasSensorsConnected = false;
   String? _currentDirectory;
   DateTime? _recordingStart;
-  final AudioRecorder _audioRecorder = AudioRecorder();
-  static const Duration _audioInputRefreshInterval = Duration(seconds: 3);
-  bool _isAudioRecording = false;
-  String? _currentAudioPath;
-  StreamSubscription<Amplitude>? _amplitudeSub;
-  Timer? _audioInputRefreshTimer;
-  List<InputDevice> _availableInputDevices = const [];
-  List<AudioInputSource> _audioInputSources = const [
-    AudioInputSource.systemDefault,
-  ];
-  AudioInputSource? _selectedAudioInputSource;
-  AudioInputSource? _appliedAudioInputSource;
 
   bool get isRecording => _isRecording;
   bool get hasSensorsConnected => _hasSensorsConnected;
   String? get currentDirectory => _currentDirectory;
   DateTime? get recordingStart => _recordingStart;
-  List<AudioInputSource> get audioInputSources =>
-      List.unmodifiable(_audioInputSources);
-  AudioInputSource? get selectedAudioInputSource => _selectedAudioInputSource;
-  AudioInputSource? get appliedAudioInputSource => _appliedAudioInputSource;
-  bool get isAudioInputEnabled =>
-      _appliedAudioInputSource != null ||
-      _isStreamingActive ||
-      _isAudioRecording;
-  bool get isAudioMonitoringActive => _isStreamingActive;
-  bool get isAudioInputSelectionPending => !_sameAudioInputSource(
-        _selectedAudioInputSource,
-        _appliedAudioInputSource,
-      );
-
-  final List<double> _waveformData = [];
-  List<double> get waveformData => List.unmodifiable(_waveformData);
+  List<AudioInputSource> get audioInputSources => _audioInput.sources;
+  AudioInputSource? get selectedAudioInputSource => _audioInput.selectedSource;
+  AudioInputSource? get appliedAudioInputSource => _audioInput.appliedSource;
+  bool get isAudioInputEnabled => _audioInput.isEnabled;
+  bool get isAudioMonitoringActive => _audioInput.isMonitoringActive;
+  bool get isAudioInputSelectionPending => _audioInput.hasPendingSelection;
+  List<double> get waveformData => _audioInput.waveformData;
 
   int _microphoneConfigurationRevision = 0;
   int get microphoneConfigurationRevision => _microphoneConfigurationRevision;
@@ -90,58 +74,19 @@ class SensorRecorderProvider with ChangeNotifier {
     _notifyListenersIfActive();
   }
 
-  // Path for temporary streaming file
-  String? _streamingPath;
-  bool _isStreamingActive = false;
-
   /// Starts periodic microphone discovery while microphone settings UI exists.
   void startAudioInputSourceRefresh() {
-    if (_audioInputRefreshTimer != null) {
-      return;
-    }
-    unawaited(refreshAudioInputSources());
-    _audioInputRefreshTimer = Timer.periodic(
-      _audioInputRefreshInterval,
-      (_) => unawaited(refreshAudioInputSources()),
-    );
+    _audioInput.startSourceRefresh();
   }
 
   /// Stops periodic microphone discovery when no UI needs it.
   void stopAudioInputSourceRefresh() {
-    _audioInputRefreshTimer?.cancel();
-    _audioInputRefreshTimer = null;
+    _audioInput.stopSourceRefresh();
   }
 
   /// Refreshes the platform microphone list used by the virtual microphone row.
   Future<void> refreshAudioInputSources() async {
-    try {
-      final devices = await _audioRecorder.listInputDevices();
-      final uniqueDevices = <InputDevice>[];
-      final seenDeviceIds = <String>{};
-      for (final device in devices) {
-        if (seenDeviceIds.add(device.id)) {
-          uniqueDevices.add(device);
-        }
-      }
-      final nextSources = [
-        AudioInputSource.systemDefault,
-        ...uniqueDevices.map(
-          (device) => AudioInputSource(
-            id: device.id,
-            label: device.label,
-            kind: classifyAudioInputSourceLabel(device.label),
-          ),
-        ),
-      ];
-      if (!_sameInputDevices(_availableInputDevices, uniqueDevices) ||
-          !_sameAudioInputSources(_audioInputSources, nextSources)) {
-        _availableInputDevices = uniqueDevices;
-        _audioInputSources = nextSources;
-        _notifyListenersIfActive();
-      }
-    } catch (e) {
-      logger.e("Error listing audio input devices: $e");
-    }
+    await _audioInput.refreshSources();
   }
 
   /// Selects the app-local microphone source used by local recordings.
@@ -149,85 +94,20 @@ class SensorRecorderProvider with ChangeNotifier {
   /// Passing `null` turns audio capture off while leaving wearable sensor
   /// configuration untouched.
   Future<void> selectAudioInputSource(AudioInputSource? source) async {
-    if (_isAudioRecording) {
-      logger.w("Cannot change audio input while recording is active");
-      return;
-    }
-
-    if (_sameAudioInputSource(_selectedAudioInputSource, source)) {
-      return;
-    }
-
-    _selectedAudioInputSource = source;
-    _notifyListenersIfActive();
+    await _audioInput.selectSource(source);
   }
 
   /// Enables or disables audio capture without changing the remembered source.
   Future<void> setAudioInputEnabled(bool enabled) async {
-    if (enabled) {
-      _selectedAudioInputSource ??= AudioInputSource.systemDefault;
-      await refreshAudioInputSources();
-    } else {
-      await selectAudioInputSource(null);
-    }
-    _notifyListenersIfActive();
-  }
-
-  InputDevice? _inputDeviceForSource(AudioInputSource source) {
-    if (source.isSystemDefault) {
-      return null;
-    }
-    for (final device in _availableInputDevices) {
-      if (device.id == source.id) {
-        return device;
-      }
-    }
-    return null;
-  }
-
-  bool _sameAudioInputSource(
-    AudioInputSource? left,
-    AudioInputSource? right,
-  ) {
-    if (left == null || right == null) {
-      return left == null && right == null;
-    }
-    return left.id == right.id;
-  }
-
-  bool _sameInputDevices(List<InputDevice> left, List<InputDevice> right) {
-    if (left.length != right.length) {
-      return false;
-    }
-    for (var i = 0; i < left.length; i++) {
-      if (left[i].id != right[i].id || left[i].label != right[i].label) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  bool _sameAudioInputSources(
-    List<AudioInputSource> left,
-    List<AudioInputSource> right,
-  ) {
-    if (left.length != right.length) {
-      return false;
-    }
-    for (var i = 0; i < left.length; i++) {
-      if (left[i] != right[i]) {
-        return false;
-      }
-    }
-    return true;
+    await _audioInput.setEnabled(enabled);
   }
 
   Future<bool> startAudioMonitoring() async {
-    return _startAudioMonitoring();
+    return _audioInput.startMonitoring();
   }
 
   Future<void> stopAudioMonitoring() async {
-    await _stopAudioMonitoring();
+    await _audioInput.stopMonitoring();
   }
 
   /// Applies the pending microphone selection to the live monitoring stream.
@@ -236,137 +116,7 @@ class SensorRecorderProvider with ChangeNotifier {
   /// pending state. Calling this method mirrors the wearable profile apply
   /// flow by starting or stopping the actual microphone stream.
   Future<bool> applySelectedAudioInputSource() async {
-    if (_isAudioRecording) {
-      logger.w("Cannot apply audio input while recording is active");
-      return false;
-    }
-    if (!isAudioInputSelectionPending) {
-      return false;
-    }
-
-    final selectedSource = _selectedAudioInputSource;
-    if (selectedSource == null) {
-      await _stopAudioMonitoring();
-      _appliedAudioInputSource = null;
-      _waveformData.clear();
-      _notifyListenersIfActive();
-      return true;
-    }
-
-    if (_isStreamingActive) {
-      await _stopAudioMonitoring(clearWaveform: false);
-    }
-    _appliedAudioInputSource = selectedSource;
-    final started = await startAudioMonitoring();
-    if (started) {
-      _notifyListenersIfActive();
-    } else {
-      _appliedAudioInputSource = null;
-      _notifyListenersIfActive();
-    }
-    return started;
-  }
-
-  Future<bool> _startAudioMonitoring() async {
-    if (_isStreamingActive) {
-      logger.i("Audio input monitoring already active");
-      return true;
-    }
-
-    try {
-      final source = _appliedAudioInputSource;
-      if (source == null) {
-        logger.w("No audio input selected for monitoring");
-        return false;
-      }
-      if (!await _audioRecorder.hasPermission()) {
-        logger.w("No microphone permission for monitoring");
-        return false;
-      }
-
-      await refreshAudioInputSources();
-      final selectedDevice = _inputDeviceForSource(source);
-      if (!source.isSystemDefault && selectedDevice == null) {
-        logger.w("Selected audio input is unavailable: ${source.label}");
-        return false;
-      }
-
-      const encoder = AudioEncoder.wav;
-      if (!await _audioRecorder.isEncoderSupported(encoder)) {
-        logger.w("WAV encoder not supported");
-        return false;
-      }
-
-      final tempDir = await getTemporaryDirectory();
-      _streamingPath =
-          '${tempDir.path}/ble_stream_${DateTime.now().millisecondsSinceEpoch}.wav';
-
-      final config = RecordConfig(
-        encoder: encoder,
-        sampleRate: 48000,
-        bitRate: 768000,
-        numChannels: 1,
-        device: selectedDevice,
-      );
-
-      await _audioRecorder.start(config, path: _streamingPath!);
-      _isStreamingActive = true;
-
-      // Set up amplitude monitoring for waveform display
-      _amplitudeSub?.cancel();
-      _amplitudeSub = _audioRecorder
-          .onAmplitudeChanged(const Duration(milliseconds: 100))
-          .listen((amp) {
-        final normalized = (amp.current + 50) / 50;
-        _waveformData.add(normalized.clamp(0.0, 1.0));
-
-        if (_waveformData.length > 100) {
-          _waveformData.removeAt(0);
-        }
-
-        _notifyListenersIfActive();
-      });
-
-      logger.i(
-        "Audio monitoring started with input: ${source.label}",
-      );
-      _notifyListenersIfActive();
-      return true;
-    } catch (e) {
-      logger.e("Failed to start audio monitoring: $e");
-      _isStreamingActive = false;
-      _streamingPath = null;
-      _notifyListenersIfActive();
-      return false;
-    }
-  }
-
-  /// Stops the temporary monitoring session without changing the applied source.
-  Future<void> _stopAudioMonitoring({
-    bool clearWaveform = true,
-    bool notify = true,
-  }) async {
-    if (!_isStreamingActive) {
-      return;
-    }
-
-    try {
-      await _audioRecorder.stop();
-      _amplitudeSub?.cancel();
-      _amplitudeSub = null;
-      _isStreamingActive = false;
-      if (clearWaveform) {
-        _waveformData.clear();
-      }
-      await _deleteStreamingFile();
-
-      logger.i("Audio monitoring stopped");
-      if (notify) {
-        _notifyListenersIfActive();
-      }
-    } catch (e) {
-      logger.e("Error stopping audio monitoring: $e");
-    }
+    return _audioInput.applySelectedSource();
   }
 
   Future<void> startRecording(String dirname) async {
@@ -394,82 +144,9 @@ class SensorRecorderProvider with ChangeNotifier {
       rethrow;
     }
 
-    await _startAudioRecording(dirname);
+    await _audioInput.startRecording(dirname);
 
     _notifyListenersIfActive();
-  }
-
-  Future<void> _startAudioRecording(String recordingFolderPath) async {
-    final source = _appliedAudioInputSource;
-    if (source == null) {
-      return;
-    }
-
-    final shouldRestoreMonitoring = _isStreamingActive;
-    if (shouldRestoreMonitoring) {
-      await _stopAudioMonitoring(clearWaveform: false, notify: false);
-    }
-
-    try {
-      if (!await _audioRecorder.hasPermission()) {
-        logger.w("No microphone permission for recording");
-        await _restoreAudioMonitoringIfNeeded(shouldRestoreMonitoring);
-        return;
-      }
-
-      await refreshAudioInputSources();
-      final selectedDevice = _inputDeviceForSource(source);
-      if (!source.isSystemDefault && selectedDevice == null) {
-        logger.w(
-          "Selected audio input is unavailable, skipping audio recording: ${source.label}",
-        );
-        await _restoreAudioMonitoringIfNeeded(shouldRestoreMonitoring);
-        return;
-      }
-
-      const encoder = AudioEncoder.wav;
-      if (!await _audioRecorder.isEncoderSupported(encoder)) {
-        logger.w("WAV encoder not supported");
-        await _restoreAudioMonitoringIfNeeded(shouldRestoreMonitoring);
-        return;
-      }
-
-      final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
-      final audioPath = '$recordingFolderPath/audio_$timestamp.wav';
-
-      final config = RecordConfig(
-        encoder: encoder,
-        sampleRate: 48000, // Set to 48kHz for BLE audio quality
-        bitRate: 768000, // 16-bit * 48kHz * 1 channel = 768 kbps
-        numChannels: 1,
-        device: selectedDevice,
-      );
-
-      await _audioRecorder.start(config, path: audioPath);
-      _currentAudioPath = audioPath;
-      _isAudioRecording = true;
-
-      logger.i(
-        "Audio recording started: $_currentAudioPath with input: ${source.label}",
-      );
-
-      _amplitudeSub = _audioRecorder
-          .onAmplitudeChanged(const Duration(milliseconds: 100))
-          .listen((amp) {
-        final normalized = (amp.current + 50) / 50;
-        _waveformData.add(normalized.clamp(0.0, 1.0));
-
-        if (_waveformData.length > 100) {
-          _waveformData.removeAt(0);
-        }
-
-        _notifyListenersIfActive();
-      });
-    } catch (e) {
-      logger.e("Failed to start audio recording: $e");
-      _isAudioRecording = false;
-      await _restoreAudioMonitoringIfNeeded(shouldRestoreMonitoring);
-    }
   }
 
   /// Stops active wearable and audio recording streams and finalizes files.
@@ -478,56 +155,9 @@ class SensorRecorderProvider with ChangeNotifier {
     _recordingStart = null;
     _recordingFilepathsBySensorIdentity.clear();
     _stopAllRecorderStreams();
-    try {
-      if (_isAudioRecording) {
-        final path = await _audioRecorder.stop();
-        _amplitudeSub?.cancel();
-        _amplitudeSub = null;
-        _isAudioRecording = false;
-
-        logger.i("Audio recording saved to: $path");
-        _currentAudioPath = null;
-      }
-    } catch (e) {
-      logger.e("Error stopping audio recording: $e");
-    }
-
-    if (turnOffMic) {
-      await selectAudioInputSource(null);
-      await _stopAudioMonitoring();
-      _appliedAudioInputSource = null;
-      _waveformData.clear();
-      _notifyListenersIfActive();
-    } else if (_appliedAudioInputSource != null) {
-      await startAudioMonitoring();
-    }
+    await _audioInput.stopRecording(turnOffMic: turnOffMic);
 
     _notifyListenersIfActive();
-  }
-
-  /// Restarts monitoring when recording could not take over the audio input.
-  Future<void> _restoreAudioMonitoringIfNeeded(bool shouldRestore) async {
-    if (!shouldRestore || _disposed || _appliedAudioInputSource == null) {
-      return;
-    }
-    await _startAudioMonitoring();
-  }
-
-  /// Deletes the temporary file used by the live monitoring recorder session.
-  Future<void> _deleteStreamingFile() async {
-    final streamingPath = _streamingPath;
-    if (streamingPath == null) {
-      return;
-    }
-    _streamingPath = null;
-    try {
-      final file = File(streamingPath);
-      if (await file.exists()) {
-        await file.delete();
-      }
-    } catch (e) {
-      logger.w("Failed to delete temporary audio monitoring file: $e");
-    }
   }
 
   /// Notifies listeners only while this provider is still mounted.
@@ -771,22 +401,8 @@ class SensorRecorderProvider with ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
-    stopAudioInputSourceRefresh();
-    _amplitudeSub?.cancel();
-    _amplitudeSub = null;
-    _isStreamingActive = false;
-    _isAudioRecording = false;
-    _waveformData.clear();
-    unawaited(() async {
-      try {
-        await _audioRecorder.stop();
-        await _deleteStreamingFile();
-      } catch (e) {
-        logger.e("Error stopping audio in dispose: $e");
-      } finally {
-        await _audioRecorder.dispose();
-      }
-    }());
+    _audioInput.removeListener(_notifyListenersIfActive);
+    _audioInput.dispose();
     for (final wearable in _recorders.keys.toList()) {
       _disposeWearable(wearable);
     }
@@ -794,4 +410,231 @@ class SensorRecorderProvider with ChangeNotifier {
     _recorders.clear();
     super.dispose();
   }
+}
+
+class _IoAudioInputPlatform implements AudioInputPlatform {
+  final AudioRecorder _audioRecorder = AudioRecorder();
+  StreamSubscription<Amplitude>? _amplitudeSub;
+  List<InputDevice> _availableInputDevices = const [];
+  String? _streamingPath;
+  String? _currentAudioPath;
+  bool _isMonitoringActive = false;
+  bool _isRecordingActive = false;
+
+  @override
+  Future<List<AudioInputSource>> listAudioInputSources() async {
+    final devices = await _audioRecorder.listInputDevices();
+    final uniqueDevices = <InputDevice>[];
+    final seenDeviceIds = <String>{};
+    for (final device in devices) {
+      if (seenDeviceIds.add(device.id)) {
+        uniqueDevices.add(device);
+      }
+    }
+    _availableInputDevices = uniqueDevices;
+    return [
+      AudioInputSource.systemDefault,
+      ...uniqueDevices.map(
+        (device) => AudioInputSource(
+          id: device.id,
+          label: device.label,
+          kind: classifyAudioInputSourceLabel(device.label),
+        ),
+      ),
+    ];
+  }
+
+  @override
+  Future<bool> startMonitoring(
+    AudioInputSource source,
+    ValueChanged<double> onLevel,
+  ) async {
+    if (_isMonitoringActive) {
+      return true;
+    }
+    try {
+      final selectedDevice = await _inputDeviceForSource(source);
+      if (selectedDevice == _UnavailableInputDevice.instance) {
+        logger.w("Selected audio input is unavailable: ${source.label}");
+        return false;
+      }
+      if (!await _audioRecorder.hasPermission()) {
+        logger.w("No microphone permission for monitoring");
+        return false;
+      }
+      const encoder = AudioEncoder.wav;
+      if (!await _audioRecorder.isEncoderSupported(encoder)) {
+        logger.w("WAV encoder not supported");
+        return false;
+      }
+
+      final tempDir = await getTemporaryDirectory();
+      _streamingPath =
+          '${tempDir.path}/audio_monitor_${DateTime.now().millisecondsSinceEpoch}.wav';
+      await _audioRecorder.start(
+        RecordConfig(
+          encoder: encoder,
+          sampleRate: 48000,
+          bitRate: 768000,
+          numChannels: 1,
+          device: selectedDevice,
+        ),
+        path: _streamingPath!,
+      );
+      _isMonitoringActive = true;
+      _listenToAmplitude(onLevel);
+      logger.i("Audio monitoring started with input: ${source.label}");
+      return true;
+    } catch (e) {
+      logger.e("Failed to start audio monitoring: $e");
+      _isMonitoringActive = false;
+      _streamingPath = null;
+      return false;
+    }
+  }
+
+  @override
+  Future<void> stopMonitoring() async {
+    if (!_isMonitoringActive) {
+      return;
+    }
+    try {
+      await _audioRecorder.stop();
+      await _amplitudeSub?.cancel();
+      _amplitudeSub = null;
+      _isMonitoringActive = false;
+      await _deleteStreamingFile();
+      logger.i("Audio monitoring stopped");
+    } catch (e) {
+      logger.e("Error stopping audio monitoring: $e");
+    }
+  }
+
+  @override
+  Future<bool> startRecording(
+    AudioInputSource source,
+    String recordingFolderPath,
+    ValueChanged<double> onLevel,
+  ) async {
+    try {
+      final selectedDevice = await _inputDeviceForSource(source);
+      if (selectedDevice == _UnavailableInputDevice.instance) {
+        logger.w(
+          "Selected audio input is unavailable, skipping audio recording: ${source.label}",
+        );
+        return false;
+      }
+      if (!await _audioRecorder.hasPermission()) {
+        logger.w("No microphone permission for recording");
+        return false;
+      }
+      const encoder = AudioEncoder.wav;
+      if (!await _audioRecorder.isEncoderSupported(encoder)) {
+        logger.w("WAV encoder not supported");
+        return false;
+      }
+      final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
+      final audioPath = '$recordingFolderPath/audio_$timestamp.wav';
+      await _audioRecorder.start(
+        RecordConfig(
+          encoder: encoder,
+          sampleRate: 48000,
+          bitRate: 768000,
+          numChannels: 1,
+          device: selectedDevice,
+        ),
+        path: audioPath,
+      );
+      _currentAudioPath = audioPath;
+      _isRecordingActive = true;
+      _listenToAmplitude(onLevel);
+      logger.i("Audio recording started: $_currentAudioPath");
+      return true;
+    } catch (e) {
+      logger.e("Failed to start audio recording: $e");
+      _isRecordingActive = false;
+      return false;
+    }
+  }
+
+  @override
+  Future<List<LocalRecorderDraftFile>> stopRecording() async {
+    if (!_isRecordingActive) {
+      return const [];
+    }
+    try {
+      final path = await _audioRecorder.stop();
+      await _amplitudeSub?.cancel();
+      _amplitudeSub = null;
+      _isRecordingActive = false;
+      logger.i("Audio recording saved to: $path");
+      _currentAudioPath = null;
+    } catch (e) {
+      logger.e("Error stopping audio recording: $e");
+    }
+    return const [];
+  }
+
+  Future<InputDevice?> _inputDeviceForSource(AudioInputSource source) async {
+    if (source.isSystemDefault) {
+      return null;
+    }
+    if (_availableInputDevices.isEmpty) {
+      await listAudioInputSources();
+    }
+    for (final device in _availableInputDevices) {
+      if (device.id == source.id) {
+        return device;
+      }
+    }
+    return _UnavailableInputDevice.instance;
+  }
+
+  void _listenToAmplitude(ValueChanged<double> onLevel) {
+    unawaited(_amplitudeSub?.cancel());
+    _amplitudeSub = _audioRecorder
+        .onAmplitudeChanged(const Duration(milliseconds: 100))
+        .listen((amp) => onLevel(_normalizeAmplitude(amp)));
+  }
+
+  double _normalizeAmplitude(Amplitude amplitude) {
+    return ((amplitude.current + 50) / 50).clamp(0.0, 1.0);
+  }
+
+  Future<void> _deleteStreamingFile() async {
+    final streamingPath = _streamingPath;
+    if (streamingPath == null) {
+      return;
+    }
+    _streamingPath = null;
+    try {
+      final file = File(streamingPath);
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } catch (e) {
+      logger.w("Failed to delete temporary audio monitoring file: $e");
+    }
+  }
+
+  @override
+  Future<void> dispose() async {
+    await _amplitudeSub?.cancel();
+    _amplitudeSub = null;
+    try {
+      await _audioRecorder.stop();
+      await _deleteStreamingFile();
+    } catch (e) {
+      logger.e("Error stopping audio in dispose: $e");
+    } finally {
+      await _audioRecorder.dispose();
+    }
+  }
+}
+
+class _UnavailableInputDevice extends InputDevice {
+  static const _UnavailableInputDevice instance = _UnavailableInputDevice._();
+
+  const _UnavailableInputDevice._()
+      : super(id: '__unavailable_input_device__', label: 'Unavailable');
 }

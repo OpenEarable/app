@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 class LocalRecorderRecordingFile {
   final String path;
   final String name;
@@ -32,11 +34,13 @@ class LocalRecorderDraftFile {
   final String name;
   final String content;
   final String mimeType;
+  final Uint8List? bytes;
 
   const LocalRecorderDraftFile({
     required this.name,
-    required this.content,
+    this.content = '',
     this.mimeType = 'text/csv',
+    this.bytes,
   });
 }
 
