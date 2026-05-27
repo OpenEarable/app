@@ -103,6 +103,45 @@ class AppUpgradeRegistry {
         ),
       ],
     ),
+    AppUpgradeHighlight(
+      version: '1.3.0',
+      eyebrow: 'OpenWearables 1.3.0',
+      title: 'Record audio alongside\nyour sensor data',
+      summary:
+          'Capture microphone audio in the local recorder and export synchronized session files.',
+      heroDescription:
+          'The local recorder now supports audio capture, so experiments can pair wearable sensor streams '
+          'with microphone recordings from the app. Select an input, monitor the waveform, and save audio '
+          'together with the rest of the session.',
+      accentColor: Color(0xFF8F6A67),
+      useHeroGradient: false,
+      features: <AppUpgradeFeatureHighlight>[
+        AppUpgradeFeatureHighlight(
+          icon: Icons.mic_rounded,
+          title: 'Audio recorder',
+          description:
+              'Record microphone audio directly from the app as part of a local recording session.',
+        ),
+        AppUpgradeFeatureHighlight(
+          icon: Icons.graphic_eq_rounded,
+          title: 'Live waveform monitoring',
+          description:
+              'Preview incoming audio levels before and during capture to verify the selected input.',
+        ),
+        AppUpgradeFeatureHighlight(
+          icon: Icons.input_rounded,
+          title: 'Selectable input source',
+          description:
+              'Choose from available microphone inputs and apply the selected source before recording.',
+        ),
+        AppUpgradeFeatureHighlight(
+          icon: Icons.folder_zip_rounded,
+          title: 'Session exports',
+          description:
+              'Audio files are saved with the same recording session as sensor data for easier review and sharing.',
+        ),
+      ],
+    ),
   ];
 
   /// Returns the configured highlight for [version], if any.
