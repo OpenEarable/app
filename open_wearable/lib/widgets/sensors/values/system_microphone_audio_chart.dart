@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/models/audio_input_availability.dart';
 import 'package:open_wearable/models/device_name_formatter.dart';
 import 'package:open_wearable/models/wearable_display_group.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider_facade.dart';
@@ -20,7 +21,7 @@ class SystemMicrophoneAudioChart extends StatefulWidget {
   });
 
   /// Whether the current platform can render the system microphone chart.
-  static bool get isSupported => true;
+  static bool get isSupported => AudioInputAvailability.isSupported;
 
   @override
   State<SystemMicrophoneAudioChart> createState() =>

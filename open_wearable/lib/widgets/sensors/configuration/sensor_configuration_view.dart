@@ -39,8 +39,10 @@ class SensorConfigurationView extends StatelessWidget {
       return ListView(
         padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
         children: [
-          const MicrophoneConfigurationCard(),
-          const SizedBox(height: 12),
+          if (MicrophoneConfigurationCard.isSupported) ...[
+            const MicrophoneConfigurationCard(),
+            const SizedBox(height: 12),
+          ],
           _buildApplyConfigButton(
             context,
             targets: const <_ConfigApplyTarget>[],
@@ -75,7 +77,8 @@ class SensorConfigurationView extends StatelessWidget {
           wearablesProvider: wearablesProvider,
         );
         final sections = <Widget>[
-          const MicrophoneConfigurationCard(),
+          if (MicrophoneConfigurationCard.isSupported)
+            const MicrophoneConfigurationCard(),
           ...groups.map(
             (group) => _buildGroupConfigurationRow(
               group: group,
