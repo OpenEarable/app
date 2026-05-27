@@ -35,9 +35,7 @@ class SensorRecorderProvider with ChangeNotifier {
   final Map<String, String> _recordingFilepathsBySensorIdentity = {};
   Future<void> _pendingSynchronization = Future<void>.value();
   bool _disposed = false;
-  late final AudioInputController _audioInput = AudioInputController(
-    platform: _IoAudioInputPlatform(),
-  )..addListener(_notifyListenersIfActive);
+  AudioInputController? _audioInput;
 
   bool _isRecording = false;
   bool _hasSensorsConnected = false;
@@ -48,13 +46,30 @@ class SensorRecorderProvider with ChangeNotifier {
   bool get hasSensorsConnected => _hasSensorsConnected;
   String? get currentDirectory => _currentDirectory;
   DateTime? get recordingStart => _recordingStart;
-  List<AudioInputSource> get audioInputSources => _audioInput.sources;
-  AudioInputSource? get selectedAudioInputSource => _audioInput.selectedSource;
-  AudioInputSource? get appliedAudioInputSource => _audioInput.appliedSource;
-  bool get isAudioInputEnabled => _audioInput.isEnabled;
-  bool get isAudioMonitoringActive => _audioInput.isMonitoringActive;
-  bool get isAudioInputSelectionPending => _audioInput.hasPendingSelection;
-  List<double> get waveformData => _audioInput.waveformData;
+  List<AudioInputSource> get audioInputSources =>
+      _supportedAudioInput?.sources ?? const [];
+  AudioInputSource? get selectedAudioInputSource =>
+      _supportedAudioInput?.selectedSource;
+  AudioInputSource? get appliedAudioInputSource =>
+      _supportedAudioInput?.appliedSource;
+  bool get isAudioInputEnabled => _supportedAudioInput?.isEnabled ?? false;
+  bool get isAudioMonitoringActive =>
+      _supportedAudioInput?.isMonitoringActive ?? false;
+  bool get isAudioInputSelectionPending =>
+      _supportedAudioInput?.hasPendingSelection ?? false;
+  List<double> get waveformData =>
+      _supportedAudioInput?.waveformData ?? const [];
+
+  bool get _isAudioInputSupported => !Platform.isMacOS;
+
+  AudioInputController? get _supportedAudioInput {
+    if (!_isAudioInputSupported) {
+      return null;
+    }
+    return _audioInput ??= AudioInputController(
+      platform: _IoAudioInputPlatform(),
+    )..addListener(_notifyListenersIfActive);
+  }
 
   int _microphoneConfigurationRevision = 0;
   int get microphoneConfigurationRevision => _microphoneConfigurationRevision;
@@ -76,17 +91,17 @@ class SensorRecorderProvider with ChangeNotifier {
 
   /// Starts periodic microphone discovery while microphone settings UI exists.
   void startAudioInputSourceRefresh() {
-    _audioInput.startSourceRefresh();
+    _supportedAudioInput?.startSourceRefresh();
   }
 
   /// Stops periodic microphone discovery when no UI needs it.
   void stopAudioInputSourceRefresh() {
-    _audioInput.stopSourceRefresh();
+    _audioInput?.stopSourceRefresh();
   }
 
   /// Refreshes the platform microphone list used by the virtual microphone row.
   Future<void> refreshAudioInputSources() async {
-    await _audioInput.refreshSources();
+    await _supportedAudioInput?.refreshSources();
   }
 
   /// Selects the app-local microphone source used by local recordings.
@@ -94,20 +109,20 @@ class SensorRecorderProvider with ChangeNotifier {
   /// Passing `null` turns audio capture off while leaving wearable sensor
   /// configuration untouched.
   Future<void> selectAudioInputSource(AudioInputSource? source) async {
-    await _audioInput.selectSource(source);
+    await _supportedAudioInput?.selectSource(source);
   }
 
   /// Enables or disables audio capture without changing the remembered source.
   Future<void> setAudioInputEnabled(bool enabled) async {
-    await _audioInput.setEnabled(enabled);
+    await _supportedAudioInput?.setEnabled(enabled);
   }
 
   Future<bool> startAudioMonitoring() async {
-    return _audioInput.startMonitoring();
+    return _supportedAudioInput?.startMonitoring() ?? false;
   }
 
   Future<void> stopAudioMonitoring() async {
-    await _audioInput.stopMonitoring();
+    await _audioInput?.stopMonitoring();
   }
 
   /// Applies the pending microphone selection to the live monitoring stream.
@@ -116,7 +131,7 @@ class SensorRecorderProvider with ChangeNotifier {
   /// pending state. Calling this method mirrors the wearable profile apply
   /// flow by starting or stopping the actual microphone stream.
   Future<bool> applySelectedAudioInputSource() async {
-    return _audioInput.applySelectedSource();
+    return _supportedAudioInput?.applySelectedSource() ?? false;
   }
 
   Future<void> startRecording(String dirname) async {
@@ -144,7 +159,7 @@ class SensorRecorderProvider with ChangeNotifier {
       rethrow;
     }
 
-    await _audioInput.startRecording(dirname);
+    await _supportedAudioInput?.startRecording(dirname);
 
     _notifyListenersIfActive();
   }
@@ -155,7 +170,7 @@ class SensorRecorderProvider with ChangeNotifier {
     _recordingStart = null;
     _recordingFilepathsBySensorIdentity.clear();
     _stopAllRecorderStreams();
-    await _audioInput.stopRecording(turnOffMic: turnOffMic);
+    await _audioInput?.stopRecording(turnOffMic: turnOffMic);
 
     _notifyListenersIfActive();
   }
@@ -401,8 +416,8 @@ class SensorRecorderProvider with ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
-    _audioInput.removeListener(_notifyListenersIfActive);
-    _audioInput.dispose();
+    _audioInput?.removeListener(_notifyListenersIfActive);
+    _audioInput?.dispose();
     for (final wearable in _recorders.keys.toList()) {
       _disposeWearable(wearable);
     }

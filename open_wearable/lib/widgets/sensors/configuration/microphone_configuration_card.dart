@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:open_wearable/models/audio_input_availability.dart';
 import 'package:open_wearable/models/audio_input_source.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider_facade.dart';
 import 'package:provider/provider.dart';
@@ -11,6 +12,9 @@ import 'package:provider/provider.dart';
 /// physical wearable.
 class MicrophoneConfigurationCard extends StatefulWidget {
   const MicrophoneConfigurationCard({super.key});
+
+  /// Whether app-local microphone configuration should be visible.
+  static bool get isSupported => AudioInputAvailability.isSupported;
 
   @override
   State<MicrophoneConfigurationCard> createState() =>
