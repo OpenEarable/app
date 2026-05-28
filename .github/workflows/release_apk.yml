@@ -9,32 +9,20 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v6
+      - name: Set up Android build
+        uses: ./.github/actions/android-build-prepare
         with:
-          distribution: 'zulu'
-          java-version: '17'
-          cache: 'gradle'
-          check-latest: true
-      - name: Get flutter version
-        run: echo "flutter_version=`cat open_wearable/.flutter_version`" >> $GITHUB_ENV
-        id: flutter_version
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: "stable"
-          cache: true
-          flutter-version: ${{ env.flutter_version }}
+          app-dir: open_wearable
+          analyze: "true"
 
-      - working-directory: ./open_wearable
-        run: flutter pub get
-      - working-directory: ./open_wearable
-        run: flutter analyze
-      - working-directory: ./open_wearable
-        run: flutter build apk
-      - uses: actions/upload-artifact@v4.6.2
+      - working-directory: open_wearable
+        run: flutter build apk --release
+      - uses: actions/upload-artifact@v6
         with:
           name: release-apk
-          path: open_wearable/build/app/outputs/apk/release/app-release.apk
+          path: open_wearable/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
 
   release:
     permissions: write-all
@@ -42,7 +30,7 @@ jobs:
     needs: build
     steps:
       - name: Download APK Artifact
-        uses: actions/download-artifact@v4.3.0
+        uses: actions/download-artifact@v7
         with:
           name: release-apk
           path: ${{ github.workspace }}/release-apk

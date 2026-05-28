@@ -26,7 +26,7 @@ jobs:
       RELEASE_TYPE: ${{ github.event.inputs.release_type }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.inputs.branch }}
 
@@ -36,27 +36,12 @@ jobs:
           ruby-version: 3.2.3
           bundler-cache: true
 
-      - name: Get flutter version
-        run: echo "flutter_version=`cat open_wearable/.flutter_version`" >> $GITHUB_ENV
-        id: flutter_version
-      - name: Install flutter
-        uses: subosito/flutter-action@v2
+      - name: Set up Android build
+        uses: ./.github/actions/android-build-prepare
         with:
-          channel: "stable"
-          cache: true
-          flutter-version: ${{ env.flutter_version }}
-      - run: flutter --version
-
-      - name: Get packages
-        run: |
-          cd open_wearable
-          flutter clean
-          flutter pub get
-
-      - name: Analyze source
-        run: |
-          cd open_wearable
-          flutter analyze
+          app-dir: open_wearable
+          clean: "true"
+          analyze: "true"
 
       - name: Decode and save OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PATH
         run: |
