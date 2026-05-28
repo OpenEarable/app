@@ -6,6 +6,7 @@ import 'package:open_wearable/models/audio_input_availability.dart';
 import 'package:open_wearable/models/device_name_formatter.dart';
 import 'package:open_wearable/models/wearable_display_group.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider_facade.dart';
+import 'package:open_wearable/widgets/sensors/values/live_data_graph_settings.dart';
 import 'package:provider/provider.dart';
 
 /// Displays the Android system microphone level and source metadata.
@@ -13,11 +14,20 @@ import 'package:provider/provider.dart';
 /// The widget keeps recorder-driven rebuilds local to the audio card so
 /// frequent amplitude samples do not rebuild the surrounding sensor page.
 class SystemMicrophoneAudioChart extends StatefulWidget {
+  /// Stereo-aware wearable groups used to describe the active microphone route.
   final List<WearableDisplayGroup> groups;
+
+  /// Shared visibility and update policy for live data graphs.
+  final LiveDataGraphSettings settings;
+
+  /// Called when the disabled chart overlay is tapped.
+  final VoidCallback? onDisabledTap;
 
   const SystemMicrophoneAudioChart({
     super.key,
     required this.groups,
+    this.settings = LiveDataGraphSettings.enabled,
+    this.onDisabledTap,
   });
 
   /// Whether the current platform can render the system microphone chart.
@@ -107,14 +117,24 @@ class _SystemMicrophoneAudioChartState
                 const SizedBox(height: 10),
                 SizedBox(
                   height: 200,
-                  child: Selector<SensorRecorderProvider, List<double>>(
-                    selector: (context, recorderProvider) =>
-                        recorderProvider.waveformData,
-                    builder: (context, waveformData, child) => _AudioLevelChart(
-                      waveformData: waveformData,
-                      microphoneSourcesFuture: microphoneSourcesFuture,
-                    ),
-                  ),
+                  child: widget.settings.liveUpdatesEnabled
+                      ? Selector<SensorRecorderProvider, List<double>>(
+                          selector: (context, recorderProvider) =>
+                              recorderProvider.waveformData,
+                          builder: (context, waveformData, child) =>
+                              _AudioLevelChart(
+                            waveformData: waveformData,
+                            microphoneSourcesFuture: microphoneSourcesFuture,
+                            settings: widget.settings,
+                            onDisabledTap: widget.onDisabledTap,
+                          ),
+                        )
+                      : _AudioLevelChart(
+                          waveformData: const <double>[],
+                          microphoneSourcesFuture: microphoneSourcesFuture,
+                          settings: widget.settings,
+                          onDisabledTap: widget.onDisabledTap,
+                        ),
                 ),
               ],
             ),
@@ -474,10 +494,14 @@ class _AudioLevelChart extends StatelessWidget {
 
   final List<double> waveformData;
   final Future<List<_AudioMicrophoneSourceInfo>> microphoneSourcesFuture;
+  final LiveDataGraphSettings settings;
+  final VoidCallback? onDisabledTap;
 
   const _AudioLevelChart({
     required this.waveformData,
     required this.microphoneSourcesFuture,
+    required this.settings,
+    required this.onDisabledTap,
   });
 
   @override
@@ -592,9 +616,13 @@ class _AudioLevelChart extends StatelessWidget {
         Expanded(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(2, 2, 2, 0),
-            child: LineChart(
-              chartData,
-              duration: const Duration(milliseconds: 0),
+            child: LiveDataGraphSurface(
+              settings: settings,
+              onDisabledTap: onDisabledTap,
+              child: LineChart(
+                chartData,
+                duration: const Duration(milliseconds: 0),
+              ),
             ),
           ),
         ),
