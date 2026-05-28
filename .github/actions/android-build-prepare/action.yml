@@ -1,0 +1,32 @@
+name: Android Build Prepare
+description: Set up Java, Flutter, and dependencies for Android builds.
+
+inputs:
+  app-dir:
+    description: Path to the Flutter application directory.
+    required: true
+  clean:
+    description: Whether to clean Flutter build outputs before fetching dependencies.
+    required: false
+    default: "false"
+  analyze:
+    description: Whether to run flutter analyze after dependencies are installed.
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Java
+      uses: actions/setup-java@v5
+      with:
+        distribution: zulu
+        java-version: "21"
+        cache: gradle
+
+    - name: Set up Flutter project
+      uses: ./.github/actions/flutter-prepare
+      with:
+        app-dir: ${{ inputs.app-dir }}
+        clean: ${{ inputs.clean }}
+        analyze: ${{ inputs.analyze }}

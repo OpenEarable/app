@@ -32,21 +32,12 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v6
 
-      - name: Install Flutter
-        run: |
-          git clone https://github.com/flutter/flutter.git --depth 1 -b stable "$RUNNER_TEMP/flutter"
-          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
-
-      - name: Show Flutter version
-        run: flutter --version
-
-      - name: Install dependencies
-        working-directory: ${{ env.FLUTTER_PROJECT }}
-        run: flutter pub get
-
       - name: Build web bundle
-        working-directory: ${{ env.FLUTTER_PROJECT }}
-        run: flutter build web --release --base-href "${BASE_HREF}" --pwa-strategy=none
+        uses: ./.github/actions/flutter-web-build
+        with:
+          app-dir: ${{ env.FLUTTER_PROJECT }}
+          base-href: ${{ env.BASE_HREF }}
+          pwa-strategy: none
 
       - name: Prepare GitHub Pages files
         working-directory: ${{ env.FLUTTER_PROJECT }}

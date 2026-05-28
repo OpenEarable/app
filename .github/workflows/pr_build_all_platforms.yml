@@ -9,6 +9,7 @@ on:
       - ready_for_review
 
 permissions:
+  actions: read
   contents: read
   pull-requests: write
 
@@ -20,51 +21,46 @@ env:
   APP_DIR: open_wearable
 
 jobs:
-  build_android:
-    name: Build Android
-    runs-on: ubuntu-latest
-    outputs:
-      artifact_id: ${{ steps.upload_android.outputs.artifact-id }}
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Set up Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: zulu
-          java-version: "21"
-          cache: gradle
-
-      - name: Set up Flutter project
-        uses: ./.github/actions/flutter-prepare
-        with:
-          app-dir: ${{ env.APP_DIR }}
-
-      - name: Build Android APK
-        working-directory: ${{ env.APP_DIR }}
-        run: flutter build apk --release
-
-      - name: Upload Android APK
-        id: upload_android
-        uses: actions/upload-artifact@v6
-        with:
-          name: android-apk
-          path: open_wearable/build/app/outputs/flutter-apk/app-release.apk
-          if-no-files-found: error
-
-  build_linux:
-    name: Build Linux
-    runs-on: ubuntu-latest
-    outputs:
-      artifact_id: ${{ steps.upload_linux.outputs.artifact-id }}
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: android
+            name: Android
+            os: ubuntu-latest
+            build_command: flutter build apk --release
+            artifact_name: android-apk
+            artifact_path: open_wearable/build/app/outputs/flutter-apk/app-release.apk
+            android: true
+          - target: linux
+            name: Linux
+            os: ubuntu-latest
+            build_command: flutter build linux --release
+            artifact_name: linux-bundle
+            artifact_path: open_wearable/build/linux/x64/release/bundle
+            linux_dependencies: true
+          - target: windows
+            name: Windows
+            os: windows-latest
+            build_command: flutter build windows --release
+            artifact_name: windows-runner
+            artifact_path: open_wearable/build/windows/x64/runner/Release
+          - target: web
+            name: Web
+            os: ubuntu-latest
+            build_command: flutter build web --release
+            artifact_name: web-bundle
+            artifact_path: open_wearable/build/web
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
 
       - name: Install Linux build dependencies
+        if: ${{ matrix.linux_dependencies == true }}
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -77,85 +73,33 @@ jobs:
             ninja-build \
             pkg-config
 
+      - name: Set up Android build
+        if: ${{ matrix.android == true }}
+        uses: ./.github/actions/android-build-prepare
+        with:
+          app-dir: ${{ env.APP_DIR }}
+
       - name: Set up Flutter project
+        if: ${{ matrix.android != true }}
         uses: ./.github/actions/flutter-prepare
         with:
           app-dir: ${{ env.APP_DIR }}
 
-      - name: Build Linux bundle
+      - name: Build ${{ matrix.name }} artifact
         working-directory: ${{ env.APP_DIR }}
-        run: flutter build linux --release
+        run: ${{ matrix.build_command }}
 
-      - name: Upload Linux bundle
-        id: upload_linux
+      - name: Upload ${{ matrix.name }} artifact
         uses: actions/upload-artifact@v6
         with:
-          name: linux-bundle
-          path: open_wearable/build/linux/x64/release/bundle
-          if-no-files-found: error
-
-  build_windows:
-    name: Build Windows
-    runs-on: windows-latest
-    outputs:
-      artifact_id: ${{ steps.upload_windows.outputs.artifact-id }}
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Set up Flutter project
-        uses: ./.github/actions/flutter-prepare
-        with:
-          app-dir: ${{ env.APP_DIR }}
-
-      - name: Build Windows runner
-        working-directory: ${{ env.APP_DIR }}
-        run: flutter build windows --release
-
-      - name: Upload Windows runner
-        id: upload_windows
-        uses: actions/upload-artifact@v6
-        with:
-          name: windows-runner
-          path: open_wearable/build/windows/x64/runner/Release
-          if-no-files-found: error
-
-  build_web:
-    name: Build Web
-    runs-on: ubuntu-latest
-    outputs:
-      artifact_id: ${{ steps.upload_web.outputs.artifact-id }}
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Set up Flutter project
-        uses: ./.github/actions/flutter-prepare
-        with:
-          app-dir: ${{ env.APP_DIR }}
-
-      - name: Build Web bundle
-        working-directory: ${{ env.APP_DIR }}
-        run: flutter build web --release
-
-      - name: Upload Web bundle
-        id: upload_web
-        uses: actions/upload-artifact@v6
-        with:
-          name: web-bundle
-          path: open_wearable/build/web
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_path }}
           if-no-files-found: error
 
   comment_artifact_links:
     name: Comment Artifact Links
     runs-on: ubuntu-latest
-    needs:
-      - build_android
-      - build_linux
-      - build_windows
-      - build_web
+    needs: build
     if: always()
 
     steps:
@@ -163,26 +107,40 @@ jobs:
         uses: actions/github-script@v8
         env:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          ANDROID_ARTIFACT_ID: ${{ needs.build_android.outputs.artifact_id }}
-          LINUX_ARTIFACT_ID: ${{ needs.build_linux.outputs.artifact_id }}
-          WINDOWS_ARTIFACT_ID: ${{ needs.build_windows.outputs.artifact_id }}
-          WEB_ARTIFACT_ID: ${{ needs.build_web.outputs.artifact_id }}
         with:
           script: |
             const marker = '<!-- pr-build-artifacts -->';
             const prNumber = context.payload.pull_request.number;
             const runUrl = process.env.RUN_URL;
             const repoUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}`;
-            const linkFor = (id) => id
-              ? `${repoUrl}/actions/runs/${context.runId}/artifacts/${id}`
-              : runUrl;
+            const artifactLabels = new Map([
+              ['android-apk', 'Android APK'],
+              ['linux-bundle', 'Linux Bundle'],
+              ['windows-runner', 'Windows Runner'],
+              ['web-bundle', 'Web Bundle'],
+            ]);
+
+            const { data: artifactData } = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId,
+            });
+
+            const artifactByName = new Map(
+              artifactData.artifacts.map((artifact) => [artifact.name, artifact])
+            );
+
+            const artifactLines = [...artifactLabels].map(([name, label]) => {
+              const artifact = artifactByName.get(name);
+              const url = artifact
+                ? `${repoUrl}/actions/runs/${context.runId}/artifacts/${artifact.id}`
+                : runUrl;
+              return `- ${label}: [Download ${label}](${url})`;
+            });
 
             const body = `${marker}
             ### PR Build Artifacts
-            - Android APK: [Download Android build](${linkFor(process.env.ANDROID_ARTIFACT_ID)})
-            - Linux Bundle: [Download Linux build](${linkFor(process.env.LINUX_ARTIFACT_ID)})
-            - Windows Runner: [Download Windows build](${linkFor(process.env.WINDOWS_ARTIFACT_ID)})
-            - Web Bundle: [Download Web build](${linkFor(process.env.WEB_ARTIFACT_ID)})
+            ${artifactLines.join('\n')}
 
             Full workflow run: ${runUrl}`;
 

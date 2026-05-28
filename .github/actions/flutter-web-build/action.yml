@@ -1,0 +1,49 @@
+name: Flutter Web Build
+description: Prepare Flutter, analyze the app, and build a web bundle.
+
+inputs:
+  app-dir:
+    description: Path to the Flutter application directory.
+    required: true
+  base-href:
+    description: Optional base href passed to flutter build web.
+    required: false
+    default: ""
+  pwa-strategy:
+    description: Optional PWA strategy passed to flutter build web.
+    required: false
+    default: ""
+  build-metadata:
+    description: Whether to add BUILD_COMMIT and BUILD_BRANCH dart defines.
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Flutter project
+      uses: ./.github/actions/flutter-prepare
+      with:
+        app-dir: ${{ inputs.app-dir }}
+        analyze: "true"
+
+    - name: Build web bundle
+      shell: bash
+      working-directory: ${{ inputs.app-dir }}
+      run: |
+        args=(web --release)
+
+        if [ -n "${{ inputs.base-href }}" ]; then
+          args+=(--base-href "${{ inputs.base-href }}")
+        fi
+
+        if [ -n "${{ inputs.pwa-strategy }}" ]; then
+          args+=(--pwa-strategy "${{ inputs.pwa-strategy }}")
+        fi
+
+        if [ "${{ inputs.build-metadata }}" = "true" ]; then
+          args+=(--dart-define "BUILD_COMMIT=$(git rev-parse --short HEAD)")
+          args+=(--dart-define "BUILD_BRANCH=$(git rev-parse --abbrev-ref HEAD)")
+        fi
+
+        flutter build "${args[@]}"
