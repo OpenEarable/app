@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
-import 'package:open_wearable/models/app_shutdown_settings.dart';
 import 'package:open_wearable/models/wearable_display_group.dart';
 import 'package:open_wearable/view_models/sensor_data_provider.dart';
+import 'package:open_wearable/view_models/sensor_recorder_provider_facade.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
+import 'package:open_wearable/widgets/sensors/values/live_data_graph_settings.dart';
 import 'package:open_wearable/widgets/sensors/values/sensor_value_card.dart';
 import 'package:open_wearable/widgets/sensors/values/system_microphone_audio_chart.dart';
 import 'package:provider/provider.dart';
 
+/// Lists all live sensor graphs and the app-local system microphone graph.
 class SensorValuesPage extends StatefulWidget {
+  /// Optional externally-owned providers used to share sensor streams.
   final Map<(Wearable, Sensor), SensorDataProvider>? sharedProviders;
 
   const SensorValuesPage({
@@ -50,43 +54,44 @@ class _SensorValuesPageState extends State<SensorValuesPage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return ValueListenableBuilder<bool>(
-      valueListenable: AppShutdownSettings.disableLiveDataGraphsListenable,
-      builder: (context, disableLiveDataGraphs, _) {
-        return ValueListenableBuilder<bool>(
-          valueListenable:
-              AppShutdownSettings.hideLiveDataGraphsWithoutDataListenable,
-          builder: (context, hideCardsWithoutLiveData, __) {
-            final shouldHideCardsWithoutLiveData =
-                hideCardsWithoutLiveData && !disableLiveDataGraphs;
-            return Consumer<WearablesProvider>(
-              builder: (context, wearablesProvider, child) {
-                return FutureBuilder<List<WearableDisplayGroup>>(
-                  future: _wearableGroupsFutureFor(wearablesProvider),
-                  builder: (context, snapshot) {
-                    final groups = orderWearableGroupsByNameAndSide(
-                      snapshot.data ??
-                          wearablesProvider.wearables
-                              .map(
-                                (wearable) => WearableDisplayGroup.single(
-                                  wearable: wearable,
-                                ),
-                              )
-                              .toList(),
-                    );
-                    final orderedWearables =
-                        _orderedWearablesFromGroups(groups);
-                    _ensureProviders(orderedWearables);
-                    _cleanupProviders(orderedWearables);
+    return LiveDataGraphSettingsBuilder(
+      builder: (context, graphSettings) {
+        return Consumer<WearablesProvider>(
+          builder: (context, wearablesProvider, child) {
+            return FutureBuilder<List<WearableDisplayGroup>>(
+              future: _wearableGroupsFutureFor(wearablesProvider),
+              builder: (context, snapshot) {
+                final groups = orderWearableGroupsByNameAndSide(
+                  snapshot.data ??
+                      wearablesProvider.wearables
+                          .map(
+                            (wearable) => WearableDisplayGroup.single(
+                              wearable: wearable,
+                            ),
+                          )
+                          .toList(),
+                );
+                final orderedWearables = _orderedWearablesFromGroups(groups);
+                _ensureProviders(orderedWearables);
+                _cleanupProviders(orderedWearables);
 
-                    Widget buildContent() {
-                      final hasAnySensors = _hasAnySensors(orderedWearables);
-                      final charts = _buildCharts(
-                        orderedWearables,
-                        hideCardsWithoutLiveData:
-                            shouldHideCardsWithoutLiveData,
+                Widget buildContent() {
+                  final hasAnySensors = _hasAnySensors(orderedWearables);
+                  final charts = _buildCharts(
+                    orderedWearables,
+                    hideCardsWithoutLiveData:
+                        graphSettings.hideGraphsWithoutData,
+                  );
+
+                  return Selector<SensorRecorderProvider, bool>(
+                    selector: (context, recorderProvider) =>
+                        recorderProvider.waveformData.isNotEmpty,
+                    builder: (context, hasSystemMicrophoneData, _) {
+                      final showSystemMicrophoneChart =
+                          _shouldShowSystemMicrophoneChart(
+                        settings: graphSettings,
+                        hasSystemMicrophoneData: hasSystemMicrophoneData,
                       );
-
                       return LayoutBuilder(
                         builder: (context, constraints) {
                           if (constraints.maxWidth < 600) {
@@ -96,7 +101,10 @@ class _SensorValuesPageState extends State<SensorValuesPage>
                               groups,
                               hasAnySensors: hasAnySensors,
                               hideCardsWithoutLiveData:
-                                  shouldHideCardsWithoutLiveData,
+                                  graphSettings.hideGraphsWithoutData,
+                              showSystemMicrophoneChart:
+                                  showSystemMicrophoneChart,
+                              graphSettings: graphSettings,
                             );
                           } else {
                             return _buildLargeScreenLayout(
@@ -105,25 +113,28 @@ class _SensorValuesPageState extends State<SensorValuesPage>
                               groups,
                               hasAnySensors: hasAnySensors,
                               hideCardsWithoutLiveData:
-                                  shouldHideCardsWithoutLiveData,
+                                  graphSettings.hideGraphsWithoutData,
+                              showSystemMicrophoneChart:
+                                  showSystemMicrophoneChart,
+                              graphSettings: graphSettings,
                             );
                           }
                         },
                       );
-                    }
+                    },
+                  );
+                }
 
-                    if (disableLiveDataGraphs) {
-                      return buildContent();
-                    }
+                if (!graphSettings.liveUpdatesEnabled) {
+                  return buildContent();
+                }
 
-                    final sensorDataListenable =
-                        Listenable.merge(_providersFor(orderedWearables));
+                final sensorDataListenable =
+                    Listenable.merge(_providersFor(orderedWearables));
 
-                    return AnimatedBuilder(
-                      animation: sensorDataListenable,
-                      builder: (context, ___) => buildContent(),
-                    );
-                  },
+                return AnimatedBuilder(
+                  animation: sensorDataListenable,
+                  builder: (context, ___) => buildContent(),
                 );
               },
             );
@@ -317,6 +328,8 @@ class _SensorValuesPageState extends State<SensorValuesPage>
     List<WearableDisplayGroup> groups, {
     required bool hasAnySensors,
     required bool hideCardsWithoutLiveData,
+    required bool showSystemMicrophoneChart,
+    required LiveDataGraphSettings graphSettings,
   }) {
     return ListView(
       padding: SensorPageSpacing.pagePaddingWithBottomInset(context),
@@ -332,8 +345,14 @@ class _SensorValuesPageState extends State<SensorValuesPage>
               ),
             ),
           ),
-        if (SystemMicrophoneAudioChart.isSupported)
-          SystemMicrophoneAudioChart(groups: groups),
+        if (showSystemMicrophoneChart)
+          SystemMicrophoneAudioChart(
+            groups: groups,
+            settings: graphSettings,
+            onDisabledTap: graphSettings.liveUpdatesEnabled
+                ? null
+                : () => context.push('/settings/general'),
+          ),
       ],
     );
   }
@@ -344,6 +363,8 @@ class _SensorValuesPageState extends State<SensorValuesPage>
     List<WearableDisplayGroup> groups, {
     required bool hasAnySensors,
     required bool hideCardsWithoutLiveData,
+    required bool showSystemMicrophoneChart,
+    required LiveDataGraphSettings graphSettings,
   }) {
     final gridItems = <Widget>[
       if (charts.isEmpty)
@@ -356,8 +377,14 @@ class _SensorValuesPageState extends State<SensorValuesPage>
         )
       else
         ...charts,
-      if (SystemMicrophoneAudioChart.isSupported)
-        SystemMicrophoneAudioChart(groups: groups),
+      if (showSystemMicrophoneChart)
+        SystemMicrophoneAudioChart(
+          groups: groups,
+          settings: graphSettings,
+          onDisabledTap: graphSettings.liveUpdatesEnabled
+              ? null
+              : () => context.push('/settings/general'),
+        ),
     ];
 
     return SingleChildScrollView(
@@ -398,6 +425,17 @@ class _SensorValuesPageState extends State<SensorValuesPage>
       title: 'No sensors connected',
       subtitle: 'Connect a wearable to start viewing live sensor values.',
     );
+  }
+
+  /// Applies live-data visibility settings to the app-local microphone chart.
+  bool _shouldShowSystemMicrophoneChart({
+    required LiveDataGraphSettings settings,
+    required bool hasSystemMicrophoneData,
+  }) {
+    if (!SystemMicrophoneAudioChart.isSupported) {
+      return false;
+    }
+    return settings.shouldShowGraph(hasData: hasSystemMicrophoneData);
   }
 
   Widget _buildEmptyStateCard(
