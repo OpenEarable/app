@@ -87,19 +87,11 @@ class _MicrophoneConfigurationCardState
                 padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
                 child: Row(
                   children: [
-                    Expanded(
-                      child: PlatformText(
-                        'Microphone',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'Refresh audio inputs',
-                      onPressed: () =>
-                          recorderProvider.refreshAudioInputSources(),
-                      icon: const Icon(Icons.refresh_rounded, size: 20),
+                    PlatformText(
+                      'System Audio',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                     ),
                   ],
                 ),
@@ -136,7 +128,7 @@ class _MicrophoneConfigurationCardState
                           const SizedBox(width: 7),
                           Expanded(
                             child: Text(
-                              'Audio Input',
+                              'System Microphone',
                               maxLines: 1,
                               softWrap: false,
                               overflow: TextOverflow.ellipsis,
