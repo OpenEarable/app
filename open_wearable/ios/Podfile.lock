@@ -1,125 +1,42 @@
 PODS:
-  - audioplayers_darwin (0.0.1):
-    - Flutter
-    - FlutterMacOS
-  - device_info_plus (0.0.1):
-    - Flutter
-  - DKImagePickerController/Core (4.3.9):
-    - DKImagePickerController/ImageDataManager
-    - DKImagePickerController/Resource
-  - DKImagePickerController/ImageDataManager (4.3.9)
-  - DKImagePickerController/PhotoGallery (4.3.9):
-    - DKImagePickerController/Core
-    - DKPhotoGallery
-  - DKImagePickerController/Resource (4.3.9)
-  - DKPhotoGallery (0.0.19):
-    - DKPhotoGallery/Core (= 0.0.19)
-    - DKPhotoGallery/Model (= 0.0.19)
-    - DKPhotoGallery/Preview (= 0.0.19)
-    - DKPhotoGallery/Resource (= 0.0.19)
-    - SDWebImage
-    - SwiftyGif
-  - DKPhotoGallery/Core (0.0.19):
-    - DKPhotoGallery/Model
-    - DKPhotoGallery/Preview
-    - SDWebImage
-    - SwiftyGif
-  - DKPhotoGallery/Model (0.0.19):
-    - SDWebImage
-    - SwiftyGif
-  - DKPhotoGallery/Preview (0.0.19):
-    - DKPhotoGallery/Model
-    - DKPhotoGallery/Resource
-    - SDWebImage
-    - SwiftyGif
-  - DKPhotoGallery/Resource (0.0.19):
-    - SDWebImage
-    - SwiftyGif
-  - file_picker (0.0.1):
-    - DKImagePickerController/PhotoGallery
-    - Flutter
-  - file_selector_ios (0.0.1):
-    - Flutter
   - Flutter (1.0.0)
   - flutter_archive (0.0.1):
     - Flutter
     - ZIPFoundation (= 0.9.19)
   - flutter_headset_detector (3.1.0):
     - Flutter
-  - iOSMcuManagerLibrary (1.10.1):
-    - SwiftCBOR (= 0.4.7)
+  - iOSMcuManagerLibrary (1.12):
+    - SwiftCBOR (= 0.5.0)
     - ZIPFoundation (= 0.9.19)
-  - mcumgr_flutter (0.6.1):
+  - mcumgr_flutter (0.9.0):
     - Flutter
-    - iOSMcuManagerLibrary (= 1.10.1)
+    - FlutterMacOS
+    - iOSMcuManagerLibrary (= 1.12)
     - SwiftProtobuf
   - open_file_ios (1.0.3):
     - Flutter
-  - package_info_plus (0.4.5):
-    - Flutter
   - permission_handler_apple (9.3.0):
     - Flutter
-  - SDWebImage (5.21.7):
-    - SDWebImage/Core (= 5.21.7)
-  - SDWebImage/Core (5.21.7)
-  - sensors_plus (0.0.1):
-    - Flutter
-  - share_plus (0.0.1):
-    - Flutter
-  - shared_preferences_foundation (0.0.1):
-    - Flutter
-    - FlutterMacOS
-  - SwiftCBOR (0.4.7)
+  - SwiftCBOR (0.5.0)
   - SwiftProtobuf (1.37.0)
-  - SwiftyGif (5.4.5)
-  - universal_ble (0.0.1):
-    - Flutter
-    - FlutterMacOS
-  - url_launcher_ios (0.0.1):
-    - Flutter
-  - wakelock_plus (0.0.1):
-    - Flutter
   - ZIPFoundation (0.9.19)
 
 DEPENDENCIES:
-  - audioplayers_darwin (from `.symlinks/plugins/audioplayers_darwin/darwin`)
-  - device_info_plus (from `.symlinks/plugins/device_info_plus/ios`)
-  - file_picker (from `.symlinks/plugins/file_picker/ios`)
-  - file_selector_ios (from `.symlinks/plugins/file_selector_ios/ios`)
   - Flutter (from `Flutter`)
   - flutter_archive (from `.symlinks/plugins/flutter_archive/ios`)
   - flutter_headset_detector (from `.symlinks/plugins/flutter_headset_detector/ios`)
-  - mcumgr_flutter (from `.symlinks/plugins/mcumgr_flutter/ios`)
+  - mcumgr_flutter (from `.symlinks/plugins/mcumgr_flutter/darwin`)
   - open_file_ios (from `.symlinks/plugins/open_file_ios/ios`)
-  - package_info_plus (from `.symlinks/plugins/package_info_plus/ios`)
   - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
-  - sensors_plus (from `.symlinks/plugins/sensors_plus/ios`)
-  - share_plus (from `.symlinks/plugins/share_plus/ios`)
-  - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
-  - universal_ble (from `.symlinks/plugins/universal_ble/darwin`)
-  - url_launcher_ios (from `.symlinks/plugins/url_launcher_ios/ios`)
-  - wakelock_plus (from `.symlinks/plugins/wakelock_plus/ios`)
 
 SPEC REPOS:
   trunk:
-    - DKImagePickerController
-    - DKPhotoGallery
     - iOSMcuManagerLibrary
-    - SDWebImage
     - SwiftCBOR
     - SwiftProtobuf
-    - SwiftyGif
     - ZIPFoundation
 
 EXTERNAL SOURCES:
-  audioplayers_darwin:
-    :path: ".symlinks/plugins/audioplayers_darwin/darwin"
-  device_info_plus:
-    :path: ".symlinks/plugins/device_info_plus/ios"
-  file_picker:
-    :path: ".symlinks/plugins/file_picker/ios"
-  file_selector_ios:
-    :path: ".symlinks/plugins/file_selector_ios/ios"
   Flutter:
     :path: Flutter
   flutter_archive:
@@ -127,53 +44,24 @@ EXTERNAL SOURCES:
   flutter_headset_detector:
     :path: ".symlinks/plugins/flutter_headset_detector/ios"
   mcumgr_flutter:
-    :path: ".symlinks/plugins/mcumgr_flutter/ios"
+    :path: ".symlinks/plugins/mcumgr_flutter/darwin"
   open_file_ios:
     :path: ".symlinks/plugins/open_file_ios/ios"
-  package_info_plus:
-    :path: ".symlinks/plugins/package_info_plus/ios"
   permission_handler_apple:
     :path: ".symlinks/plugins/permission_handler_apple/ios"
-  sensors_plus:
-    :path: ".symlinks/plugins/sensors_plus/ios"
-  share_plus:
-    :path: ".symlinks/plugins/share_plus/ios"
-  shared_preferences_foundation:
-    :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
-  universal_ble:
-    :path: ".symlinks/plugins/universal_ble/darwin"
-  url_launcher_ios:
-    :path: ".symlinks/plugins/url_launcher_ios/ios"
-  wakelock_plus:
-    :path: ".symlinks/plugins/wakelock_plus/ios"
 
 SPEC CHECKSUMS:
-  audioplayers_darwin: 835ced6edd4c9fc8ebb0a7cc9e294a91d99917d5
-  device_info_plus: 21fcca2080fbcd348be798aa36c3e5ed849eefbe
-  DKImagePickerController: 946cec48c7873164274ecc4624d19e3da4c1ef3c
-  DKPhotoGallery: b3834fecb755ee09a593d7c9e389d8b5d6deed60
-  file_picker: a0560bc09d61de87f12d246fc47d2119e6ef37be
-  file_selector_ios: ec57ec07954363dd730b642e765e58f199bb621a
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   flutter_archive: ad8edfd7f7d1bb12058d05424ba93e27d9930efe
   flutter_headset_detector: 37d2407c6c59aa6e8a9daecf732854862ff6dd4a
-  iOSMcuManagerLibrary: e9555825af11a61744fe369c12e1e66621061b58
-  mcumgr_flutter: 969e99cc15e9fe658242669ce1075bf4612aef8a
+  iOSMcuManagerLibrary: f72db849f6dd66b1f26cd7eea776050a22c8591c
+  mcumgr_flutter: b9864b2ae8334b6ba2b33f9ab4fc0a67bbe75c7a
   open_file_ios: 46184d802ee7959203f6392abcfa0dd49fdb5be0
-  package_info_plus: af8e2ca6888548050f16fa2f1938db7b5a5df499
   permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
-  SDWebImage: e9fc87c1aab89a8ab1bbd74eba378c6f53be8abf
-  sensors_plus: 6a11ed0c2e1d0bd0b20b4029d3bad27d96e0c65b
-  share_plus: 50da8cb520a8f0f65671c6c6a99b3617ed10a58a
-  shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb
-  SwiftCBOR: 465775bed0e8bac7bfb8160bcf7b95d7f75971e4
+  SwiftCBOR: aa87349b4ccddd19f861aa544f7c27d43dee5772
   SwiftProtobuf: 3fafd1b2fb97e6d95ad9c8adb2215da9afec7c83
-  SwiftyGif: 706c60cf65fa2bc5ee0313beece843c8eb8194d4
-  universal_ble: ff19787898040d721109c6324472e5dd4bc86adc
-  url_launcher_ios: 7a95fa5b60cc718a708b8f2966718e93db0cef1b
-  wakelock_plus: e29112ab3ef0b318e58cfa5c32326458be66b556
   ZIPFoundation: b8c29ea7ae353b309bc810586181fd073cb3312c
 
-PODFILE CHECKSUM: 1857a7cdb7dfafe45f2b0e9a9af44644190f7506
+PODFILE CHECKSUM: 0e9eed5871e122220f30e4ea32b6cb406980544a
 
 COCOAPODS: 1.16.2
