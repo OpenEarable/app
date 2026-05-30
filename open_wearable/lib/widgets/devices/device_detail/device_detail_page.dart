@@ -260,7 +260,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: PowerSavingModeWidget(
               device: widget.device,
-              applyScope: StereoPairApplyScope.userSelectable,
+              applyScope: StereoPairApplyScope.individualOnly,
             ),
           ),
         ),
