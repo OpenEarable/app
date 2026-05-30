@@ -693,9 +693,11 @@ class _PairedDeviceSheet extends StatelessWidget {
   }
 
   Wearable? _resolvePowerSavingModeDevice() {
-    if (_supportsStereoPowerSavingMode(leftDevice) &&
-        _supportsStereoPowerSavingMode(rightDevice)) {
+    if (_supportsStereoPowerSavingMode(leftDevice)) {
       return leftDevice;
+    }
+    if (_supportsStereoPowerSavingMode(rightDevice)) {
+      return rightDevice;
     }
     return null;
   }
@@ -815,9 +817,6 @@ class _PairedDeviceSheet extends StatelessWidget {
                       'pair_power_saving_${leftDevice.deviceId}_${rightDevice.deviceId}',
                     ),
                     device: powerSavingModeDevice,
-                    pairedDeviceOverride: powerSavingModeDevice == leftDevice
-                        ? rightDevice
-                        : leftDevice,
                     applyScope: StereoPairApplyScope.pairOnly,
                   ),
                 ] else ...[
