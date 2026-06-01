@@ -121,7 +121,6 @@ class _PowerSavingModeWidgetState extends State<PowerSavingModeWidget> {
               data.modes.any((candidate) => _modesEqualById(candidate, mode)),
           equalsSelection: _modesEqualById,
           optionLabel: (mode) => mode.name,
-          optionSubtitle: (_) => '',
           optionIcon: (_) => Icons.battery_saver_rounded,
           loadErrorText: (error) =>
               'Failed to load power saving mode: ${_describeError(error)}',
