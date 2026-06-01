@@ -62,8 +62,8 @@ class StereoPairOptionSelector<T, M> extends StatefulWidget {
   /// Builds the label shown for an option.
   final String Function(T selection) optionLabel;
 
-  /// Builds the subtitle shown for an option.
-  final String Function(T selection) optionSubtitle;
+  /// Builds the subtitle shown for an option, when provided.
+  final String Function(T selection)? optionSubtitle;
 
   /// Chooses the leading icon shown for an option.
   final IconData Function(T selection) optionIcon;
@@ -97,8 +97,8 @@ class StereoPairOptionSelector<T, M> extends StatefulWidget {
     required this.supportsOption,
     required this.equalsSelection,
     required this.optionLabel,
-    required this.optionSubtitle,
     required this.optionIcon,
+    this.optionSubtitle,
     this.optionBadgeText,
     required this.loadErrorText,
     required this.applyErrorText,
@@ -379,7 +379,7 @@ class _StereoPairOptionSelectorState<T, M>
               width: itemWidth,
               child: _SelectionOptionButton(
                 label: widget.optionLabel(option),
-                subtitle: widget.optionSubtitle(option),
+                subtitle: widget.optionSubtitle?.call(option),
                 icon: widget.optionIcon(option),
                 badgeText: widget.optionBadgeText?.call(option),
                 selected: _selectedSelection != null &&
@@ -484,7 +484,7 @@ class _StereoPairOptionSelectorState<T, M>
 /// Reusable visual representation for a selectable setting option.
 class _SelectionOptionButton extends StatelessWidget {
   final String label;
-  final String subtitle;
+  final String? subtitle;
   final IconData icon;
   final String? badgeText;
   final bool selected;
@@ -515,6 +515,7 @@ class _SelectionOptionButton extends StatelessWidget {
     final titleColor = enabled
         ? (selected ? colorScheme.primary : colorScheme.onSurface)
         : colorScheme.onSurface.withValues(alpha: 0.55);
+    final subtitleText = subtitle;
     final subtitleColor = enabled
         ? colorScheme.onSurfaceVariant
         : colorScheme.onSurfaceVariant.withValues(alpha: 0.55);
@@ -572,13 +573,15 @@ class _SelectionOptionButton extends StatelessWidget {
                         ],
                       ],
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: subtitleColor,
+                    if (subtitleText != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitleText,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: subtitleColor,
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
