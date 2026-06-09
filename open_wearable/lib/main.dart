@@ -190,25 +190,37 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       appBannerController.showBanner(
         (id) {
           final colorScheme = Theme.of(context).colorScheme;
-          final bool isError = event is WearableErrorEvent;
+          final severity =
+              event is WearableErrorEvent ? event.severity : null;
+          final bool isError = severity == DeviceErrorLevel.error ||
+              severity == DeviceErrorLevel.fatal;
+          final bool isWarning = severity == DeviceErrorLevel.warning;
           final bool isTimeSync = event is WearableTimeSynchronizedEvent;
           const timeSyncBackground = Color(0xFFEDE4FF);
           const timeSyncForeground = Color(0xFF5A2EA6);
+          const warningBackground = Color(0xFFFFF3CD);
+          const warningForeground = Color(0xFF6B4E00);
           final backgroundColor = isError
               ? colorScheme.errorContainer
-              : isTimeSync
-                  ? timeSyncBackground
-                  : colorScheme.primaryContainer;
+              : isWarning
+                  ? warningBackground
+                  : isTimeSync
+                      ? timeSyncBackground
+                      : colorScheme.primaryContainer;
           final textColor = isError
               ? colorScheme.onErrorContainer
-              : isTimeSync
-                  ? timeSyncForeground
-                  : colorScheme.onPrimaryContainer;
+              : isWarning
+                  ? warningForeground
+                  : isTimeSync
+                      ? timeSyncForeground
+                      : colorScheme.onPrimaryContainer;
           final icon = isError
               ? Icons.error_outline_rounded
-              : isTimeSync
-                  ? Icons.schedule_rounded
-                  : Icons.info_outline_rounded;
+              : isWarning
+                  ? Icons.warning_amber_rounded
+                  : isTimeSync
+                      ? Icons.schedule_rounded
+                      : Icons.info_outline_rounded;
           final textStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: textColor,
                 fontWeight: FontWeight.w600,

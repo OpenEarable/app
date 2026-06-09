@@ -75,9 +75,12 @@ class WearableTimeSynchronizedEvent extends WearableEvent {
 /// Emitted when wearable-side operations fail and should surface in UI.
 class WearableErrorEvent extends WearableEvent {
   final String errorMessage;
+  final DeviceErrorLevel severity;
+
   WearableErrorEvent({
     required super.wearable,
     required this.errorMessage,
+    this.severity = DeviceErrorLevel.error,
     String? description,
   }) : super(
           description: description ??
@@ -156,6 +159,7 @@ class WearablesProvider with ChangeNotifier {
       _wearableEventController.stream;
 
   final Map<Wearable, StreamSubscription> _capabilitySubscriptions = {};
+  final Map<Wearable, StreamSubscription> _errorSubscriptions = {};
 
   // MARK: Internal helpers
 
@@ -179,12 +183,14 @@ class WearablesProvider with ChangeNotifier {
   void _emitWearableError({
     required Wearable wearable,
     required String errorMessage,
+    DeviceErrorLevel severity = DeviceErrorLevel.error,
     String? description,
   }) {
     _emitWearableEvent(
       WearableErrorEvent(
         wearable: wearable,
         errorMessage: errorMessage,
+        severity: severity,
         description: description,
       ),
     );
@@ -506,6 +512,7 @@ class WearablesProvider with ChangeNotifier {
     _wearables.remove(wearable);
     _sensorConfigurationProviders.remove(wearable)?.dispose();
     _capabilitySubscriptions.remove(wearable)?.cancel();
+    _errorSubscriptions.remove(wearable)?.cancel();
     if (!_disposed) {
       notifyListeners();
     }
@@ -552,6 +559,10 @@ class WearablesProvider with ChangeNotifier {
       unawaited(sub.cancel());
     }
     _capabilitySubscriptions.clear();
+    for (final sub in _errorSubscriptions.values) {
+      unawaited(sub.cancel());
+    }
+    _errorSubscriptions.clear();
 
     for (final provider in _sensorConfigurationProviders.values) {
       provider.dispose();
@@ -564,26 +575,28 @@ class WearablesProvider with ChangeNotifier {
     unawaited(_wearableEventController.close());
     super.dispose();
   }
-  // Add this method to the WearablesProvider class
-void _handleWearableErrors(Wearable wearable) {
-  wearable.onError.listen((error) {
-    if (error is SensorError) {
-      _emitWearableEvent(
-        WearableErrorEvent(
-          wearable: wearable,
-          errorMessage: error.formattedMessage,
-          description: error.formattedMessage,
-        ),
-      );
-    } else {
-      _emitWearableEvent(
-        WearableErrorEvent(
-          wearable: wearable,
-          errorMessage: error.toString(),
-          description: error.toString(),
-        ),
-      );
-    }
-  });
-}
+
+  void _handleWearableErrors(Wearable wearable) {
+    _errorSubscriptions[wearable]?.cancel();
+    _errorSubscriptions[wearable] = wearable.onError.listen((error) {
+      if (error is SensorError) {
+        _emitWearableEvent(
+          WearableErrorEvent(
+            wearable: wearable,
+            errorMessage: error.formattedMessage,
+            severity: error.level,
+            description: error.formattedMessage,
+          ),
+        );
+      } else {
+        _emitWearableEvent(
+          WearableErrorEvent(
+            wearable: wearable,
+            errorMessage: error.toString(),
+            description: error.toString(),
+          ),
+        );
+      }
+    });
+  }
 }
