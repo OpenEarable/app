@@ -38,7 +38,7 @@ double _computeSealQuality(List<Map<String, dynamic>> points) {
   mse /= points.length;
 
   // Linear regression: magnitude vs ln(frequency)
-  final logFreqs = freqs.map((f) => math.log(f)).toList();
+  final logFreqs = freqs.map(math.log).toList();
   final meanLogFreq = logFreqs.reduce((a, b) => a + b) / logFreqs.length;
   double num = 0.0, den = 0.0;
   for (int i = 0; i < points.length; i++) {
@@ -101,7 +101,7 @@ class AudioResponseMeasurementView extends StatefulWidget {
     this.parameters = const {},
     this.title = 'Audio Response',
   }) : assert(left != null || right != null,
-            'At least one of left or right must be provided');
+            'At least one of left or right must be provided',);
 
   final AudioResponseManager? left;
   final AudioResponseManager? right;
@@ -147,12 +147,12 @@ class _AudioResponseMeasurementViewState
     final fileName = 'audio_response_${_timestampForFilename(now)}.json';
 
     if (Platform.isAndroid) {
-      final dirPath = await FilePicker.platform.getDirectoryPath();
+      final dirPath = await FilePicker.getDirectoryPath();
       if (dirPath == null || dirPath.isEmpty) return null;
       final String path = p.join(dirPath, fileName);
       await File(path).writeAsString(
           const JsonEncoder.withIndent('  ').convert(result),
-          flush: true);
+          flush: true,);
       return path;
     }
 
@@ -166,7 +166,7 @@ class _AudioResponseMeasurementViewState
     final String path = p.join(dir.path, fileName);
     await File(path).writeAsString(
         const JsonEncoder.withIndent('  ').convert(result),
-        flush: true);
+        flush: true,);
     return path;
   }
 
@@ -185,12 +185,12 @@ class _AudioResponseMeasurementViewState
       if (widget.left != null) {
         futures.add(widget.left!
             .measureAudioResponse(widget.parameters)
-            .then((r) => (true, r)));
+            .then((r) => (true, r)),);
       }
       if (widget.right != null) {
         futures.add(widget.right!
             .measureAudioResponse(widget.parameters)
-            .then((r) => (false, r)));
+            .then((r) => (false, r)),);
       }
 
       final results = await Future.wait(futures);
@@ -355,7 +355,7 @@ class _AudioResponseMeasurementViewState
   }
 
   Widget _buildResult(ThemeData theme) {
-    List<Map<String, dynamic>> _parsePoints(Map<String, dynamic>? result) {
+    List<Map<String, dynamic>> parsePoints(Map<String, dynamic>? result) {
       if (result == null) return [];
       final pointsDyn = (result['points'] as List?) ?? const [];
       final pts = pointsDyn
@@ -364,20 +364,20 @@ class _AudioResponseMeasurementViewState
                 'frequency_hz': (m['frequency_hz'] as num?)?.toDouble(),
                 'frequency_raw_q12_4': (m['frequency_raw_q12_4'] as num?)?.toInt(),
                 'magnitude': (m['magnitude'] as num?)?.toDouble(),
-              })
+              },)
           .where((m) =>
               m['frequency_hz'] != null &&
               m['magnitude'] != null &&
-              (m['frequency_hz'] as double) > 0.0)
+              (m['frequency_hz'] as double) > 0.0,)
           .cast<Map<String, dynamic>>()
           .toList();
       pts.sort((a, b) =>
-          (a['frequency_hz'] as double).compareTo(b['frequency_hz'] as double));
+          (a['frequency_hz'] as double).compareTo(b['frequency_hz'] as double),);
       return pts;
     }
 
-    final leftPoints = _parsePoints(_leftResult);
-    final rightPoints = _parsePoints(_rightResult);
+    final leftPoints = parsePoints(_leftResult);
+    final rightPoints = parsePoints(_rightResult);
 
     // Compute a shared normalization factor (avg of all measured magnitudes)
     final allMags = [
@@ -401,15 +401,15 @@ class _AudioResponseMeasurementViewState
                 child: Card(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 14),
+                        horizontal: 16, vertical: 14,),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Text('Left Quality',
-                            style: theme.textTheme.labelMedium),
+                            style: theme.textTheme.labelMedium,),
                         const SizedBox(height: 4),
                         Text('${leftQuality.round()} / 100',
-                            style: theme.textTheme.titleLarge),
+                            style: theme.textTheme.titleLarge,),
                       ],
                     ),
                   ),
@@ -422,15 +422,15 @@ class _AudioResponseMeasurementViewState
                 child: Card(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 14),
+                        horizontal: 16, vertical: 14,),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Text('Right Quality',
-                            style: theme.textTheme.labelMedium),
+                            style: theme.textTheme.labelMedium,),
                         const SizedBox(height: 4),
                         Text('${rightQuality.round()} / 100',
-                            style: theme.textTheme.titleLarge),
+                            style: theme.textTheme.titleLarge,),
                       ],
                     ),
                   ),
@@ -455,7 +455,7 @@ class _AudioResponseMeasurementViewState
             onPressed: () => setState(() => _showRawValues = !_showRawValues),
             icon: Icon(_showRawValues ? Icons.expand_less : Icons.expand_more),
             label: Text(
-                _showRawValues ? 'Hide raw values' : 'View raw values'),
+                _showRawValues ? 'Hide raw values' : 'View raw values',),
           ),
         ),
         if (_showRawValues) ...[
@@ -479,26 +479,26 @@ class _AudioResponseMeasurementViewState
     final targetColor = colorScheme.tertiary;
 
     // Convert to dB: 20 * log10(mag / normMag)
-    double _toDb(double mag) =>
+    double toDb(double mag) =>
         20.0 * math.log(mag / normMag) / math.ln10;
 
     // Use frequency INDEX (0–8) as X so fl_chart tick placement is trivial.
     // Each index corresponds to _kTargetFrequencies[index].
-    List<FlSpot> _toSpots(List<Map<String, dynamic>> pts) {
+    List<FlSpot> toSpots(List<Map<String, dynamic>> pts) {
       final spots = <FlSpot>[];
       for (final p in pts) {
         final freq = p['frequency_hz'] as double;
         if (freq <= 0) continue;
         spots.add(FlSpot(
           _closestTargetIndex(freq).toDouble(),
-          _toDb(p['magnitude'] as double),
-        ));
+          toDb(p['magnitude'] as double),
+        ),);
       }
       return spots;
     }
 
-    final leftSpots = _toSpots(leftPoints);
-    final rightSpots = _toSpots(rightPoints);
+    final leftSpots = toSpots(leftPoints);
+    final rightSpots = toSpots(rightPoints);
 
     // Target spots at integer indices; dB re 1.0
     final targetSpots = List.generate(_kTargetFrequencies.length, (i) {
@@ -653,9 +653,9 @@ class _AudioResponseMeasurementViewState
                   ),
                 ),
                 topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false)),
+                    sideTitles: SideTitles(showTitles: false),),
                 rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false)),
+                    sideTitles: SideTitles(showTitles: false),),
               ),
               gridData: FlGridData(
                 show: true,
@@ -761,7 +761,7 @@ class _AudioResponseMeasurementViewState
                               normMag,
                               label: t.label,
                             ),
-                          ))
+                          ),)
                       .toList(),
                 ),
               ),
@@ -826,7 +826,7 @@ class _AudioResponseMeasurementViewState
                     DataCell(Text('${db.toStringAsFixed(1)} dB')),
                     DataCell(Text(tFreq.toStringAsFixed(3))),
                     DataCell(Text('${tDb.toStringAsFixed(1)} dB')),
-                  ]);
+                  ],);
                 }).toList(),
               ),
             ),

@@ -180,6 +180,8 @@ class _SelectAudioResponsePairViewState
 
     if (leftManager == null && rightManager == null) return;
 
+    if (!mounted) return;
+
     final navigator = Navigator.of(context);
     setState(() => _isStartingApp = true);
 
@@ -245,7 +247,7 @@ class _GroupCard extends StatelessWidget {
             children: [
               // Icon placeholder
               const SizedBox(width: 40, height: 40,
-                child: Icon(Icons.headphones, size: 32)),
+                child: Icon(Icons.headphones, size: 32),),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
