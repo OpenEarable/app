@@ -14,3 +14,7 @@ This section documents the app pages in a consistent format:
 - [Settings and Logging Pages](./settings-and-logging-pages.md)
 - [Apps Pages](./apps-pages.md)
 - [Firmware Update (FOTA) Pages](./fota-pages.md)
+
+## Related Documentation
+
+- [App Compatibility Framework](../app-compatibility.md)

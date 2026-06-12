@@ -531,10 +531,11 @@ packages:
   open_earable_flutter:
     dependency: "direct main"
     description:
-      name: open_earable_flutter
-      sha256: d7a2e491fa589ea14093101fa37b182d748240ac26fe9cafe9938371f6256b67
-      url: "https://pub.dev"
-    source: hosted
+      path: "."
+      ref: "123-feature/seal_check"
+      resolved-ref: d6108d65dba2be94c8ec4c6464de91e12380e43f
+      url: "https://github.com/OpenEarable/open_earable_flutter.git"
+    source: git
     version: "2.3.10"
   open_file:
     dependency: "direct main"
@@ -625,7 +626,7 @@ packages:
     source: hosted
     version: "3.2.1"
   path:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: path
       sha256: "75cca69d1490965be98c73ceaea117e8a04dd21217b37b292c9ddbec0d955bc5"

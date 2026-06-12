@@ -35,7 +35,11 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.9
   open_file: ^3.5.11
-  open_earable_flutter: ^2.3.10
+  # open_earable_flutter: ^2.3.10
+  open_earable_flutter:
+    git:
+      url: https://github.com/OpenEarable/open_earable_flutter.git
+      ref: 123-feature/seal_check
   universal_ble: ^2.0.2
   flutter_platform_widgets: ^10.0.1
   provider: ^6.1.5+1
@@ -55,6 +59,7 @@ dependencies:
   go_router: ^17.2.3
   audioplayers: ^6.7.0
   wakelock_plus: ^1.5.2
+  path: ^1.9.1
   package_info_plus: ^9.0.1
   sensors_plus: ^7.0.0
   device_info_plus: ^12.4.0
@@ -89,6 +94,7 @@ flutter:
   assets:
     - lib/apps/posture_tracker/assets/
     - lib/apps/heart_tracker/assets/
+    - lib/apps/audio_response_measure/assets/
     - lib/assets/devices/phone-app.png
     - android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
 
