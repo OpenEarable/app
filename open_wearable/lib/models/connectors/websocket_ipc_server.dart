@@ -13,6 +13,7 @@ import 'package:open_wearable/models/connectors/audio_playback_config.dart';
 import 'package:open_wearable/models/connectors/websocket_audio_playback_service.dart';
 import 'package:open_wearable/models/logger.dart';
 import 'package:open_wearable/models/network/device_ip_address.dart';
+import 'package:open_wearable/models/permissions_helper.dart';
 import 'package:open_wearable/models/wearable_connector.dart';
 
 /// Websocket-based IPC server that exposes wearable operations to external clients.
@@ -20,8 +21,8 @@ class WebSocketIpcServer implements CommandRuntime {
   static const int defaultPort = 8765;
   static const String defaultPath = '/ws';
 
-  final WearableManager _wearableManager;
-  final WearableConnector _wearableConnector;
+  WearableManager? _wearableManager;
+  WearableConnector? _wearableConnector;
   final WebsocketAudioPlaybackService _audioPlaybackService;
 
   HttpServer? _httpServer;
@@ -49,8 +50,8 @@ class WebSocketIpcServer implements CommandRuntime {
     WearableManager? wearableManager,
     WearableConnector? wearableConnector,
     WebsocketAudioPlaybackService? audioPlaybackService,
-  })  : _wearableManager = wearableManager ?? WearableManager(),
-        _wearableConnector = wearableConnector ?? WearableConnector(),
+  })  : _wearableManager = wearableManager,
+        _wearableConnector = wearableConnector,
         _audioPlaybackService =
             audioPlaybackService ?? WebsocketAudioPlaybackService() {
     for (final command in createDefaultIpcCommands(this)) {
@@ -60,6 +61,11 @@ class WebSocketIpcServer implements CommandRuntime {
       addActionCommand(command);
     }
   }
+
+  WearableManager get wearableManager => _wearableManager ??= WearableManager();
+
+  WearableConnector get wearableConnector =>
+      _wearableConnector ??= WearableConnector();
 
   /// Returns whether the websocket server is currently bound and accepting requests.
   bool get isRunning => _httpServer != null;
@@ -230,13 +236,13 @@ class WebSocketIpcServer implements CommandRuntime {
   @override
 
   /// Returns whether the underlying wearable runtime already has required permissions.
-  Future<bool> hasPermissions() => _wearableManager.hasPermissions();
+  Future<bool> hasPermissions() => PermissionsHelper.hasBlePermissions();
 
   @override
 
   /// Checks for and requests missing runtime permissions from the platform.
   Future<bool> checkAndRequestPermissions() =>
-      WearableManager.checkAndRequestPermissions();
+      PermissionsHelper.requestBlePermissions();
 
   /// Starts device scanning through the wearable manager.
   @override
@@ -244,9 +250,13 @@ class WebSocketIpcServer implements CommandRuntime {
     bool checkAndRequestPermissions = true,
   }) async {
     _discoveredDevicesById.clear();
-    await _wearableManager.startScan(
-      checkAndRequestPermissions: checkAndRequestPermissions,
-    );
+    final hasPermissions = checkAndRequestPermissions
+        ? await PermissionsHelper.requestBlePermissions()
+        : await PermissionsHelper.hasBlePermissions();
+    if (!hasPermissions) {
+      return <String, dynamic>{'started': false};
+    }
+    await wearableManager.startScan(checkAndRequestPermissions: false);
     return <String, dynamic>{'started': true};
   }
 
@@ -276,7 +286,7 @@ class WebSocketIpcServer implements CommandRuntime {
         ? <ConnectionOption>{const ConnectedViaSystem()}
         : const <ConnectionOption>{};
 
-    final wearable = await _wearableConnector.connect(
+    final wearable = await wearableConnector.connect(
       discovered,
       options: options,
     );
@@ -289,7 +299,7 @@ class WebSocketIpcServer implements CommandRuntime {
   Future<List<Map<String, dynamic>>> connectSystemDevices({
     List<String> ignoredDeviceIds = const <String>[],
   }) async {
-    final wearables = await _wearableConnector.connectToSystemDevices(
+    final wearables = await wearableConnector.connectToSystemDevices(
       ignoredDeviceIds: ignoredDeviceIds,
     );
     for (final wearable in wearables) {
@@ -433,7 +443,7 @@ class WebSocketIpcServer implements CommandRuntime {
 
   /// Hooks wearable manager streams into websocket broadcast events.
   void _attachManagerSubscriptions() {
-    _scanSubscription ??= _wearableManager.scanStream.listen((device) {
+    _scanSubscription ??= wearableManager.scanStream.listen((device) {
       _discoveredDevicesById[device.id] = device;
       _scanEventsController.add(device);
       _broadcastEvent(
@@ -445,7 +455,7 @@ class WebSocketIpcServer implements CommandRuntime {
     });
 
     _connectingSubscription ??=
-        _wearableManager.connectingStream.listen((device) {
+        wearableManager.connectingStream.listen((device) {
       _broadcastEvent(
         <String, dynamic>{
           'event': 'connecting',
@@ -454,7 +464,7 @@ class WebSocketIpcServer implements CommandRuntime {
       );
     });
 
-    _connectSubscription ??= _wearableManager.connectStream.listen((wearable) {
+    _connectSubscription ??= wearableManager.connectStream.listen((wearable) {
       _registerConnectedWearable(wearable);
       _broadcastEvent(
         <String, dynamic>{

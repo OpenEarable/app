@@ -3,10 +3,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'auto_connect_preferences.dart';
 import 'logger.dart';
+import 'permissions_helper.dart';
 
 /// Background reconnect orchestrator for remembered Bluetooth wearables.
 ///
@@ -27,7 +29,7 @@ class BluetoothAutoConnector {
   static const Duration _iosScanRestartDelay = Duration(seconds: 1);
 
   final NavigatorState? Function() navStateGetter;
-  final WearableManager wearableManager;
+  WearableManager? _wearableManager;
   final Future<SharedPreferences> prefsFuture;
   final void Function(Wearable wearable) onWearableConnected;
 
@@ -54,10 +56,12 @@ class BluetoothAutoConnector {
 
   BluetoothAutoConnector({
     required this.navStateGetter,
-    required this.wearableManager,
+    WearableManager? wearableManager,
     required this.prefsFuture,
     required this.onWearableConnected,
-  });
+  }) : _wearableManager = wearableManager;
+
+  WearableManager get wearableManager => _wearableManager ??= WearableManager();
 
   void start() async {
     final token = ++_sessionToken;
@@ -296,22 +300,22 @@ class BluetoothAutoConnector {
     }
 
     _isAttemptingConnection = true;
-    if (!Platform.isIOS) {
-      final hasPerm = await wearableManager.hasPermissions();
-      if (activeToken != _sessionToken) {
-        _isAttemptingConnection = false;
-        return;
+    final hasPerm = await PermissionsHelper.hasBlePermissions();
+    if (activeToken != _sessionToken) {
+      _isAttemptingConnection = false;
+      return;
+    }
+    if (!hasPerm) {
+      logger.w(
+        'Bluetooth permissions not granted. Showing permissions dialog.',
+      );
+      if (!_askedPermissionsThisSession) {
+        _askedPermissionsThisSession = true;
+        _showPermissionsDialog();
       }
-      if (!hasPerm) {
-        logger.w('Bluetooth permissions not granted. Showing permissions dialog.');
-        if (!_askedPermissionsThisSession) {
-          _askedPermissionsThisSession = true;
-          _showPermissionsDialog();
-        }
-        logger.w('Skipping auto-connect: no permissions granted yet.');
-        _isAttemptingConnection = false;
-        return;
-      }
+      logger.w('Skipping auto-connect: no permissions granted yet.');
+      _isAttemptingConnection = false;
+      return;
     }
 
     try {
@@ -326,7 +330,9 @@ class BluetoothAutoConnector {
           _isStartingScan = true;
           try {
             await _applyIosScanCooldownIfNeeded();
-            await wearableManager.startScan();
+            await wearableManager.startScan(
+              checkAndRequestPermissions: false,
+            );
           } finally {
             _isStartingScan = false;
           }
@@ -444,7 +450,14 @@ class BluetoothAutoConnector {
           actions: [
             PlatformDialogAction(
               onPressed: nav.pop,
-              child: PlatformText("OK"),
+              child: PlatformText("Cancel"),
+            ),
+            PlatformDialogAction(
+              onPressed: () async {
+                nav.pop();
+                await openAppSettings();
+              },
+              child: PlatformText("Open Settings"),
             ),
           ],
         ),

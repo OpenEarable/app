@@ -5,6 +5,7 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_wearable/models/app_upgrade_highlight.dart';
 
 const double _upgradeCardSpacing = 8;
+const EdgeInsets _upgradeCardContentPadding = EdgeInsets.all(20);
 
 /// Full-screen page that presents a custom "what's new" experience.
 class AppUpgradePage extends StatelessWidget {
@@ -109,6 +110,7 @@ class _CompactUpgradeLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         _UpgradeHeroCard(highlight: highlight, accentColor: accentColor),
         const SizedBox(height: _upgradeCardSpacing),
@@ -167,6 +169,7 @@ class _WideUpgradeLayout extends StatelessWidget {
         Expanded(
           flex: 12,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               GridView.count(
                 crossAxisCount: 2,
@@ -206,6 +209,7 @@ class _UpgradeHeroCard extends StatelessWidget {
     final ColorScheme colorScheme = theme.colorScheme;
 
     return Card(
+      margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
       child: Container(
         constraints: BoxConstraints(minHeight: expanded ? 520 : 0),
@@ -222,7 +226,7 @@ class _UpgradeHeroCard extends StatelessWidget {
               )
             : null,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(22, 22, 22, 22),
+          padding: _upgradeCardContentPadding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
@@ -303,8 +307,9 @@ class _UpgradeFeatureCard extends StatelessWidget {
     final ColorScheme colorScheme = theme.colorScheme;
 
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+        padding: _upgradeCardContentPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
@@ -355,14 +360,17 @@ class _UpgradeFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
-      child: SizedBox(
-        width: double.infinity,
-        child: FilledButton.icon(
-          onPressed: onContinue,
-          icon: const Icon(Icons.arrow_forward_rounded),
-          label: const Text('Continue'),
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: _upgradeCardContentPadding,
+        child: SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: onContinue,
+            icon: const Icon(Icons.arrow_forward_rounded),
+            label: const Text('Continue'),
+          ),
         ),
       ),
     );
