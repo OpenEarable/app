@@ -35,11 +35,11 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.9
   open_file: ^3.5.11
-  # open_earable_flutter: ^2.3.10
+  # Use the Git source until audio response and microphone gain are published.
   open_earable_flutter:
     git:
       url: https://github.com/OpenEarable/open_earable_flutter.git
-      ref: feature/audio-response
+      ref: main
   universal_ble: ^2.0.4
   permission_handler: ^12.0.1
   flutter_platform_widgets: ^10.0.1
@@ -67,7 +67,6 @@ dependencies:
   pub_semver: ^2.2.0
   flutter_headset_detector: ^3.1.0
   record: ^7.0.0
-  path: ^1.9.1
   web: ^1.1.1
 
 dev_dependencies:
