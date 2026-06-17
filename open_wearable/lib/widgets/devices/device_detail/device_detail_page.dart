@@ -14,6 +14,7 @@ import 'package:open_wearable/widgets/app_toast.dart';
 import 'package:open_wearable/widgets/common/app_section_card.dart';
 import 'package:open_wearable/widgets/devices/device_detail/audio_mode_widget.dart';
 import 'package:open_wearable/widgets/devices/device_detail/device_detail_shared_widgets.dart';
+import 'package:open_wearable/widgets/devices/device_detail/microphone_gain_controls.dart';
 import 'package:open_wearable/widgets/devices/device_detail/power_saving_mode_widget.dart';
 import 'package:open_wearable/widgets/devices/device_status_pills.dart';
 import 'package:open_wearable/widgets/devices/wearable_icon.dart';
@@ -240,6 +241,14 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
               device: widget.device,
               applyScope: StereoPairApplyScope.individualOnly,
             ),
+          ),
+        ),
+      if (widget.device.hasCapability<MicrophoneGainManager>())
+        Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: MicrophoneGainControls(device: widget.device),
           ),
         ),
       if (widget.device.hasCapability<MicrophoneManager>())

@@ -531,10 +531,9 @@ packages:
   open_earable_flutter:
     dependency: "direct main"
     description:
-      name: open_earable_flutter
-      sha256: d7a2e491fa589ea14093101fa37b182d748240ac26fe9cafe9938371f6256b67
-      url: "https://pub.dev"
-    source: hosted
+      path: "E:/teco/microphone-gain/open_earable_flutter"
+      relative: false
+    source: path
     version: "2.3.10"
   open_file:
     dependency: "direct main"

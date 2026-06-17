@@ -23,8 +23,9 @@ class SensorConfigurationDetailView extends StatelessWidget {
   Widget build(BuildContext context) {
     const sensorOnGreen = Color(0xFF2E7D32);
     final sensorConfigNotifier = context.watch<SensorConfigurationProvider>();
-    final selectedValue =
-        sensorConfigNotifier.getSelectedConfigurationValue(sensorConfiguration);
+    final selectedValue = sensorConfigNotifier.getSelectedConfigurationValue(
+      sensorConfiguration,
+    );
     final isApplied = sensorConfigNotifier.isConfigurationApplied(
       sensorConfiguration,
     );
@@ -32,8 +33,10 @@ class SensorConfigurationDetailView extends StatelessWidget {
         .getSensorConfigurationValues(sensorConfiguration, distinct: true)
         .where((value) => _isVisibleValue(value, selectedValue))
         .toList(growable: false);
-    final dropdownSelection =
-        _resolveSelection(selectableValues, selectedValue);
+    final dropdownSelection = _resolveSelection(
+      selectableValues,
+      selectedValue,
+    );
     final colorScheme = Theme.of(context).colorScheme;
     final accentColor = isApplied ? sensorOnGreen : colorScheme.primary;
     final targetOptions = sensorConfiguration is ConfigurableSensorConfiguration
@@ -47,8 +50,9 @@ class SensorConfigurationDetailView extends StatelessWidget {
             }
 
             // If on iOS, hide 'microphone' + 'stream' combination
-            final isMic =
-                sensorConfiguration.name.toLowerCase().contains('microphone');
+            final isMic = sensorConfiguration.name.toLowerCase().contains(
+                  'microphone',
+                );
             final isStream = option is StreamSensorConfigOption;
             return !(isMic && isStream);
           }).toList(growable: false)
@@ -60,9 +64,9 @@ class SensorConfigurationDetailView extends StatelessWidget {
         if (targetOptions.isNotEmpty) ...[
           Text(
             'Data Targets',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 3),
           Text(
@@ -79,9 +83,7 @@ class SensorConfigurationDetailView extends StatelessWidget {
                   option: targetOptions[i],
                   accentColor: accentColor,
                   selected: sensorConfigNotifier
-                      .getSelectedConfigurationOptions(
-                        sensorConfiguration,
-                      )
+                      .getSelectedConfigurationOptions(sensorConfiguration)
                       .contains(targetOptions[i]),
                   onChanged: (enabled) {
                     _updatePrimaryAndPair(
@@ -110,9 +112,9 @@ class SensorConfigurationDetailView extends StatelessWidget {
         ],
         Text(
           'Sampling Rate',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 3),
         Text(
@@ -200,8 +202,9 @@ class SensorConfigurationDetailView extends StatelessWidget {
       return;
     }
 
-    final selectedPrimaryValue =
-        primaryProvider.getSelectedConfigurationValue(sensorConfiguration);
+    final selectedPrimaryValue = primaryProvider.getSelectedConfigurationValue(
+      sensorConfiguration,
+    );
     if (selectedPrimaryValue == null) {
       return;
     }
@@ -422,10 +425,7 @@ class _OptionToggleTile extends StatelessWidget {
 
   (String, String?) _copyForOption(SensorConfigurationOption option) {
     if (option is StreamSensorConfigOption) {
-      return (
-        'Live stream to phone',
-        'Send to app via Bluetooth.',
-      );
+      return ('Live stream to phone', 'Send to app via Bluetooth.');
     }
     if (option is RecordSensorConfigOption) {
       return (
