@@ -28,6 +28,7 @@ DEPENDENCIES:
   - mcumgr_flutter (from `.symlinks/plugins/mcumgr_flutter/darwin`)
   - open_file_ios (from `.symlinks/plugins/open_file_ios/ios`)
   - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
+  - SwiftProtobuf (= 1.37.0)
 
 SPEC REPOS:
   trunk:
@@ -62,6 +63,6 @@ SPEC CHECKSUMS:
   SwiftProtobuf: 3fafd1b2fb97e6d95ad9c8adb2215da9afec7c83
   ZIPFoundation: b8c29ea7ae353b309bc810586181fd073cb3312c
 
-PODFILE CHECKSUM: 0e9eed5871e122220f30e4ea32b6cb406980544a
+PODFILE CHECKSUM: 90b3a4074c9b926b9a16e9353324d16f640ce381
 
 COCOAPODS: 1.16.2

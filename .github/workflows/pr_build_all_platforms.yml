@@ -44,7 +44,7 @@ jobs:
             linux_dependencies: true
           - target: windows
             name: Windows
-            os: windows-latest
+            os: windows-2022
             build_command: flutter build windows --release
             artifact_name: windows-runner
             artifact_path: open_wearable/build/windows/x64/runner/Release

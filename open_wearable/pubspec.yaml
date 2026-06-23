@@ -36,7 +36,8 @@ dependencies:
   cupertino_icons: ^1.0.9
   open_file: ^3.5.11
   open_earable_flutter: ^2.3.10
-  universal_ble: ^2.0.2
+  universal_ble: ^2.0.4
+  permission_handler: ^12.0.1
   flutter_platform_widgets: ^10.0.1
   provider: ^6.1.5+1
   logger: ^2.7.0

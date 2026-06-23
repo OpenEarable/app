@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
@@ -14,6 +16,7 @@ import 'package:open_wearable/models/auto_connect_preferences.dart';
 import 'package:open_wearable/models/connector_settings.dart';
 import 'package:open_wearable/models/log_file_manager.dart';
 import 'package:open_wearable/models/fota_post_update_verification.dart';
+import 'package:open_wearable/models/permissions_helper.dart';
 import 'package:open_wearable/models/wearable_connector.dart'
     hide WearableEvent;
 import 'package:open_wearable/router.dart';
@@ -24,8 +27,10 @@ import 'package:open_wearable/widgets/global_app_banner_overlay.dart';
 import 'package:open_wearable/widgets/app_toast.dart';
 import 'package:open_wearable/widgets/fota/fota_verification_banner.dart';
 import 'package:open_wearable/widgets/updates/app_upgrade_page.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:open_wearable/widgets/onboarding/permissions_onboarding_page.dart';
 
 import 'models/bluetooth_auto_connector.dart';
 import 'models/logger.dart';
@@ -40,9 +45,7 @@ void main() async {
   initLogger(logFileManager.logger);
   await AutoConnectPreferences.initialize();
   await AppShutdownSettings.initialize();
-  await ConnectorSettings.initialize(
-    wearableConnector: wearableConnector,
-  );
+  await ConnectorSettings.initialize(wearableConnector: wearableConnector);
 
   runApp(
     MultiProvider(
@@ -83,7 +86,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   late final StreamSubscription _unsupportedFirmwareSub;
   late final StreamSubscription _wearableEventSub;
-  late final StreamSubscription<AvailabilityState> _bleAvailabilitySub;
+  StreamSubscription<AvailabilityState>? _bleAvailabilitySub;
   late final BluetoothAutoConnector _autoConnector;
   late final WearableConnector _wearableConnector;
   late final Future<SharedPreferences> _prefsFuture;
@@ -99,6 +102,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   bool _backgroundExecutionRequestedForRecording = false;
   bool _isBackgroundExecutionActive = false;
   bool _isBluetoothPoweredOn = true;
+  bool _permissionsOnboardingCompleted = false;
+  bool _startupFlowStarted = false;
+  AppUpgradeHighlight? _startupUpgradeHighlight;
+
+  static const String _permissionsOnboardingShownKey =
+      'permissions_onboarding_shown';
 
   static const Duration _closeShutdownGracePeriod = Duration(
     seconds: 10,
@@ -240,13 +249,230 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
     _autoConnector = BluetoothAutoConnector(
       navStateGetter: () => rootNavigatorKey.currentState,
-      wearableManager: WearableManager(),
       prefsFuture: _prefsFuture,
       onWearableConnected: _handleWearableConnected,
     );
     AutoConnectPreferences.autoConnectEnabledListenable.addListener(
       _syncAutoConnectorWithSetting,
     );
+    if (!kIsWeb && !Platform.isIOS && !Platform.isMacOS) {
+      _startBleAvailabilityMonitoring();
+    }
+
+    _wearableEventSub = _wearableConnector.events.listen((event) {
+      if (event is WearableConnectEvent) {
+        _handleWearableConnected(event.wearable);
+      }
+    });
+
+    startupRouteReadyCallback = _handleStartupRouteReady;
+  }
+
+  Future<void> _initStartupFlow() async {
+    try {
+      final SharedPreferences prefs = await _prefsFuture;
+      final String? acknowledgedVersionAtStartup = prefs.getString(
+        AppUpgradeCoordinator.acknowledgedVersionKey,
+      );
+
+      final bool didShowOnboarding =
+          await _presentPermissionsOnboardingIfNeeded();
+      _syncAutoConnectorWithSetting();
+      if (!mounted) {
+        return;
+      }
+
+      if (didShowOnboarding && acknowledgedVersionAtStartup == null) {
+        _startupUpgradeHighlight =
+            await _appUpgradeCoordinator.loadCurrentHighlight();
+      } else {
+        _startupUpgradeHighlight =
+            await _appUpgradeCoordinator.loadPendingHighlight();
+      }
+      await _presentPendingUpgradeHighlight(_startupUpgradeHighlight);
+    } catch (e, st) {
+      logger.w('Failed to complete startup flow: $e\n$st');
+    } finally {
+      if (mounted) {
+        router.go('/');
+      }
+    }
+  }
+
+  void _handleStartupRouteReady() {
+    if (!mounted || _startupFlowStarted) {
+      return;
+    }
+    _startupFlowStarted = true;
+    unawaited(_initStartupFlow());
+  }
+
+  Future<bool> _presentPermissionsOnboardingIfNeeded() async {
+    try {
+      if (kIsWeb) {
+        final prefs = await _prefsFuture;
+        await prefs.setBool(_permissionsOnboardingShownKey, true);
+        _permissionsOnboardingCompleted = true;
+        return false;
+      }
+
+      final prefs = await _prefsFuture;
+      final shown = prefs.getBool(_permissionsOnboardingShownKey) ?? false;
+      final hasBlePermissions = await PermissionsHelper.hasBlePermissions();
+      final requiresMicPermission = Platform.isAndroid || Platform.isWindows;
+      final hasMicPermission = requiresMicPermission
+          ? await _hasMicrophonePermissionGranted()
+          : true;
+
+      if (shown) {
+        // If permissions are still missing (for example after deny/reset),
+        // present onboarding again instead of skipping directly to upgrades.
+        if (!hasBlePermissions || !hasMicPermission) {
+          final navigator = rootNavigatorKey.currentState;
+          if (navigator == null || !mounted) return false;
+
+          await navigator.push<void>(
+            MaterialPageRoute<void>(
+              fullscreenDialog: true,
+              builder: (_) => BluetoothPermissionsPage(
+                onCompleted: _completePermissionsOnboarding,
+                onBluetoothRequestCompleted:
+                    _handleBluetoothPermissionRequested,
+              ),
+            ),
+          );
+
+          if (!mounted) return false;
+          _permissionsOnboardingCompleted = true;
+          await _startBleAvailabilityMonitoringWhenAllowed();
+          return true;
+        }
+
+        _permissionsOnboardingCompleted = true;
+        await _startBleAvailabilityMonitoringWhenAllowed();
+        return false;
+      }
+
+      final navigator = rootNavigatorKey.currentState;
+      if (navigator == null || !mounted) return false;
+
+      if (hasBlePermissions && requiresMicPermission) {
+        await navigator.push<void>(
+          MaterialPageRoute<void>(
+            fullscreenDialog: true,
+            builder: (_) => PermissionsWelcomePage(
+              nextPageBuilder: (_) => MicrophonePermissionsPage(
+                onCompleted: _completePermissionsOnboarding,
+              ),
+            ),
+          ),
+        );
+
+        if (!mounted) return false;
+        await prefs.setBool(_permissionsOnboardingShownKey, true);
+        _permissionsOnboardingCompleted = true;
+        await _startBleAvailabilityMonitoringWhenAllowed();
+        return true;
+      }
+
+      if (hasBlePermissions) {
+        await prefs.setBool(_permissionsOnboardingShownKey, true);
+        _permissionsOnboardingCompleted = true;
+        await _startBleAvailabilityMonitoringWhenAllowed();
+        return false;
+      }
+
+      await navigator.push<void>(
+        MaterialPageRoute<void>(
+          fullscreenDialog: true,
+          builder: (_) => PermissionsWelcomePage(
+            nextPageBuilder: (_) => BluetoothPermissionsPage(
+              onCompleted: _completePermissionsOnboarding,
+              onBluetoothRequestCompleted: _handleBluetoothPermissionRequested,
+            ),
+          ),
+        ),
+      );
+
+      if (!mounted) return false;
+      await prefs.setBool(_permissionsOnboardingShownKey, true);
+      _permissionsOnboardingCompleted = true;
+      await _startBleAvailabilityMonitoringWhenAllowed();
+      return true;
+    } catch (e, st) {
+      logger.w('Failed to present permissions onboarding: $e\n$st');
+    }
+    return false;
+  }
+
+  Future<void> _completePermissionsOnboarding(BuildContext context) async {
+    final prefs = await _prefsFuture;
+    await prefs.setBool(_permissionsOnboardingShownKey, true);
+    _permissionsOnboardingCompleted = true;
+
+    if (!mounted || !context.mounted) return;
+    Navigator.of(context).popUntil((route) => route.isFirst);
+  }
+
+  Future<void> _handleBluetoothPermissionRequested() async {
+    await _startBleAvailabilityMonitoringWhenAllowed();
+    _syncAutoConnectorWithSetting();
+  }
+
+  /// Presents the current version's upgrade highlight when required.
+  Future<void> _presentPendingUpgradeHighlight(
+    AppUpgradeHighlight? highlight,
+  ) async {
+    if (!mounted || highlight == null) {
+      return;
+    }
+
+    final NavigatorState? navigator = rootNavigatorKey.currentState;
+    if (!mounted || navigator == null) {
+      return;
+    }
+
+    await navigator.push<void>(
+      MaterialPageRoute<void>(
+        fullscreenDialog: true,
+        builder: (_) => AppUpgradePage(
+          highlight: highlight,
+          onContinue: navigator.pop,
+        ),
+      ),
+    );
+
+    if (!mounted) {
+      return;
+    }
+    await _appUpgradeCoordinator.acknowledgeVersion(highlight.version);
+  }
+
+  void _syncAutoConnectorWithSetting() {
+    if (!_permissionsOnboardingCompleted) {
+      _autoConnector.stop();
+      return;
+    }
+
+    if (!kIsWeb &&
+        (Platform.isIOS || Platform.isMacOS) &&
+        _bleAvailabilitySub == null) {
+      _autoConnector.stop();
+      return;
+    }
+
+    if (AutoConnectPreferences.autoConnectEnabled && _isBluetoothPoweredOn) {
+      _autoConnector.start();
+      return;
+    }
+    _autoConnector.stop();
+  }
+
+  void _startBleAvailabilityMonitoring() {
+    if (kIsWeb || _bleAvailabilitySub != null) {
+      return;
+    }
+
     _bleAvailabilitySub = UniversalBle.availabilityStream.listen(
       _handleBleAvailabilityChanged,
       onError: (error, stackTrace) {
@@ -256,56 +482,25 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       },
     );
     unawaited(_syncInitialBluetoothAvailability());
-
-    _wearableEventSub = _wearableConnector.events.listen((event) {
-      if (event is WearableConnectEvent) {
-        _handleWearableConnected(event.wearable);
-      }
-    });
-
-    _syncAutoConnectorWithSetting();
-    unawaited(_presentPendingUpgradeHighlight());
   }
 
-  /// Presents the current version's upgrade highlight when required.
-  Future<void> _presentPendingUpgradeHighlight() async {
-    final AppUpgradeHighlight? highlight =
-        await _appUpgradeCoordinator.loadPendingHighlight();
-    if (!mounted || highlight == null) {
+  Future<void> _startBleAvailabilityMonitoringWhenAllowed() async {
+    if (kIsWeb) {
       return;
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final NavigatorState? navigator = rootNavigatorKey.currentState;
-      if (!mounted || navigator == null) {
-        return;
-      }
-
-      await navigator.push<void>(
-        MaterialPageRoute<void>(
-          fullscreenDialog: true,
-          builder: (_) => AppUpgradePage(
-            highlight: highlight,
-            onContinue: () {
-              rootNavigatorKey.currentState?.pop();
-            },
-          ),
-        ),
-      );
-
-      if (!mounted) {
-        return;
-      }
-      await _appUpgradeCoordinator.acknowledgeVersion(highlight.version);
-    });
-  }
-
-  void _syncAutoConnectorWithSetting() {
-    if (AutoConnectPreferences.autoConnectEnabled && _isBluetoothPoweredOn) {
-      _autoConnector.start();
+    if (!await PermissionsHelper.hasBlePermissions()) {
       return;
     }
-    _autoConnector.stop();
+
+    _startBleAvailabilityMonitoring();
+  }
+
+  Future<bool> _hasMicrophonePermissionGranted() async {
+    if (!Platform.isAndroid && !Platform.isWindows) {
+      return true;
+    }
+    return await Permission.microphone.isGranted;
   }
 
   Future<void> _syncInitialBluetoothAvailability() async {
@@ -730,7 +925,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     unawaited(ConnectorSettings.dispose());
     _unsupportedFirmwareSub.cancel();
     _wearableEventSub.cancel();
-    _bleAvailabilitySub.cancel();
+    _bleAvailabilitySub?.cancel();
     _wearableProvEventSub.cancel();
     AutoConnectPreferences.autoConnectEnabledListenable.removeListener(
       _syncAutoConnectorWithSetting,
@@ -742,6 +937,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     _setBackgroundExecutionForShutdown(false);
     _setBackgroundExecutionForRecording(false);
     _autoConnector.stop();
+    if (identical(startupRouteReadyCallback, _handleStartupRouteReady)) {
+      startupRouteReadyCallback = null;
+    }
     super.dispose();
   }
 

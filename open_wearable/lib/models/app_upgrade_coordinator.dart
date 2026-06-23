@@ -38,6 +38,12 @@ class AppUpgradeCoordinator {
 
   final AppVersionProvider _versionProvider;
 
+  /// Returns the configured highlight for the current app version, if any.
+  Future<AppUpgradeHighlight?> loadCurrentHighlight() async {
+    final String currentVersion = await _versionProvider.getVersion();
+    return AppUpgradeRegistry.forVersion(currentVersion);
+  }
+
   /// Returns the highlight that should be displayed on this launch, if any.
   Future<AppUpgradeHighlight?> loadPendingHighlight() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();

@@ -51,13 +51,15 @@ final class WearableStereoPairedEvent extends WearableEvent {
 class WearableConnector {
   // final Map<DiscoveredDevice, Wearable> _connectedDevices = {};
 
-  final WearableManager _wm;
+  WearableManager? _wearableManager;
   final Set<String> _trackedWearableIds = <String>{};
 
   final _events = StreamController<WearableEvent>.broadcast();
   Stream<WearableEvent> get events => _events.stream;
 
-  WearableConnector([WearableManager? wm]) : _wm = wm ?? WearableManager();
+  WearableConnector([WearableManager? wm]) : _wearableManager = wm;
+
+  WearableManager get _wm => _wearableManager ??= WearableManager();
 
   Future<Wearable> connect(
     DiscoveredDevice device, {

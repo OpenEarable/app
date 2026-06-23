@@ -1,10 +1,11 @@
 import 'dart:async';
-import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
+import 'package:open_wearable/models/permissions_helper.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:universal_ble/universal_ble.dart';
 import 'package:open_wearable/models/connect_devices_scan_session.dart';
 import 'package:open_wearable/models/device_name_formatter.dart';
@@ -31,7 +32,8 @@ class ConnectDevicesPage extends StatefulWidget {
 }
 
 class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
-  final WearableManager _wearableManager = WearableManager();
+  bool _hasBlePermissions = false;
+  bool _hasMicPermission = true;
   final Map<String, bool> _connectingDevices = {};
 
   late ConnectDevicesScanSnapshot _scanSnapshot;
@@ -52,10 +54,68 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
     };
 
     ConnectDevicesScanSession.notifier.addListener(_scanSnapshotListener);
-    if (!_scanSnapshot.isScanning) {
-      unawaited(ConnectDevicesScanSession.startScanning(clearPrevious: true));
-    }
+    unawaited(_checkPermissions());
     unawaited(_addThisDeviceToDiscovered());
+  }
+
+  Future<bool> _checkPermissions() async {
+    try {
+      final hasBle = await _hasBlePermissionsGranted();
+      final micGranted = defaultTargetPlatform == TargetPlatform.android ||
+              defaultTargetPlatform == TargetPlatform.windows
+          ? await Permission.microphone.isGranted
+          : true;
+      if (!mounted) return hasBle;
+      setState(() {
+        _hasBlePermissions = hasBle;
+        _hasMicPermission = micGranted;
+      });
+      return hasBle;
+    } catch (_) {
+      // conservative default on error
+      if (!mounted) return true;
+      setState(() {
+        _hasBlePermissions = true;
+        _hasMicPermission = true;
+      });
+      return true;
+    }
+  }
+
+  Future<bool> _hasBlePermissionsGranted() async {
+    return await PermissionsHelper.hasBlePermissions();
+  }
+
+  Future<void> _requestBlePermissions() async {
+    await PermissionsHelper.requestBlePermissions();
+    final hasBlePermissions = await _checkPermissions();
+    if (hasBlePermissions) {
+      await _startScanningIfAllowed(clearPrevious: true);
+    }
+  }
+
+  Future<void> _requestMicPermission() async {
+    try {
+      await Permission.microphone.request();
+    } catch (_) {}
+    await _checkPermissions();
+  }
+
+  Future<void> _startScanningIfAllowed({bool clearPrevious = false}) async {
+    if (_scanSnapshot.isScanning) {
+      return;
+    }
+
+    if (defaultTargetPlatform == TargetPlatform.iOS && !_hasBlePermissions) {
+      return;
+    }
+
+    final hasBlePermissions = await _checkPermissions();
+    if (!hasBlePermissions) {
+      return;
+    }
+
+    await ConnectDevicesScanSession.startScanning(clearPrevious: clearPrevious);
   }
 
   @override
@@ -66,11 +126,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
         connectedWearables.map((wearable) => wearable.deviceId).toSet();
     final connectedGroups = orderWearableGroupsForOverview(
       connectedWearables
-          .map(
-            (wearable) => WearableDisplayGroup.single(
-              wearable: wearable,
-            ),
-          )
+          .map((wearable) => WearableDisplayGroup.single(wearable: wearable))
           .toList(),
     );
 
@@ -100,16 +156,14 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                 : const Icon(Icons.bluetooth_searching),
             onPressed: _scanSnapshot.isScanning
                 ? null
-                : () => ConnectDevicesScanSession.startScanning(
-                      clearPrevious: true,
-                    ),
+                : () => _startScanningIfAllowed(clearPrevious: true),
           ),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
           if (!_scanSnapshot.isScanning) {
-            await ConnectDevicesScanSession.startScanning(clearPrevious: true);
+            await _startScanningIfAllowed(clearPrevious: true);
           }
         },
         child: ListView(
@@ -121,6 +175,44 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
             16 + MediaQuery.paddingOf(context).bottom,
           ),
           children: [
+            if (!_hasBlePermissions)
+              Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  leading: Icon(
+                    Icons.bluetooth,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  title: const Text('Enable Bluetooth & Location'),
+                  subtitle: const Text(
+                    'Allow Bluetooth and Location so the app can find and connect to your wearable.',
+                  ),
+                  trailing: PlatformElevatedButton(
+                    onPressed: _requestBlePermissions,
+                    child: const Text('Enable'),
+                  ),
+                ),
+              ),
+            if (!_hasMicPermission &&
+                (defaultTargetPlatform == TargetPlatform.android ||
+                    defaultTargetPlatform == TargetPlatform.windows))
+              Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  leading: Icon(
+                    Icons.mic,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  title: const Text('Enable Microphone'),
+                  subtitle: const Text(
+                    'OpenWearable can record audio from the device microphone for synchronized audio data. Grant microphone access to enable this.',
+                  ),
+                  trailing: PlatformElevatedButton(
+                    onPressed: _requestMicPermission,
+                    child: const Text('Enable'),
+                  ),
+                ),
+              ),
             _buildScanStatusCard(
               context,
               connectedCount: connectedWearables.length,
@@ -169,41 +261,33 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                     : 'Press scan again or pull to refresh.',
               )
             else
-              ...availableDevices.map(
-                (device) {
-                  final isThisDevice = device.id == _thisDeviceEntry?.id;
-                  final connect = isThisDevice
-                      ? () => _connectToThisDevice(context)
-                      : () => _connectToDevice(device, context);
+              ...availableDevices.map((device) {
+                final isThisDevice = device.id == _thisDeviceEntry?.id;
+                final connect = isThisDevice
+                    ? () => _connectToThisDevice(context)
+                    : () => _connectToDevice(device, context);
 
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: PlatformListTile(
-                      leading: Icon(
-                        isThisDevice ? Icons.smartphone : Icons.bluetooth,
-                      ),
-                      title: PlatformText(
-                        _deviceName(device, isThisDevice: isThisDevice),
-                      ),
-                      subtitle: PlatformText(device.id),
-                      trailing: _buildTrailingWidget(
-                        device,
-                        onConnect: connect,
-                      ),
-                      onTap: _connectingDevices[device.id] == true
-                          ? null
-                          : connect,
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: PlatformListTile(
+                    leading: Icon(
+                      isThisDevice ? Icons.smartphone : Icons.bluetooth,
                     ),
-                  );
-                },
-              ),
+                    title: PlatformText(
+                      _deviceName(device, isThisDevice: isThisDevice),
+                    ),
+                    subtitle: PlatformText(device.id),
+                    trailing: _buildTrailingWidget(device, onConnect: connect),
+                    onTap:
+                        _connectingDevices[device.id] == true ? null : connect,
+                  ),
+                );
+              }),
             const SizedBox(height: 10),
             PlatformElevatedButton(
               onPressed: _scanSnapshot.isScanning
                   ? null
-                  : () => ConnectDevicesScanSession.startScanning(
-                        clearPrevious: true,
-                      ),
+                  : () => _startScanningIfAllowed(clearPrevious: true),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -264,10 +348,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
               ],
             ),
             const SizedBox(height: 4),
-            Text(
-              helperText,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+            Text(helperText, style: Theme.of(context).textTheme.bodySmall),
             const SizedBox(height: 10),
             Wrap(
               spacing: 8,
@@ -294,9 +375,9 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
         children: [
           Text(
             title,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(width: 8),
           _StatusPill(label: '$count'),
@@ -447,7 +528,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
         return;
       }
 
-      final message = _wearableManager.deviceErrorMessage(e, device.name);
+      final message = WearableManager().deviceErrorMessage(e, device.name);
       logger.e(
         'Failed to connect to device: ${device.name}, error: $message\n$stackTrace',
       );
@@ -477,7 +558,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
 
   bool _isAlreadyConnectedError(Object error, DiscoveredDevice device) {
     try {
-      final message = _wearableManager.deviceErrorMessage(error, device.name);
+      final message = WearableManager().deviceErrorMessage(error, device.name);
       return message.toLowerCase().contains('already connected');
     } catch (_) {
       return error.toString().toLowerCase().contains('already connected');
@@ -518,9 +599,9 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
 
     try {
       await UniversalBle.connect(device.id);
-      await UniversalBle.connectionStream(device.id)
-          .firstWhere((isConnected) => isConnected)
-          .timeout(Duration(seconds: 2));
+      await UniversalBle.connectionStream(
+        device.id,
+      ).firstWhere((isConnected) => isConnected).timeout(Duration(seconds: 2));
     } catch (error, stackTrace) {
       logger.d(
         'Low-level connect probe for ${device.id} did not complete during stale recovery: $error\n$stackTrace',
@@ -564,25 +645,23 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
 class _StatusPill extends StatelessWidget {
   final String label;
 
-  const _StatusPill({
-    required this.label,
-  });
+  const _StatusPill({required this.label});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer.withValues(
-              alpha: 0.65,
-            ),
+        color: Theme.of(
+          context,
+        ).colorScheme.primaryContainer.withValues(alpha: 0.65),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+        style: Theme.of(
+          context,
+        ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
       ),
     );
   }

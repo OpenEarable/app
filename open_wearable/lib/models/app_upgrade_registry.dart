@@ -68,7 +68,7 @@ class AppUpgradeRegistry {
           'OpenWearables now includes a connector that exposes app control through a WebSocket API. '
           'The Python API builds on that connection, making scripted workflows, external tools, '
           'and repeatable automation possible.',
-      accentColor: Color(0xFF2F7D6D),
+      accentColor: Color(0xFF8F6A67),
       useHeroGradient: false,
       features: <AppUpgradeFeatureHighlight>[
         AppUpgradeFeatureHighlight(

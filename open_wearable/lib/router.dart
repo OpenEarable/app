@@ -12,6 +12,7 @@ import 'package:open_wearable/widgets/logging/log_files_screen.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_all_recordings_page.dart';
 import 'package:open_wearable/widgets/settings/connectors_page.dart';
 import 'package:open_wearable/widgets/settings/general_settings_page.dart';
+import 'package:open_wearable/widgets/startup/startup_loading_page.dart';
 import 'package:open_wearable/widgets/updates/app_upgrade_history_page.dart';
 import 'dart:io' show Platform;
 import 'package:flutter/cupertino.dart';
@@ -21,6 +22,7 @@ import 'package:open_wearable/widgets/updates/app_upgrade_page.dart';
 
 /// Global navigator key for go_router
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+VoidCallback? startupRouteReadyCallback;
 bool _unsupportedFotaDialogVisible = false;
 
 void _showUnsupportedFotaDialog() {
@@ -89,8 +91,15 @@ int _parseHomeSectionIndex(String? tabParam) {
 /// Router configuration for the app
 final GoRouter router = GoRouter(
   navigatorKey: rootNavigatorKey,
-  initialLocation: '/',
+  initialLocation: '/startup',
   routes: [
+    GoRoute(
+      path: '/startup',
+      name: 'startup',
+      builder: (context, state) => StartupLoadingPage(
+        onReady: startupRouteReadyCallback,
+      ),
+    ),
     GoRoute(
       path: '/',
       name: 'home',

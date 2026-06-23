@@ -101,7 +101,7 @@ class ConnectDevicesScanSession {
       if (scanToken != _scanToken) {
         return;
       }
-      await _wearableManager.startScan();
+      await _wearableManager.startScan(checkAndRequestPermissions: false);
     } catch (error, stackTrace) {
       logger.w('Failed to start scan: $error\n$stackTrace');
       await stopScanning();
