@@ -11,6 +11,7 @@ import 'package:open_wearable/widgets/connector_activity_indicator.dart';
 import 'package:open_wearable/widgets/devices/connect_devices_page.dart';
 import 'package:open_wearable/widgets/devices/device_detail/audio_mode_widget.dart';
 import 'package:open_wearable/widgets/devices/device_detail/device_detail_page.dart';
+import 'package:open_wearable/widgets/devices/device_detail/microphone_gain_controls.dart';
 import 'package:open_wearable/widgets/devices/device_detail/microphone_selection_widget.dart';
 import 'package:open_wearable/widgets/devices/device_detail/power_saving_mode_widget.dart';
 import 'package:open_wearable/widgets/devices/device_detail/stereo_pair_option_selector.dart';
@@ -687,6 +688,11 @@ class _PairedDeviceSheet extends StatelessWidget {
     return null;
   }
 
+  bool _supportsStereoMicrophoneGain() {
+    return leftDevice.hasCapability<MicrophoneGainManager>() &&
+        rightDevice.hasCapability<MicrophoneGainManager>();
+  }
+
   bool _supportsStereoPowerSavingMode(Wearable device) {
     return device.hasCapability<StereoDevice>() &&
         device.hasCapability<PowerSavingModeManager>();
@@ -707,6 +713,7 @@ class _PairedDeviceSheet extends StatelessWidget {
     final theme = Theme.of(context);
     final listeningModeDevice = _resolveListeningModeDevice();
     final microphoneSelectionDevice = _resolveMicrophoneSelectionDevice();
+    final supportsMicrophoneGain = _supportsStereoMicrophoneGain();
     final powerSavingModeDevice = _resolvePowerSavingModeDevice();
 
     return DraggableScrollableSheet(
@@ -790,6 +797,16 @@ class _PairedDeviceSheet extends StatelessWidget {
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
+                  ),
+                ],
+                if (supportsMicrophoneGain) ...[
+                  const SizedBox(height: 12),
+                  MicrophoneGainControls(
+                    key: ValueKey(
+                      'pair_microphone_gain_${leftDevice.deviceId}_${rightDevice.deviceId}',
+                    ),
+                    device: leftDevice,
+                    pairedDevice: rightDevice,
                   ),
                 ],
                 if (microphoneSelectionDevice != null) ...[
