@@ -1,44 +1,62 @@
-# OpenEarable - App
+# OpenWearable - App
 
-[OpenEarable](openearable.com) is the world's first fully open-source AI platform for ear-based sensing applications with true wireless audio. Packed with an unprecedented array of high-precision sensors, OpenEarable redefines what's possible in wearable tech. Designed for both development and research applications, OpenEarable is modular, reconfigurable, and built for the future.
+The OpenWearable App is a mobile application for connecting to, configuring, and interacting with wearable devices. It is designed as a flexible companion app for research, development, and prototyping with sensor-rich wearable platforms.
+
+The app supports live sensor control, data visualizations and example applications that demonstrate how wearable devices can be used in practice. [OpenEarable](https://openearable.com) is one example of a compatible OpenWearable device. It is a fully open-source platform for ear-based sensing applications with true wireless audio, high-precision sensors, and a modular, reconfigurable hardware design.
+
+For more information about the OpenWearable ecosystem, visit [openwearables.com](https://openwearables.com).
 
 ## Features
-- Connect to OpenEarable device
-- Configure the sensors
-- Control the audio 
-- Control the built-in LED
-- Show live data from the sensors
-- Provide a number of example applications
-    - Posture Tracker
-    - Recorder
+
+- Connect to compatible OpenWearable devices, such as OpenEarable
+- Configure available device sensors
+- Control audio features
+- Show live data from wearable sensors
+- Provide example applications, including:
+  - Posture Tracker
+  - Recorder
 
 ## Getting Started
-To get started with the OpenEarable App, you need to have the following:
-- An OpenEarable device with the newest firmware
-- A working flutter installation
+
+To get started with the OpenWearable App, you need:
+
+- A compatible OpenWearable device, such as an OpenEarable device with the latest firmware
+- A working Flutter installation
 
 ## Contributing
 
 Contributor expectations and workflow rules are documented in [CONTRIBUTING.md](./CONTRIBUTING.md).
 
-### Run the app
-1. Clone this repository
+## Run the app
+
+1. Clone this repository:
+
+    ```bash
+    git clone https://github.com/OpenWearable/app.git
     ```
-    git clone https://github.com/OpenEarable/app.git
-    ```
-2. Navigate to the project folder in your terminal
-3. Connect your Phone to your Computer
-4. Start the app on your phone
-    ```
+
+2. Navigate to the project folder in your terminal.
+
+3. Connect your phone to your computer.
+
+4. Start the app on your phone:
+
+    ```bash
     flutter run
     ```
-    and select your phone as the target device from the list of connected devices.
 
-### Install the app
-1. Navigate to the project folder in your terminal
-2. Connect your Phone to your Computer
-3. Run the app in release mode
-    ```
+    Select your phone as the target device from the list of connected devices.
+
+## Install the app
+
+1. Navigate to the project folder in your terminal.
+
+2. Connect your phone to your computer.
+
+3. Run the app in release mode:
+
+    ```bash
     flutter run --release
     ```
-    and select your phone as the target device from the list of connected devices.
+
+    Select your phone as the target device from the list of connected devices.
