@@ -6,12 +6,17 @@ import 'package:open_wearable/models/app_shutdown_settings.dart';
 import 'package:open_wearable/models/device_name_formatter.dart';
 import 'package:open_wearable/view_models/sensor_data_provider.dart';
 import 'package:open_wearable/widgets/devices/stereo_position_badge.dart';
+import 'package:open_wearable/widgets/sensors/values/live_data_graph_settings.dart';
 import 'package:open_wearable/widgets/sensors/values/sensor_chart.dart';
 import 'package:open_wearable/widgets/sensors/values/sensor_value_detail.dart';
 import 'package:provider/provider.dart';
 
+/// Shows the latest live graph preview for one wearable sensor.
 class SensorValueCard extends StatelessWidget {
+  /// Sensor whose live data should be visualized.
   final Sensor sensor;
+
+  /// Wearable that owns [sensor].
   final Wearable wearable;
 
   const SensorValueCard({
@@ -76,49 +81,30 @@ class SensorValueCard extends StatelessWidget {
               ),
               Padding(
                 padding: const EdgeInsets.only(top: 10.0),
-                child: ValueListenableBuilder<bool>(
-                  valueListenable:
-                      AppShutdownSettings.disableLiveDataGraphsListenable,
-                  builder: (context, disableLiveDataGraphs, _) {
-                    return ValueListenableBuilder<bool>(
-                      valueListenable: AppShutdownSettings
-                          .hideLiveDataGraphsWithoutDataListenable,
-                      builder: (context, hideGraphsWithoutData, __) {
-                        final shouldHideWithoutData =
-                            hideGraphsWithoutData && !disableLiveDataGraphs;
-                        if (!shouldHideWithoutData) {
-                          return SizedBox(
-                            height: 200,
-                            child: SensorChart(
-                              allowToggleAxes: false,
-                              liveUpdatesEnabled: !disableLiveDataGraphs,
-                              onDisabledTap: disableLiveDataGraphs
-                                  ? () => context.push('/settings/general')
-                                  : null,
-                            ),
-                          );
-                        }
-
-                        return Consumer<SensorDataProvider>(
-                          builder: (context, dataProvider, ___) {
-                            final hideNoDataGraph =
-                                dataProvider.sensorValues.isEmpty;
-                            return SizedBox(
-                              height: 200,
-                              child: hideNoDataGraph
-                                  ? _GraphsDisabledPlaceholder(
-                                      icon: Icons.sensors_off_outlined,
-                                      title: 'No live data yet',
-                                      subtitle:
-                                          'Graph hidden when no data is received. Tap to open General settings',
-                                      onTap: () =>
-                                          context.push('/settings/general'),
-                                    )
-                                  : const SensorChart(
-                                      allowToggleAxes: false,
-                                    ),
-                            );
-                          },
+                child: LiveDataGraphSettingsBuilder(
+                  builder: (context, settings) {
+                    return Selector<SensorDataProvider, bool>(
+                      selector: (context, dataProvider) =>
+                          dataProvider.sensorValues.isNotEmpty,
+                      builder: (context, hasData, _) {
+                        return SizedBox(
+                          height: 200,
+                          child: settings.shouldShowGraph(hasData: hasData)
+                              ? SensorChart(
+                                  allowToggleAxes: false,
+                                  settings: settings,
+                                  onDisabledTap: settings.liveUpdatesEnabled
+                                      ? null
+                                      : () => context.push('/settings/general'),
+                                )
+                              : LiveDataGraphHiddenPlaceholder(
+                                  icon: Icons.sensors_off_outlined,
+                                  title: 'No live data yet',
+                                  subtitle:
+                                      'Graph hidden when no data is received. Tap to open General settings',
+                                  onTap: () =>
+                                      context.push('/settings/general'),
+                                ),
                         );
                       },
                     );
@@ -126,66 +112,6 @@ class SensorValueCard extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _GraphsDisabledPlaceholder extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  const _GraphsDisabledPlaceholder({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: onTap,
-        child: Container(
-          decoration: BoxDecoration(
-            color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  icon,
-                  color: colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: colorScheme.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                ),
-              ],
-            ),
           ),
         ),
       ),

@@ -18,6 +18,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   deploy_for_android:
@@ -26,7 +27,7 @@ jobs:
       RELEASE_TYPE: ${{ github.event.inputs.release_type }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.inputs.branch }}
 
@@ -36,27 +37,12 @@ jobs:
           ruby-version: 3.2.3
           bundler-cache: true
 
-      - name: Get flutter version
-        run: echo "flutter_version=`cat open_wearable/.flutter_version`" >> $GITHUB_ENV
-        id: flutter_version
-      - name: Install flutter
-        uses: subosito/flutter-action@v2
+      - name: Set up Android build
+        uses: ./.github/actions/android-build-prepare
         with:
-          channel: "stable"
-          cache: true
-          flutter-version: ${{ env.flutter_version }}
-      - run: flutter --version
-
-      - name: Get packages
-        run: |
-          cd open_wearable
-          flutter clean
-          flutter pub get
-
-      - name: Analyze source
-        run: |
-          cd open_wearable
-          flutter analyze
+          app-dir: open_wearable
+          clean: "true"
+          analyze: "true"
 
       - name: Decode and save OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PATH
         run: |
@@ -87,37 +73,56 @@ jobs:
         env:
           OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PASSWORD }}
 
-      - name: Bump version after production release
+      - name: Open and merge version bump PR
         if: ${{ github.event.inputs.release_type == 'production' }}
         shell: bash
         env:
           VERSION_FILE: open_wearable/pubspec.yaml
+          BASE_BRANCH: ${{ github.event.inputs.branch }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Configure Git user
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Read current version
           line=$(grep '^version:' "$VERSION_FILE")
           raw_version=${line#version: }
           version=${raw_version//\"/}
           echo "Current version: $version"
-          echo "old_version=$version" >> $GITHUB_OUTPUT
 
-          # Split into semver and build metadata
           semver=${version%%+*}
           build=${version#*+}
-          IFS='.' read -r major minor patch <<< "$semver"
+          if [ "$semver" = "$build" ]; then
+            echo "::error::Version '$version' must include build metadata, for example 1.2.3+45."
+            exit 1
+          fi
 
-          # Increment patch
+          IFS='.' read -r major minor patch <<< "$semver"
+          if ! [[ "$major" =~ ^[0-9]+$ && "$minor" =~ ^[0-9]+$ && "$patch" =~ ^[0-9]+$ ]]; then
+            echo "::error::Version '$version' must use numeric major.minor.patch values."
+            exit 1
+          fi
+
           new_patch=$((patch + 1))
           new_version="${major}.${minor}.${new_patch}+${build}"
+          bump_branch="automation/bump-version-${new_version}-${GITHUB_RUN_ID}"
+          commit_message="chore(version): bump version to ${new_version}"
 
-          # Update version in pubspec.yaml
+          git switch -c "$bump_branch"
           sed -i "s|^version: .*|version: $new_version|" "$VERSION_FILE"
           echo "New version set to: $new_version"
 
-          # Commit the bump
           git add "$VERSION_FILE"
-          git commit -m "Bump version to ${major}.${minor}.${new_patch}"
-          git push
+          git commit -m "$commit_message"
+          git push --set-upstream origin "$bump_branch"
+
+          pr_url=$(gh pr create \
+            --base "$BASE_BRANCH" \
+            --head "$bump_branch" \
+            --title "$commit_message" \
+            --body "Bumps the app version after the production Play Store release.")
+
+          gh pr merge "$pr_url" \
+            --squash \
+            --delete-branch \
+            --subject "$commit_message" \
+            --body "Merged automatically after the production Play Store release."

@@ -5,17 +5,24 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 import 'package:open_wearable/view_models/sensor_data_provider.dart';
+import 'package:open_wearable/widgets/sensors/values/live_data_graph_settings.dart';
 import 'package:provider/provider.dart';
 
+/// Displays a provider-backed live line chart for a wearable sensor.
 class SensorChart extends StatefulWidget {
+  /// Whether users can toggle individual sensor axes.
   final bool allowToggleAxes;
-  final bool liveUpdatesEnabled;
+
+  /// Shared live graph policy controlling visibility and sample updates.
+  final LiveDataGraphSettings settings;
+
+  /// Called when the disabled graph overlay is tapped.
   final VoidCallback? onDisabledTap;
 
   const SensorChart({
     super.key,
     this.allowToggleAxes = true,
-    this.liveUpdatesEnabled = true,
+    this.settings = LiveDataGraphSettings.enabled,
     this.onDisabledTap,
   });
 
@@ -59,12 +66,12 @@ class _SensorChartState extends State<SensorChart> {
 
   @override
   Widget build(BuildContext context) {
-    final dataProvider = widget.liveUpdatesEnabled
+    final dataProvider = widget.settings.liveUpdatesEnabled
         ? context.watch<SensorDataProvider>()
         : context.read<SensorDataProvider>();
     final sensor = dataProvider.sensor;
     _syncAxisState(sensor);
-    final sensorValues = widget.liveUpdatesEnabled
+    final sensorValues = widget.settings.liveUpdatesEnabled
         ? dataProvider.sensorValues
         : Queue<SensorValue>();
     final theme = Theme.of(context);
@@ -110,8 +117,9 @@ class _SensorChartState extends State<SensorChart> {
       minY: yAxisBounds.min,
       maxY: yAxisBounds.max,
       lineTouchData: LineTouchData(
-        enabled: widget.liveUpdatesEnabled && !compactMode,
-        handleBuiltInTouches: widget.liveUpdatesEnabled && !compactMode,
+        enabled: widget.settings.liveUpdatesEnabled && !compactMode,
+        handleBuiltInTouches:
+            widget.settings.liveUpdatesEnabled && !compactMode,
       ),
       gridData: FlGridData(
         show: true,
@@ -232,50 +240,13 @@ class _SensorChartState extends State<SensorChart> {
               2,
               0,
             ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Opacity(
-                  opacity: widget.liveUpdatesEnabled ? 1 : 0.5,
-                  child: LineChart(
-                    chartData,
-                    duration: const Duration(milliseconds: 0),
-                  ),
-                ),
-                if (!widget.liveUpdatesEnabled)
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: widget.onDisabledTap,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: colorScheme.surface.withValues(alpha: 0.82),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: colorScheme.outline.withValues(alpha: 0.35),
-                          ),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          child: Text(
-                            widget.onDisabledTap == null
-                                ? 'Live graphs disabled'
-                                : 'Live graphs disabled. Tap to open settings.',
-                            style: theme.textTheme.labelMedium?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
+            child: LiveDataGraphSurface(
+              settings: widget.settings,
+              onDisabledTap: widget.onDisabledTap,
+              child: LineChart(
+                chartData,
+                duration: const Duration(milliseconds: 0),
+              ),
             ),
           ),
         ),
@@ -339,7 +310,7 @@ class _SensorChartState extends State<SensorChart> {
                                   ),
                                 ),
                                 selected: selected,
-                                onSelected: widget.liveUpdatesEnabled
+                                onSelected: widget.settings.liveUpdatesEnabled
                                     ? (value) => _toggleAxis(axisName, value)
                                     : null,
                                 showCheckmark: false,

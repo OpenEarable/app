@@ -2,14 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
-import 'package:open_wearable/models/app_shutdown_settings.dart';
 import 'package:open_wearable/models/device_name_formatter.dart';
 import 'package:open_wearable/view_models/sensor_data_provider.dart';
+import 'package:open_wearable/widgets/sensors/values/live_data_graph_settings.dart';
 import 'package:open_wearable/widgets/sensors/values/sensor_chart.dart';
 import 'package:provider/provider.dart';
 
+/// Full-screen live graph view for a single wearable sensor.
 class SensorValueDetail extends StatelessWidget {
+  /// Sensor whose values should be visualized.
   final Sensor sensor;
+
+  /// Wearable that owns [sensor].
   final Wearable wearable;
 
   const SensorValueDetail({
@@ -38,75 +42,29 @@ class SensorValueDetail extends StatelessWidget {
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             Expanded(
-              child: ValueListenableBuilder<bool>(
-                valueListenable:
-                    AppShutdownSettings.disableLiveDataGraphsListenable,
-                builder: (context, disableLiveDataGraphs, _) {
-                  return ValueListenableBuilder<bool>(
-                    valueListenable: AppShutdownSettings
-                        .hideLiveDataGraphsWithoutDataListenable,
-                    builder: (context, hideGraphsWithoutData, __) {
-                      final shouldHideWithoutData =
-                          hideGraphsWithoutData && !disableLiveDataGraphs;
-                      if (!shouldHideWithoutData) {
+              child: LiveDataGraphSettingsBuilder(
+                builder: (context, settings) {
+                  return Selector<SensorDataProvider, bool>(
+                    selector: (context, dataProvider) =>
+                        dataProvider.sensorValues.isNotEmpty,
+                    builder: (context, hasData, _) {
+                      if (settings.shouldShowGraph(hasData: hasData)) {
                         return SensorChart(
                           allowToggleAxes: true,
-                          liveUpdatesEnabled: !disableLiveDataGraphs,
-                          onDisabledTap: disableLiveDataGraphs
-                              ? () => context.push('/settings/general')
-                              : null,
+                          settings: settings,
+                          onDisabledTap: settings.liveUpdatesEnabled
+                              ? null
+                              : () => context.push('/settings/general'),
                         );
                       }
 
-                      return Consumer<SensorDataProvider>(
-                        builder: (context, dataProvider, ___) {
-                          if (dataProvider.sensorValues.isNotEmpty) {
-                            return const SensorChart(
-                              allowToggleAxes: true,
-                            );
-                          }
-
-                          return Center(
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(12),
-                                onTap: () => context.push('/settings/general'),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 18,
-                                    vertical: 12,
-                                  ),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        'Live data graph is hidden while this sensor has no data.',
-                                        textAlign: TextAlign.center,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium,
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        'Tap to open General settings',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall
-                                            ?.copyWith(
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .primary,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        },
+                      return Center(
+                        child: LiveDataGraphHiddenPlaceholder(
+                          icon: Icons.sensors_off_outlined,
+                          title: 'Live data graph hidden',
+                          subtitle: 'Tap to open General settings',
+                          onTap: () => context.push('/settings/general'),
+                        ),
                       );
                     },
                   );

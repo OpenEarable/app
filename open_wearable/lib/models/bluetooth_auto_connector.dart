@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
@@ -64,6 +65,14 @@ class BluetoothAutoConnector {
   WearableManager get wearableManager => _wearableManager ??= WearableManager();
 
   void start() async {
+    if (kIsWeb) {
+      logger.i(
+        'Bluetooth auto-connect is disabled on web because Web Bluetooth requires a direct user gesture.',
+      );
+      _stopInternal();
+      return;
+    }
+
     final token = ++_sessionToken;
     _stopInternal();
     _connectedDeviceIds.clear();
@@ -275,7 +284,7 @@ class BluetoothAutoConnector {
   }
 
   Future<void> _applyIosScanCooldownIfNeeded() async {
-    if (!Platform.isIOS) {
+    if (kIsWeb || !Platform.isIOS) {
       return;
     }
     final stoppedAt = _lastScanStoppedAt;
@@ -413,7 +422,9 @@ class BluetoothAutoConnector {
       _isStartingScan = true;
       try {
         await _applyIosScanCooldownIfNeeded();
-        await wearableManager.startScan();
+        await wearableManager.startScan(
+          checkAndRequestPermissions: false,
+        );
       } finally {
         _isStartingScan = false;
       }

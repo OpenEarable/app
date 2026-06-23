@@ -12,6 +12,7 @@ import 'package:open_wearable/widgets/devices/connect_devices_page.dart';
 import 'package:open_wearable/widgets/devices/device_detail/audio_mode_widget.dart';
 import 'package:open_wearable/widgets/devices/device_detail/device_detail_page.dart';
 import 'package:open_wearable/widgets/devices/device_detail/microphone_selection_widget.dart';
+import 'package:open_wearable/widgets/devices/device_detail/power_saving_mode_widget.dart';
 import 'package:open_wearable/widgets/devices/device_detail/stereo_pair_option_selector.dart';
 import 'package:open_wearable/widgets/devices/device_status_pills.dart';
 import 'package:open_wearable/widgets/devices/wearable_icon.dart';
@@ -686,11 +687,27 @@ class _PairedDeviceSheet extends StatelessWidget {
     return null;
   }
 
+  bool _supportsStereoPowerSavingMode(Wearable device) {
+    return device.hasCapability<StereoDevice>() &&
+        device.hasCapability<PowerSavingModeManager>();
+  }
+
+  Wearable? _resolvePowerSavingModeDevice() {
+    if (_supportsStereoPowerSavingMode(leftDevice)) {
+      return leftDevice;
+    }
+    if (_supportsStereoPowerSavingMode(rightDevice)) {
+      return rightDevice;
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final listeningModeDevice = _resolveListeningModeDevice();
     final microphoneSelectionDevice = _resolveMicrophoneSelectionDevice();
+    final powerSavingModeDevice = _resolvePowerSavingModeDevice();
 
     return DraggableScrollableSheet(
       expand: false,
@@ -788,6 +805,24 @@ class _PairedDeviceSheet extends StatelessWidget {
                   const SizedBox(height: 10),
                   Text(
                     'LE Audio microphone selection is not available for this stereo pair.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+                if (powerSavingModeDevice != null) ...[
+                  const SizedBox(height: 12),
+                  PowerSavingModeWidget(
+                    key: ValueKey(
+                      'pair_power_saving_${leftDevice.deviceId}_${rightDevice.deviceId}',
+                    ),
+                    device: powerSavingModeDevice,
+                    applyScope: StereoPairApplyScope.pairOnly,
+                  ),
+                ] else ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    'Power saving mode is not available for this stereo pair.',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),

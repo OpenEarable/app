@@ -1,20 +1,19 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
+import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_models.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 
 class LocalRecorderRecordingFolderCard extends StatelessWidget {
-  final Directory folder;
+  final LocalRecorderRecordingFolder folder;
   final bool isCurrentRecording;
   final bool isExpanded;
-  final List<File> files;
+  final List<LocalRecorderRecordingFile> files;
   final String updatedLabel;
   final VoidCallback onToggleExpanded;
   final VoidCallback onShareFolder;
   final VoidCallback onDeleteFolder;
-  final void Function(File file) onShareFile;
-  final void Function(File file) onOpenFile;
-  final String Function(File file) formatFileSize;
+  final void Function(LocalRecorderRecordingFile file) onShareFile;
+  final void Function(LocalRecorderRecordingFile file) onOpenFile;
+  final String Function(int bytes) formatFileSize;
   final bool selectionMode;
   final bool isSelected;
   final VoidCallback? onSelectionToggle;
@@ -37,13 +36,10 @@ class LocalRecorderRecordingFolderCard extends StatelessWidget {
     this.onSelectionToggle,
   });
 
-  String _basename(String path) => path.split(RegExp(r'[\\/]+')).last;
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final folderName = _basename(folder.path);
 
     return Card(
       margin: const EdgeInsets.only(bottom: SensorPageSpacing.sectionGap),
@@ -57,7 +53,7 @@ class LocalRecorderRecordingFolderCard extends StatelessWidget {
                   : colorScheme.onSurfaceVariant,
             ),
             title: Text(
-              folderName,
+              folder.name,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -152,7 +148,7 @@ class LocalRecorderRecordingFolderCard extends StatelessWidget {
             ...files.map(
               (file) => _LocalRecorderRecordingFileTile(
                 file: file,
-                fileSize: formatFileSize(file),
+                fileSize: formatFileSize(file.sizeBytes),
                 onShare: () => onShareFile(file),
                 onOpen: () => onOpenFile(file),
               ),
@@ -164,7 +160,7 @@ class LocalRecorderRecordingFolderCard extends StatelessWidget {
 }
 
 class _LocalRecorderRecordingFileTile extends StatelessWidget {
-  final File file;
+  final LocalRecorderRecordingFile file;
   final String fileSize;
   final VoidCallback onShare;
   final VoidCallback onOpen;
@@ -176,12 +172,9 @@ class _LocalRecorderRecordingFileTile extends StatelessWidget {
     required this.onOpen,
   });
 
-  String _basename(String path) => path.split(RegExp(r'[\\/]+')).last;
-
   @override
   Widget build(BuildContext context) {
-    final fileName = _basename(file.path);
-    final isCsv = fileName.toLowerCase().endsWith('.csv');
+    final isCsv = file.name.toLowerCase().endsWith('.csv');
 
     return ListTile(
       contentPadding: const EdgeInsets.fromLTRB(58, 2, 10, 2),
@@ -191,7 +184,7 @@ class _LocalRecorderRecordingFileTile extends StatelessWidget {
         size: 20,
       ),
       title: Text(
-        fileName,
+        file.name,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: Theme.of(context).textTheme.bodyMedium,

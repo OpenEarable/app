@@ -10,19 +10,12 @@ jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Get flutter version
-        run: echo "flutter_version=`cat open_wearable/.flutter_version`" >> $GITHUB_ENV
-        id: flutter_version
-      - uses: subosito/flutter-action@v2
+      - uses: actions/checkout@v6
+      - name: Build web bundle
+        uses: ./.github/actions/flutter-web-build
         with:
-          channel: "stable"
-          cache: true
-          flutter-version: ${{ env.flutter_version }}
-      - run: (cd open_wearable && flutter analyze)
-      - run: (cd open_wearable && flutter build web --dart-define=BUILD_COMMIT=$(git
-          rev-parse --short HEAD) --dart-define=BUILD_BRANCH=$(git rev-parse
-          --abbrev-ref HEAD))
+          app-dir: open_wearable
+          build-metadata: "true"
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
