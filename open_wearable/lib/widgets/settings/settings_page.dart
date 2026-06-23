@@ -96,7 +96,7 @@ class _AboutPageState extends State<_AboutPage> {
   static final Uri _tecoUri = Uri.parse('https://teco.edu');
   static final Uri _openWearablesUri = Uri.parse('https://openwearables.com');
   static const String _aboutAttribution =
-      'The OpenWearables App is developed and maintained by the TECO research group at the Karlsruhe Institute of Technology and OpenWearables GmbH.';
+      'The OpenWearables App is developed and maintained by the TECO research group at the Karlsruhe Institute of Technology and OpenWearables.';
 
   @override
   void initState() {
@@ -265,7 +265,7 @@ class _AboutPageState extends State<_AboutPage> {
                       const SizedBox(height: 6),
                       _AboutExternalLink(
                         icon: Icons.language_rounded,
-                        title: 'OpenWearables GmbH',
+                        title: 'OpenWearables',
                         urlText: 'openwearables.com',
                         trailing: const _OpenWearablesFloatingBadge(),
                         onTap: () => _openExternalUrl(

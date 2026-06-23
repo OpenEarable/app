@@ -275,7 +275,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         AppUpgradeCoordinator.acknowledgedVersionKey,
       );
 
-      final bool didShowOnboarding = await _presentPermissionsOnboardingIfNeeded();
+      final bool didShowOnboarding =
+          await _presentPermissionsOnboardingIfNeeded();
       _syncAutoConnectorWithSetting();
       if (!mounted) {
         return;
@@ -359,8 +360,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         await navigator.push<void>(
           MaterialPageRoute<void>(
             fullscreenDialog: true,
-            builder: (_) => MicrophonePermissionsPage(
-              onCompleted: _completePermissionsOnboarding,
+            builder: (_) => PermissionsWelcomePage(
+              nextPageBuilder: (_) => MicrophonePermissionsPage(
+                onCompleted: _completePermissionsOnboarding,
+              ),
             ),
           ),
         );
@@ -382,9 +385,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       await navigator.push<void>(
         MaterialPageRoute<void>(
           fullscreenDialog: true,
-          builder: (_) => BluetoothPermissionsPage(
-            onCompleted: _completePermissionsOnboarding,
-            onBluetoothRequestCompleted: _handleBluetoothPermissionRequested,
+          builder: (_) => PermissionsWelcomePage(
+            nextPageBuilder: (_) => BluetoothPermissionsPage(
+              onCompleted: _completePermissionsOnboarding,
+              onBluetoothRequestCompleted: _handleBluetoothPermissionRequested,
+            ),
           ),
         ),
       );

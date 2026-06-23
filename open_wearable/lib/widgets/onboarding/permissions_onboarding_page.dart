@@ -1,10 +1,170 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_wearable/models/permissions_helper.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+class PermissionsWelcomePage extends StatelessWidget {
+  const PermissionsWelcomePage({
+    super.key,
+    required this.nextPageBuilder,
+  });
+
+  static const String _appIconAsset =
+      'android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png';
+
+  final WidgetBuilder nextPageBuilder;
+
+  void _continue(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: nextPageBuilder),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return PlatformScaffold(
+      appBar: PlatformAppBar(
+        automaticallyImplyLeading: false,
+        title: const Text('Welcome'),
+      ),
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Spacer(),
+                        Center(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(24),
+                            child: Image.asset(
+                              _appIconAsset,
+                              width: 88,
+                              height: 88,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          'Welcome to OpenWearable',
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'OpenWearable supports research and development of the next generation wearable applications by helping you connect devices, inspect live sensor data, and record synchronized sessions.',
+                          style: theme.textTheme.bodyMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 18),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: _SupportEmailText(
+                            style: theme.textTheme.bodyMedium,
+                            linkStyle: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        const SizedBox(height: 32),
+                        PlatformElevatedButton(
+                          onPressed: () => _continue(context),
+                          child: const Text('Get Started'),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _SupportEmailText extends StatefulWidget {
+  const _SupportEmailText({
+    required this.style,
+    required this.linkStyle,
+  });
+
+  final TextStyle? style;
+  final TextStyle? linkStyle;
+
+  @override
+  State<_SupportEmailText> createState() => _SupportEmailTextState();
+}
+
+class _SupportEmailTextState extends State<_SupportEmailText> {
+  static final Uri _supportEmailUri = Uri(
+    scheme: 'mailto',
+    path: 'info@openwearables.com',
+  );
+
+  late final TapGestureRecognizer _emailRecognizer;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailRecognizer = TapGestureRecognizer()..onTap = _openSupportEmail;
+  }
+
+  @override
+  void dispose() {
+    _emailRecognizer.dispose();
+    super.dispose();
+  }
+
+  Future<void> _openSupportEmail() async {
+    await launchUrl(
+      _supportEmailUri,
+      mode: LaunchMode.externalApplication,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text.rich(
+      TextSpan(
+        style: widget.style,
+        children: [
+          const TextSpan(
+            text:
+                'Thank you for trusting OpenWearable. If you have any questions or run into problems, reach out to ',
+          ),
+          TextSpan(
+            text: 'info@openwearables.com',
+            style: widget.linkStyle,
+            recognizer: _emailRecognizer,
+          ),
+          const TextSpan(text: '.'),
+        ],
+      ),
+      textAlign: TextAlign.center,
+    );
+  }
+}
 
 class BluetoothPermissionsPage extends StatefulWidget {
   const BluetoothPermissionsPage({
