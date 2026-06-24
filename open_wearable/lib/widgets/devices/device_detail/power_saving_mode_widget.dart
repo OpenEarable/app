@@ -121,7 +121,8 @@ class _PowerSavingModeWidgetState extends State<PowerSavingModeWidget> {
               data.modes.any((candidate) => _modesEqualById(candidate, mode)),
           equalsSelection: _modesEqualById,
           optionLabel: (mode) => mode.name,
-          optionIcon: (_) => Icons.battery_saver_rounded,
+          optionSubtitle: _subtitleForMode,
+          optionIcon: _iconForMode,
           loadErrorText: (error) =>
               'Failed to load power saving mode: ${_describeError(error)}',
           applyErrorText: (
@@ -205,6 +206,48 @@ class _PowerSavingModeStatus extends StatelessWidget {
 
 bool _modesEqualById(PowerSavingMode? a, PowerSavingMode b) {
   return a != null && a.id == b.id;
+}
+
+String _subtitleForMode(PowerSavingMode mode) {
+  return switch (mode.id) {
+    0 => 'Auto-off disabled',
+    1 => 'Off after 30 min idle (audio/sensors prevent)',
+    2 => 'Off after 15 min idle (audio/sensors prevent)',
+    3 => 'Off after 5 min idle (only audio prevents)',
+    _ => _subtitleForModeName(mode.name),
+  };
+}
+
+String _subtitleForModeName(String name) {
+  final normalized = name.toLowerCase().replaceAll(RegExp(r'[^a-z]'), '');
+  return switch (normalized) {
+    'off' => 'Auto-off disabled',
+    'minimal' => 'Off after 30 min idle (audio/sensors prevent)',
+    'balanced' => 'Off after 15 min idle (audio/sensors prevent)',
+    'aggressive' || 'agressive' => 'Off after 5 min idle (only audio prevents)',
+    _ => 'Firmware-defined auto-off behavior',
+  };
+}
+
+IconData _iconForMode(PowerSavingMode mode) {
+  return switch (mode.id) {
+    0 => Icons.power_settings_new_rounded,
+    1 => Icons.schedule_rounded,
+    2 => Icons.battery_saver_rounded,
+    3 => Icons.speed_rounded,
+    _ => _iconForModeName(mode.name),
+  };
+}
+
+IconData _iconForModeName(String name) {
+  final normalized = name.toLowerCase().replaceAll(RegExp(r'[^a-z]'), '');
+  return switch (normalized) {
+    'off' => Icons.power_settings_new_rounded,
+    'minimal' => Icons.schedule_rounded,
+    'balanced' => Icons.battery_saver_rounded,
+    'aggressive' || 'agressive' => Icons.speed_rounded,
+    _ => Icons.battery_saver_rounded,
+  };
 }
 
 String _describeError(Object error) {

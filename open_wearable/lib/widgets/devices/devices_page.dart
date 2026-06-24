@@ -819,14 +819,6 @@ class _PairedDeviceSheet extends StatelessWidget {
                     device: powerSavingModeDevice,
                     applyScope: StereoPairApplyScope.pairOnly,
                   ),
-                ] else ...[
-                  const SizedBox(height: 10),
-                  Text(
-                    'Power saving mode is not available for this stereo pair.',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
                 ],
               ],
             ),
