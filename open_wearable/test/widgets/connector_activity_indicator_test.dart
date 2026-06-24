@@ -77,7 +77,7 @@ void main() {
     );
 
     expect(
-      find.byTooltip('Connector active, Wi-Fi unavailable'),
+      find.byTooltip('Connector active, network unavailable'),
       findsOneWidget,
     );
   });
