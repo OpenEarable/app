@@ -21,6 +21,14 @@ High-level architecture and state-management docs live in [`docs/`](./docs/READM
    flutter run
    ```
 
+To enter demo mode with simulated sensor values, start the app with the App Store preview flag:
+
+```bash
+flutter run --dart-define=APP_STORE_PREVIEW=true
+```
+
+This launches the preview shell used for screenshots and demo flows instead of the normal Bluetooth-connected app.
+
 ## Notes
 
 - Core app bootstrap is in `lib/main.dart`.
