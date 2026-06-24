@@ -121,6 +121,10 @@ jobs:
             --title "$commit_message" \
             --body "Bumps the app version after the production Play Store release.")
 
+          gh pr review "$pr_url" \
+            --approve \
+            --body "Automated approval for version bump after production release."
+
           gh pr merge "$pr_url" \
             --squash \
             --delete-branch \
