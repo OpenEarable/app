@@ -1,4 +1,4 @@
-package edu.kit.teco.openWearable
+package edu.kit.teco.openwearables
 
 import android.content.Intent
 import android.provider.Settings
@@ -8,7 +8,7 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
   companion object {
-    private const val SYSTEM_SETTINGS_CHANNEL = "edu.kit.teco.open_wearable/system_settings"
+    private const val SYSTEM_SETTINGS_CHANNEL = "edu.kit.teco.openwearables/system_settings"
   }
 
   override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
