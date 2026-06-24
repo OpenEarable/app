@@ -43,7 +43,7 @@ Future<String?> pickRecordingDirectory() async {
   if (kIsWeb) return null;
 
   final recordingName =
-      'OpenWearable_Recording_${DateTime.now().toIso8601String().replaceAll(':', '-')}';
+      'OpenWearables_Recording_${DateTime.now().toIso8601String().replaceAll(':', '-')}';
 
   final rootDir = await _getRecordingsRootDirectory();
   if (rootDir == null) return null;
@@ -67,7 +67,11 @@ Future<List<LocalRecorderRecordingFolder>> listRecordingFolders() async {
   final folders = root
       .listSync()
       .whereType<Directory>()
-      .where((entity) => entity.path.contains('OpenWearable_Recording'))
+      .where(
+        (entity) => entity.path.contains(
+          'OpenWearable', // Not checking for "OpenWearables_Recording" to avoid losing existing recordings
+        ),
+      )
       .map(_directoryToFolder)
       .toList()
     ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));

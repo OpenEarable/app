@@ -269,7 +269,7 @@ class _AppRailLogo extends StatelessWidget {
         height: 32,
         fit: BoxFit.cover,
         filterQuality: FilterQuality.medium,
-        semanticLabel: 'OpenWearable app icon',
+        semanticLabel: 'OpenWearables app icon',
       ),
     );
 
@@ -283,7 +283,7 @@ class _AppRailLogo extends StatelessWidget {
         icon,
         const SizedBox(width: 12),
         Text(
-          'OpenWearable',
+          'OpenWearables',
           style: Theme.of(context).textTheme.titleMedium,
         ),
       ],
