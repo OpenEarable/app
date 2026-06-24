@@ -973,7 +973,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               DefaultWidgetsLocalizations.delegate,
               DefaultCupertinoLocalizations.delegate,
             ],
-            title: 'Open Wearable',
+            title: 'OpenWearables',
           ),
         ),
       ),

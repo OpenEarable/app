@@ -1,4 +1,4 @@
-# OpenWearable App Module
+# OpenWearables App Module
 
 Flutter application module for the OpenEarable app.
 

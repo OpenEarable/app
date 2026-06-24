@@ -129,7 +129,7 @@ class _AppStorePreviewAppState extends State<AppStorePreviewApp> {
           materialDarkTheme: AppTheme.darkTheme(),
           themeMode: ThemeMode.light,
           builder: (context) => PlatformApp.router(
-            title: 'Open Wearable',
+            title: 'OpenWearables',
             debugShowCheckedModeBanner: false,
             localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
               DefaultMaterialLocalizations.delegate,

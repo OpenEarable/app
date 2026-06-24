@@ -60,7 +60,7 @@ class PermissionsWelcomePage extends StatelessWidget {
                         ),
                         const SizedBox(height: 20),
                         Text(
-                          'Welcome to OpenWearable',
+                          'Welcome to OpenWearables',
                           style: theme.textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
@@ -68,7 +68,7 @@ class PermissionsWelcomePage extends StatelessWidget {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'OpenWearable supports research and development of the next generation wearable applications by helping you connect devices, inspect live sensor data, and record synchronized sessions.',
+                          'OpenWearables supports research and development of the next generation wearable applications by helping you connect devices, inspect live sensor data, and record synchronized sessions.',
                           style: theme.textTheme.bodyMedium,
                           textAlign: TextAlign.center,
                         ),
@@ -151,7 +151,7 @@ class _SupportEmailTextState extends State<_SupportEmailText> {
         children: [
           const TextSpan(
             text:
-                'Thank you for trusting OpenWearable. If you have any questions or run into problems, reach out to ',
+                'Thank you for trusting OpenWearables. If you have any questions or run into problems, reach out to ',
           ),
           TextSpan(
             text: 'info@openwearables.com',
