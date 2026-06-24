@@ -20,6 +20,7 @@ import 'package:open_wearable/models/fota_post_update_verification.dart';
 import 'package:open_wearable/models/permissions_helper.dart';
 import 'package:open_wearable/models/wearable_connector.dart'
     hide WearableEvent;
+import 'package:open_wearable/app_store_preview.dart';
 import 'package:open_wearable/router.dart';
 import 'package:open_wearable/theme/app_theme.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider_facade.dart';
@@ -40,12 +41,20 @@ import 'view_models/label_provider.dart';
 import 'view_models/label_set_provider.dart';
 import 'view_models/wearables_provider.dart';
 
+const bool _isAppStorePreview = bool.fromEnvironment('APP_STORE_PREVIEW');
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   LogFileManager logFileManager = await LogFileManager.create();
   final wearableConnector = WearableConnector();
   initOpenWearableLogger(logFileManager.libLogger);
   initLogger(logFileManager.logger);
+
+  if (_isAppStorePreview) {
+    runApp(AppStorePreviewApp(logFileManager: logFileManager));
+    return;
+  }
+
   await AutoConnectPreferences.initialize();
   await AppShutdownSettings.initialize();
   await ConnectorSettings.initialize(wearableConnector: wearableConnector);
