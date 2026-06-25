@@ -488,7 +488,7 @@
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
-				PRODUCT_BUNDLE_IDENTIFIER = edu.kit.teco.openwearables.RunnerTests;
+				PRODUCT_BUNDLE_IDENTIFIER = edu.kit.teco.openWearable.RunnerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/open_wearable.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/open_wearable";
@@ -503,7 +503,7 @@
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
-				PRODUCT_BUNDLE_IDENTIFIER = edu.kit.teco.openwearables.RunnerTests;
+				PRODUCT_BUNDLE_IDENTIFIER = edu.kit.teco.openWearable.RunnerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/open_wearable.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/open_wearable";
@@ -518,7 +518,7 @@
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
-				PRODUCT_BUNDLE_IDENTIFIER = edu.kit.teco.openwearables.RunnerTests;
+				PRODUCT_BUNDLE_IDENTIFIER = edu.kit.teco.openWearable.RunnerTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/open_wearable.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/open_wearable";
