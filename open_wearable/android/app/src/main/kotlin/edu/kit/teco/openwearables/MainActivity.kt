@@ -1,4 +1,4 @@
-package edu.kit.teco.openwearables
+package edu.kit.teco.openWearable
 
 import android.content.Intent
 import android.provider.Settings
