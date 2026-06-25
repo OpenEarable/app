@@ -1,6 +1,6 @@
 # WebSocket IPC API
 
-This document describes how to communicate with the OpenWearable WebSocket connector.
+This document describes how to communicate with the OpenWearables WebSocket connector.
 
 Python clients can use the [`open-wearables`](https://pypi.org/project/open-wearables/)
 package instead of implementing the JSON WebSocket protocol directly.
