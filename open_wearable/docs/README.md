@@ -1,4 +1,4 @@
-# OpenWearable App Documentation
+# OpenWearables App Documentation
 
 This folder contains high-level documentation for the Flutter app in `open_wearable/`.
 
