@@ -26,15 +26,15 @@ cd $CI_WORKSPACE_PATH
 echo "🟩 Install Flutter Dependencies"
 cd repository/open_wearable
 time flutter clean
-time flutter pub get
-time flutter pub upgrade
+time flutter pub get --enforce-lockfile
 
 echo "🟩 Install CocoaPods via Homebrew"
 time HOMEBREW_NO_AUTO_UPDATE=1 brew install cocoapods
 
 echo "🟩 Install CocoaPods dependencies..."
-time cd ios && pod install
-cd ../
+cd ios
+time pod install
+cd ..
 
 echo "🟩 build iOS"
 time flutter build ios --release --no-codesign
