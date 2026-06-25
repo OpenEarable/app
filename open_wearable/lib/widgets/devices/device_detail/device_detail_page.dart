@@ -39,7 +39,7 @@ class DeviceDetailPage extends StatefulWidget {
 
 class _DeviceDetailPageState extends State<DeviceDetailPage> {
   static const MethodChannel _systemSettingsChannel = MethodChannel(
-    'edu.kit.teco.openwearables/system_settings',
+    'edu.kit.teco.openWearable/system_settings',
   );
 
   StreamSubscription<List<Type>>? _capabilitySubscription;
