@@ -47,6 +47,8 @@
 	<string>This app records microphone audio with local sensor recording sessions.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Camera access may be required by an iOS file selection component used to import firmware files. The app does not use the camera as part of its normal workflow.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Location access may be required by an iOS file selection component used to import firmware files. The app does not use location as part of its normal workflow.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Needed for optional file selection functionality.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
