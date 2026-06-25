@@ -1,36 +1,5 @@
 # OpenWearables App Module
 
-Flutter application module for the OpenEarable app.
+This folder contains the main Flutter app for the repository.
 
-## Documentation
-
-High-level architecture and state-management docs live in [`docs/`](./docs/README.md).
-
-- [App Setup and Architecture](./docs/app-setup.md)
-- [State and Providers](./docs/state-and-providers.md)
-
-## Development Quick Start
-
-1. Install Flutter (stable channel).
-2. From this folder (`open_wearable/`), fetch dependencies:
-   ```bash
-   flutter pub get
-   ```
-3. Run on a connected device/emulator:
-   ```bash
-   flutter run
-   ```
-
-To enter demo mode with simulated sensor values, start the app with the App Store preview flag:
-
-```bash
-flutter run --dart-define=APP_STORE_PREVIEW=true
-```
-
-This launches the preview shell used for screenshots and demo flows instead of the normal Bluetooth-connected app.
-
-## Notes
-
-- Core app bootstrap is in `lib/main.dart`.
-- Route definitions are in `lib/router.dart`.
-- High-level feature state is primarily under `lib/view_models/`.
+For the primary project overview, setup instructions, and documentation links, see the [root README](../README.md).
