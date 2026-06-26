@@ -516,6 +516,8 @@ class _SensorChartState extends State<SensorChart> {
     if (name == 'r' || name == 'red') return Colors.red;
     if (name == 'g' || name == 'green') return Colors.green;
     if (name == 'b' || name == 'blue') return Colors.blue;
+    if (name == 'ir' || name == 'infrared') return const Color(0xFF9C27B0);
+    if (name == 'ambient') return const Color(0xFF607D8B);
     if (name.contains('temp')) return const Color(0xFFFB8500);
     if (name.contains('pressure')) return const Color(0xFF6C63FF);
 

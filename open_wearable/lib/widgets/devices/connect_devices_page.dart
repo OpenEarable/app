@@ -205,7 +205,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                   ),
                   title: const Text('Enable Microphone'),
                   subtitle: const Text(
-                    'OpenWearable can record audio from the device microphone for synchronized audio data. Grant microphone access to enable this.',
+                    'OpenWearables can record audio from the device microphone for synchronized audio data. Grant microphone access to enable this.',
                   ),
                   trailing: PlatformElevatedButton(
                     onPressed: _requestMicPermission,

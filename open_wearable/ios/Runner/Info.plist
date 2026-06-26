@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Open Wearable</string>
+	<string>OpenWearables</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -45,6 +45,10 @@
 	<string>This app requires access to device motion in order to provide sensor data.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>This app records microphone audio with local sensor recording sessions.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Camera access may be required by an iOS file selection component used to import firmware files. The app does not use the camera as part of its normal workflow.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Location access may be required by an iOS file selection component used to import firmware files. The app does not use location as part of its normal workflow.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Needed for optional file selection functionality.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

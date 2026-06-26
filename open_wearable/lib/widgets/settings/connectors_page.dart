@@ -329,7 +329,7 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Expose OpenWearable features for external tools.',
+                          'Expose OpenWearables features for external tools.',
                           style:
                               Theme.of(context).textTheme.bodySmall?.copyWith(
                                     color: Theme.of(context)
@@ -415,7 +415,7 @@ class _ConnectorsPageState extends State<ConnectorsPage> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Expose the OpenWearable Flutter API over JSON messages.',
+                        'Expose the OpenWearables Flutter API over JSON messages.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: colorScheme.onSurfaceVariant,
                             ),

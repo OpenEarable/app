@@ -27,7 +27,6 @@ echo "🟩 Install Flutter Dependencies"
 cd repository/open_wearable
 time flutter clean
 time flutter pub get
-time flutter pub upgrade
 
 echo "🟩 Install CocoaPods via Homebrew"
 time HOMEBREW_NO_AUTO_UPDATE=1 brew install cocoapods

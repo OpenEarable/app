@@ -113,7 +113,7 @@ LocalRecorderRecordingFolder _createFolder({
 
 String _recordingFolderName() {
   final timestamp = DateTime.now().toIso8601String();
-  return 'OpenWearable_Recording_$timestamp';
+  return 'OpenWearables_Recording_$timestamp';
 }
 
 List<LocalRecorderRecordingFolder> _readFolders(SharedPreferences prefs) {

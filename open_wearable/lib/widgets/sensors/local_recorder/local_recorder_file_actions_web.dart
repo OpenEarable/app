@@ -17,7 +17,7 @@ Future<void> localRecorderShareFile(LocalRecorderRecordingFile file) async {
           mimeType: file.mimeType,
         ),
       ],
-      subject: 'OpenWearable Recording File',
+      subject: 'OpenWearables Recording File',
     ),
   );
 }
@@ -40,7 +40,7 @@ Future<void> localRecorderShareFolder(
   await SharePlus.instance.share(
     ShareParams(
       files: files,
-      subject: 'OpenWearable Recording',
+      subject: 'OpenWearables Recording',
     ),
   );
 }

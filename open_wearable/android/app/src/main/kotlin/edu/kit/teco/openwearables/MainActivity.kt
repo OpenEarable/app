@@ -8,7 +8,7 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
   companion object {
-    private const val SYSTEM_SETTINGS_CHANNEL = "edu.kit.teco.open_wearable/system_settings"
+    private const val SYSTEM_SETTINGS_CHANNEL = "edu.kit.teco.openWearable/system_settings"
   }
 
   override fun configureFlutterEngine(flutterEngine: FlutterEngine) {

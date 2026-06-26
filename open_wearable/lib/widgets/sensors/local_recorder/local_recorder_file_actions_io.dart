@@ -7,7 +7,7 @@ Future<void> localRecorderShareFile(LocalRecorderRecordingFile file) async {
   await SharePlus.instance.share(
     ShareParams(
       files: [XFile(file.path)],
-      subject: 'OpenWearable Recording File',
+      subject: 'OpenWearables Recording File',
     ),
   );
 }
@@ -18,7 +18,7 @@ Future<void> localRecorderShareFolder(
   await SharePlus.instance.share(
     ShareParams(
       files: folder.files.map((entry) => XFile(entry.path)).toList(),
-      subject: 'OpenWearable Recording',
+      subject: 'OpenWearables Recording',
     ),
   );
 }
