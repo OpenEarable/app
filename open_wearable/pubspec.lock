@@ -563,7 +563,7 @@ packages:
   open_earable_flutter:
     dependency: "direct main"
     description:
-      path: "C:/teco/ble error/open_earable_flutter"
+      path: "E:/teco/bluetooth_error/open_earable_flutter"
       relative: false
     source: path
     version: "2.3.6"

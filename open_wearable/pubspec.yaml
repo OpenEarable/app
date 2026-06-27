@@ -36,9 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   open_file: ^3.3.2
   open_earable_flutter:
-      git:
-        url: https://github.com/habibialireza/open_earable_flutter.git
-        ref: ble-device-errors
+      path: E:/teco/bluetooth_error/open_earable_flutter
   universal_ble: ^0.21.1
   flutter_platform_widgets: ^9.0.0
   provider: ^6.1.2
