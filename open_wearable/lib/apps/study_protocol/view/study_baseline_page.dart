@@ -124,6 +124,15 @@ class _StudyBaselinePageState extends State<StudyBaselinePage> {
             }
           },
           child: PlatformScaffold(
+            // The page has no text inputs; ignoring the bottom inset avoids a
+            // transient layout overflow while the keyboard from the proband-id
+            // dialog is still animating away.
+            material: (_, __) => MaterialScaffoldData(
+              resizeToAvoidBottomInset: false,
+            ),
+            cupertino: (_, __) => CupertinoPageScaffoldData(
+              resizeToAvoidBottomInset: false,
+            ),
             appBar: PlatformAppBar(
               title: PlatformText('Baseline'),
             ),
@@ -148,34 +157,53 @@ class _StudyBaselinePageState extends State<StudyBaselinePage> {
       StudyRecordingStatus.completed => 'Completed',
     };
 
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        children: [
-          _StepHeader(probandId: widget.probandId),
-          const SizedBox(height: 8),
-          Text(
-            'Sit still and breathe normally for 5 minutes. The recording stops '
-            'automatically when the timer ends.',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+    // LayoutBuilder + scrollable intrinsic height keeps the centered ring and
+    // bottom button layout while guaranteeing the page can never overflow,
+    // regardless of screen height or transient viewport insets.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: IntrinsicHeight(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    _StepHeader(probandId: widget.probandId),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Sit still and breathe normally for 5 minutes. The '
+                      'recording stops automatically when the timer ends.',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          TimerRing(
+                            progress: _controller.progress,
+                            label: _formatDuration(_controller.remaining),
+                            caption: caption,
+                          ),
+                          if (_controller.warning != null) ...[
+                            const SizedBox(height: 20),
+                            _WarningBanner(message: _controller.warning!),
+                          ],
+                        ],
+                      ),
+                    ),
+                    _buildActionButton(status, isRecording),
+                  ],
+                ),
+              ),
             ),
           ),
-          const Spacer(),
-          TimerRing(
-            progress: _controller.progress,
-            label: _formatDuration(_controller.remaining),
-            caption: caption,
-          ),
-          if (_controller.warning != null) ...[
-            const SizedBox(height: 20),
-            _WarningBanner(message: _controller.warning!),
-          ],
-          const Spacer(),
-          _buildActionButton(status, isRecording),
-        ],
-      ),
+        );
+      },
     );
   }
 

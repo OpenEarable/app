@@ -28,6 +28,7 @@ class StudyRecordingsList extends StatefulWidget {
 
 class _StudyRecordingsListState extends State<StudyRecordingsList> {
   final Set<String> _expandedFolders = {};
+  final TextEditingController _probandIdController = TextEditingController();
   List<LocalRecorderRecordingFolder> _recordings =
       <LocalRecorderRecordingFolder>[];
   bool _isLoading = true;
@@ -36,6 +37,12 @@ class _StudyRecordingsListState extends State<StudyRecordingsList> {
   void initState() {
     super.initState();
     _loadRecordings();
+  }
+
+  @override
+  void dispose() {
+    _probandIdController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadRecordings() async {
@@ -58,6 +65,10 @@ class _StudyRecordingsListState extends State<StudyRecordingsList> {
       return;
     }
 
+    // Dismiss the dialog keyboard before navigating so the next page does not
+    // build against a shrinking viewport inset.
+    FocusManager.instance.primaryFocus?.unfocus();
+
     await Navigator.of(context).push(
       platformPageRoute(
         context: context,
@@ -74,8 +85,8 @@ class _StudyRecordingsListState extends State<StudyRecordingsList> {
   }
 
   Future<String?> _promptProbandId() async {
-    final controller = TextEditingController();
-    final result = await showPlatformDialog<String>(
+    _probandIdController.clear();
+    return showPlatformDialog<String>(
       context: context,
       builder: (dialogContext) {
         return PlatformAlertDialog(
@@ -83,7 +94,7 @@ class _StudyRecordingsListState extends State<StudyRecordingsList> {
           content: Padding(
             padding: const EdgeInsets.only(top: 12),
             child: PlatformTextField(
-              controller: controller,
+              controller: _probandIdController,
               autofocus: true,
               hintText: 'Proband ID',
               textCapitalization: TextCapitalization.characters,
@@ -97,7 +108,7 @@ class _StudyRecordingsListState extends State<StudyRecordingsList> {
             PlatformDialogAction(
               child: PlatformText('Continue'),
               onPressed: () {
-                final value = controller.text.trim();
+                final value = _probandIdController.text.trim();
                 if (value.isEmpty) {
                   return;
                 }
@@ -108,8 +119,6 @@ class _StudyRecordingsListState extends State<StudyRecordingsList> {
         );
       },
     );
-    controller.dispose();
-    return result;
   }
 
   Future<void> _shareFolder(LocalRecorderRecordingFolder folder) async {

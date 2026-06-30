@@ -73,8 +73,9 @@ Future<List<LocalRecorderRecordingFolder>> listStudyRecordingFolders() async {
   final folders = root
       .listSync()
       .whereType<Directory>()
-      .where((entity) =>
-          studyBasename(entity.path).startsWith(studyRecordingPrefix))
+      .where(
+        (entity) => studyBasename(entity.path).startsWith(studyRecordingPrefix),
+      )
       .map(_directoryToFolder)
       .toList()
     ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));

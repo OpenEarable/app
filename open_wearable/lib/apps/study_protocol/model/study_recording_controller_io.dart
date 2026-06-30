@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:collection';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
@@ -38,7 +40,7 @@ class StudyRecordingController extends ChangeNotifier {
   /// Target IMU sample rate for OpenEarable SD-card recording.
   static const int imuFrequencyHz = 100;
 
-  final Map<Sensor, Recorder> _respibanRecorders = {};
+  _RespibanCsvWriter? _respibanWriter;
   final List<_AppliedEarableConfig> _appliedEarableConfigs = [];
 
   SensorConfiguration? _respibanConfiguration;
@@ -108,8 +110,9 @@ class StudyRecordingController extends ChangeNotifier {
       final directory = await createStudySessionDirectory(probandId);
       _sessionDirectory = directory;
 
-      await _startRespibanRecording(deviceSet.respiban, directory, probandId);
+      // Start order: OpenEarable SD recording first, then the RESPIRABAN.
       await _startEarableSdRecording(deviceSet.earables, probandId);
+      await _startRespibanRecording(deviceSet.respiban, directory, probandId);
 
       await WakelockPlus.enable();
 
@@ -155,17 +158,39 @@ class StudyRecordingController extends ChangeNotifier {
     final token = sanitizeProbandId(probandId);
     final sensors = respiban.requireCapability<SensorManager>().sensors;
 
-    // Start CSV recorders before switching the device on so no samples are lost
-    // once data starts flowing.
-    for (final sensor in sensors) {
-      final recorder = Recorder(columns: sensor.axisNames);
-      final filename =
-          '${token}_RESPIRABAN_${_sanitizeFilenamePart(sensor.sensorName)}.csv';
-      await recorder.start(
-        filepath: '$directory/$filename',
-        inputStream: SensorStreams.shared(wearable: respiban, sensor: sensor),
+    final beltSensor =
+        sensors.whereType<RespibanRespirationSensor>().firstOrNull;
+    final accelerometerSensor =
+        sensors.whereType<RespibanAccelerometerSensor>().firstOrNull;
+    final gyroscopeSensor =
+        sensors.whereType<RespibanGyroscopeSensor>().firstOrNull;
+
+    if (beltSensor == null) {
+      _addWarning('RESPIRABAN respiration belt sensor not found.');
+    } else {
+      // Start the merged CSV writer before switching the device on so no
+      // samples are lost once data starts flowing. Belt, accelerometer and
+      // gyroscope share the same sample timestamps and are written into a
+      // single file.
+      final writer = _RespibanCsvWriter();
+      await writer.start(
+        filepath: '$directory/${token}_RESPIRABAN.csv',
+        beltStream:
+            SensorStreams.shared(wearable: respiban, sensor: beltSensor),
+        accelerometerStream: accelerometerSensor == null
+            ? null
+            : SensorStreams.shared(
+                wearable: respiban,
+                sensor: accelerometerSensor,
+              ),
+        gyroscopeStream: gyroscopeSensor == null
+            ? null
+            : SensorStreams.shared(
+                wearable: respiban,
+                sensor: gyroscopeSensor,
+              ),
       );
-      _respibanRecorders[sensor] = recorder;
+      _respibanWriter = writer;
     }
 
     final configuration = findRespibanConfiguration(respiban);
@@ -193,8 +218,10 @@ class StudyRecordingController extends ChangeNotifier {
     String probandId,
   ) async {
     final token = sanitizeProbandId(probandId);
-    await _configureEarable(earables.left, 'left_$token');
-    await _configureEarable(earables.right, 'right_$token');
+    // Trailing underscore separates the prefix from the device-generated file
+    // name suffix, e.g. `left_p000_`.
+    await _configureEarable(earables.left, 'left_${token}_');
+    await _configureEarable(earables.right, 'right_${token}_');
   }
 
   Future<void> _configureEarable(Wearable earable, String filePrefix) async {
@@ -243,15 +270,14 @@ class StudyRecordingController extends ChangeNotifier {
   }
 
   /// Stops streams/recorders and returns every device to its off state.
+  ///
+  /// Stop order is the reverse of [start]: the RESPIRABAN is fully stopped
+  /// first, then the OpenEarable pair.
   Future<void> _teardown() async {
     _ticker?.cancel();
     _ticker = null;
 
-    for (final recorder in _respibanRecorders.values) {
-      recorder.stop();
-    }
-    _respibanRecorders.clear();
-
+    // 1) RESPIRABAN: switch acquisition off, then finalize the merged CSV.
     final respibanConfiguration = _respibanConfiguration;
     if (respibanConfiguration != null) {
       final offValue = respibanConfiguration.offValue;
@@ -261,6 +287,10 @@ class StudyRecordingController extends ChangeNotifier {
     }
     _respibanConfiguration = null;
 
+    await _respibanWriter?.stop();
+    _respibanWriter = null;
+
+    // 2) OpenEarable pair: switch the SD-card recording configurations off.
     for (final applied in _appliedEarableConfigs) {
       final offValue = applied.configuration.offValue;
       if (offValue != null) {
@@ -279,11 +309,6 @@ class StudyRecordingController extends ChangeNotifier {
   void _addWarning(String message) {
     logger.w('Study recording: $message');
     _warning = _warning == null ? message : '$_warning\n$message';
-  }
-
-  String _sanitizeFilenamePart(String value) {
-    final sanitized = value.trim().replaceAll(RegExp(r'[^A-Za-z0-9_\-]+'), '_');
-    return sanitized.isEmpty ? 'sensor' : sanitized;
   }
 
   @override
@@ -305,4 +330,124 @@ class _AppliedEarableConfig {
   final SensorConfiguration configuration;
 
   const _AppliedEarableConfig(this.configuration);
+}
+
+/// Writes the RESPIRABAN respiration belt, accelerometer and gyroscope streams
+/// into a single CSV file.
+///
+/// All three RESPIRABAN sensors are decoded from the same device sample and
+/// therefore share identical timestamps. Rows are keyed by timestamp and
+/// written once every expected component for that timestamp has arrived, so a
+/// row contains the belt value alongside its matching IMU values.
+class _RespibanCsvWriter {
+  IOSink? _sink;
+  final List<StreamSubscription<SensorValue>> _subscriptions = [];
+  final SplayTreeMap<int, _RespibanRow> _pending =
+      SplayTreeMap<int, _RespibanRow>();
+  bool _expectsAccelerometer = false;
+  bool _expectsGyroscope = false;
+
+  static const List<String> _emptyTriplet = ['', '', ''];
+
+  /// Opens [filepath] and starts buffering samples from the provided streams.
+  Future<void> start({
+    required String filepath,
+    required Stream<SensorValue> beltStream,
+    Stream<SensorValue>? accelerometerStream,
+    Stream<SensorValue>? gyroscopeStream,
+  }) async {
+    final file = File(filepath);
+    await file.parent.create(recursive: true);
+    _sink = file.openWrite();
+    _expectsAccelerometer = accelerometerStream != null;
+    _expectsGyroscope = gyroscopeStream != null;
+
+    _sink!.writeln(
+      'timestamp,Belt,Acc_X,Acc_Y,Acc_Z,Gyro_X,Gyro_Y,Gyro_Z',
+    );
+
+    _subscriptions.add(beltStream.listen(_onBelt));
+    if (accelerometerStream != null) {
+      _subscriptions.add(accelerometerStream.listen(_onAccelerometer));
+    }
+    if (gyroscopeStream != null) {
+      _subscriptions.add(gyroscopeStream.listen(_onGyroscope));
+    }
+  }
+
+  _RespibanRow _rowFor(int timestamp) =>
+      _pending.putIfAbsent(timestamp, _RespibanRow.new);
+
+  void _onBelt(SensorValue value) {
+    final strings = value.valueStrings;
+    _rowFor(value.timestamp).belt = strings.isEmpty ? '' : strings.first;
+    _flushIfComplete(value.timestamp);
+  }
+
+  void _onAccelerometer(SensorValue value) {
+    _rowFor(value.timestamp).accelerometer = value.valueStrings;
+    _flushIfComplete(value.timestamp);
+  }
+
+  void _onGyroscope(SensorValue value) {
+    _rowFor(value.timestamp).gyroscope = value.valueStrings;
+    _flushIfComplete(value.timestamp);
+  }
+
+  void _flushIfComplete(int timestamp) {
+    final row = _pending[timestamp];
+    if (row == null) {
+      return;
+    }
+    final hasBelt = row.belt != null;
+    final hasAccelerometer =
+        !_expectsAccelerometer || row.accelerometer != null;
+    final hasGyroscope = !_expectsGyroscope || row.gyroscope != null;
+    if (hasBelt && hasAccelerometer && hasGyroscope) {
+      _writeRow(timestamp, row);
+      _pending.remove(timestamp);
+    }
+  }
+
+  void _writeRow(int timestamp, _RespibanRow row) {
+    final sink = _sink;
+    if (sink == null) {
+      return;
+    }
+    final accelerometer = row.accelerometer ?? _emptyTriplet;
+    final gyroscope = row.gyroscope ?? _emptyTriplet;
+    sink.writeln(
+      '$timestamp,${row.belt ?? ''},'
+      '${_at(accelerometer, 0)},${_at(accelerometer, 1)},${_at(accelerometer, 2)},'
+      '${_at(gyroscope, 0)},${_at(gyroscope, 1)},${_at(gyroscope, 2)}',
+    );
+  }
+
+  String _at(List<String> values, int index) =>
+      index < values.length ? values[index] : '';
+
+  /// Stops buffering and flushes any remaining rows before closing the file.
+  Future<void> stop() async {
+    for (final subscription in _subscriptions) {
+      await subscription.cancel();
+    }
+    _subscriptions.clear();
+
+    // Flush any rows still waiting for a missing component, in timestamp order.
+    for (final entry in _pending.entries) {
+      _writeRow(entry.key, entry.value);
+    }
+    _pending.clear();
+
+    await _sink?.flush();
+    await _sink?.close();
+    _sink = null;
+  }
+}
+
+/// Partial CSV row accumulating the belt and IMU values for one timestamp.
+class _RespibanRow {
+  String? belt;
+  List<String>? accelerometer;
+  List<String>? gyroscope;
 }

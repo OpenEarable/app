@@ -2,10 +2,11 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-/// Circular progress ring with a time label in its center.
+/// Countdown ring with a time label in its center.
 ///
-/// [progress] is the fraction filled in the range `[0, 1]` and [label] is the
-/// text rendered in the middle (typically a `mm:ss` countdown).
+/// [progress] is the elapsed fraction in the range `[0, 1]`. The ring starts
+/// full and unwinds counter-clockwise as time passes, so it visually runs
+/// backwards alongside the `mm:ss` [label] countdown rendered in the middle.
 class TimerRing extends StatelessWidget {
   final double progress;
   final String label;
@@ -93,8 +94,11 @@ class _RingPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..strokeWidth = strokeWidth;
 
+    // Start full at the top and unwind counter-clockwise (negative sweep) as
+    // the elapsed [progress] grows, so the ring runs backwards.
     const startAngle = -math.pi / 2;
-    final sweepAngle = 2 * math.pi * progress;
+    final remaining = 1 - progress;
+    final sweepAngle = -2 * math.pi * remaining;
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
       startAngle,
