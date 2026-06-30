@@ -286,7 +286,8 @@ class SensorConfigurationValueRow extends StatelessWidget {
               as SensorFrequencyConfigurationValue?;
       isOn = value?.frequencyHz != null && value!.frequencyHz > 0;
     } else {
-      isOn = true;
+      final selected = notifier.getSelectedConfigurationValue(config);
+      isOn = config.offValue == null || selected != config.offValue;
     }
 
     return isOn;
