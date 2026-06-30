@@ -90,6 +90,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - lib/apps/posture_tracker/assets/
+    - lib/apps/study_protocol/assets/
     - lib/apps/heart_tracker/assets/
     - lib/assets/devices/phone-app.png
     - android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png

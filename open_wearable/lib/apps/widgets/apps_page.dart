@@ -5,6 +5,7 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/apps/heart_tracker/widgets/heart_tracker_page.dart';
 import 'package:open_wearable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_wearable/apps/posture_tracker/view/posture_tracker_view.dart';
+import 'package:open_wearable/apps/study_protocol/view/study_protocol_app.dart';
 import 'package:open_wearable/apps/widgets/app_compatibility.dart';
 import 'package:open_wearable/apps/widgets/select_earable_view.dart';
 import 'package:open_wearable/apps/widgets/app_tile.dart';
@@ -46,6 +47,10 @@ const List<String> _heartSupportedDevices = [
   "OpenEarable",
   "OpenRing",
 ];
+const List<String> _studyProtocolSupportedDevices = [
+  "OpenEarable",
+  "PLUX",
+];
 
 Sensor? _findOpticalTemperatureSensor(List<Sensor> sensors) {
   String normalizeToken(String input) {
@@ -84,6 +89,14 @@ Sensor? _findOpticalTemperatureSensor(List<Sensor> sensors) {
 }
 
 final List<AppInfo> _apps = [
+  AppInfo(
+    logoPath: "lib/apps/study_protocol/assets/logo.png",
+    title: "Study Protocol",
+    description: "Guided study recording with OpenEarable + RESPIRABAN",
+    supportedDevices: _studyProtocolSupportedDevices,
+    accentColor: _appAccentColor,
+    widget: const StudyProtocolApp(),
+  ),
   AppInfo(
     logoPath: "lib/apps/posture_tracker/assets/logo.png",
     title: "Posture Tracker",
