@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import 'package:open_wearable/apps/study_protocol/model/study_devices.dart';
+import 'package:open_wearable/apps/study_protocol/model/study_file_actions.dart';
 import 'package:open_wearable/apps/study_protocol/model/study_protocol_storage.dart';
 import 'package:open_wearable/apps/study_protocol/view/study_baseline_page.dart';
-import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_file_actions.dart';
+import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_models.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_recording_folder_card.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
@@ -13,14 +16,12 @@ import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 ///
 /// Shows existing study recordings with share/delete actions (mirroring the
 /// Local Recorder) and a prominent action to start a new guided recording.
+///
+/// The list is always available; starting a new recording resolves the required
+/// device set (OpenEarable pair + RESPIRABAN) on demand and only proceeds when
+/// both are connected.
 class StudyRecordingsList extends StatefulWidget {
-  /// The resolved device set used to start a new recording.
-  final StudyDeviceSet deviceSet;
-
-  const StudyRecordingsList({
-    super.key,
-    required this.deviceSet,
-  });
+  const StudyRecordingsList({super.key});
 
   @override
   State<StudyRecordingsList> createState() => _StudyRecordingsListState();
@@ -60,6 +61,18 @@ class _StudyRecordingsListState extends State<StudyRecordingsList> {
   }
 
   Future<void> _startNewRecording() async {
+    // Resolve the required device set on demand: the app is browsable without
+    // devices, but a new recording needs the OpenEarable pair and RESPIRABAN.
+    final wearables = context.read<WearablesProvider>().wearables;
+    final deviceSet = await resolveStudyDeviceSet(wearables);
+    if (!mounted) {
+      return;
+    }
+    if (deviceSet == null) {
+      await _showDevicesRequired();
+      return;
+    }
+
     final probandId = await _promptProbandId();
     if (probandId == null || !mounted) {
       return;
@@ -74,13 +87,41 @@ class _StudyRecordingsListState extends State<StudyRecordingsList> {
         context: context,
         builder: (_) => StudyBaselinePage(
           probandId: probandId,
-          deviceSet: widget.deviceSet,
+          deviceSet: deviceSet,
         ),
       ),
     );
 
     if (mounted) {
       await _loadRecordings();
+    }
+  }
+
+  Future<void> _showDevicesRequired() async {
+    final shouldConnect = await showPlatformDialog<bool>(
+          context: context,
+          builder: (dialogContext) => PlatformAlertDialog(
+            title: PlatformText('Devices required'),
+            content: PlatformText(
+              'Connect a pair of OpenEarables and a Plux RESPIRABAN to start a '
+              'new recording.',
+            ),
+            actions: [
+              PlatformDialogAction(
+                child: PlatformText('Cancel'),
+                onPressed: () => Navigator.pop(dialogContext, false),
+              ),
+              PlatformDialogAction(
+                child: PlatformText('Connect devices'),
+                onPressed: () => Navigator.pop(dialogContext, true),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+
+    if (shouldConnect && mounted) {
+      context.push('/connect-devices');
     }
   }
 
@@ -123,7 +164,7 @@ class _StudyRecordingsListState extends State<StudyRecordingsList> {
 
   Future<void> _shareFolder(LocalRecorderRecordingFolder folder) async {
     try {
-      await localRecorderShareFolder(folder);
+      await shareStudyFolder(folder);
     } catch (e) {
       await _showError('Failed to share recording: $e');
     }
@@ -131,7 +172,7 @@ class _StudyRecordingsListState extends State<StudyRecordingsList> {
 
   Future<void> _shareFile(LocalRecorderRecordingFile file) async {
     try {
-      await localRecorderShareFile(file);
+      await shareStudyFile(file);
     } catch (e) {
       await _showError('Failed to share file: $e');
     }
@@ -139,7 +180,7 @@ class _StudyRecordingsListState extends State<StudyRecordingsList> {
 
   Future<void> _openFile(LocalRecorderRecordingFile file) async {
     try {
-      await localRecorderOpenRecordingFile(file);
+      await openStudyFile(file);
     } catch (e) {
       await _showError('Failed to open file: $e');
     }
