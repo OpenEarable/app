@@ -119,6 +119,7 @@ class _FotaVerificationBannerState extends State<FotaVerificationBanner> {
             ),
           ),
         ),
+        const SizedBox(height: 8),
         AppBanner(
           backgroundColor: warningBackground,
           foregroundColor: warningForeground,

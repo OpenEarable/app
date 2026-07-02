@@ -50,7 +50,6 @@ class SensorValueDetail extends StatelessWidget {
                     builder: (context, hasData, _) {
                       if (settings.shouldShowGraph(hasData: hasData)) {
                         return SensorChart(
-                          allowToggleAxes: true,
                           settings: settings,
                           onDisabledTap: settings.liveUpdatesEnabled
                               ? null
