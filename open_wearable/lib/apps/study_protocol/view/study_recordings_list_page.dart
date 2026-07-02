@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -6,7 +7,8 @@ import 'package:provider/provider.dart';
 import 'package:open_wearable/apps/study_protocol/model/study_devices.dart';
 import 'package:open_wearable/apps/study_protocol/model/study_file_actions.dart';
 import 'package:open_wearable/apps/study_protocol/model/study_protocol_storage.dart';
-import 'package:open_wearable/apps/study_protocol/view/study_baseline_page.dart';
+import 'package:open_wearable/apps/study_protocol/model/study_session.dart';
+import 'package:open_wearable/apps/study_protocol/view/study_flow.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_models.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_recording_folder_card.dart';
@@ -30,6 +32,7 @@ class StudyRecordingsList extends StatefulWidget {
 class _StudyRecordingsListState extends State<StudyRecordingsList> {
   final Set<String> _expandedFolders = {};
   final TextEditingController _probandIdController = TextEditingController();
+  final TextEditingController _ageController = TextEditingController();
   List<LocalRecorderRecordingFolder> _recordings =
       <LocalRecorderRecordingFolder>[];
   bool _isLoading = true;
@@ -43,6 +46,7 @@ class _StudyRecordingsListState extends State<StudyRecordingsList> {
   @override
   void dispose() {
     _probandIdController.dispose();
+    _ageController.dispose();
     super.dispose();
   }
 
@@ -73,8 +77,8 @@ class _StudyRecordingsListState extends State<StudyRecordingsList> {
       return;
     }
 
-    final probandId = await _promptProbandId();
-    if (probandId == null || !mounted) {
+    final session = await _promptSession();
+    if (session == null || !mounted) {
       return;
     }
 
@@ -82,12 +86,28 @@ class _StudyRecordingsListState extends State<StudyRecordingsList> {
     // build against a shrinking viewport inset.
     FocusManager.instance.primaryFocus?.unfocus();
 
+    // Create the session directory once; every phase records into it.
+    String directory;
+    try {
+      directory = await createStudySessionDirectory(session.probandId);
+    } catch (e) {
+      if (mounted) {
+        await _showError('Failed to prepare the session: $e');
+      }
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+
     await Navigator.of(context).push(
       platformPageRoute(
         context: context,
-        builder: (_) => StudyBaselinePage(
-          probandId: probandId,
+        builder: (_) => buildStudyPhasePage(
+          phase: studyPhaseOrder.first,
+          session: session,
           deviceSet: deviceSet,
+          directory: directory,
         ),
       ),
     );
@@ -125,38 +145,81 @@ class _StudyRecordingsListState extends State<StudyRecordingsList> {
     }
   }
 
-  Future<String?> _promptProbandId() async {
+  Future<StudySession?> _promptSession() async {
     _probandIdController.clear();
-    return showPlatformDialog<String>(
+    _ageController.clear();
+    return showPlatformDialog<StudySession>(
       context: context,
       builder: (dialogContext) {
-        return PlatformAlertDialog(
-          title: PlatformText('New recording'),
-          content: Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: PlatformTextField(
-              controller: _probandIdController,
-              autofocus: true,
-              hintText: 'Proband ID',
-              textCapitalization: TextCapitalization.characters,
-            ),
-          ),
-          actions: [
-            PlatformDialogAction(
-              child: PlatformText('Cancel'),
-              onPressed: () => Navigator.pop(dialogContext),
-            ),
-            PlatformDialogAction(
-              child: PlatformText('Continue'),
-              onPressed: () {
-                final value = _probandIdController.text.trim();
-                if (value.isEmpty) {
-                  return;
-                }
-                Navigator.pop(dialogContext, value);
-              },
-            ),
-          ],
+        String? error;
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return PlatformAlertDialog(
+              title: PlatformText('New recording'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  PlatformTextField(
+                    controller: _probandIdController,
+                    autofocus: true,
+                    hintText: 'Proband ID',
+                    textCapitalization: TextCapitalization.characters,
+                    material: (_, __) => MaterialTextFieldData(
+                      decoration:
+                          const InputDecoration(labelText: 'Proband ID'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  PlatformTextField(
+                    controller: _ageController,
+                    hintText: 'Age (years)',
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    material: (_, __) => MaterialTextFieldData(
+                      decoration:
+                          const InputDecoration(labelText: 'Age (years)'),
+                    ),
+                  ),
+                  if (error != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      error!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              actions: [
+                PlatformDialogAction(
+                  child: PlatformText('Cancel'),
+                  onPressed: () => Navigator.pop(dialogContext),
+                ),
+                PlatformDialogAction(
+                  child: PlatformText('Continue'),
+                  onPressed: () {
+                    final probandId = _probandIdController.text.trim();
+                    final age = int.tryParse(_ageController.text.trim());
+                    if (probandId.isEmpty) {
+                      setDialogState(() => error = 'Enter a proband ID.');
+                      return;
+                    }
+                    if (age == null || age <= 0 || age > 120) {
+                      setDialogState(() => error = 'Enter a valid age.');
+                      return;
+                    }
+                    Navigator.pop(
+                      dialogContext,
+                      StudySession(probandId: probandId, age: age),
+                    );
+                  },
+                ),
+              ],
+            );
+          },
         );
       },
     );

@@ -1,0 +1,53 @@
+import 'package:flutter/foundation.dart';
+
+import 'study_devices.dart';
+import 'study_session.dart';
+import 'ymca_models.dart';
+
+/// Web stub: the ergometer test needs local file storage and BLE devices that
+/// are unavailable on web. Exists only so the UI compiles for the web target.
+class YmcaErgometerController extends ChangeNotifier {
+  static const Duration measurementInterval = Duration(minutes: 1);
+
+  final StudySession session;
+  final StudyDeviceSet deviceSet;
+  final String directory;
+
+  YmcaErgometerController({
+    required this.session,
+    required this.deviceSet,
+    required this.directory,
+  });
+
+  ErgoStatus get status => ErgoStatus.idle;
+  int get submaxHeartRate => session.submaxHeartRate;
+  int get maxHeartRate => session.maxHeartRate;
+  int get currentStage => 0;
+  int? get currentTargetWatt => null;
+  List<ErgoMeasurement> get measurements => const <ErgoMeasurement>[];
+  bool get isMeasurementDue => false;
+  int? get dueMeasurementMinute => null;
+  Duration get timeToNextMeasurement => measurementInterval;
+  String? get pendingStageMessage => null;
+  bool get endSuggested => false;
+  String? get warning => null;
+
+  Future<void> start() async {
+    throw UnsupportedError('The ergometer test is not supported on web');
+  }
+
+  Future<void> submitMeasurement({
+    required int heartRate,
+    required int actualWatt,
+  }) async {}
+
+  void manualNextStage() {}
+
+  void acknowledgeStageMessage() {}
+
+  void dismissEndSuggestion() {}
+
+  Future<void> end({required int endHeartRate}) async {}
+
+  Future<void> skip() async {}
+}

@@ -2,32 +2,50 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 
 import 'package:open_wearable/apps/study_protocol/model/study_devices.dart';
-import 'package:open_wearable/apps/study_protocol/model/study_recording_controller.dart';
 import 'package:open_wearable/apps/study_protocol/model/study_recording_status.dart';
+import 'package:open_wearable/apps/study_protocol/model/study_session.dart';
+import 'package:open_wearable/apps/study_protocol/model/timed_recording_controller.dart';
+import 'package:open_wearable/apps/study_protocol/view/study_flow.dart';
 import 'package:open_wearable/apps/study_protocol/widgets/timer_ring.dart';
 
-/// Guided 5-minute baseline step.
+/// Generic fixed-duration recording phase (baseline, recovery, treadmill).
 ///
-/// Starts synchronized recording on the OpenEarable pair (microphone + IMU to
-/// SD card) and the RESPIRABAN (Belt + IMU, streamed to a phone-side CSV), runs
-/// a countdown ring, and stops both devices automatically when it elapses.
-class StudyBaselinePage extends StatefulWidget {
-  final String probandId;
+/// Records continuously on the OpenEarable pair and RESPIRABAN for the phase
+/// [config] duration, shows a countdown ring, and continues to the next phase
+/// when complete. Every phase must be actively started and can be skipped.
+class TimedPhasePage extends StatefulWidget {
+  final StudyPhase phase;
+  final TimedPhaseConfig config;
+  final StudySession session;
   final StudyDeviceSet deviceSet;
+  final String directory;
 
-  const StudyBaselinePage({
+  const TimedPhasePage({
     super.key,
-    required this.probandId,
+    required this.phase,
+    required this.config,
+    required this.session,
     required this.deviceSet,
+    required this.directory,
   });
 
   @override
-  State<StudyBaselinePage> createState() => _StudyBaselinePageState();
+  State<TimedPhasePage> createState() => _TimedPhasePageState();
 }
 
-class _StudyBaselinePageState extends State<StudyBaselinePage> {
-  final StudyRecordingController _controller = StudyRecordingController();
+class _TimedPhasePageState extends State<TimedPhasePage> {
+  late final TimedRecordingController _controller;
   bool _isBusy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TimedRecordingController(
+      duration: widget.config.duration,
+      respibanFileLabel: widget.config.respibanFileLabel,
+      earablePrefixSuffix: widget.config.earablePrefixSuffix,
+    );
+  }
 
   @override
   void dispose() {
@@ -42,15 +60,16 @@ class _StudyBaselinePageState extends State<StudyBaselinePage> {
     return '$minutes:$seconds';
   }
 
-  Future<void> _startBaseline() async {
+  Future<void> _start() async {
     setState(() => _isBusy = true);
     try {
       await _controller.start(
-        probandId: widget.probandId,
+        probandId: widget.session.probandId,
         deviceSet: widget.deviceSet,
+        directory: widget.directory,
       );
     } catch (e) {
-      await _showError('Failed to start the baseline recording: $e');
+      await _showError('Failed to start the recording: $e');
     } finally {
       if (mounted) {
         setState(() => _isBusy = false);
@@ -58,42 +77,75 @@ class _StudyBaselinePageState extends State<StudyBaselinePage> {
     }
   }
 
-  Future<void> _stopBaseline() async {
-    final shouldStop = await showPlatformDialog<bool>(
+  Future<void> _stop() async {
+    final shouldStop = await _confirm(
+      'Stop ${widget.config.title.toLowerCase()}?',
+      'The phase is not finished yet. Stopping now will end the recording on '
+          'all devices.',
+      confirmLabel: 'Stop',
+    );
+    if (shouldStop) {
+      await _controller.stop();
+    }
+  }
+
+  Future<void> _skip() async {
+    final shouldSkip = await _confirm(
+      'Skip ${widget.config.title.toLowerCase()}?',
+      'This phase will be skipped and the next phase will start.',
+      confirmLabel: 'Skip',
+    );
+    if (!shouldSkip || !mounted) {
+      return;
+    }
+    if (_controller.isRecording) {
+      await _controller.stop();
+    }
+    if (mounted) {
+      _advance();
+    }
+  }
+
+  void _advance() {
+    advanceStudyPhase(
+      context: context,
+      current: widget.phase,
+      session: widget.session,
+      deviceSet: widget.deviceSet,
+      directory: widget.directory,
+    );
+  }
+
+  Future<bool> _confirm(
+    String title,
+    String message, {
+    required String confirmLabel,
+  }) async {
+    return await showPlatformDialog<bool>(
           context: context,
           builder: (dialogContext) => PlatformAlertDialog(
-            title: PlatformText('Stop baseline?'),
-            content: PlatformText(
-              'The baseline is not finished yet. Stopping now will end the '
-              'recording on all devices.',
-            ),
+            title: PlatformText(title),
+            content: PlatformText(message),
             actions: [
               PlatformDialogAction(
-                child: PlatformText('Keep recording'),
+                child: PlatformText('Cancel'),
                 onPressed: () => Navigator.pop(dialogContext, false),
               ),
               PlatformDialogAction(
-                cupertino: (_, __) => CupertinoDialogActionData(
-                  isDestructiveAction: true,
-                ),
-                child: PlatformText('Stop'),
+                child: PlatformText(confirmLabel),
                 onPressed: () => Navigator.pop(dialogContext, true),
               ),
             ],
           ),
         ) ??
         false;
-
-    if (shouldStop) {
-      await _controller.stop();
-    }
   }
 
   Future<void> _showError(String message) async {
     if (!mounted) {
       return;
     }
-    await showPlatformDialog(
+    await showPlatformDialog<void>(
       context: context,
       builder: (dialogContext) => PlatformAlertDialog(
         title: PlatformText('Error'),
@@ -120,13 +172,10 @@ class _StudyBaselinePageState extends State<StudyBaselinePage> {
           canPop: !isRecording,
           onPopInvokedWithResult: (didPop, _) {
             if (!didPop) {
-              _stopBaseline();
+              _stop();
             }
           },
           child: PlatformScaffold(
-            // The page has no text inputs; ignoring the bottom inset avoids a
-            // transient layout overflow while the keyboard from the proband-id
-            // dialog is still animating away.
             material: (_, __) => MaterialScaffoldData(
               resizeToAvoidBottomInset: false,
             ),
@@ -134,22 +183,16 @@ class _StudyBaselinePageState extends State<StudyBaselinePage> {
               resizeToAvoidBottomInset: false,
             ),
             appBar: PlatformAppBar(
-              title: PlatformText('Baseline'),
+              title: PlatformText(widget.config.title),
             ),
-            body: SafeArea(
-              child: _buildBody(context, status, isRecording),
-            ),
+            body: SafeArea(child: _buildBody(context, status)),
           ),
         );
       },
     );
   }
 
-  Widget _buildBody(
-    BuildContext context,
-    StudyRecordingStatus status,
-    bool isRecording,
-  ) {
+  Widget _buildBody(BuildContext context, StudyRecordingStatus status) {
     final theme = Theme.of(context);
     final caption = switch (status) {
       StudyRecordingStatus.idle => 'Ready',
@@ -157,9 +200,6 @@ class _StudyBaselinePageState extends State<StudyBaselinePage> {
       StudyRecordingStatus.completed => 'Completed',
     };
 
-    // LayoutBuilder + scrollable intrinsic height keeps the centered ring and
-    // bottom button layout while guaranteeing the page can never overflow,
-    // regardless of screen height or transient viewport insets.
     return LayoutBuilder(
       builder: (context, constraints) {
         return SingleChildScrollView(
@@ -170,11 +210,13 @@ class _StudyBaselinePageState extends State<StudyBaselinePage> {
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
-                    _StepHeader(probandId: widget.probandId),
+                    _StepHeader(
+                      stepLabel: widget.config.stepLabel,
+                      probandId: widget.session.probandId,
+                    ),
                     const SizedBox(height: 8),
                     Text(
-                      'Sit still and breathe normally for 5 minutes. The '
-                      'recording stops automatically when the timer ends.',
+                      widget.config.instruction,
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
@@ -196,7 +238,17 @@ class _StudyBaselinePageState extends State<StudyBaselinePage> {
                         ],
                       ),
                     ),
-                    _buildActionButton(status, isRecording),
+                    _buildActionButton(status),
+                    if (status != StudyRecordingStatus.completed) ...[
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: PlatformTextButton(
+                          onPressed: _skip,
+                          child: PlatformText('Skip ${widget.config.title}'),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -207,21 +259,25 @@ class _StudyBaselinePageState extends State<StudyBaselinePage> {
     );
   }
 
-  Widget _buildActionButton(StudyRecordingStatus status, bool isRecording) {
+  Widget _buildActionButton(StudyRecordingStatus status) {
     switch (status) {
       case StudyRecordingStatus.idle:
         return SizedBox(
           width: double.infinity,
           child: PlatformElevatedButton(
-            onPressed: _isBusy ? null : _startBaseline,
-            child: PlatformText(_isBusy ? 'Starting…' : 'Start baseline'),
+            onPressed: _isBusy ? null : _start,
+            child: PlatformText(
+              _isBusy
+                  ? 'Starting…'
+                  : 'Start ${widget.config.title.toLowerCase()}',
+            ),
           ),
         );
       case StudyRecordingStatus.recording:
         return SizedBox(
           width: double.infinity,
           child: PlatformElevatedButton(
-            onPressed: _stopBaseline,
+            onPressed: _stop,
             material: (_, __) => MaterialElevatedButtonData(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.error,
@@ -235,8 +291,8 @@ class _StudyBaselinePageState extends State<StudyBaselinePage> {
         return SizedBox(
           width: double.infinity,
           child: PlatformElevatedButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: PlatformText('Done'),
+            onPressed: _advance,
+            child: PlatformText('Continue'),
           ),
         );
     }
@@ -244,9 +300,10 @@ class _StudyBaselinePageState extends State<StudyBaselinePage> {
 }
 
 class _StepHeader extends StatelessWidget {
+  final String stepLabel;
   final String probandId;
 
-  const _StepHeader({required this.probandId});
+  const _StepHeader({required this.stepLabel, required this.probandId});
 
   @override
   Widget build(BuildContext context) {
@@ -254,7 +311,7 @@ class _StepHeader extends StatelessWidget {
     return Column(
       children: [
         Text(
-          'Step 1 of 1 · Baseline',
+          stepLabel,
           style: theme.textTheme.labelLarge?.copyWith(
             color: theme.colorScheme.primary,
             fontWeight: FontWeight.w700,
@@ -296,10 +353,7 @@ class _WarningBanner extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              message,
-              style: theme.textTheme.bodySmall,
-            ),
+            child: Text(message, style: theme.textTheme.bodySmall),
           ),
         ],
       ),
