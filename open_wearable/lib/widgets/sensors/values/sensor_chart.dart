@@ -1,17 +1,30 @@
 import 'dart:collection';
 import 'dart:math';
-import 'package:flutter/material.dart';
+
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
+import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 import 'package:open_wearable/view_models/sensor_data_provider.dart';
+import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/sensors/values/live_data_graph_settings.dart';
 import 'package:provider/provider.dart';
 
+part 'sensor_chart/axis_channel_chip.dart';
+part 'sensor_chart/axis_configuration_sheet.dart';
+part 'sensor_chart/axis_display_filter.dart';
+part 'sensor_chart/axis_filter_engine.dart';
+part 'sensor_chart/axis_filter_config.dart';
+
 /// Displays a provider-backed live line chart for a wearable sensor.
 class SensorChart extends StatefulWidget {
-  /// Whether users can toggle individual sensor axes.
-  final bool allowToggleAxes;
+  /// Whether the chart uses the compact embedded-card layout.
+  final bool compactMode;
+
+  /// Whether users can open the per-axis configuration sheet.
+  final bool allowAxisConfiguration;
 
   /// Shared live graph policy controlling visibility and sample updates.
   final LiveDataGraphSettings settings;
@@ -21,7 +34,8 @@ class SensorChart extends StatefulWidget {
 
   const SensorChart({
     super.key,
-    this.allowToggleAxes = true,
+    this.compactMode = false,
+    this.allowAxisConfiguration = true,
     this.settings = LiveDataGraphSettings.enabled,
     this.onDisabledTap,
   });
@@ -42,6 +56,8 @@ class _SensorChartState extends State<SensorChart> {
   ];
 
   late Map<String, bool> _axisEnabled;
+  late Map<String, _AxisFilterConfig> _axisFilters;
+  late Map<String, _AxisDisplayFilterCache> _axisDisplayFilters;
   late String _sensorIdentity;
 
   @override
@@ -58,9 +74,17 @@ class _SensorChartState extends State<SensorChart> {
     _syncAxisState(sensor);
   }
 
-  void _toggleAxis(String axisName, bool value) {
+  void _setAxisVisible(String axisName, bool value) {
     setState(() {
       _axisEnabled[axisName] = value;
+      _axisDisplayFilters.remove(axisName);
+    });
+  }
+
+  void _setAxisFilter(String axisName, _AxisFilterConfig filter) {
+    setState(() {
+      _axisFilters[axisName] = filter;
+      _axisDisplayFilters.remove(axisName);
     });
   }
 
@@ -69,6 +93,34 @@ class _SensorChartState extends State<SensorChart> {
     final dataProvider = widget.settings.liveUpdatesEnabled
         ? context.watch<SensorDataProvider>()
         : context.read<SensorDataProvider>();
+    final sensorConfigurationProvider = _sensorConfigurationProviderFor(
+      context,
+      dataProvider.wearable,
+    );
+
+    if (sensorConfigurationProvider == null) {
+      return _buildChart(
+        context,
+        dataProvider: dataProvider,
+        sensorConfigurationProvider: null,
+      );
+    }
+
+    return ListenableBuilder(
+      listenable: sensorConfigurationProvider,
+      builder: (context, _) => _buildChart(
+        context,
+        dataProvider: dataProvider,
+        sensorConfigurationProvider: sensorConfigurationProvider,
+      ),
+    );
+  }
+
+  Widget _buildChart(
+    BuildContext context, {
+    required SensorDataProvider dataProvider,
+    required SensorConfigurationProvider? sensorConfigurationProvider,
+  }) {
     final sensor = dataProvider.sensor;
     _syncAxisState(sensor);
     final sensorValues = widget.settings.liveUpdatesEnabled
@@ -76,14 +128,24 @@ class _SensorChartState extends State<SensorChart> {
         : Queue<SensorValue>();
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final compactMode = !widget.allowToggleAxes;
+    final compactMode = widget.compactMode;
     final referenceTimestamp = dataProvider.displayTimestamp;
+    final visibleAxes = {
+      for (final axis in sensor.axisNames)
+        if (_axisEnabled[axis] ?? false) axis,
+    };
+    final frequencyBounds = _frequencyBoundsForSensor(
+      sensor,
+      sensorConfigurationProvider: sensorConfigurationProvider,
+    );
 
     final axisData = _buildAxisData(
       sensor,
       sensorValues,
+      visibleAxes: visibleAxes,
       windowSeconds: dataProvider.timeWindow.toDouble(),
       referenceTimestamp: referenceTimestamp,
+      frequencyBounds: frequencyBounds,
     );
     final enabledSeries = <_AxisSeries>[
       for (int i = 0; i < sensor.axisNames.length; i++)
@@ -103,7 +165,6 @@ class _SensorChartState extends State<SensorChart> {
     final minX = -windowSeconds;
     final yAxisBounds = _computeYAxisBounds(enabledSeries);
 
-    final axisChipTextStyle = theme.textTheme.labelMedium;
     const disabledChipLabelColor = Color(0xFF8A8A8A);
     const disabledChipBackgroundColor = Color(0xFFECECEC);
     const disabledChipBorderColor = Color(0xFFD7D7D7);
@@ -227,9 +288,6 @@ class _SensorChartState extends State<SensorChart> {
           .toList(growable: false),
     );
 
-    final enabledAxes =
-        sensor.axisNames.where((axis) => _axisEnabled[axis] ?? false).toList();
-
     return Column(
       children: [
         Expanded(
@@ -276,64 +334,41 @@ class _SensorChartState extends State<SensorChart> {
                               colorScheme: colorScheme,
                             );
                             final selected = _axisEnabled[axisName] ?? false;
-                            final chipLabelColor = selected
-                                ? axisColor.withValues(alpha: 0.95)
-                                : disabledChipLabelColor;
-                            final chipBackgroundColor = selected
-                                ? axisColor.withValues(alpha: 0.18)
-                                : disabledChipBackgroundColor;
-                            final chipBorderColor = selected
-                                ? axisColor.withValues(alpha: 0.28)
-                                : disabledChipBorderColor;
-                            final chipDotColor = axisColor;
-                            final disabledDotColor = disabledChipDotColor;
+                            final filter = _effectiveAxisFilter(
+                              axisName,
+                              frequencyBounds,
+                            );
 
                             return Padding(
                               padding: const EdgeInsets.only(right: 6),
-                              child: FilterChip(
-                                label: Text(
-                                  axisName,
-                                  style: axisChipTextStyle?.copyWith(
-                                    color: chipLabelColor,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: compactMode ? 10.5 : 11.5,
-                                  ),
+                              child: _AxisChannelChip(
+                                axisName: axisName,
+                                statusLabel: _axisChipStatusLabel(
+                                  filter: filter,
                                 ),
-                                avatar: Container(
-                                  width: 7,
-                                  height: 7,
-                                  decoration: BoxDecoration(
-                                    color: selected
-                                        ? chipDotColor
-                                        : disabledDotColor,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                selected: selected,
-                                onSelected: widget.settings.liveUpdatesEnabled
-                                    ? (value) => _toggleAxis(axisName, value)
+                                dotColor:
+                                    selected ? axisColor : disabledChipDotColor,
+                                labelColor: selected
+                                    ? axisColor.withValues(alpha: 0.95)
+                                    : disabledChipLabelColor,
+                                backgroundColor: selected
+                                    ? axisColor.withValues(alpha: 0.18)
+                                    : disabledChipBackgroundColor,
+                                borderColor: selected
+                                    ? axisColor.withValues(alpha: 0.28)
+                                    : disabledChipBorderColor,
+                                dottedBorder: !selected,
+                                compact: compactMode,
+                                onTap: widget.settings.liveUpdatesEnabled &&
+                                        widget.allowAxisConfiguration
+                                    ? () => _openAxisConfigurationSheet(
+                                          context: context,
+                                          sensor: sensor,
+                                          dataProvider: dataProvider,
+                                          axisName: axisName,
+                                          axisColor: axisColor,
+                                        )
                                     : null,
-                                showCheckmark: false,
-                                visualDensity: compactMode
-                                    ? const VisualDensity(
-                                        horizontal: -3,
-                                        vertical: -3,
-                                      )
-                                    : const VisualDensity(
-                                        horizontal: -2,
-                                        vertical: -2,
-                                      ),
-                                materialTapTargetSize:
-                                    MaterialTapTargetSize.shrinkWrap,
-                                labelPadding:
-                                    const EdgeInsets.symmetric(horizontal: 4),
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 4),
-                                selectedColor: chipBackgroundColor,
-                                backgroundColor: chipBackgroundColor,
-                                side: BorderSide(
-                                  color: chipBorderColor,
-                                ),
                               ),
                             );
                           }).toList(growable: false),
@@ -354,18 +389,327 @@ class _SensorChartState extends State<SensorChart> {
             ),
           ),
         ),
-        if (enabledAxes.isEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              'Enable at least one axis to display data.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
       ],
     );
+  }
+
+  void _openAxisConfigurationSheet({
+    required BuildContext context,
+    required Sensor sensor,
+    required SensorDataProvider dataProvider,
+    required String axisName,
+    required Color axisColor,
+  }) {
+    final frequencyBounds = _frequencyBoundsForSensor(
+      sensor,
+      sensorConfigurationProvider: _sensorConfigurationProviderFor(
+        context,
+        dataProvider.wearable,
+      ),
+    );
+    final existingFilter =
+        _axisFilters[axisName] ?? const _AxisFilterConfig.raw();
+    final clampedFilter = existingFilter.clampedTo(frequencyBounds);
+    if (existingFilter != clampedFilter) {
+      setState(() {
+        _axisFilters[axisName] = clampedFilter;
+        _axisDisplayFilters.remove(axisName);
+      });
+    }
+
+    showPlatformModalSheet<void>(
+      context: context,
+      material: MaterialModalSheetData(
+        isScrollControlled: true,
+        showDragHandle: true,
+        isDismissible: true,
+        enableDrag: true,
+      ),
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (sheetContext, setSheetState) {
+            final visible = _axisEnabled[axisName] ?? true;
+            final filter =
+                (_axisFilters[axisName] ?? const _AxisFilterConfig.raw())
+                    .clampedTo(frequencyBounds);
+
+            void updateVisible(bool value) {
+              _setAxisVisible(axisName, value);
+              setSheetState(() {});
+            }
+
+            void updateFilter(_AxisFilterConfig value) {
+              _setAxisFilter(axisName, value.clampedTo(frequencyBounds));
+              setSheetState(() {});
+            }
+
+            void applyFilterToAll() {
+              setState(() {
+                for (final axis in sensor.axisNames) {
+                  _axisFilters[axis] = filter;
+                  _axisDisplayFilters.remove(axis);
+                }
+              });
+              setSheetState(() {});
+            }
+
+            void resetChannel() {
+              setState(() {
+                _axisEnabled[axisName] = true;
+                _axisFilters[axisName] =
+                    const _AxisFilterConfig.raw().clampedTo(frequencyBounds);
+                _axisDisplayFilters.remove(axisName);
+              });
+              setSheetState(() {});
+            }
+
+            final theme = Theme.of(sheetContext);
+            final colorScheme = theme.colorScheme;
+            final sensorTitle = _axisConfigurationSensorTitle(sensor);
+            final mediaQuery = MediaQuery.of(sheetContext);
+            return SafeArea(
+              child: AnimatedPadding(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOut,
+                padding: EdgeInsets.only(bottom: mediaQuery.viewInsets.bottom),
+                child: SizedBox(
+                  height: mediaQuery.size.height * 0.82,
+                  child: Material(
+                    color: colorScheme.surface,
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
+                                      children: [
+                                        if (sensorTitle.isNotEmpty) ...[
+                                          Flexible(
+                                            fit: FlexFit.loose,
+                                            child: Text(
+                                              sensorTitle,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: theme.textTheme.titleMedium
+                                                  ?.copyWith(
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                        ],
+                                        _AxisHeaderChannelPill(
+                                          axisName: axisName,
+                                          axisColor: axisColor,
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Configure graph visibility and filtering. Recordings are unaffected.',
+                                      style:
+                                          theme.textTheme.bodySmall?.copyWith(
+                                        color: colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                tooltip: 'Close',
+                                onPressed: () =>
+                                    Navigator.of(sheetContext).pop(),
+                                icon: const Icon(Icons.close_rounded, size: 20),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: _AxisConfigurationPanel(
+                            key: ValueKey('axis_config_$axisName'),
+                            axisColor: axisColor,
+                            visible: visible,
+                            filter: filter,
+                            frequencyBounds: frequencyBounds,
+                            onVisibleChanged: updateVisible,
+                            onFilterChanged: updateFilter,
+                            onApplyFilterToAll: applyFilterToAll,
+                            onResetChannel: resetChannel,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  String _axisConfigurationSensorTitle(Sensor sensor) =>
+      sensor.sensorName.trim();
+
+  String _axisChipStatusLabel({required _AxisFilterConfig filter}) {
+    return _axisFilterShortLabel(filter);
+  }
+
+  _AxisFilterConfig _effectiveAxisFilter(
+    String axisName,
+    _FilterFrequencyBounds frequencyBounds,
+  ) {
+    return (_axisFilters[axisName] ?? const _AxisFilterConfig.raw()).clampedTo(
+      frequencyBounds,
+    );
+  }
+
+  SensorConfigurationProvider? _sensorConfigurationProviderFor(
+    BuildContext context,
+    Wearable wearable,
+  ) {
+    try {
+      return context
+          .read<WearablesProvider>()
+          .getSensorConfigurationProvider(wearable);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  _FilterFrequencyBounds _frequencyBoundsForSensor(
+    Sensor sensor, {
+    SensorConfigurationProvider? sensorConfigurationProvider,
+  }) {
+    final activeStreamingRates = <double>[];
+    final streamingRates = <double>[];
+    final fallbackRates = <double>[];
+
+    for (final configuration in sensor.relatedConfigurations) {
+      final activeValue = _activeFrequencyValueForConfiguration(
+        configuration,
+        sensorConfigurationProvider,
+      );
+      if (activeValue != null &&
+          activeValue.frequencyHz > 0 &&
+          _isStreamingFrequencyValue(configuration, activeValue)) {
+        activeStreamingRates.add(activeValue.frequencyHz);
+      }
+
+      for (final value in configuration.values) {
+        if (value is! SensorFrequencyConfigurationValue ||
+            value.frequencyHz <= 0) {
+          continue;
+        }
+
+        fallbackRates.add(value.frequencyHz);
+
+        if (_isStreamingFrequencyValue(configuration, value)) {
+          streamingRates.add(value.frequencyHz);
+        }
+      }
+    }
+
+    final rates = activeStreamingRates.isNotEmpty
+        ? activeStreamingRates
+        : (streamingRates.isNotEmpty ? streamingRates : fallbackRates);
+    if (rates.isEmpty) {
+      return const _FilterFrequencyBounds.fallback();
+    }
+
+    final maxSamplingRateHz = rates.reduce(max);
+    return _FilterFrequencyBounds(
+      maxCutoffHz: max(
+        _FilterFrequencyBounds.defaultMinCutoffHz,
+        maxSamplingRateHz / 2,
+      ),
+      maxSamplingRateHz: maxSamplingRateHz,
+    );
+  }
+
+  SensorFrequencyConfigurationValue? _activeFrequencyValueForConfiguration(
+    SensorConfiguration configuration,
+    SensorConfigurationProvider? sensorConfigurationProvider,
+  ) {
+    final selectedValue =
+        sensorConfigurationProvider?.getSelectedConfigurationValue(
+      configuration,
+    );
+    if (selectedValue is SensorFrequencyConfigurationValue) {
+      return selectedValue;
+    }
+
+    final reportedValue =
+        sensorConfigurationProvider?.getLastReportedConfigurationValue(
+      configuration,
+    );
+    if (reportedValue is SensorFrequencyConfigurationValue) {
+      return reportedValue;
+    }
+
+    final dynamic configurationDynamic = configuration;
+    try {
+      final currentValue = configurationDynamic.currentValue;
+      if (currentValue is SensorFrequencyConfigurationValue) {
+        return currentValue;
+      }
+    } catch (_) {
+      // Fall back to advertised values when the configuration has no current
+      // value API.
+    }
+    return null;
+  }
+
+  bool _isStreamingFrequencyValue(
+    SensorConfiguration configuration,
+    SensorFrequencyConfigurationValue value,
+  ) {
+    final SensorConfigurationValue configurationValue = value;
+    if (configurationValue is ConfigurableSensorConfigurationValue) {
+      return configurationValue.options.contains(
+        const StreamSensorConfigOption(),
+      );
+    }
+
+    return configuration is! ConfigurableSensorConfiguration ||
+        configuration.availableOptions.contains(
+          const StreamSensorConfigOption(),
+        );
+  }
+
+  String _axisFilterShortLabel(_AxisFilterConfig filter) {
+    if (!filter.hasActiveFilters) {
+      return 'Raw';
+    }
+
+    final labels = <String>[];
+    if (filter.highPassEnabled && filter.lowPassEnabled) {
+      labels.add(
+        'BP ${_formatNumber(filter.highPassCutoffHz)}-${_formatNumber(filter.lowPassCutoffHz)}Hz',
+      );
+    } else if (filter.highPassEnabled) {
+      labels.add('HP ${_formatNumber(filter.highPassCutoffHz)}Hz');
+    } else if (filter.lowPassEnabled) {
+      labels.add('LP ${_formatNumber(filter.lowPassCutoffHz)}Hz');
+    }
+
+    if (filter.notchEnabled) {
+      labels.add(
+        'N ${_formatNumber(filter.notchCenterHz)}±${_formatNumber(filter.notchWidthHz / 2)}Hz',
+      );
+    }
+
+    return labels.isEmpty ? 'Raw' : labels.join(' + ');
   }
 
   double _toRelativeSeconds(
@@ -380,13 +724,29 @@ class _SensorChartState extends State<SensorChart> {
   Map<String, List<FlSpot>> _buildAxisData(
     Sensor sensor,
     Queue<SensorValue> buffer, {
+    required Set<String> visibleAxes,
     required double windowSeconds,
     required int referenceTimestamp,
+    required _FilterFrequencyBounds frequencyBounds,
   }) {
     final data = <String, List<FlSpot>>{
       for (var axis in sensor.axisNames) axis: <FlSpot>[],
     };
     if (buffer.isEmpty) return data;
+
+    final timestampScale = pow(10, -sensor.timestampExponent).toDouble();
+    final filteredVisibleAxes = visibleAxes.where((axisName) {
+      final filter = _effectiveAxisFilter(axisName, frequencyBounds);
+      return filter.hasActiveFilters;
+    }).toList(growable: false);
+    if (filteredVisibleAxes.isNotEmpty && _axisDisplayFilters.isNotEmpty) {
+      final visibleTimestamps = {
+        for (final sensorValue in buffer) sensorValue.timestamp,
+      };
+      for (final axisName in filteredVisibleAxes) {
+        _axisDisplayFilters[axisName]?.retainTimestamps(visibleTimestamps);
+      }
+    }
 
     for (final sensorValue in buffer) {
       final x = _toRelativeSeconds(
@@ -396,17 +756,78 @@ class _SensorChartState extends State<SensorChart> {
       ).clamp(-windowSeconds, 0.0);
       if (sensorValue is SensorDoubleValue) {
         for (int i = 0; i < sensor.axisCount; i++) {
-          data[sensor.axisNames[i]]!.add(FlSpot(x, sensorValue.values[i]));
+          final axisName = sensor.axisNames[i];
+          if (!visibleAxes.contains(axisName)) {
+            continue;
+          }
+          final displayValue = _displayValueForAxis(
+            axisName: axisName,
+            rawValue: sensorValue.values[i],
+            timestamp: sensorValue.timestamp,
+            timestampScale: timestampScale,
+            frequencyBounds: frequencyBounds,
+          );
+          data[axisName]!.add(FlSpot(x, displayValue));
         }
       } else {
         final values = (sensorValue as SensorIntValue).values;
         for (int i = 0; i < sensor.axisCount; i++) {
-          data[sensor.axisNames[i]]!.add(FlSpot(x, values[i].toDouble()));
+          final axisName = sensor.axisNames[i];
+          if (!visibleAxes.contains(axisName)) {
+            continue;
+          }
+          final displayValue = _displayValueForAxis(
+            axisName: axisName,
+            rawValue: values[i].toDouble(),
+            timestamp: sensorValue.timestamp,
+            timestampScale: timestampScale,
+            frequencyBounds: frequencyBounds,
+          );
+          data[axisName]!.add(FlSpot(x, displayValue));
         }
       }
     }
 
     return data;
+  }
+
+  double _displayValueForAxis({
+    required String axisName,
+    required double rawValue,
+    required int timestamp,
+    required double timestampScale,
+    required _FilterFrequencyBounds frequencyBounds,
+  }) {
+    final config = _effectiveAxisFilter(axisName, frequencyBounds);
+    if (!config.hasActiveFilters) {
+      return rawValue;
+    }
+
+    return _displayFilterForAxis(
+      axisName: axisName,
+      config: config,
+      timestampScale: timestampScale,
+    ).apply(rawValue, timestamp);
+  }
+
+  _AxisDisplayFilterCache _displayFilterForAxis({
+    required String axisName,
+    required _AxisFilterConfig config,
+    required double timestampScale,
+  }) {
+    final existing = _axisDisplayFilters[axisName];
+    if (existing != null &&
+        existing.config == config &&
+        existing.timestampScale == timestampScale) {
+      return existing;
+    }
+
+    final next = _AxisDisplayFilterCache(
+      config: config,
+      timestampScale: timestampScale,
+    );
+    _axisDisplayFilters[axisName] = next;
+    return next;
   }
 
   _YAxisBounds _computeYAxisBounds(List<_AxisSeries> seriesList) {
@@ -443,6 +864,10 @@ class _SensorChartState extends State<SensorChart> {
   void _initializeAxisState(Sensor sensor) {
     _sensorIdentity = _sensorKey(sensor);
     _axisEnabled = {for (final axis in sensor.axisNames) axis: true};
+    _axisFilters = {
+      for (final axis in sensor.axisNames) axis: const _AxisFilterConfig.raw(),
+    };
+    _axisDisplayFilters = <String, _AxisDisplayFilterCache>{};
   }
 
   void _syncAxisState(Sensor sensor) {
@@ -453,7 +878,11 @@ class _SensorChartState extends State<SensorChart> {
     }
 
     final hasSameAxes = _axisEnabled.length == sensor.axisNames.length &&
-        sensor.axisNames.every((axis) => _axisEnabled.containsKey(axis));
+        _axisFilters.length == sensor.axisNames.length &&
+        sensor.axisNames.every(
+          (axis) =>
+              _axisEnabled.containsKey(axis) && _axisFilters.containsKey(axis),
+        );
     if (hasSameAxes) {
       return;
     }
@@ -461,6 +890,12 @@ class _SensorChartState extends State<SensorChart> {
     _axisEnabled = {
       for (final axis in sensor.axisNames) axis: _axisEnabled[axis] ?? true,
     };
+    _axisFilters = {
+      for (final axis in sensor.axisNames)
+        axis: _axisFilters[axis] ?? const _AxisFilterConfig.raw(),
+    };
+    final axisNames = sensor.axisNames.toSet();
+    _axisDisplayFilters.removeWhere((axis, _) => !axisNames.contains(axis));
   }
 
   String _sensorKey(Sensor sensor) =>

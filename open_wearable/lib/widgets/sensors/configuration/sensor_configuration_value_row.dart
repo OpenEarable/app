@@ -184,6 +184,12 @@ class SensorConfigurationValueRow extends StatelessWidget {
   ) {
     showPlatformModalSheet<void>(
       context: context,
+      material: MaterialModalSheetData(
+        isScrollControlled: true,
+        showDragHandle: true,
+        isDismissible: true,
+        enableDrag: true,
+      ),
       builder: (modalContext) {
         return ChangeNotifierProvider.value(
           value: sensorConfigNotifier,
