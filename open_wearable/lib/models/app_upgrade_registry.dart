@@ -142,6 +142,43 @@ class AppUpgradeRegistry {
         ),
       ],
     ),
+    AppUpgradeHighlight(
+      version: '1.4.0',
+      eyebrow: 'OpenWearables 1.4.0',
+      title: 'Tune live graphs\nwhile streams are running',
+      summary:
+          'Configure filters and channel visibility directly from live sensor graphs.',
+      heroDescription:
+          'Live data graphs are now easier to inspect while streams are running. Open a channel chip to show or hide that channel, then choose raw, low-pass, high-pass, band-pass, or notch filtering for the preview.',
+      accentColor: Color(0xFF8F6A67),
+      useHeroGradient: false,
+      features: <AppUpgradeFeatureHighlight>[
+        AppUpgradeFeatureHighlight(
+          icon: Icons.filter_alt_rounded,
+          title: 'Filtering',
+          description:
+              'Apply raw, low-pass, high-pass, band-pass, or notch filters to the live graph preview for each channel.',
+        ),
+        AppUpgradeFeatureHighlight(
+          icon: Icons.tune_rounded,
+          title: 'Channel configuration sheets',
+          description:
+              'Tap a graph channel to open a focused configuration sheet with visibility and filter controls.',
+        ),
+        AppUpgradeFeatureHighlight(
+          icon: Icons.visibility_rounded,
+          title: 'Clearer graph states',
+          description:
+              'Disabled channels are visually distinct, and graph controls better communicate that they can be configured.',
+        ),
+        AppUpgradeFeatureHighlight(
+          icon: Icons.battery_saver_rounded,
+          title: 'Power saving modes',
+          description:
+              'Choose the idle auto-off behavior for supported OpenEarable devices to help reduce battery drain.',
+        ),
+      ],
+    ),
   ];
 
   /// Returns the configured highlight for [version], if any.

@@ -91,7 +91,7 @@ class SensorValueCard extends StatelessWidget {
                           height: 200,
                           child: settings.shouldShowGraph(hasData: hasData)
                               ? SensorChart(
-                                  allowToggleAxes: false,
+                                  compactMode: true,
                                   settings: settings,
                                   onDisabledTap: settings.liveUpdatesEnabled
                                       ? null
