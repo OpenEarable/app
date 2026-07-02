@@ -16,7 +16,7 @@ class StudyProtocolApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return PlatformScaffold(
       appBar: PlatformAppBar(
-        title: PlatformText('Study Protocol'),
+        title: PlatformText('DecoupEar'),
       ),
       body: const StudyRecordingsList(),
     );

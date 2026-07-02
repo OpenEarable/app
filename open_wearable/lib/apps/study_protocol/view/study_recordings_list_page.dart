@@ -416,7 +416,7 @@ class _StartRecordingCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Guided 5-minute baseline',
+                      'DecoupEar protocol',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),

@@ -91,8 +91,8 @@ Sensor? _findOpticalTemperatureSensor(List<Sensor> sensors) {
 final List<AppInfo> _apps = [
   AppInfo(
     logoPath: "lib/apps/study_protocol/assets/logo.png",
-    title: "Study Protocol",
-    description: "Guided study recording with OpenEarable + RESPIRABAN",
+    title: "DecoupEar",
+    description: "Guided DecoupEar protocol with OpenEarable + RESPIRABAN",
     supportedDevices: _studyProtocolSupportedDevices,
     accentColor: _appAccentColor,
     widget: const StudyProtocolApp(),

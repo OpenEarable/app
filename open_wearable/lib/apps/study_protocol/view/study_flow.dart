@@ -44,9 +44,9 @@ const Map<StudyPhase, TimedPhaseConfig> studyTimedPhaseConfigs = {
   StudyPhase.baseline: TimedPhaseConfig(
     title: 'Baseline',
     stepLabel: 'Step 1 · Baseline',
-    instruction: 'Sit still and breathe normally for 5 minutes. '
+    instruction: 'Sit still and breathe normally for 15 minutes. '
         'The recording stops automatically when the timer ends.',
-    duration: Duration(minutes: 5),
+    duration: Duration(minutes: 15),
     respibanFileLabel: 'baseline',
     earablePrefixSuffix: 'base_',
   ),
