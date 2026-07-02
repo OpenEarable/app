@@ -26,7 +26,9 @@ class YmcaErgometerController extends ChangeNotifier {
   int? get currentTargetWatt => null;
   List<ErgoMeasurement> get measurements => const <ErgoMeasurement>[];
   bool get isMeasurementDue => false;
+  bool get canUndo => false;
   int? get dueMeasurementMinute => null;
+  Duration get elapsed => Duration.zero;
   Duration get timeToNextMeasurement => measurementInterval;
   String? get pendingStageMessage => null;
   bool get endSuggested => false;
@@ -42,6 +44,8 @@ class YmcaErgometerController extends ChangeNotifier {
   }) async {}
 
   void manualNextStage() {}
+
+  void undoLastMeasurement() {}
 
   void acknowledgeStageMessage() {}
 

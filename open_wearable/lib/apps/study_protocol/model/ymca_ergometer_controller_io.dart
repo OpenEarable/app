@@ -33,6 +33,7 @@ class YmcaErgometerController extends ChangeNotifier {
 
   final List<ErgoMeasurement> _measurements = [];
   final Queue<int> _dueMeasurements = Queue<int>();
+  final List<_ErgoSnapshot> _undoStack = [];
 
   Timer? _ticker;
   DateTime? _startTime;
@@ -76,9 +77,21 @@ class YmcaErgometerController extends ChangeNotifier {
   /// Whether a measurement is due and waiting for the experimenter to enter it.
   bool get isMeasurementDue => _dueMeasurements.isNotEmpty;
 
+  /// Whether the last measurement or manual stage change can be undone.
+  bool get canUndo => _status == ErgoStatus.running && _undoStack.isNotEmpty;
+
   /// Minute index of the measurement currently awaiting entry, if any.
   int? get dueMeasurementMinute =>
       _dueMeasurements.isEmpty ? null : _dueMeasurements.first;
+
+  /// Total time elapsed since the test started.
+  Duration get elapsed {
+    final start = _startTime;
+    if (start == null) {
+      return Duration.zero;
+    }
+    return DateTime.now().difference(start);
+  }
 
   /// Time until the next scheduled measurement prompt.
   Duration get timeToNextMeasurement {
@@ -162,6 +175,9 @@ class YmcaErgometerController extends ChangeNotifier {
     final minute = _dueMeasurements.removeFirst();
     final previous = _measurements.isEmpty ? null : _measurements.last;
 
+    // Snapshot pre-measurement state so this step can be undone.
+    _pushUndoSnapshot(dueMinute: minute, removedMeasurement: true);
+
     final measurement = ErgoMeasurement(
       minute: minute,
       stage: _currentStage,
@@ -197,10 +213,56 @@ class YmcaErgometerController extends ChangeNotifier {
     if (_status != ErgoStatus.running) {
       return;
     }
+    // Snapshot pre-change state so the manual advance can be undone.
+    _pushUndoSnapshot(dueMinute: null, removedMeasurement: false);
     final latestHeartRate =
         _measurements.isEmpty ? null : _measurements.last.heartRate;
     _advanceStage(latestHeartRate);
     notifyListeners();
+  }
+
+  /// Undoes the last measurement or manual stage change.
+  ///
+  /// Reverts stage/target/counter state and, when a measurement was undone,
+  /// re-queues that minute so its value can be re-entered — for example to
+  /// repeat a stage. The correction is also logged for the record.
+  void undoLastMeasurement() {
+    if (_status != ErgoStatus.running || _undoStack.isEmpty) {
+      return;
+    }
+    final snapshot = _undoStack.removeLast();
+    if (snapshot.removedMeasurement && _measurements.isNotEmpty) {
+      _measurements.removeLast();
+    }
+    _currentStage = snapshot.stage;
+    _currentTargetWatt = snapshot.targetWatt;
+    _measurementsInStage = snapshot.measurementsInStage;
+    _firstStabilizationDone = snapshot.firstStabilizationDone;
+    _pendingStageMessage = snapshot.pendingStageMessage;
+    _endSuggested = snapshot.endSuggested;
+    if (snapshot.dueMinute != null) {
+      _dueMeasurements.addFirst(snapshot.dueMinute!);
+    }
+    _writeLog('undo,${snapshot.dueMinute ?? ''},$_currentStage,,,');
+    notifyListeners();
+  }
+
+  void _pushUndoSnapshot({
+    required int? dueMinute,
+    required bool removedMeasurement,
+  }) {
+    _undoStack.add(
+      _ErgoSnapshot(
+        dueMinute: dueMinute,
+        removedMeasurement: removedMeasurement,
+        stage: _currentStage,
+        targetWatt: _currentTargetWatt,
+        measurementsInStage: _measurementsInStage,
+        firstStabilizationDone: _firstStabilizationDone,
+        pendingStageMessage: _pendingStageMessage,
+        endSuggested: _endSuggested,
+      ),
+    );
   }
 
   void _advanceStage(int? heartRate) {
@@ -283,6 +345,7 @@ class YmcaErgometerController extends ChangeNotifier {
     _ticker?.cancel();
     _ticker = null;
     _dueMeasurements.clear();
+    _undoStack.clear();
 
     await _logSink?.flush();
     await _logSink?.close();
@@ -301,4 +364,27 @@ class YmcaErgometerController extends ChangeNotifier {
     }
     super.dispose();
   }
+}
+
+/// Captured controller state used to undo a measurement or manual stage change.
+class _ErgoSnapshot {
+  final int? dueMinute;
+  final bool removedMeasurement;
+  final int stage;
+  final int? targetWatt;
+  final int measurementsInStage;
+  final bool firstStabilizationDone;
+  final String? pendingStageMessage;
+  final bool endSuggested;
+
+  const _ErgoSnapshot({
+    required this.dueMinute,
+    required this.removedMeasurement,
+    required this.stage,
+    required this.targetWatt,
+    required this.measurementsInStage,
+    required this.firstStabilizationDone,
+    required this.pendingStageMessage,
+    required this.endSuggested,
+  });
 }

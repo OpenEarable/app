@@ -116,6 +116,31 @@ class _TimedPhasePageState extends State<TimedPhasePage> {
     );
   }
 
+  /// Goes back to the previous phase (fresh restart), like skip but backwards.
+  Future<void> _back() async {
+    final shouldGoBack = await _confirm(
+      'Go to previous phase?',
+      'This leaves ${widget.config.title.toLowerCase()} and returns to the '
+          'previous phase, which restarts from the beginning.',
+      confirmLabel: 'Previous',
+    );
+    if (!shouldGoBack || !mounted) {
+      return;
+    }
+    if (_controller.isRecording) {
+      await _controller.stop();
+    }
+    if (mounted) {
+      goToPreviousStudyPhase(
+        context: context,
+        current: widget.phase,
+        session: widget.session,
+        deviceSet: widget.deviceSet,
+        directory: widget.directory,
+      );
+    }
+  }
+
   Future<bool> _confirm(
     String title,
     String message, {
@@ -239,16 +264,24 @@ class _TimedPhasePageState extends State<TimedPhasePage> {
                       ),
                     ),
                     _buildActionButton(status),
-                    if (status != StudyRecordingStatus.completed) ...[
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        child: PlatformTextButton(
-                          onPressed: _skip,
-                          child: PlatformText('Skip ${widget.config.title}'),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: PlatformTextButton(
+                            onPressed: _back,
+                            child: PlatformText('Previous phase'),
+                          ),
                         ),
-                      ),
-                    ],
+                        if (status != StudyRecordingStatus.completed)
+                          Expanded(
+                            child: PlatformTextButton(
+                              onPressed: _skip,
+                              child: PlatformText('Skip phase'),
+                            ),
+                          ),
+                      ],
+                    ),
                   ],
                 ),
               ),

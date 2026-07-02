@@ -257,7 +257,19 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
         false;
 
     _controller.dismissEndSuggestion();
-    if (shouldEnd) {
+    if (!shouldEnd) {
+      return;
+    }
+
+    // The heart rate that reached the submaximal target was just entered, so
+    // reuse it as the end heart rate instead of asking for it again.
+    final measurements = _controller.measurements;
+    if (measurements.isNotEmpty) {
+      await _controller.end(endHeartRate: measurements.last.heartRate);
+      if (mounted) {
+        _advance();
+      }
+    } else {
       await _endTest(requireConfirmation: false);
     }
   }
@@ -298,6 +310,47 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
     await _controller.end(endHeartRate: endHeartRate);
     if (mounted) {
       _advance();
+    }
+  }
+
+  /// Undoes the last measurement/stage change so it can be re-entered.
+  Future<void> _undoLast() async {
+    if (!_controller.canUndo) {
+      return;
+    }
+    final confirmed = await _confirm(
+      title: 'Go back?',
+      message: 'Undo the last step and re-enter it — for example to repeat a '
+          'stage.',
+      confirmLabel: 'Go back',
+    );
+    if (confirmed) {
+      _controller.undoLastMeasurement();
+    }
+  }
+
+  /// Goes back to the previous phase (fresh restart), like skip but backwards.
+  Future<void> _previousPhase() async {
+    final confirmed = await _confirm(
+      title: 'Go to previous phase?',
+      message: 'This stops recording and returns to the previous phase, which '
+          'restarts from the beginning.',
+      confirmLabel: 'Previous',
+    );
+    if (!confirmed) {
+      return;
+    }
+    if (_controller.status == ErgoStatus.running) {
+      await _controller.skip();
+    }
+    if (mounted) {
+      goToPreviousStudyPhase(
+        context: context,
+        current: StudyPhase.ergometer,
+        session: widget.session,
+        deviceSet: widget.deviceSet,
+        directory: widget.directory,
+      );
     }
   }
 
@@ -459,6 +512,15 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
             appBar: PlatformAppBar(
               title: PlatformText('Ergometer Test'),
               trailingActions: [
+                if (_controller.canUndo)
+                  PlatformTextButton(
+                    onPressed: _undoLast,
+                    child: PlatformText('Undo'),
+                  ),
+                PlatformTextButton(
+                  onPressed: _previousPhase,
+                  child: PlatformText('Prev'),
+                ),
                 PlatformTextButton(
                   onPressed: _skipTest,
                   child: PlatformText('Skip'),
@@ -546,6 +608,7 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
               _StageCard(
                 stage: _controller.currentStage,
                 targetWatt: _controller.currentTargetWatt,
+                totalElapsed: _formatDuration(_controller.elapsed),
                 nextMeasurementIn:
                     _formatDuration(_controller.timeToNextMeasurement),
               ),
@@ -679,11 +742,13 @@ class _TargetHeartRateCard extends StatelessWidget {
 class _StageCard extends StatelessWidget {
   final int stage;
   final int? targetWatt;
+  final String totalElapsed;
   final String nextMeasurementIn;
 
   const _StageCard({
     required this.stage,
     required this.targetWatt,
+    required this.totalElapsed,
     required this.nextMeasurementIn,
   });
 
@@ -698,45 +763,68 @@ class _StageCard extends StatelessWidget {
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(14),
-        child: Row(
+        child: Column(
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    stageLabel,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    wattLabel,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Next measurement',
-                  style: theme.textTheme.labelSmall?.copyWith(
+                  'Total time',
+                  style: theme.textTheme.labelMedium?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
-                const SizedBox(height: 2),
                 Text(
-                  nextMeasurementIn,
-                  style: theme.textTheme.titleMedium?.copyWith(
+                  totalElapsed,
+                  style: theme.textTheme.headlineSmall?.copyWith(
                     fontFeatures: const [FontFeature.tabularFigures()],
                     fontWeight: FontWeight.w700,
                   ),
+                ),
+              ],
+            ),
+            const Divider(height: 18),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        stageLabel,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        wattLabel,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Next measurement',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      nextMeasurementIn,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

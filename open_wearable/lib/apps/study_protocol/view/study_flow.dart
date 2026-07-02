@@ -121,3 +121,31 @@ void advanceStudyPhase({
     ),
   );
 }
+
+/// Goes back from [current] to the previous phase, or returns to the recordings
+/// list when [current] is the first phase. The previous phase restarts fresh.
+void goToPreviousStudyPhase({
+  required BuildContext context,
+  required StudyPhase current,
+  required StudySession session,
+  required StudyDeviceSet deviceSet,
+  required String directory,
+}) {
+  final index = studyPhaseOrder.indexOf(current);
+  if (index <= 0) {
+    Navigator.of(context).pop();
+    return;
+  }
+  final previous = studyPhaseOrder[index - 1];
+  Navigator.of(context).pushReplacement(
+    platformPageRoute(
+      context: context,
+      builder: (_) => buildStudyPhasePage(
+        phase: previous,
+        session: session,
+        deviceSet: deviceSet,
+        directory: directory,
+      ),
+    ),
+  );
+}
