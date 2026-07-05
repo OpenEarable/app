@@ -16,7 +16,7 @@ import 'study_protocol_storage.dart';
 /// Does:
 /// - Configures the OpenEarable pair to record microphone (8000 Hz) and IMU
 ///   (100 Hz) to each earable's own SD card, without streaming.
-/// - Starts the RESPIRABAN in Belt + IMU mode and writes its belt, accelerometer
+/// - Starts the RespiBAN in Belt + IMU mode and writes its belt, accelerometer
 ///   and gyroscope streams into a single phone-side CSV.
 /// - Holds a wakelock while recording.
 ///
@@ -37,7 +37,7 @@ class StudyDeviceRecorder {
   /// Non-fatal warnings raised while configuring devices, if any.
   String? get warning => _warning;
 
-  /// Starts recording on the OpenEarable pair and the RESPIRABAN.
+  /// Starts recording on the OpenEarable pair and the RespiBAN.
   ///
   /// [respibanFileLabel] and [earablePrefixSuffix] scope the output names to the
   /// phase (for example `ergometer` / `ergo_`); pass empty strings to keep the
@@ -49,7 +49,7 @@ class StudyDeviceRecorder {
     String respibanFileLabel = '',
     String earablePrefixSuffix = '',
   }) async {
-    // Start order: OpenEarable SD recording first, then the RESPIRABAN.
+    // Start order: OpenEarable SD recording first, then the RespiBAN.
     await _startEarableSdRecording(
       deviceSet.earables,
       probandId,
@@ -67,7 +67,7 @@ class StudyDeviceRecorder {
 
   /// Stops recording and returns every device to its off state.
   ///
-  /// Stop order is the reverse of [start]: the RESPIRABAN is fully stopped
+  /// Stop order is the reverse of [start]: the RespiBAN is fully stopped
   /// first, then the OpenEarable pair.
   Future<void> stop() async {
     final respibanConfiguration = _respibanConfiguration;
@@ -171,7 +171,7 @@ class StudyDeviceRecorder {
         sensors.whereType<RespibanGyroscopeSensor>().firstOrNull;
 
     if (beltSensor == null) {
-      _addWarning('RESPIRABAN respiration belt sensor not found.');
+      _addWarning('RespiBAN respiration belt sensor not found.');
     } else {
       final label = fileLabel.isEmpty ? '' : '_$fileLabel';
       // Start the merged CSV writer before switching the device on so no
@@ -180,7 +180,7 @@ class StudyDeviceRecorder {
       // single file.
       final writer = _RespibanCsvWriter();
       await writer.start(
-        filepath: '$directory/$token${label}_RESPIRABAN.csv',
+        filepath: '$directory/$token${label}_RespiBAN.csv',
         beltStream:
             SensorStreams.shared(wearable: respiban, sensor: beltSensor),
         accelerometerStream: accelerometerSensor == null
@@ -201,7 +201,7 @@ class StudyDeviceRecorder {
 
     final configuration = findRespibanConfiguration(respiban);
     if (configuration == null) {
-      _addWarning('RESPIRABAN acquisition configuration not found.');
+      _addWarning('RespiBAN acquisition configuration not found.');
       return;
     }
     _respibanConfiguration = configuration;
@@ -213,7 +213,7 @@ class StudyDeviceRecorder {
         .firstWhere((value) => value != null, orElse: () => null);
 
     if (beltAndImuValue == null) {
-      _addWarning('RESPIRABAN Belt + IMU mode is unavailable.');
+      _addWarning('RespiBAN Belt + IMU mode is unavailable.');
       return;
     }
     configuration.setConfiguration(beltAndImuValue);
@@ -225,10 +225,10 @@ class StudyDeviceRecorder {
   }
 }
 
-/// Writes the RESPIRABAN respiration belt, accelerometer and gyroscope streams
+/// Writes the RespiBAN respiration belt, accelerometer and gyroscope streams
 /// into a single CSV file.
 ///
-/// All three RESPIRABAN sensors are decoded from the same device sample and
+/// All three RespiBAN sensors are decoded from the same device sample and
 /// therefore share identical timestamps. Rows are keyed by timestamp and
 /// written once every expected component for that timestamp has arrived, so a
 /// row contains the belt value alongside its matching IMU values.

@@ -20,7 +20,7 @@ import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 /// Local Recorder) and a prominent action to start a new guided recording.
 ///
 /// The list is always available; starting a new recording resolves the required
-/// device set (OpenEarable pair + RESPIRABAN) on demand and only proceeds when
+/// device set (OpenEarable pair + RespiBAN) on demand and only proceeds when
 /// both are connected.
 class StudyRecordingsList extends StatefulWidget {
   const StudyRecordingsList({super.key});
@@ -66,7 +66,7 @@ class _StudyRecordingsListState extends State<StudyRecordingsList> {
 
   Future<void> _startNewRecording() async {
     // Resolve the required device set on demand: the app is browsable without
-    // devices, but a new recording needs the OpenEarable pair and RESPIRABAN.
+    // devices, but a new recording needs the OpenEarable pair and RespiBAN.
     final wearables = context.read<WearablesProvider>().wearables;
     final deviceSet = await resolveStudyDeviceSet(wearables);
     if (!mounted) {
@@ -123,7 +123,7 @@ class _StudyRecordingsListState extends State<StudyRecordingsList> {
           builder: (dialogContext) => PlatformAlertDialog(
             title: PlatformText('Devices required'),
             content: PlatformText(
-              'Connect a pair of OpenEarables and a Plux RESPIRABAN to start a '
+              'Connect a pair of OpenEarables and a Plux RespiBAN to start a '
               'new recording.',
             ),
             actions: [

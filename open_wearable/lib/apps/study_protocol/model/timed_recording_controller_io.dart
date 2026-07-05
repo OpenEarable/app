@@ -10,7 +10,7 @@ import 'study_recording_status.dart';
 
 /// Controls one fixed-duration recording phase (baseline, recovery, treadmill).
 ///
-/// Delegates the physiological recording (OpenEarable SD + RESPIRABAN CSV) to a
+/// Delegates the physiological recording (OpenEarable SD + RespiBAN CSV) to a
 /// [StudyDeviceRecorder] and adds the countdown that stops recording
 /// automatically when [duration] elapses. File naming is scoped to the phase via
 /// [respibanFileLabel] / [earablePrefixSuffix] so every phase in a session has
@@ -19,7 +19,7 @@ class TimedRecordingController extends ChangeNotifier {
   /// Length of the phase.
   final Duration duration;
 
-  /// RESPIRABAN CSV file label for this phase (e.g. `baseline`).
+  /// RespiBAN CSV file label for this phase (e.g. `baseline`).
   final String respibanFileLabel;
 
   /// OpenEarable file-prefix suffix for this phase (e.g. `base_`).

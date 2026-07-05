@@ -10,7 +10,7 @@ import 'package:open_wearable/apps/study_protocol/widgets/timer_ring.dart';
 
 /// Generic fixed-duration recording phase (baseline, recovery, treadmill).
 ///
-/// Records continuously on the OpenEarable pair and RESPIRABAN for the phase
+/// Records continuously on the OpenEarable pair and RespiBAN for the phase
 /// [config] duration, shows a countdown ring, and continues to the next phase
 /// when complete. Every phase must be actively started and can be skipped.
 class TimedPhasePage extends StatefulWidget {

@@ -44,7 +44,7 @@ String sanitizeProbandId(String probandId) {
 
 /// Creates a new study session directory for [probandId] and returns its path.
 ///
-/// The directory holds the phone-side RESPIRABAN CSV recordings. The
+/// The directory holds the phone-side RespiBAN CSV recordings. The
 /// OpenEarable audio/IMU data is stored on each earable's own SD card and is
 /// not written here.
 Future<String> createStudySessionDirectory(String probandId) async {

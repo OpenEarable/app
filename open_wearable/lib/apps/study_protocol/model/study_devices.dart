@@ -4,7 +4,7 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 /// and for resolving the OpenEarable sensor configurations it records.
 ///
 /// The study protocol requires a stereo pair of OpenEarable devices (one left,
-/// one right) plus a Plux RESPIRABAN. These helpers keep that detection logic in
+/// one right) plus a Plux RespiBAN. These helpers keep that detection logic in
 /// one place so the gate screen and the recording controller agree on what a
 /// valid setup looks like.
 
@@ -24,7 +24,7 @@ class StudyDeviceSet {
   /// Connected OpenEarable stereo pair.
   final EarablePair earables;
 
-  /// Connected Plux RESPIRABAN.
+  /// Connected Plux RespiBAN.
   final Wearable respiban;
 
   const StudyDeviceSet({required this.earables, required this.respiban});
@@ -40,7 +40,7 @@ bool _isEdgeRecordingEarable(Wearable wearable) {
       wearable.hasCapability<StereoDevice>();
 }
 
-/// Returns true if [wearable] is a Plux RESPIRABAN.
+/// Returns true if [wearable] is a Plux RespiBAN.
 bool isRespiban(Wearable wearable) => wearable is Respiban;
 
 /// Resolves the connected left/right OpenEarable pair, if present.
@@ -70,7 +70,7 @@ Future<EarablePair?> findEarablePair(Iterable<Wearable> wearables) async {
   return EarablePair(left: left, right: right);
 }
 
-/// Resolves the connected Plux RESPIRABAN, if present.
+/// Resolves the connected Plux RespiBAN, if present.
 Wearable? findRespiban(Iterable<Wearable> wearables) {
   for (final wearable in wearables) {
     if (isRespiban(wearable)) {
@@ -82,7 +82,7 @@ Wearable? findRespiban(Iterable<Wearable> wearables) {
 
 /// Resolves the full [StudyDeviceSet] required to start a recording.
 ///
-/// Returns `null` when either the OpenEarable pair or the RESPIRABAN is
+/// Returns `null` when either the OpenEarable pair or the RespiBAN is
 /// missing.
 Future<StudyDeviceSet?> resolveStudyDeviceSet(
   Iterable<Wearable> wearables,
@@ -167,7 +167,7 @@ SensorConfigurationValue? recordOnlyValueNearest(
   return nextBigger ?? nextSmaller;
 }
 
-/// Resolves the RESPIRABAN acquisition configuration on [wearable].
+/// Resolves the RespiBAN acquisition configuration on [wearable].
 RespibanSensorConfiguration? findRespibanConfiguration(Wearable wearable) {
   final configurations = wearable
       .requireCapability<SensorConfigurationManager>()

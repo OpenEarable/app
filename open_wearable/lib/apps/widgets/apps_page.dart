@@ -92,7 +92,7 @@ final List<AppInfo> _apps = [
   AppInfo(
     logoPath: "lib/apps/study_protocol/assets/logo.png",
     title: "DecoupEar",
-    description: "Guided DecoupEar protocol with OpenEarable + RESPIRABAN",
+    description: "Guided DecoupEar protocol with OpenEarable + RespiBAN",
     supportedDevices: _studyProtocolSupportedDevices,
     accentColor: _appAccentColor,
     widget: const StudyProtocolApp(),

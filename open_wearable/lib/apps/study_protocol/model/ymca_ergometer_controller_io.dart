@@ -17,7 +17,7 @@ import 'ymca_models.dart';
 /// Runs a fixed 1-minute measurement clock (the next timer starts in the
 /// background the moment one elapses, independent of data entry), tracks stage
 /// progression and computes the wattage to set for each new stage. Physiological
-/// recording (OpenEarable SD + RESPIRABAN CSV) runs continuously via a
+/// recording (OpenEarable SD + RespiBAN CSV) runs continuously via a
 /// [StudyDeviceRecorder]; the manual heart-rate/wattage measurements are logged
 /// to a separate CSV.
 class YmcaErgometerController extends ChangeNotifier {

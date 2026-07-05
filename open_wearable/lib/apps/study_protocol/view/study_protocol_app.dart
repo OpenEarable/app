@@ -7,7 +7,7 @@ import 'package:open_wearable/apps/study_protocol/view/study_recordings_list_pag
 ///
 /// The recordings list is always available so past recordings can be browsed,
 /// shared and deleted without any device connected. The device requirement (a
-/// stereo pair of OpenEarables plus a Plux RESPIRABAN) is enforced only when
+/// stereo pair of OpenEarables plus a Plux RespiBAN) is enforced only when
 /// the user starts a new recording.
 class StudyProtocolApp extends StatelessWidget {
   const StudyProtocolApp({super.key});
