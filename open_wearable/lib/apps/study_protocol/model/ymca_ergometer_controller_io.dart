@@ -160,7 +160,7 @@ class YmcaErgometerController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _recorder.start(
+      final firstRespibanSampleAt = await _recorder.start(
         deviceSet: deviceSet,
         directory: directory,
         probandId: session.probandId,
@@ -169,7 +169,7 @@ class YmcaErgometerController extends ChangeNotifier {
       );
       await _openLog();
 
-      _startTime = DateTime.now();
+      _startTime = firstRespibanSampleAt;
       _nextDueTime = _startTime!.add(measurementInterval);
       _ticker = Timer.periodic(const Duration(seconds: 1), _onTick);
       notifyListeners();

@@ -81,11 +81,11 @@ class TimedRecordingController extends ChangeNotifier {
     }
 
     _status = StudyRecordingStatus.recording;
-    _startTime = DateTime.now();
+    _startTime = null;
     notifyListeners();
 
     try {
-      await _recorder.start(
+      final firstRespibanSampleAt = await _recorder.start(
         deviceSet: deviceSet,
         directory: directory,
         probandId: probandId,
@@ -93,6 +93,7 @@ class TimedRecordingController extends ChangeNotifier {
         earablePrefixSuffix: earablePrefixSuffix,
       );
 
+      _startTime = firstRespibanSampleAt;
       _ticker = Timer.periodic(const Duration(seconds: 1), _onTick);
       notifyListeners();
     } catch (e, st) {

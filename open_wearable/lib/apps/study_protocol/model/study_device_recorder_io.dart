@@ -29,9 +29,13 @@ class StudyDeviceRecorder {
   /// Target IMU sample rate for OpenEarable SD-card recording.
   static const int imuFrequencyHz = 100;
 
+  /// Allows the start acknowledgement and one watchdog recovery before a
+  /// missing first RespiBAN sample is treated as a failed phase start.
+  static const Duration firstRespibanSampleTimeout = Duration(seconds: 10);
+
   _RespibanCsvWriter? _respibanWriter;
   final List<SensorConfiguration> _appliedEarableConfigs = [];
-  SensorConfiguration? _respibanConfiguration;
+  RespibanSensorConfiguration? _respibanConfiguration;
   String? _warning;
 
   /// Non-fatal warnings raised while configuring devices, if any.
@@ -42,7 +46,8 @@ class StudyDeviceRecorder {
   /// [respibanFileLabel] and [earablePrefixSuffix] scope the output names to the
   /// phase (for example `ergometer` / `ergo_`); pass empty strings to keep the
   /// unlabeled baseline naming.
-  Future<void> start({
+  /// Returns the app-side arrival time of the first RespiBAN sample.
+  Future<DateTime> start({
     required StudyDeviceSet deviceSet,
     required String directory,
     required String probandId,
@@ -55,7 +60,7 @@ class StudyDeviceRecorder {
       probandId,
       earablePrefixSuffix,
     );
-    await _startRespibanRecording(
+    final firstRespibanSampleAt = await _startRespibanRecording(
       deviceSet.respiban,
       directory,
       probandId,
@@ -63,6 +68,7 @@ class StudyDeviceRecorder {
     );
 
     await WakelockPlus.enable();
+    return firstRespibanSampleAt;
   }
 
   /// Stops recording and returns every device to its off state.
@@ -74,7 +80,7 @@ class StudyDeviceRecorder {
     if (respibanConfiguration != null) {
       final offValue = respibanConfiguration.offValue;
       if (offValue != null) {
-        respibanConfiguration.setConfiguration(offValue);
+        await respibanConfiguration.setMode(offValue.mode);
       }
     }
     _respibanConfiguration = null;
@@ -154,7 +160,7 @@ class StudyDeviceRecorder {
     _appliedEarableConfigs.add(configuration);
   }
 
-  Future<void> _startRespibanRecording(
+  Future<DateTime> _startRespibanRecording(
     Wearable respiban,
     String directory,
     String probandId,
@@ -171,38 +177,36 @@ class StudyDeviceRecorder {
         sensors.whereType<RespibanGyroscopeSensor>().firstOrNull;
 
     if (beltSensor == null) {
-      _addWarning('RespiBAN respiration belt sensor not found.');
-    } else {
-      final label = fileLabel.isEmpty ? '' : '_$fileLabel';
-      // Start the merged CSV writer before switching the device on so no
-      // samples are lost once data starts flowing. Belt, accelerometer and
-      // gyroscope share the same sample timestamps and are written into a
-      // single file.
-      final writer = _RespibanCsvWriter();
-      await writer.start(
-        filepath: '$directory/$token${label}_RespiBAN.csv',
-        beltStream:
-            SensorStreams.shared(wearable: respiban, sensor: beltSensor),
-        accelerometerStream: accelerometerSensor == null
-            ? null
-            : SensorStreams.shared(
-                wearable: respiban,
-                sensor: accelerometerSensor,
-              ),
-        gyroscopeStream: gyroscopeSensor == null
-            ? null
-            : SensorStreams.shared(
-                wearable: respiban,
-                sensor: gyroscopeSensor,
-              ),
-      );
-      _respibanWriter = writer;
+      throw StateError('RespiBAN respiration belt sensor not found.');
     }
+
+    final label = fileLabel.isEmpty ? '' : '_$fileLabel';
+    // Start the merged CSV writer before switching the device on so no
+    // samples are lost once data starts flowing. Belt, accelerometer and
+    // gyroscope share the same sample timestamps and are written into a
+    // single file.
+    final writer = _RespibanCsvWriter();
+    await writer.start(
+      filepath: '$directory/$token${label}_RespiBAN.csv',
+      beltStream: SensorStreams.shared(wearable: respiban, sensor: beltSensor),
+      accelerometerStream: accelerometerSensor == null
+          ? null
+          : SensorStreams.shared(
+              wearable: respiban,
+              sensor: accelerometerSensor,
+            ),
+      gyroscopeStream: gyroscopeSensor == null
+          ? null
+          : SensorStreams.shared(
+              wearable: respiban,
+              sensor: gyroscopeSensor,
+            ),
+    );
+    _respibanWriter = writer;
 
     final configuration = findRespibanConfiguration(respiban);
     if (configuration == null) {
-      _addWarning('RespiBAN acquisition configuration not found.');
-      return;
+      throw StateError('RespiBAN acquisition configuration not found.');
     }
     _respibanConfiguration = configuration;
 
@@ -213,10 +217,19 @@ class StudyDeviceRecorder {
         .firstWhere((value) => value != null, orElse: () => null);
 
     if (beltAndImuValue == null) {
-      _addWarning('RespiBAN Belt + IMU mode is unavailable.');
-      return;
+      throw StateError('RespiBAN Belt + IMU mode is unavailable.');
     }
-    configuration.setConfiguration(beltAndImuValue);
+    await configuration.setMode(beltAndImuValue.mode);
+    try {
+      return await writer.firstSampleArrival.timeout(
+        firstRespibanSampleTimeout,
+      );
+    } on TimeoutException {
+      throw TimeoutException(
+        'No RespiBAN sample arrived after the start acknowledgement.',
+        firstRespibanSampleTimeout,
+      );
+    }
   }
 
   void _addWarning(String message) {
@@ -234,6 +247,7 @@ class StudyDeviceRecorder {
 /// row contains the belt value alongside its matching IMU values.
 class _RespibanCsvWriter {
   IOSink? _sink;
+  final Completer<DateTime> _firstSampleArrival = Completer<DateTime>();
   final List<StreamSubscription<SensorValue>> _subscriptions = [];
   final SplayTreeMap<int, _RespibanRow> _pending =
       SplayTreeMap<int, _RespibanRow>();
@@ -241,6 +255,8 @@ class _RespibanCsvWriter {
   bool _expectsGyroscope = false;
 
   static const List<String> _emptyTriplet = ['', '', ''];
+
+  Future<DateTime> get firstSampleArrival => _firstSampleArrival.future;
 
   /// Opens [filepath] and starts buffering samples from the provided streams.
   Future<void> start({
@@ -272,6 +288,9 @@ class _RespibanCsvWriter {
       _pending.putIfAbsent(timestamp, _RespibanRow.new);
 
   void _onBelt(SensorValue value) {
+    if (!_firstSampleArrival.isCompleted) {
+      _firstSampleArrival.complete(DateTime.now());
+    }
     final strings = value.valueStrings;
     _rowFor(value.timestamp).belt = strings.isEmpty ? '' : strings.first;
     _flushIfComplete(value.timestamp);

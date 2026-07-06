@@ -9,13 +9,14 @@ class StudyDeviceRecorder {
 
   String? get warning => null;
 
-  Future<void> start({
+  Future<DateTime> start({
     required StudyDeviceSet deviceSet,
     required String directory,
     required String probandId,
     String respibanFileLabel = '',
     String earablePrefixSuffix = '',
-  }) async {}
+  }) async =>
+      DateTime.now();
 
   Future<void> stop() async {}
 }
