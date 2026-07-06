@@ -9,14 +9,15 @@ import 'package:open_wearable/apps/study_protocol/view/ymca_ergometer_page.dart'
 /// Ordered phases of one study session.
 ///
 /// Each phase is a separate recording; all recordings are written into the same
-/// session directory.
-enum StudyPhase { baseline, ergometer, recovery, treadmill }
+/// session directory. The recovery phase is part of the ergometer test (it runs
+/// automatically when the test ends, on the same recording), so it is not a
+/// separate phase here.
+enum StudyPhase { baseline, ergometer, treadmill }
 
 /// The order in which phases run.
 const List<StudyPhase> studyPhaseOrder = [
   StudyPhase.baseline,
   StudyPhase.ergometer,
-  StudyPhase.recovery,
   StudyPhase.treadmill,
 ];
 
@@ -50,18 +51,9 @@ const Map<StudyPhase, TimedPhaseConfig> studyTimedPhaseConfigs = {
     respibanFileLabel: 'baseline',
     earablePrefixSuffix: 'base_',
   ),
-  StudyPhase.recovery: TimedPhaseConfig(
-    title: 'Recovery',
-    stepLabel: 'Step 3 · Recovery',
-    instruction: 'Recover and sit calmly for 15 minutes. '
-        'The recording stops automatically when the timer ends.',
-    duration: Duration(minutes: 15),
-    respibanFileLabel: 'recovery',
-    earablePrefixSuffix: 'rec_',
-  ),
   StudyPhase.treadmill: TimedPhaseConfig(
     title: 'Treadmill',
-    stepLabel: 'Step 4 · Treadmill',
+    stepLabel: 'Step 3 · Treadmill',
     instruction: 'Run on the treadmill for 5 minutes. '
         'The recording stops automatically when the timer ends.',
     duration: Duration(minutes: 5),

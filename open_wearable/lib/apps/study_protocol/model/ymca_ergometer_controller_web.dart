@@ -8,6 +8,7 @@ import 'ymca_models.dart';
 /// are unavailable on web. Exists only so the UI compiles for the web target.
 class YmcaErgometerController extends ChangeNotifier {
   static const Duration measurementInterval = Duration(minutes: 1);
+  static const Duration recoveryDuration = ymcaRecoveryDuration;
 
   final StudySession session;
   final StudyDeviceSet deviceSet;
@@ -32,6 +33,9 @@ class YmcaErgometerController extends ChangeNotifier {
   Duration get timeToNextMeasurement => measurementInterval;
   String? get pendingStageMessage => null;
   bool get endSuggested => false;
+  Duration get recoveryRemaining => recoveryDuration;
+  double get recoveryProgress => 0;
+  bool get isRecoveryFinished => false;
   String? get warning => null;
 
   Future<void> start() async {
@@ -52,6 +56,8 @@ class YmcaErgometerController extends ChangeNotifier {
   void dismissEndSuggestion() {}
 
   Future<void> end({required int endHeartRate}) async {}
+
+  Future<void> finishRecovery() async {}
 
   Future<void> skip() async {}
 }

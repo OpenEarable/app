@@ -20,9 +20,18 @@ import 'ymca_models.dart';
 /// recording (OpenEarable SD + RespiBAN CSV) runs continuously via a
 /// [StudyDeviceRecorder]; the manual heart-rate/wattage measurements are logged
 /// to a separate CSV.
+///
+/// Ending the test does not stop recording: it transitions into a fixed-length
+/// recovery phase (see [ymcaRecoveryDuration]) that keeps every device
+/// recording into the same files. Only the start of the recovery is labelled in
+/// the log. When the recovery countdown elapses (or is finished/skipped by the
+/// experimenter) recording is stopped and the test reaches [ErgoStatus.ended].
 class YmcaErgometerController extends ChangeNotifier {
   /// Interval between measurement prompts.
   static const Duration measurementInterval = Duration(minutes: 1);
+
+  /// Length of the recovery phase that runs after the test ends.
+  static const Duration recoveryDuration = ymcaRecoveryDuration;
 
   final StudySession session;
   final StudyDeviceSet deviceSet;
@@ -40,6 +49,10 @@ class YmcaErgometerController extends ChangeNotifier {
   DateTime? _nextDueTime;
   int _measurementCounter = 0;
 
+  Timer? _recoveryTicker;
+  DateTime? _recoveryStartTime;
+  bool _recoveryFinished = false;
+
   ErgoStatus _status = ErgoStatus.idle;
   int _currentStage = 0;
   int? _currentTargetWatt;
@@ -47,6 +60,7 @@ class YmcaErgometerController extends ChangeNotifier {
   bool _firstStabilizationDone = false;
   String? _pendingStageMessage;
   bool _endSuggested = false;
+  bool _recorderStopped = false;
   bool _disposed = false;
 
   YmcaErgometerController({
@@ -108,6 +122,31 @@ class YmcaErgometerController extends ChangeNotifier {
 
   /// Whether the last entered heart rate reached the submaximal target.
   bool get endSuggested => _endSuggested;
+
+  /// Time remaining in the recovery countdown.
+  Duration get recoveryRemaining {
+    final start = _recoveryStartTime;
+    if (start == null || _status != ErgoStatus.recovering) {
+      return recoveryDuration;
+    }
+    final left = recoveryDuration - DateTime.now().difference(start);
+    return left.isNegative ? Duration.zero : left;
+  }
+
+  /// Fraction of the recovery phase that has elapsed, in the range `[0, 1]`.
+  double get recoveryProgress {
+    final total = recoveryDuration.inMilliseconds;
+    if (total == 0) {
+      return 0;
+    }
+    final done =
+        recoveryDuration.inMilliseconds - recoveryRemaining.inMilliseconds;
+    return (done / total).clamp(0.0, 1.0);
+  }
+
+  /// Whether the recovery countdown has elapsed and recording has stopped, so
+  /// the experimenter can continue to the next phase.
+  bool get isRecoveryFinished => _recoveryFinished;
 
   /// Non-fatal recording warning, if any.
   String? get warning => _recorder.warning;
@@ -302,18 +341,80 @@ class YmcaErgometerController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Ends the test, records the [endHeartRate] and stops recording.
+  /// Ends the measurement part of the test, records the [endHeartRate] and
+  /// transitions into the recovery phase.
+  ///
+  /// Recording keeps running on all devices; only the start of the recovery is
+  /// labelled. The recovery countdown starts immediately.
   Future<void> end({required int endHeartRate}) async {
-    if (_status == ErgoStatus.ended) {
+    if (_status != ErgoStatus.running) {
       return;
     }
     _writeLog('end,,$_currentStage,,,$endHeartRate');
+
+    // Stop the measurement clock but keep recording: the recovery phase runs on
+    // the same devices and files, only its start is labelled.
+    _ticker?.cancel();
+    _ticker = null;
+    _dueMeasurements.clear();
+    _undoStack.clear();
+    _endSuggested = false;
+    _pendingStageMessage = null;
+
+    _status = ErgoStatus.recovering;
+    _recoveryStartTime = DateTime.now();
+    _writeLog('recovery_start,${elapsed.inMinutes},$_currentStage,,,');
+    _recoveryTicker =
+        Timer.periodic(const Duration(seconds: 1), _onRecoveryTick);
+    notifyListeners();
+  }
+
+  void _onRecoveryTick(Timer timer) {
+    if (_disposed || _status != ErgoStatus.recovering) {
+      return;
+    }
+    if (recoveryRemaining <= Duration.zero) {
+      unawaited(_completeRecovery());
+      return;
+    }
+    notifyListeners();
+  }
+
+  /// Called when the recovery countdown elapses: stops recording at the clean
+  /// 15-minute boundary but keeps the [ErgoStatus.recovering] state so the
+  /// experimenter still has to confirm before moving on.
+  Future<void> _completeRecovery() async {
+    if (_recoveryFinished) {
+      return;
+    }
+    _recoveryFinished = true;
+    _recoveryTicker?.cancel();
+    _recoveryTicker = null;
+    _writeLog('recovery_end,${elapsed.inMinutes},$_currentStage,,,');
+    await _stopRecorderOnce();
+    notifyListeners();
+  }
+
+  /// Finishes the recovery phase (countdown elapsed or skipped early), stops
+  /// recording if it is still running and ends the test.
+  Future<void> finishRecovery() async {
+    if (_status != ErgoStatus.recovering) {
+      return;
+    }
+    _recoveryTicker?.cancel();
+    _recoveryTicker = null;
+    if (!_recoveryFinished) {
+      _recoveryFinished = true;
+      _writeLog('recovery_end,${elapsed.inMinutes},$_currentStage,,,');
+    }
     await _teardown();
     _status = ErgoStatus.ended;
     notifyListeners();
   }
 
   /// Skips the test without an end heart rate and stops recording.
+  ///
+  /// Works both while the measurements are running and during recovery.
   Future<void> skip() async {
     if (_status == ErgoStatus.ended) {
       return;
@@ -344,8 +445,19 @@ class YmcaErgometerController extends ChangeNotifier {
   Future<void> _teardown() async {
     _ticker?.cancel();
     _ticker = null;
+    _recoveryTicker?.cancel();
+    _recoveryTicker = null;
     _dueMeasurements.clear();
     _undoStack.clear();
+    await _stopRecorderOnce();
+  }
+
+  /// Closes the log file and stops all device recording, at most once.
+  Future<void> _stopRecorderOnce() async {
+    if (_recorderStopped) {
+      return;
+    }
+    _recorderStopped = true;
 
     await _logSink?.flush();
     await _logSink?.close();
@@ -357,10 +469,11 @@ class YmcaErgometerController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
-    if (_status == ErgoStatus.running) {
+    if (_status == ErgoStatus.running || _status == ErgoStatus.recovering) {
       unawaited(_teardown());
     } else {
       _ticker?.cancel();
+      _recoveryTicker?.cancel();
     }
     super.dispose();
   }

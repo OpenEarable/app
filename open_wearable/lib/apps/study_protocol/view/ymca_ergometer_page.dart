@@ -9,6 +9,7 @@ import 'package:open_wearable/apps/study_protocol/model/study_session.dart';
 import 'package:open_wearable/apps/study_protocol/model/ymca_ergometer_controller.dart';
 import 'package:open_wearable/apps/study_protocol/model/ymca_models.dart';
 import 'package:open_wearable/apps/study_protocol/view/study_flow.dart';
+import 'package:open_wearable/apps/study_protocol/widgets/timer_ring.dart';
 
 /// Guided modified YMCA ergometer test.
 ///
@@ -262,13 +263,12 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
     }
 
     // The heart rate that reached the submaximal target was just entered, so
-    // reuse it as the end heart rate instead of asking for it again.
+    // reuse it as the end heart rate instead of asking for it again. Ending the
+    // test transitions into recovery (recording keeps running); the page shows
+    // the recovery countdown from here.
     final measurements = _controller.measurements;
     if (measurements.isNotEmpty) {
       await _controller.end(endHeartRate: measurements.last.heartRate);
-      if (mounted) {
-        _advance();
-      }
     } else {
       await _endTest(requireConfirmation: false);
     }
@@ -307,7 +307,33 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
       return;
     }
 
+    // Ending transitions into the recovery phase: recording keeps running and
+    // the page shows the recovery countdown. Advancing happens only once the
+    // recovery is finished.
     await _controller.end(endHeartRate: endHeartRate);
+  }
+
+  /// Finishes the recovery phase (countdown complete) and continues.
+  Future<void> _finishRecovery() async {
+    await _controller.finishRecovery();
+    if (mounted) {
+      _advance();
+    }
+  }
+
+  /// Ends the recovery phase early and continues to the next phase.
+  Future<void> _skipRecovery() async {
+    final confirmed = await _confirm(
+      title: 'Skip recovery?',
+      message: 'This ends the recovery recording early and continues to the '
+          'next phase.',
+      confirmLabel: 'Skip',
+      destructive: true,
+    );
+    if (!confirmed) {
+      return;
+    }
+    await _controller.finishRecovery();
     if (mounted) {
       _advance();
     }
@@ -494,11 +520,18 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
     return ListenableBuilder(
       listenable: _controller,
       builder: (context, _) {
-        final isRunning = _controller.status == ErgoStatus.running;
+        final status = _controller.status;
+        final isRunning = status == ErgoStatus.running;
+        final isRecovering = status == ErgoStatus.recovering;
         return PopScope(
-          canPop: !isRunning,
+          canPop: !isRunning && !isRecovering,
           onPopInvokedWithResult: (didPop, _) {
-            if (!didPop) {
+            if (didPop) {
+              return;
+            }
+            if (isRecovering) {
+              _skipRecovery();
+            } else {
               _endTest(requireConfirmation: true);
             }
           },
@@ -510,21 +543,25 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
               resizeToAvoidBottomInset: false,
             ),
             appBar: PlatformAppBar(
-              title: PlatformText('Ergometer Test'),
+              title: PlatformText(isRecovering ? 'Recovery' : 'Ergometer Test'),
               trailingActions: [
-                if (_controller.canUndo)
+                // During recovery the controls live in the body; the test
+                // navigation actions apply only before/while measuring.
+                if (!isRecovering) ...[
+                  if (_controller.canUndo)
+                    PlatformTextButton(
+                      onPressed: _undoLast,
+                      child: PlatformText('Undo'),
+                    ),
                   PlatformTextButton(
-                    onPressed: _undoLast,
-                    child: PlatformText('Undo'),
+                    onPressed: _previousPhase,
+                    child: PlatformText('Prev'),
                   ),
-                PlatformTextButton(
-                  onPressed: _previousPhase,
-                  child: PlatformText('Prev'),
-                ),
-                PlatformTextButton(
-                  onPressed: _skipTest,
-                  child: PlatformText('Skip'),
-                ),
+                  PlatformTextButton(
+                    onPressed: _skipTest,
+                    child: PlatformText('Skip'),
+                  ),
+                ],
               ],
             ),
             body: SafeArea(child: _buildBody(context)),
@@ -589,10 +626,96 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
     if (_starting) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (_controller.status == ErgoStatus.idle) {
-      return _buildStartScreen(context);
+    switch (_controller.status) {
+      case ErgoStatus.idle:
+        return _buildStartScreen(context);
+      case ErgoStatus.recovering:
+        return _buildRecoveryView(context);
+      case ErgoStatus.running:
+      case ErgoStatus.ended:
+        return _buildRunningBody(context);
     }
+  }
 
+  Widget _buildRecoveryView(BuildContext context) {
+    final theme = Theme.of(context);
+    final finished = _controller.isRecoveryFinished;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: IntrinsicHeight(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    Text(
+                      'Recovery',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      finished
+                          ? 'Recovery complete. Recording has stopped — continue '
+                              'to the next phase.'
+                          : 'Recover and sit calmly. Recording continues on all '
+                              'devices until the timer ends.',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          TimerRing(
+                            progress: _controller.recoveryProgress,
+                            label: _formatDuration(
+                              _controller.recoveryRemaining,
+                            ),
+                            caption: finished ? 'Complete' : 'Recovery',
+                          ),
+                          if (_controller.warning != null) ...[
+                            const SizedBox(height: 20),
+                            _WarningBanner(message: _controller.warning!),
+                          ],
+                        ],
+                      ),
+                    ),
+                    SizedBox(
+                      width: double.infinity,
+                      child: PlatformElevatedButton(
+                        onPressed: finished ? _finishRecovery : _skipRecovery,
+                        material: finished
+                            ? null
+                            : (_, __) => MaterialElevatedButtonData(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: theme.colorScheme.error,
+                                    foregroundColor: theme.colorScheme.onError,
+                                  ),
+                                ),
+                        child: PlatformText(
+                          finished ? 'Continue' : 'Skip recovery',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRunningBody(BuildContext context) {
     final measurements = _controller.measurements;
     return Column(
       children: [

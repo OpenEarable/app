@@ -8,7 +8,7 @@ import 'study_device_recorder.dart';
 import 'study_devices.dart';
 import 'study_recording_status.dart';
 
-/// Controls one fixed-duration recording phase (baseline, recovery, treadmill).
+/// Controls one fixed-duration recording phase (baseline, treadmill).
 ///
 /// Delegates the physiological recording (OpenEarable SD + RespiBAN CSV) to a
 /// [StudyDeviceRecorder] and adds the countdown that stops recording

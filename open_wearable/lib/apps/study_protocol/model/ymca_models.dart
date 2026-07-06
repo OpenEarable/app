@@ -6,7 +6,13 @@ enum ErgoStatus {
   /// The test is running.
   running,
 
-  /// The test has been ended.
+  /// The test has ended and the recovery phase is running.
+  ///
+  /// Recording continues on all devices; only the start of the recovery is
+  /// labelled. When the recovery countdown elapses the test moves to [ended].
+  recovering,
+
+  /// The test has ended.
   ended,
 }
 
@@ -49,6 +55,12 @@ const int ymcaSteadyStateBpmTolerance = 5;
 /// Wattage increment (in watts) applied for every stage after the first
 /// stabilized workload.
 const int ymcaStageIncrementWatt = 30;
+
+/// Duration of the recovery phase that runs directly after the ergometer test.
+///
+/// Recording keeps running on all devices during recovery; only the start of
+/// the recovery is labelled in the ergometer log.
+const Duration ymcaRecoveryDuration = Duration(minutes: 15);
 
 /// Computes the first workload wattage from the heart rate at the first
 /// stabilized (warm-up) level of the modified YMCA test.

@@ -8,7 +8,7 @@ import 'package:open_wearable/apps/study_protocol/model/timed_recording_controll
 import 'package:open_wearable/apps/study_protocol/view/study_flow.dart';
 import 'package:open_wearable/apps/study_protocol/widgets/timer_ring.dart';
 
-/// Generic fixed-duration recording phase (baseline, recovery, treadmill).
+/// Generic fixed-duration recording phase (baseline, treadmill).
 ///
 /// Records continuously on the OpenEarable pair and RespiBAN for the phase
 /// [config] duration, shows a countdown ring, and continues to the next phase
