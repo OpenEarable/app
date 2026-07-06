@@ -5,6 +5,7 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/apps/posture_tracker/model/attitude.dart';
 import 'package:open_wearable/apps/posture_tracker/model/attitude_tracker.dart';
 import 'package:open_wearable/apps/posture_tracker/model/ewma.dart';
+import 'package:open_wearable/apps/models/sensor_matching.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 
 class EarableAttitudeTracker extends AttitudeTracker {
@@ -37,9 +38,12 @@ class EarableAttitudeTracker extends AttitudeTracker {
       return;
     }
 
-    final Sensor accelSensor = _sensorManager.sensors.firstWhere(
-      (s) => s.sensorName.toLowerCase() == "accelerometer".toLowerCase(),
-    );
+    final accelSensor = findAccelerometerSensor(_sensorManager.sensors);
+    if (accelSensor == null) {
+      throw StateError(
+        'Posture Tracker requires an accelerometer sensor on the selected wearable.',
+      );
+    }
 
     final Set<SensorConfiguration> configurations = {};
     configurations.addAll(accelSensor.relatedConfigurations);
