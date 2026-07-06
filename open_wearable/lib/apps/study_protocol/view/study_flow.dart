@@ -3,6 +3,7 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 
 import 'package:open_wearable/apps/study_protocol/model/study_devices.dart';
 import 'package:open_wearable/apps/study_protocol/model/study_session.dart';
+import 'package:open_wearable/apps/study_protocol/view/study_seal_check_page.dart';
 import 'package:open_wearable/apps/study_protocol/view/timed_phase_page.dart';
 import 'package:open_wearable/apps/study_protocol/view/ymca_ergometer_page.dart';
 
@@ -20,6 +21,14 @@ const List<StudyPhase> studyPhaseOrder = [
   StudyPhase.ergometer,
   StudyPhase.treadmill,
 ];
+
+extension StudyPhaseInfo on StudyPhase {
+  String get title => switch (this) {
+        StudyPhase.baseline => 'Baseline',
+        StudyPhase.ergometer => 'Ergometer',
+        StudyPhase.treadmill => 'Treadmill',
+      };
+}
 
 /// Static configuration for a fixed-duration recording phase.
 class TimedPhaseConfig {
@@ -85,6 +94,79 @@ Widget buildStudyPhasePage({
   );
 }
 
+/// Builds the mandatory seal check that precedes [phase].
+Widget buildStudyPhaseEntryPage({
+  required StudyPhase phase,
+  required StudySession session,
+  required StudyDeviceSet deviceSet,
+  required String directory,
+}) {
+  return Builder(
+    builder: (context) => StudySealCheckPage(
+      phaseName: phase.name,
+      phaseTitle: phase.title,
+      position: StudySealCheckPosition.start,
+      session: session,
+      deviceSet: deviceSet,
+      directory: directory,
+      actionLabel: 'Start ${phase.title.toLowerCase()}',
+      onContinue: () {
+        Navigator.of(context).pushReplacement(
+          platformPageRoute(
+            context: context,
+            builder: (_) => buildStudyPhasePage(
+              phase: phase,
+              session: session,
+              deviceSet: deviceSet,
+              directory: directory,
+            ),
+          ),
+        );
+      },
+    ),
+  );
+}
+
+Widget _buildStudyPhaseExitPage({
+  required StudyPhase phase,
+  required StudySession session,
+  required StudyDeviceSet deviceSet,
+  required String directory,
+}) {
+  final index = studyPhaseOrder.indexOf(phase);
+  final hasNextPhase = index >= 0 && index + 1 < studyPhaseOrder.length;
+
+  return Builder(
+    builder: (context) => StudySealCheckPage(
+      phaseName: phase.name,
+      phaseTitle: phase.title,
+      position: StudySealCheckPosition.end,
+      session: session,
+      deviceSet: deviceSet,
+      directory: directory,
+      actionLabel: hasNextPhase ? 'Continue' : 'Finish protocol',
+      onContinue: () {
+        if (!hasNextPhase) {
+          Navigator.of(context).pop();
+          return;
+        }
+        final next = studyPhaseOrder[index + 1];
+        Navigator.of(context).pushReplacement(
+          platformPageRoute(
+            context: context,
+            builder: (_) => buildStudyPhaseEntryPage(
+              phase: next,
+              session: session,
+              deviceSet: deviceSet,
+              directory: directory,
+            ),
+          ),
+        );
+      },
+    ),
+  );
+}
+
 /// Advances from [current] to the next phase, or returns to the recordings list
 /// when [current] is the final phase.
 void advanceStudyPhase({
@@ -94,18 +176,12 @@ void advanceStudyPhase({
   required StudyDeviceSet deviceSet,
   required String directory,
 }) {
-  final index = studyPhaseOrder.indexOf(current);
-  if (index < 0 || index + 1 >= studyPhaseOrder.length) {
-    Navigator.of(context).pop();
-    return;
-  }
-  final next = studyPhaseOrder[index + 1];
-  // Replace so back navigation does not return to a finished phase.
+  // Every completed or skipped phase passes through its mandatory end check.
   Navigator.of(context).pushReplacement(
     platformPageRoute(
       context: context,
-      builder: (_) => buildStudyPhasePage(
-        phase: next,
+      builder: (_) => _buildStudyPhaseExitPage(
+        phase: current,
         session: session,
         deviceSet: deviceSet,
         directory: directory,
@@ -132,7 +208,7 @@ void goToPreviousStudyPhase({
   Navigator.of(context).pushReplacement(
     platformPageRoute(
       context: context,
-      builder: (_) => buildStudyPhasePage(
+      builder: (_) => buildStudyPhaseEntryPage(
         phase: previous,
         session: session,
         deviceSet: deviceSet,

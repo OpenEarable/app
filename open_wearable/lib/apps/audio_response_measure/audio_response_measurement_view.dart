@@ -100,8 +100,13 @@ class AudioResponseMeasurementView extends StatefulWidget {
     this.right,
     this.parameters = const {},
     this.title = 'Audio Response',
-  }) : assert(left != null || right != null,
-            'At least one of left or right must be provided',);
+    this.saveResult,
+    this.onResultAction,
+    this.resultActionLabel = 'Continue',
+  }) : assert(
+          left != null || right != null,
+          'At least one of left or right must be provided',
+        );
 
   final AudioResponseManager? left;
   final AudioResponseManager? right;
@@ -110,6 +115,15 @@ class AudioResponseMeasurementView extends StatefulWidget {
   final Map<String, dynamic> parameters;
 
   final String title;
+
+  /// Optional automatic persistence used by guided workflows.
+  ///
+  /// When supplied, the manual "Save JSON" action is replaced by
+  /// [resultActionLabel]. That action remains disabled until this callback has
+  /// stored the most recent measurement successfully.
+  final Future<void> Function(Map<String, dynamic> result)? saveResult;
+  final VoidCallback? onResultAction;
+  final String resultActionLabel;
 
   @override
   State<AudioResponseMeasurementView> createState() =>
@@ -124,9 +138,17 @@ class _AudioResponseMeasurementViewState
   Map<String, dynamic>? _leftResult;
   Map<String, dynamic>? _rightResult;
   bool _showRawValues = false;
+  bool _isSavingResult = false;
+  bool _resultSaved = false;
+  Object? _saveError;
 
   bool get _hasBothSides => widget.left != null && widget.right != null;
   bool get _hasAnyResult => _leftResult != null || _rightResult != null;
+
+  Map<String, dynamic> get _combinedResult => {
+        if (_leftResult != null) 'left': _leftResult!,
+        if (_rightResult != null) 'right': _rightResult!,
+      };
 
   @override
   void initState() {
@@ -140,7 +162,9 @@ class _AudioResponseMeasurementViewState
     return '${dt.year}${_two(dt.month)}${_two(dt.day)}_${_two(dt.hour)}${_two(dt.minute)}${_two(dt.second)}';
   }
 
-  Future<String?> _saveResultToDownloadsAsJson(Map<String, dynamic> result) async {
+  Future<String?> _saveResultToDownloadsAsJson(
+    Map<String, dynamic> result,
+  ) async {
     if (kIsWeb) return null;
 
     final now = DateTime.now();
@@ -151,8 +175,9 @@ class _AudioResponseMeasurementViewState
       if (dirPath == null || dirPath.isEmpty) return null;
       final String path = p.join(dirPath, fileName);
       await File(path).writeAsString(
-          const JsonEncoder.withIndent('  ').convert(result),
-          flush: true,);
+        const JsonEncoder.withIndent('  ').convert(result),
+        flush: true,
+      );
       return path;
     }
 
@@ -165,8 +190,9 @@ class _AudioResponseMeasurementViewState
     final dir = downloads ?? await getApplicationDocumentsDirectory();
     final String path = p.join(dir.path, fileName);
     await File(path).writeAsString(
-        const JsonEncoder.withIndent('  ').convert(result),
-        flush: true,);
+      const JsonEncoder.withIndent('  ').convert(result),
+      flush: true,
+    );
     return path;
   }
 
@@ -177,20 +203,27 @@ class _AudioResponseMeasurementViewState
       _stack = null;
       _leftResult = null;
       _rightResult = null;
+      _isSavingResult = false;
+      _resultSaved = false;
+      _saveError = null;
     });
 
     try {
       // Run both sides in parallel
       final futures = <Future<(bool isLeft, Map<String, dynamic> res)>>[];
       if (widget.left != null) {
-        futures.add(widget.left!
-            .measureAudioResponse(widget.parameters)
-            .then((r) => (true, r)),);
+        futures.add(
+          widget.left!
+              .measureAudioResponse(widget.parameters)
+              .then((r) => (true, r)),
+        );
       }
       if (widget.right != null) {
-        futures.add(widget.right!
-            .measureAudioResponse(widget.parameters)
-            .then((r) => (false, r)),);
+        futures.add(
+          widget.right!
+              .measureAudioResponse(widget.parameters)
+              .then((r) => (false, r)),
+        );
       }
 
       final results = await Future.wait(futures);
@@ -210,7 +243,27 @@ class _AudioResponseMeasurementViewState
         _leftResult = leftRes;
         _rightResult = rightRes;
         _isMeasuring = false;
+        _isSavingResult = widget.saveResult != null;
       });
+
+      final saveResult = widget.saveResult;
+      if (saveResult != null) {
+        try {
+          await saveResult(_combinedResult);
+          if (!mounted) return;
+          setState(() {
+            _isSavingResult = false;
+            _resultSaved = true;
+          });
+        } catch (e, st) {
+          if (!mounted) return;
+          setState(() {
+            _saveError = e;
+            _stack = st;
+            _isSavingResult = false;
+          });
+        }
+      }
     } catch (e, st) {
       if (!mounted) return;
       setState(() {
@@ -230,7 +283,8 @@ class _AudioResponseMeasurementViewState
         title: Text(widget.title),
         trailingActions: [
           PlatformIconButton(
-            onPressed: _isMeasuring ? null : _startMeasurement,
+            onPressed:
+                _isMeasuring || _isSavingResult ? null : _startMeasurement,
             icon: const Icon(Icons.refresh),
           ),
         ],
@@ -245,41 +299,49 @@ class _AudioResponseMeasurementViewState
                 children: [
                   Expanded(
                     child: FilledButton.icon(
-                      onPressed: _isMeasuring ? null : _startMeasurement,
+                      onPressed: _isMeasuring || _isSavingResult
+                          ? null
+                          : _startMeasurement,
                       icon: const Icon(Icons.play_arrow),
                       label: Text(_isMeasuring ? 'Measuring…' : 'Measure'),
                     ),
                   ),
                   const SizedBox(width: 12),
-                  OutlinedButton.icon(
-                    onPressed: (_isMeasuring || !_hasAnyResult)
-                        ? null
-                        : () async {
-                            final combined = {
-                              if (_leftResult != null) 'left': _leftResult!,
-                              if (_rightResult != null) 'right': _rightResult!,
-                            };
-                            final path =
-                                await _saveResultToDownloadsAsJson(combined);
-                            final msg = path == null
-                                ? 'Not saved — either not supported or you canceled.'
-                                : 'Saved to: $path';
-                            if (!context.mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(msg)),
-                            );
-                          },
-                    icon: const Icon(Icons.download),
-                    label: const Text('Save JSON'),
-                  ),
+                  if (widget.onResultAction != null)
+                    OutlinedButton.icon(
+                      onPressed: _resultSaved && !_isSavingResult
+                          ? widget.onResultAction
+                          : null,
+                      icon: const Icon(Icons.arrow_forward),
+                      label: Text(widget.resultActionLabel),
+                    )
+                  else
+                    OutlinedButton.icon(
+                      onPressed: (_isMeasuring || !_hasAnyResult)
+                          ? null
+                          : () async {
+                              final path = await _saveResultToDownloadsAsJson(
+                                _combinedResult,
+                              );
+                              final msg = path == null
+                                  ? 'Not saved — either not supported or you canceled.'
+                                  : 'Saved to: $path';
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(msg)),
+                              );
+                            },
+                      icon: const Icon(Icons.download),
+                      label: const Text('Save JSON'),
+                    ),
                 ],
               ),
             ),
             const SizedBox(height: 16),
             Expanded(
-              child: _isMeasuring
+              child: _isMeasuring || _isSavingResult
                   ? _buildLoading(theme)
-                  : (_error != null)
+                  : (_error != null || _saveError != null)
                       ? _buildError(theme)
                       : _hasAnyResult
                           ? _buildResult(theme)
@@ -304,9 +366,11 @@ class _AudioResponseMeasurementViewState
           const CircularProgressIndicator(),
           const SizedBox(height: 16),
           Text(
-            _hasBothSides
-                ? 'Measuring left + right…'
-                : 'Measuring frequency response…',
+            _isSavingResult
+                ? 'Saving result…'
+                : _hasBothSides
+                    ? 'Measuring left + right…'
+                    : 'Measuring frequency response…',
             style: theme.textTheme.titleMedium,
           ),
         ],
@@ -329,7 +393,7 @@ class _AudioResponseMeasurementViewState
             ),
             const SizedBox(height: 8),
             Text(
-              _error.toString(),
+              (_saveError ?? _error).toString(),
               style: theme.textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
@@ -345,7 +409,8 @@ class _AudioResponseMeasurementViewState
                 padding: const EdgeInsets.only(top: 16),
                 child: Text(
                   _stack.toString(),
-                  style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: theme.hintColor),
                 ),
               ),
           ],
@@ -360,19 +425,26 @@ class _AudioResponseMeasurementViewState
       final pointsDyn = (result['points'] as List?) ?? const [];
       final pts = pointsDyn
           .whereType<Map>()
-          .map((m) => {
-                'frequency_hz': (m['frequency_hz'] as num?)?.toDouble(),
-                'frequency_raw_q12_4': (m['frequency_raw_q12_4'] as num?)?.toInt(),
-                'magnitude': (m['magnitude'] as num?)?.toDouble(),
-              },)
-          .where((m) =>
-              m['frequency_hz'] != null &&
-              m['magnitude'] != null &&
-              (m['frequency_hz'] as double) > 0.0,)
+          .map(
+            (m) => {
+              'frequency_hz': (m['frequency_hz'] as num?)?.toDouble(),
+              'frequency_raw_q12_4':
+                  (m['frequency_raw_q12_4'] as num?)?.toInt(),
+              'magnitude': (m['magnitude'] as num?)?.toDouble(),
+            },
+          )
+          .where(
+            (m) =>
+                m['frequency_hz'] != null &&
+                m['magnitude'] != null &&
+                (m['frequency_hz'] as double) > 0.0,
+          )
           .cast<Map<String, dynamic>>()
           .toList();
-      pts.sort((a, b) =>
-          (a['frequency_hz'] as double).compareTo(b['frequency_hz'] as double),);
+      pts.sort(
+        (a, b) => (a['frequency_hz'] as double)
+            .compareTo(b['frequency_hz'] as double),
+      );
       return pts;
     }
 
@@ -384,85 +456,102 @@ class _AudioResponseMeasurementViewState
       ...leftPoints.map((p) => p['magnitude'] as double),
       ...rightPoints.map((p) => p['magnitude'] as double),
     ];
-    final normMag =
-        allMags.isEmpty ? 1.0 : allMags.reduce((a, b) => a + b) / allMags.length;
+    final normMag = allMags.isEmpty
+        ? 1.0
+        : allMags.reduce((a, b) => a + b) / allMags.length;
 
-    final leftQuality = leftPoints.isNotEmpty ? _computeSealQuality(leftPoints) : null;
-    final rightQuality = rightPoints.isNotEmpty ? _computeSealQuality(rightPoints) : null;
+    final leftQuality =
+        leftPoints.isNotEmpty ? _computeSealQuality(leftPoints) : null;
+    final rightQuality =
+        rightPoints.isNotEmpty ? _computeSealQuality(rightPoints) : null;
 
     return SingleChildScrollView(
       child: Column(
         children: [
-        // Summary cards
-        Row(
-          children: [
-            if (leftQuality != null) ...[
-              Expanded(
-                child: Card(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 14,),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text('Left Quality',
-                            style: theme.textTheme.labelMedium,),
-                        const SizedBox(height: 4),
-                        Text('${leftQuality.round()} / 100',
-                            style: theme.textTheme.titleLarge,),
-                      ],
+          // Summary cards
+          Row(
+            children: [
+              if (leftQuality != null) ...[
+                Expanded(
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Left Quality',
+                            style: theme.textTheme.labelMedium,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${leftQuality.round()} / 100',
+                            style: theme.textTheme.titleLarge,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-              if (rightQuality != null) const SizedBox(width: 8),
+                if (rightQuality != null) const SizedBox(width: 8),
+              ],
+              if (rightQuality != null)
+                Expanded(
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Right Quality',
+                            style: theme.textTheme.labelMedium,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${rightQuality.round()} / 100',
+                            style: theme.textTheme.titleLarge,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
             ],
-            if (rightQuality != null)
-              Expanded(
-                child: Card(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 14,),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text('Right Quality',
-                            style: theme.textTheme.labelMedium,),
-                        const SizedBox(height: 4),
-                        Text('${rightQuality.round()} / 100',
-                            style: theme.textTheme.titleLarge,),
-                      ],
-                    ),
-                  ),
-                ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 320,
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(8, 16, 16, 8),
+                child: _buildChart(theme, leftPoints, rightPoints, normMag),
               ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 320,
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 16, 16, 8),
-              child: _buildChart(theme, leftPoints, rightPoints, normMag),
             ),
           ),
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: () => setState(() => _showRawValues = !_showRawValues),
-            icon: Icon(_showRawValues ? Icons.expand_less : Icons.expand_more),
-            label: Text(
-                _showRawValues ? 'Hide raw values' : 'View raw values',),
-          ),
-        ),
-        if (_showRawValues) ...[
           const SizedBox(height: 8),
-          _buildRawValuesTabs(theme, leftPoints, rightPoints, normMag),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => setState(() => _showRawValues = !_showRawValues),
+              icon:
+                  Icon(_showRawValues ? Icons.expand_less : Icons.expand_more),
+              label: Text(
+                _showRawValues ? 'Hide raw values' : 'View raw values',
+              ),
+            ),
+          ),
+          if (_showRawValues) ...[
+            const SizedBox(height: 8),
+            _buildRawValuesTabs(theme, leftPoints, rightPoints, normMag),
+          ],
         ],
-      ],
       ),
     );
   }
@@ -479,8 +568,7 @@ class _AudioResponseMeasurementViewState
     final targetColor = colorScheme.tertiary;
 
     // Convert to dB: 20 * log10(mag / normMag)
-    double toDb(double mag) =>
-        20.0 * math.log(mag / normMag) / math.ln10;
+    double toDb(double mag) => 20.0 * math.log(mag / normMag) / math.ln10;
 
     // Use frequency INDEX (0–8) as X so fl_chart tick placement is trivial.
     // Each index corresponds to _kTargetFrequencies[index].
@@ -489,10 +577,12 @@ class _AudioResponseMeasurementViewState
       for (final p in pts) {
         final freq = p['frequency_hz'] as double;
         if (freq <= 0) continue;
-        spots.add(FlSpot(
-          _closestTargetIndex(freq).toDouble(),
-          toDb(p['magnitude'] as double),
-        ),);
+        spots.add(
+          FlSpot(
+            _closestTargetIndex(freq).toDouble(),
+            toDb(p['magnitude'] as double),
+          ),
+        );
       }
       return spots;
     }
@@ -653,9 +743,11 @@ class _AudioResponseMeasurementViewState
                   ),
                 ),
                 topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),),
+                  sideTitles: SideTitles(showTitles: false),
+                ),
                 rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),),
+                  sideTitles: SideTitles(showTitles: false),
+                ),
               ),
               gridData: FlGridData(
                 show: true,
@@ -688,7 +780,8 @@ class _AudioResponseMeasurementViewState
                   getTooltipColor: (_) => Colors.grey.shade300,
                   getTooltipItems: (touchedSpots) {
                     return touchedSpots.map((s) {
-                      final idx = s.x.round().clamp(0, _kTargetFrequencies.length - 1);
+                      final idx =
+                          s.x.round().clamp(0, _kTargetFrequencies.length - 1);
                       final freq = _kTargetFrequencies[idx];
                       final Color c;
                       final String sideLabel;
@@ -754,14 +847,16 @@ class _AudioResponseMeasurementViewState
               Expanded(
                 child: TabBarView(
                   children: tabs
-                      .map((t) => SingleChildScrollView(
-                            child: _buildRawValuesTable(
-                              theme,
-                              t.points,
-                              normMag,
-                              label: t.label,
-                            ),
-                          ),)
+                      .map(
+                        (t) => SingleChildScrollView(
+                          child: _buildRawValuesTable(
+                            theme,
+                            t.points,
+                            normMag,
+                            label: t.label,
+                          ),
+                        ),
+                      )
                       .toList(),
                 ),
               ),
@@ -818,15 +913,18 @@ class _AudioResponseMeasurementViewState
                   final db = 20.0 * math.log(mag / normMag) / math.ln10;
                   final tIdx = _closestTargetIndex(freq);
                   final tFreq = _kTargetFrequencies[tIdx];
-                  final tDb = 20.0 * math.log(_kTargetMagnitudes[tIdx]) / math.ln10;
+                  final tDb =
+                      20.0 * math.log(_kTargetMagnitudes[tIdx]) / math.ln10;
 
-                  return DataRow(cells: [
-                    DataCell(Text(freq.toStringAsFixed(2))),
-                    DataCell(Text(mag.toStringAsFixed(0))),
-                    DataCell(Text('${db.toStringAsFixed(1)} dB')),
-                    DataCell(Text(tFreq.toStringAsFixed(3))),
-                    DataCell(Text('${tDb.toStringAsFixed(1)} dB')),
-                  ],);
+                  return DataRow(
+                    cells: [
+                      DataCell(Text(freq.toStringAsFixed(2))),
+                      DataCell(Text(mag.toStringAsFixed(0))),
+                      DataCell(Text('${db.toStringAsFixed(1)} dB')),
+                      DataCell(Text(tFreq.toStringAsFixed(3))),
+                      DataCell(Text('${tDb.toStringAsFixed(1)} dB')),
+                    ],
+                  );
                 }).toList(),
               ),
             ),

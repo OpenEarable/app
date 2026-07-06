@@ -30,14 +30,16 @@ class StudyDeviceSet {
   const StudyDeviceSet({required this.earables, required this.respiban});
 }
 
-/// Returns true if [wearable] can record audio/IMU to its own SD card.
+/// Returns true if [wearable] can record audio/IMU and perform the mandatory
+/// seal checks used by the study protocol.
 ///
 /// SD-card recording requires both sensor configuration access and the edge
 /// recorder file-prefix capability that OpenEarable V2 exposes.
 bool _isEdgeRecordingEarable(Wearable wearable) {
   return wearable.hasCapability<SensorConfigurationManager>() &&
       wearable.hasCapability<EdgeRecorderManager>() &&
-      wearable.hasCapability<StereoDevice>();
+      wearable.hasCapability<StereoDevice>() &&
+      wearable.hasCapability<AudioResponseManager>();
 }
 
 /// Returns true if [wearable] is a Plux RespiBAN.

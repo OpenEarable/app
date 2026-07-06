@@ -103,7 +103,7 @@ class _StudyRecordingsListState extends State<StudyRecordingsList> {
     await Navigator.of(context).push(
       platformPageRoute(
         context: context,
-        builder: (_) => buildStudyPhasePage(
+        builder: (_) => buildStudyPhaseEntryPage(
           phase: studyPhaseOrder.first,
           session: session,
           deviceSet: deviceSet,
@@ -123,8 +123,8 @@ class _StudyRecordingsListState extends State<StudyRecordingsList> {
           builder: (dialogContext) => PlatformAlertDialog(
             title: PlatformText('Devices required'),
             content: PlatformText(
-              'Connect a pair of OpenEarables and a Plux RespiBAN to start a '
-              'new recording.',
+              'Connect a pair of seal-check capable OpenEarables and a Plux '
+              'RespiBAN to start a new recording.',
             ),
             actions: [
               PlatformDialogAction(
