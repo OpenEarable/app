@@ -394,7 +394,7 @@ class _SensorValuesPageState extends State<SensorValuesPage>
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
           maxCrossAxisExtent: 500,
-          childAspectRatio: 1.5,
+          mainAxisExtent: 270,
           crossAxisSpacing: SensorPageSpacing.gridGap,
           mainAxisSpacing: SensorPageSpacing.gridGap,
         ),
