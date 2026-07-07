@@ -30,6 +30,10 @@ class StudyRecordingsList extends StatefulWidget {
 }
 
 class _StudyRecordingsListState extends State<StudyRecordingsList> {
+  static const Duration _postProtocolRefreshDelay = Duration(
+    milliseconds: 750,
+  );
+
   final Set<String> _expandedFolders = {};
   final TextEditingController _probandIdController = TextEditingController();
   final TextEditingController _ageController = TextEditingController();
@@ -112,6 +116,18 @@ class _StudyRecordingsListState extends State<StudyRecordingsList> {
       ),
     );
 
+    if (mounted) {
+      await _refreshAfterRecordingFlow();
+    }
+  }
+
+  Future<void> _refreshAfterRecordingFlow() async {
+    // Reload immediately when the protocol route returns, then once more after
+    // the navigation frame and final filesystem metadata updates have settled.
+    // Without the second read, Android can briefly show the session directory
+    // with only the first phase file until the user manually pull-refreshes.
+    await _loadRecordings();
+    await Future<void>.delayed(_postProtocolRefreshDelay);
     if (mounted) {
       await _loadRecordings();
     }

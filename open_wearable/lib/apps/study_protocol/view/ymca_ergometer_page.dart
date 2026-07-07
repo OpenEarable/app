@@ -601,6 +601,8 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
     final finished = _controller.isRecoveryFinished;
     final canRetryStop =
         !finished && _controller.recoveryRemaining <= Duration.zero;
+    final canFinishEarly =
+        !finished && _controller.recoveryRemaining > Duration.zero;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -655,13 +657,17 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
                         ],
                       ),
                     ),
-                    if (finished || canRetryStop)
+                    if (finished || canRetryStop || canFinishEarly)
                       SizedBox(
                         width: double.infinity,
                         child: PlatformElevatedButton(
                           onPressed: _finishRecovery,
                           child: PlatformText(
-                            finished ? 'Continue' : 'Retry stop recording',
+                            finished
+                                ? 'Continue'
+                                : canRetryStop
+                                    ? 'Retry stop recording'
+                                    : 'Finish recovery early',
                           ),
                         ),
                       ),
