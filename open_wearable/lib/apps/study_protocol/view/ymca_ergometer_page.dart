@@ -232,8 +232,7 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
   }
 
   Future<void> _showEndSuggestion() async {
-    final shouldEnd =
-        await showPlatformDialog<bool>(
+    final shouldEnd = await showPlatformDialog<bool>(
           context: context,
           barrierDismissible: false,
           builder: (dialogContext) => PlatformAlertDialog(
@@ -316,9 +315,13 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
 
   /// Finishes the recovery phase (countdown complete) and continues.
   Future<void> _finishRecovery() async {
-    await _controller.finishRecovery();
-    if (mounted) {
-      _advance();
+    try {
+      await _controller.finishRecovery();
+      if (mounted) {
+        _advance();
+      }
+    } catch (e) {
+      await _showError('Failed to stop the recording: $e');
     }
   }
 
@@ -329,8 +332,7 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
     }
     final confirmed = await _confirm(
       title: 'Go back?',
-      message:
-          'Undo the last step and re-enter it — for example to repeat a '
+      message: 'Undo the last step and re-enter it — for example to repeat a '
           'stage.',
       confirmLabel: 'Go back',
     );
@@ -343,8 +345,7 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
   Future<void> _previousPhase() async {
     final confirmed = await _confirm(
       title: 'Go to previous phase?',
-      message:
-          'This stops recording and returns to the previous phase, which '
+      message: 'This stops recording and returns to the previous phase, which '
           'restarts from the beginning.',
       confirmLabel: 'Previous',
     );
@@ -442,7 +443,7 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
               PlatformDialogAction(
                 cupertino: destructive
                     ? (_, __) =>
-                          CupertinoDialogActionData(isDestructiveAction: true)
+                        CupertinoDialogActionData(isDestructiveAction: true)
                     : null,
                 child: PlatformText(confirmLabel),
                 onPressed: () => Navigator.pop(dialogContext, true),
@@ -598,6 +599,8 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
   Widget _buildRecoveryView(BuildContext context) {
     final theme = Theme.of(context);
     final finished = _controller.isRecoveryFinished;
+    final canRetryStop =
+        !finished && _controller.recoveryRemaining <= Duration.zero;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -620,9 +623,9 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
                     Text(
                       finished
                           ? 'Recovery complete. Recording has stopped — continue '
-                                'to the next phase.'
+                              'to the next phase.'
                           : 'Recover and sit calmly. Recording continues on all '
-                                'devices until the timer ends.',
+                              'devices until the timer ends.',
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
@@ -652,12 +655,14 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
                         ],
                       ),
                     ),
-                    if (finished)
+                    if (finished || canRetryStop)
                       SizedBox(
                         width: double.infinity,
                         child: PlatformElevatedButton(
                           onPressed: _finishRecovery,
-                          child: PlatformText('Continue'),
+                          child: PlatformText(
+                            finished ? 'Continue' : 'Retry stop recording',
+                          ),
                         ),
                       ),
                   ],
@@ -842,9 +847,8 @@ class _StageCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final stageLabel = stage == 0 ? 'Warm-up' : 'Stage $stage';
-    final wattLabel = targetWatt == null
-        ? 'Set resistance'
-        : 'Set $targetWatt W';
+    final wattLabel =
+        targetWatt == null ? 'Set resistance' : 'Set $targetWatt W';
 
     return Card(
       margin: EdgeInsets.zero,

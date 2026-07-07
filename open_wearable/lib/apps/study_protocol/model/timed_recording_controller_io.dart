@@ -33,6 +33,7 @@ class TimedRecordingController extends ChangeNotifier {
   int? _respibanFileSizeBytes;
   int? _respibanFileSizeDeltaBytes;
   Future<void>? _respibanFileSizeRefresh;
+  String? _stopError;
   bool _disposed = false;
 
   TimedRecordingController({
@@ -44,8 +45,14 @@ class TimedRecordingController extends ChangeNotifier {
   /// Current lifecycle state of the phase.
   StudyRecordingStatus get status => _status;
 
-  /// Non-fatal warning raised while configuring devices, if any.
-  String? get warning => _recorder.warning;
+  /// Non-fatal warning raised while configuring or stopping devices, if any.
+  String? get warning {
+    final messages = [
+      if (_recorder.warning != null) _recorder.warning!,
+      if (_stopError != null) _stopError!,
+    ];
+    return messages.isEmpty ? null : messages.join('\n');
+  }
 
   /// Latest actual phone-side RespiBAN CSV size, refreshed while recording.
   int? get respibanFileSizeBytes => _respibanFileSizeBytes;
@@ -121,7 +128,7 @@ class TimedRecordingController extends ChangeNotifier {
       return;
     }
     if (remaining <= Duration.zero) {
-      unawaited(stop());
+      unawaited(_stopAfterTimerElapsed());
       return;
     }
     unawaited(_refreshRespibanFileSize());
@@ -133,11 +140,28 @@ class TimedRecordingController extends ChangeNotifier {
     if (_status != StudyRecordingStatus.recording) {
       return;
     }
-    await _teardown();
-    await _refreshRespibanFileSize();
-    _status = StudyRecordingStatus.completed;
-    _startTime = null;
-    notifyListeners();
+    _stopError = null;
+    try {
+      await _teardown();
+      await _refreshRespibanFileSize();
+      _status = StudyRecordingStatus.completed;
+      _startTime = null;
+      notifyListeners();
+    } catch (e, st) {
+      _stopError = 'Failed to stop recording on all devices: $e';
+      logger.e('Failed to stop recording phase: $e\n$st');
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  Future<void> _stopAfterTimerElapsed() async {
+    try {
+      await stop();
+    } catch (_) {
+      // [stop] already stores the error and notifies listeners; keep the phase
+      // in recording state so the Stop button can be used to retry teardown.
+    }
   }
 
   Future<void> _refreshRespibanFileSize() {

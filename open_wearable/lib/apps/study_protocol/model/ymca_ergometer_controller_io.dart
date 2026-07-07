@@ -52,6 +52,7 @@ class YmcaErgometerController extends ChangeNotifier {
   Timer? _recoveryTicker;
   DateTime? _recoveryStartTime;
   bool _recoveryFinished = false;
+  bool _recoveryEndLogged = false;
 
   int? _respibanFileSizeBytes;
   int? _respibanFileSizeDeltaBytes;
@@ -65,6 +66,7 @@ class YmcaErgometerController extends ChangeNotifier {
   String? _pendingStageMessage;
   bool _endSuggested = false;
   bool _recorderStopped = false;
+  String? _stopError;
   bool _disposed = false;
 
   YmcaErgometerController({
@@ -153,7 +155,13 @@ class YmcaErgometerController extends ChangeNotifier {
   bool get isRecoveryFinished => _recoveryFinished;
 
   /// Non-fatal recording warning, if any.
-  String? get warning => _recorder.warning;
+  String? get warning {
+    final messages = [
+      if (_recorder.warning != null) _recorder.warning!,
+      if (_stopError != null) _stopError!,
+    ];
+    return messages.isEmpty ? null : messages.join('\n');
+  }
 
   /// Latest actual phone-side RespiBAN CSV size, refreshed while recording.
   int? get respibanFileSizeBytes => _respibanFileSizeBytes;
@@ -166,6 +174,7 @@ class YmcaErgometerController extends ChangeNotifier {
     if (_status != ErgoStatus.idle) {
       return;
     }
+    _stopError = null;
     _status = ErgoStatus.running;
     notifyListeners();
 
@@ -402,13 +411,20 @@ class YmcaErgometerController extends ChangeNotifier {
     if (_recoveryFinished) {
       return;
     }
-    _recoveryFinished = true;
     _recoveryTicker?.cancel();
     _recoveryTicker = null;
-    _writeLog('recovery_end,${elapsed.inMinutes},$_currentStage,,,');
-    await _stopRecorderOnce();
-    await _refreshRespibanFileSize();
-    notifyListeners();
+    _writeRecoveryEndOnce();
+    try {
+      await _stopRecorderOnce();
+      _recoveryFinished = true;
+      _stopError = null;
+      await _refreshRespibanFileSize();
+      notifyListeners();
+    } catch (e, st) {
+      _stopError = 'Failed to stop recording on all devices: $e';
+      logger.e('Failed to complete ergometer recovery: $e\n$st');
+      notifyListeners();
+    }
   }
 
   /// Finishes the recovery phase (countdown elapsed or skipped early), stops
@@ -419,14 +435,20 @@ class YmcaErgometerController extends ChangeNotifier {
     }
     _recoveryTicker?.cancel();
     _recoveryTicker = null;
-    if (!_recoveryFinished) {
+    _writeRecoveryEndOnce();
+    try {
+      await _teardown();
+      await _refreshRespibanFileSize();
       _recoveryFinished = true;
-      _writeLog('recovery_end,${elapsed.inMinutes},$_currentStage,,,');
+      _stopError = null;
+      _status = ErgoStatus.ended;
+      notifyListeners();
+    } catch (e, st) {
+      _stopError = 'Failed to stop recording on all devices: $e';
+      logger.e('Failed to finish ergometer recovery: $e\n$st');
+      notifyListeners();
+      rethrow;
     }
-    await _teardown();
-    await _refreshRespibanFileSize();
-    _status = ErgoStatus.ended;
-    notifyListeners();
   }
 
   /// Skips the test without an end heart rate and stops recording.
@@ -437,10 +459,18 @@ class YmcaErgometerController extends ChangeNotifier {
       return;
     }
     _writeLog('skipped,,$_currentStage,,,');
-    await _teardown();
-    await _refreshRespibanFileSize();
-    _status = ErgoStatus.ended;
-    notifyListeners();
+    try {
+      await _teardown();
+      await _refreshRespibanFileSize();
+      _stopError = null;
+      _status = ErgoStatus.ended;
+      notifyListeners();
+    } catch (e, st) {
+      _stopError = 'Failed to stop recording on all devices: $e';
+      logger.e('Failed to skip ergometer test: $e\n$st');
+      notifyListeners();
+      rethrow;
+    }
   }
 
   Future<void> _refreshRespibanFileSize() {
@@ -490,6 +520,14 @@ class YmcaErgometerController extends ChangeNotifier {
     _logSink?.writeln(row);
   }
 
+  void _writeRecoveryEndOnce() {
+    if (_recoveryEndLogged) {
+      return;
+    }
+    _writeLog('recovery_end,${elapsed.inMinutes},$_currentStage,,,');
+    _recoveryEndLogged = true;
+  }
+
   Future<void> _teardown() async {
     _ticker?.cancel();
     _ticker = null;
@@ -506,13 +544,13 @@ class YmcaErgometerController extends ChangeNotifier {
     if (_recorderStopped) {
       return;
     }
-    _recorderStopped = true;
 
     await _logSink?.flush();
     await _logSink?.close();
     _logSink = null;
 
     await _recorder.stop();
+    _recorderStopped = true;
   }
 
   @override

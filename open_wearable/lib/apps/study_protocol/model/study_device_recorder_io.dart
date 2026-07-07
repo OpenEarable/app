@@ -2,7 +2,12 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:io';
 
-import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
+import 'package:open_earable_flutter/open_earable_flutter.dart'
+    hide
+        SensorConfigurationOpenEarableV2,
+        SensorConfigurationOpenEarableV2Value,
+        logger;
+import 'package:open_earable_flutter/sensor_configuration_open_earable_v2.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'package:open_wearable/models/logger.dart';
@@ -33,9 +38,14 @@ class StudyDeviceRecorder {
   /// missing first RespiBAN sample is treated as a failed phase start.
   static const Duration firstRespibanSampleTimeout = Duration(seconds: 10);
 
+  /// Maximum time to wait until an OpenEarable reports an applied config.
+  static const Duration earableConfigurationReportTimeout = Duration(
+    seconds: 5,
+  );
+
   _RespibanCsvWriter? _respibanWriter;
   String? _respibanFilePath;
-  final List<SensorConfiguration> _appliedEarableConfigs = [];
+  final List<_AppliedEarableConfiguration> _appliedEarableConfigs = [];
   RespibanSensorConfiguration? _respibanConfiguration;
   String? _warning;
 
@@ -98,30 +108,42 @@ class StudyDeviceRecorder {
   /// Stop order is the reverse of [start]: the RespiBAN is fully stopped
   /// first, then the OpenEarable pair.
   Future<void> stop() async {
-    final respibanConfiguration = _respibanConfiguration;
-    if (respibanConfiguration != null) {
-      final offValue = respibanConfiguration.offValue;
-      if (offValue != null) {
-        await respibanConfiguration.setMode(offValue.mode);
-      }
-    }
-    _respibanConfiguration = null;
+    final errors = <String>[];
 
-    await _respibanWriter?.stop();
-    _respibanWriter = null;
-
-    for (final configuration in _appliedEarableConfigs) {
-      final offValue = configuration.offValue;
-      if (offValue != null) {
-        configuration.setConfiguration(offValue);
+    try {
+      final respibanConfiguration = _respibanConfiguration;
+      if (respibanConfiguration != null) {
+        final offValue = respibanConfiguration.offValue;
+        if (offValue != null) {
+          await respibanConfiguration.setMode(offValue.mode);
+        }
       }
+      _respibanConfiguration = null;
+    } catch (e) {
+      errors.add('RespiBAN stop failed: $e');
     }
-    _appliedEarableConfigs.clear();
+
+    try {
+      await _respibanWriter?.stop();
+      _respibanWriter = null;
+    } catch (e) {
+      errors.add('RespiBAN CSV finalization failed: $e');
+    }
+
+    try {
+      await _stopEarableSdRecording();
+    } catch (e) {
+      errors.add('OpenEarable stop failed: $e');
+    }
 
     try {
       await WakelockPlus.disable();
     } catch (e) {
       logger.w('Failed to release wakelock: $e');
+    }
+
+    if (errors.isNotEmpty) {
+      throw StateError(errors.join('\n'));
     }
   }
 
@@ -140,19 +162,19 @@ class StudyDeviceRecorder {
   Future<void> _configureEarable(Wearable earable, String filePrefix) async {
     try {
       await earable.requireCapability<EdgeRecorderManager>().setFilePrefix(
-        filePrefix,
-      );
+            filePrefix,
+          );
     } catch (e) {
       _addWarning('Could not set file prefix on ${earable.name}: $e');
     }
 
-    _applyEarableRecordConfig(
+    await _applyEarableRecordConfig(
       earable,
       keywords: const ['imu'],
       targetFrequencyHz: imuFrequencyHz,
       label: 'IMU',
     );
-    _applyEarableRecordConfig(
+    await _applyEarableRecordConfig(
       earable,
       keywords: const ['mic'],
       targetFrequencyHz: microphoneFrequencyHz,
@@ -160,7 +182,7 @@ class StudyDeviceRecorder {
     );
   }
 
-  void _applyEarableRecordConfig(
+  Future<void> _applyEarableRecordConfig(
     Wearable earable, {
     required List<String> keywords,
     required int targetFrequencyHz,
@@ -169,17 +191,133 @@ class StudyDeviceRecorder {
     final configuration = findEarableConfiguration(earable, keywords);
     if (configuration == null) {
       _addWarning('${earable.name}: no $label configuration found.');
-      return;
+      return Future<void>.value();
     }
 
     final value = recordOnlyValueNearest(configuration, targetFrequencyHz);
     if (value == null) {
       _addWarning('${earable.name}: $label cannot record to SD card.');
+      return Future<void>.value();
+    }
+
+    return _setEarableConfiguration(earable, configuration, value).then((_) {
+      _appliedEarableConfigs.add(
+        _AppliedEarableConfiguration(
+          wearable: earable,
+          configuration: configuration,
+        ),
+      );
+    });
+  }
+
+  Future<void> _stopEarableSdRecording() async {
+    for (final applied in _appliedEarableConfigs) {
+      final offValue = applied.configuration.offValue;
+      if (offValue == null) {
+        continue;
+      }
+      await _setEarableConfiguration(
+        applied.wearable,
+        applied.configuration,
+        offValue,
+        verifyReported: true,
+      );
+    }
+    _appliedEarableConfigs.clear();
+  }
+
+  Future<void> _setEarableConfiguration(
+    Wearable earable,
+    SensorConfiguration configuration,
+    SensorConfigurationValue value, {
+    bool verifyReported = false,
+  }) async {
+    if (configuration is SensorConfigurationOpenEarableV2 &&
+        value is SensorFrequencyConfigurationValue) {
+      await configuration.setConfigurationAndWait(value);
+    } else {
+      configuration.setConfiguration(value);
+    }
+
+    if (!verifyReported) {
       return;
     }
 
-    configuration.setConfiguration(value);
-    _appliedEarableConfigs.add(configuration);
+    await _waitForEarableConfigurationReport(
+      earable: earable,
+      configuration: configuration,
+      expectedValue: value,
+    );
+  }
+
+  Future<void> _waitForEarableConfigurationReport({
+    required Wearable earable,
+    required SensorConfiguration configuration,
+    required SensorConfigurationValue expectedValue,
+  }) async {
+    final manager = earable.requireCapability<SensorConfigurationManager>();
+    await manager.sensorConfigurationStream
+        .map((report) => _reportedValueFor(configuration, report))
+        .where(
+          (reported) =>
+              reported != null &&
+              _configurationValuesMatch(reported, expectedValue),
+        )
+        .first
+        .timeout(
+      earableConfigurationReportTimeout,
+      onTimeout: () {
+        throw TimeoutException(
+          '${earable.name} did not report ${configuration.name} as '
+          '${expectedValue.key} within '
+          '${earableConfigurationReportTimeout.inSeconds}s.',
+          earableConfigurationReportTimeout,
+        );
+      },
+    );
+  }
+
+  SensorConfigurationValue? _reportedValueFor(
+    SensorConfiguration configuration,
+    Map<SensorConfiguration, SensorConfigurationValue> report,
+  ) {
+    for (final entry in report.entries) {
+      if (_sameConfiguration(configuration, entry.key)) {
+        return entry.value;
+      }
+    }
+    return null;
+  }
+
+  bool _sameConfiguration(
+    SensorConfiguration expected,
+    SensorConfiguration reported,
+  ) {
+    if (identical(expected, reported)) {
+      return true;
+    }
+    if (expected is SensorConfigurationOpenEarableV2 &&
+        reported is SensorConfigurationOpenEarableV2) {
+      return expected.sensorId == reported.sensorId;
+    }
+    return expected.name == reported.name;
+  }
+
+  bool _configurationValuesMatch(
+    SensorConfigurationValue reported,
+    SensorConfigurationValue expected,
+  ) {
+    if (reported is SensorConfigurationOpenEarableV2Value &&
+        expected is SensorConfigurationOpenEarableV2Value) {
+      return reported.frequencyIndex == expected.frequencyIndex &&
+          reported.streamData == expected.streamData &&
+          reported.recordData == expected.recordData;
+    }
+    if (reported is SensorFrequencyConfigurationValue &&
+        expected is SensorFrequencyConfigurationValue) {
+      return reported.frequencyHz == expected.frequencyHz;
+    }
+    return reported.key == expected.key;
   }
 
   Future<DateTime> _startRespibanRecording(
@@ -191,15 +329,12 @@ class StudyDeviceRecorder {
     final token = sanitizeProbandId(probandId);
     final sensors = respiban.requireCapability<SensorManager>().sensors;
 
-    final beltSensor = sensors
-        .whereType<RespibanRespirationSensor>()
-        .firstOrNull;
-    final accelerometerSensor = sensors
-        .whereType<RespibanAccelerometerSensor>()
-        .firstOrNull;
-    final gyroscopeSensor = sensors
-        .whereType<RespibanGyroscopeSensor>()
-        .firstOrNull;
+    final beltSensor =
+        sensors.whereType<RespibanRespirationSensor>().firstOrNull;
+    final accelerometerSensor =
+        sensors.whereType<RespibanAccelerometerSensor>().firstOrNull;
+    final gyroscopeSensor =
+        sensors.whereType<RespibanGyroscopeSensor>().firstOrNull;
 
     if (beltSensor == null) {
       throw StateError('RespiBAN respiration belt sensor not found.');
@@ -404,4 +539,14 @@ class _RespibanRow {
   String? belt;
   List<String>? accelerometer;
   List<String>? gyroscope;
+}
+
+class _AppliedEarableConfiguration {
+  final Wearable wearable;
+  final SensorConfiguration configuration;
+
+  const _AppliedEarableConfiguration({
+    required this.wearable,
+    required this.configuration,
+  });
 }

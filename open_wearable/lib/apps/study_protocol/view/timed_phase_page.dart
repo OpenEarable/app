@@ -87,7 +87,11 @@ class _TimedPhasePageState extends State<TimedPhasePage> {
       confirmLabel: 'Stop',
     );
     if (shouldStop) {
-      await _controller.stop();
+      try {
+        await _controller.stop();
+      } catch (e) {
+        await _showError('Failed to stop the recording: $e');
+      }
     }
   }
 
