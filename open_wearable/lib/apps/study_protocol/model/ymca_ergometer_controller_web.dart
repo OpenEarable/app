@@ -37,6 +37,8 @@ class YmcaErgometerController extends ChangeNotifier {
   double get recoveryProgress => 0;
   bool get isRecoveryFinished => false;
   String? get warning => null;
+  int? get respibanFileSizeBytes => null;
+  int? get respibanFileSizeDeltaBytes => null;
 
   Future<void> start() async {
     throw UnsupportedError('The ergometer test is not supported on web');

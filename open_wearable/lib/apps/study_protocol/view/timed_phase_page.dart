@@ -6,6 +6,7 @@ import 'package:open_wearable/apps/study_protocol/model/study_recording_status.d
 import 'package:open_wearable/apps/study_protocol/model/study_session.dart';
 import 'package:open_wearable/apps/study_protocol/model/timed_recording_controller.dart';
 import 'package:open_wearable/apps/study_protocol/view/study_flow.dart';
+import 'package:open_wearable/apps/study_protocol/widgets/recording_file_size_card.dart';
 import 'package:open_wearable/apps/study_protocol/widgets/timer_ring.dart';
 
 /// Generic fixed-duration recording phase (baseline, treadmill).
@@ -185,15 +186,11 @@ class _TimedPhasePageState extends State<TimedPhasePage> {
             }
           },
           child: PlatformScaffold(
-            material: (_, __) => MaterialScaffoldData(
-              resizeToAvoidBottomInset: false,
-            ),
-            cupertino: (_, __) => CupertinoPageScaffoldData(
-              resizeToAvoidBottomInset: false,
-            ),
-            appBar: PlatformAppBar(
-              title: PlatformText(widget.config.title),
-            ),
+            material: (_, __) =>
+                MaterialScaffoldData(resizeToAvoidBottomInset: false),
+            cupertino: (_, __) =>
+                CupertinoPageScaffoldData(resizeToAvoidBottomInset: false),
+            appBar: PlatformAppBar(title: PlatformText(widget.config.title)),
             body: SafeArea(child: _buildBody(context, status)),
           ),
         );
@@ -240,6 +237,16 @@ class _TimedPhasePageState extends State<TimedPhasePage> {
                             label: _formatDuration(_controller.remaining),
                             caption: caption,
                           ),
+                          if (status != StudyRecordingStatus.idle) ...[
+                            const SizedBox(height: 16),
+                            RecordingFileSizeCard(
+                              sizeBytes: _controller.respibanFileSizeBytes,
+                              deltaBytes:
+                                  _controller.respibanFileSizeDeltaBytes,
+                              isRecording:
+                                  status == StudyRecordingStatus.recording,
+                            ),
+                          ],
                           if (_controller.warning != null) ...[
                             const SizedBox(height: 20),
                             _WarningBanner(message: _controller.warning!),
@@ -359,9 +366,7 @@ class _WarningBanner extends StatelessWidget {
             size: 20,
           ),
           const SizedBox(width: 10),
-          Expanded(
-            child: Text(message, style: theme.textTheme.bodySmall),
-          ),
+          Expanded(child: Text(message, style: theme.textTheme.bodySmall)),
         ],
       ),
     );

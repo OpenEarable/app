@@ -53,6 +53,10 @@ class YmcaErgometerController extends ChangeNotifier {
   DateTime? _recoveryStartTime;
   bool _recoveryFinished = false;
 
+  int? _respibanFileSizeBytes;
+  int? _respibanFileSizeDeltaBytes;
+  Future<void>? _respibanFileSizeRefresh;
+
   ErgoStatus _status = ErgoStatus.idle;
   int _currentStage = 0;
   int? _currentTargetWatt;
@@ -151,6 +155,12 @@ class YmcaErgometerController extends ChangeNotifier {
   /// Non-fatal recording warning, if any.
   String? get warning => _recorder.warning;
 
+  /// Latest actual phone-side RespiBAN CSV size, refreshed while recording.
+  int? get respibanFileSizeBytes => _respibanFileSizeBytes;
+
+  /// File-size growth observed since the previous refresh.
+  int? get respibanFileSizeDeltaBytes => _respibanFileSizeDeltaBytes;
+
   /// Starts recording and the measurement clock.
   Future<void> start() async {
     if (_status != ErgoStatus.idle) {
@@ -171,6 +181,7 @@ class YmcaErgometerController extends ChangeNotifier {
 
       _startTime = firstRespibanSampleAt;
       _nextDueTime = _startTime!.add(measurementInterval);
+      await _refreshRespibanFileSize();
       _ticker = Timer.periodic(const Duration(seconds: 1), _onTick);
       notifyListeners();
     } catch (e, st) {
@@ -199,6 +210,7 @@ class YmcaErgometerController extends ChangeNotifier {
     if (scheduledNew) {
       logger.d('Ergometer measurement due: minute $_measurementCounter');
     }
+    unawaited(_refreshRespibanFileSize());
     notifyListeners();
   }
 
@@ -364,8 +376,10 @@ class YmcaErgometerController extends ChangeNotifier {
     _status = ErgoStatus.recovering;
     _recoveryStartTime = DateTime.now();
     _writeLog('recovery_start,${elapsed.inMinutes},$_currentStage,,,');
-    _recoveryTicker =
-        Timer.periodic(const Duration(seconds: 1), _onRecoveryTick);
+    _recoveryTicker = Timer.periodic(
+      const Duration(seconds: 1),
+      _onRecoveryTick,
+    );
     notifyListeners();
   }
 
@@ -377,6 +391,7 @@ class YmcaErgometerController extends ChangeNotifier {
       unawaited(_completeRecovery());
       return;
     }
+    unawaited(_refreshRespibanFileSize());
     notifyListeners();
   }
 
@@ -392,6 +407,7 @@ class YmcaErgometerController extends ChangeNotifier {
     _recoveryTicker = null;
     _writeLog('recovery_end,${elapsed.inMinutes},$_currentStage,,,');
     await _stopRecorderOnce();
+    await _refreshRespibanFileSize();
     notifyListeners();
   }
 
@@ -408,6 +424,7 @@ class YmcaErgometerController extends ChangeNotifier {
       _writeLog('recovery_end,${elapsed.inMinutes},$_currentStage,,,');
     }
     await _teardown();
+    await _refreshRespibanFileSize();
     _status = ErgoStatus.ended;
     notifyListeners();
   }
@@ -421,8 +438,39 @@ class YmcaErgometerController extends ChangeNotifier {
     }
     _writeLog('skipped,,$_currentStage,,,');
     await _teardown();
+    await _refreshRespibanFileSize();
     _status = ErgoStatus.ended;
     notifyListeners();
+  }
+
+  Future<void> _refreshRespibanFileSize() {
+    final activeRefresh = _respibanFileSizeRefresh;
+    if (activeRefresh != null) {
+      return activeRefresh;
+    }
+    final refresh = _doRefreshRespibanFileSize().whenComplete(() {
+      _respibanFileSizeRefresh = null;
+    });
+    _respibanFileSizeRefresh = refresh;
+    return refresh;
+  }
+
+  Future<void> _doRefreshRespibanFileSize() async {
+    try {
+      final previous = _respibanFileSizeBytes;
+      final current = await _recorder.respibanFileSizeBytes();
+      if (current == null) {
+        return;
+      }
+      _respibanFileSizeBytes = current;
+      _respibanFileSizeDeltaBytes =
+          previous == null ? null : current - previous;
+      if (!_disposed) {
+        notifyListeners();
+      }
+    } catch (e, st) {
+      logger.w('Failed to refresh RespiBAN file size: $e\n$st');
+    }
   }
 
   Future<void> _openLog() async {
@@ -449,6 +497,7 @@ class YmcaErgometerController extends ChangeNotifier {
     _recoveryTicker = null;
     _dueMeasurements.clear();
     _undoStack.clear();
+    await _respibanFileSizeRefresh;
     await _stopRecorderOnce();
   }
 

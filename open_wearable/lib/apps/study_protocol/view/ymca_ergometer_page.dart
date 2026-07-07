@@ -9,6 +9,7 @@ import 'package:open_wearable/apps/study_protocol/model/study_session.dart';
 import 'package:open_wearable/apps/study_protocol/model/ymca_ergometer_controller.dart';
 import 'package:open_wearable/apps/study_protocol/model/ymca_models.dart';
 import 'package:open_wearable/apps/study_protocol/view/study_flow.dart';
+import 'package:open_wearable/apps/study_protocol/widgets/recording_file_size_card.dart';
 import 'package:open_wearable/apps/study_protocol/widgets/timer_ring.dart';
 
 /// Guided modified YMCA ergometer test.
@@ -231,7 +232,8 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
   }
 
   Future<void> _showEndSuggestion() async {
-    final shouldEnd = await showPlatformDialog<bool>(
+    final shouldEnd =
+        await showPlatformDialog<bool>(
           context: context,
           barrierDismissible: false,
           builder: (dialogContext) => PlatformAlertDialog(
@@ -246,9 +248,8 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
                 onPressed: () => Navigator.pop(dialogContext, false),
               ),
               PlatformDialogAction(
-                cupertino: (_, __) => CupertinoDialogActionData(
-                  isDestructiveAction: true,
-                ),
+                cupertino: (_, __) =>
+                    CupertinoDialogActionData(isDestructiveAction: true),
                 child: PlatformText('End test'),
                 onPressed: () => Navigator.pop(dialogContext, true),
               ),
@@ -328,7 +329,8 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
     }
     final confirmed = await _confirm(
       title: 'Go back?',
-      message: 'Undo the last step and re-enter it — for example to repeat a '
+      message:
+          'Undo the last step and re-enter it — for example to repeat a '
           'stage.',
       confirmLabel: 'Go back',
     );
@@ -341,7 +343,8 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
   Future<void> _previousPhase() async {
     final confirmed = await _confirm(
       title: 'Go to previous phase?',
-      message: 'This stops recording and returns to the previous phase, which '
+      message:
+          'This stops recording and returns to the previous phase, which '
           'restarts from the beginning.',
       confirmLabel: 'Previous',
     );
@@ -439,7 +442,7 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
               PlatformDialogAction(
                 cupertino: destructive
                     ? (_, __) =>
-                        CupertinoDialogActionData(isDestructiveAction: true)
+                          CupertinoDialogActionData(isDestructiveAction: true)
                     : null,
                 child: PlatformText(confirmLabel),
                 onPressed: () => Navigator.pop(dialogContext, true),
@@ -497,12 +500,10 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
             }
           },
           child: PlatformScaffold(
-            material: (_, __) => MaterialScaffoldData(
-              resizeToAvoidBottomInset: false,
-            ),
-            cupertino: (_, __) => CupertinoPageScaffoldData(
-              resizeToAvoidBottomInset: false,
-            ),
+            material: (_, __) =>
+                MaterialScaffoldData(resizeToAvoidBottomInset: false),
+            cupertino: (_, __) =>
+                CupertinoPageScaffoldData(resizeToAvoidBottomInset: false),
             appBar: PlatformAppBar(
               title: PlatformText(isRecovering ? 'Recovery' : 'Ergometer Test'),
               trailingActions: [
@@ -619,9 +620,9 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
                     Text(
                       finished
                           ? 'Recovery complete. Recording has stopped — continue '
-                              'to the next phase.'
+                                'to the next phase.'
                           : 'Recover and sit calmly. Recording continues on all '
-                              'devices until the timer ends.',
+                                'devices until the timer ends.',
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
@@ -637,6 +638,12 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
                               _controller.recoveryRemaining,
                             ),
                             caption: finished ? 'Complete' : 'Recovery',
+                          ),
+                          const SizedBox(height: 16),
+                          RecordingFileSizeCard(
+                            sizeBytes: _controller.respibanFileSizeBytes,
+                            deltaBytes: _controller.respibanFileSizeDeltaBytes,
+                            isRecording: !finished,
                           ),
                           if (_controller.warning != null) ...[
                             const SizedBox(height: 20),
@@ -680,8 +687,15 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
                 stage: _controller.currentStage,
                 targetWatt: _controller.currentTargetWatt,
                 totalElapsed: _formatDuration(_controller.elapsed),
-                nextMeasurementIn:
-                    _formatDuration(_controller.timeToNextMeasurement),
+                nextMeasurementIn: _formatDuration(
+                  _controller.timeToNextMeasurement,
+                ),
+              ),
+              const SizedBox(height: 12),
+              RecordingFileSizeCard(
+                sizeBytes: _controller.respibanFileSizeBytes,
+                deltaBytes: _controller.respibanFileSizeDeltaBytes,
+                isRecording: _controller.status == ErgoStatus.running,
               ),
               if (_controller.warning != null) ...[
                 const SizedBox(height: 12),
@@ -702,10 +716,12 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
                     onPressed: _confirmManualNextStage,
                     material: (_, __) => MaterialElevatedButtonData(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            Theme.of(context).colorScheme.secondaryContainer,
-                        foregroundColor:
-                            Theme.of(context).colorScheme.onSecondaryContainer,
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.secondaryContainer,
+                        foregroundColor: Theme.of(
+                          context,
+                        ).colorScheme.onSecondaryContainer,
                       ),
                     ),
                     child: PlatformText('Next stage'),
@@ -752,9 +768,8 @@ class _NumberField extends StatelessWidget {
       keyboardType: TextInputType.number,
       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
       hintText: label,
-      material: (_, __) => MaterialTextFieldData(
-        decoration: InputDecoration(labelText: label),
-      ),
+      material: (_, __) =>
+          MaterialTextFieldData(decoration: InputDecoration(labelText: label)),
     );
   }
 }
@@ -827,8 +842,9 @@ class _StageCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final stageLabel = stage == 0 ? 'Warm-up' : 'Stage $stage';
-    final wattLabel =
-        targetWatt == null ? 'Set resistance' : 'Set $targetWatt W';
+    final wattLabel = targetWatt == null
+        ? 'Set resistance'
+        : 'Set $targetWatt W';
 
     return Card(
       margin: EdgeInsets.zero,
@@ -966,10 +982,7 @@ class _HistoryRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          for (final cell in cells)
-            Expanded(
-              child: Text(cell, style: style),
-            ),
+          for (final cell in cells) Expanded(child: Text(cell, style: style)),
         ],
       ),
     );
@@ -1000,9 +1013,7 @@ class _WarningBanner extends StatelessWidget {
             size: 20,
           ),
           const SizedBox(width: 10),
-          Expanded(
-            child: Text(message, style: theme.textTheme.bodySmall),
-          ),
+          Expanded(child: Text(message, style: theme.textTheme.bodySmall)),
         ],
       ),
     );

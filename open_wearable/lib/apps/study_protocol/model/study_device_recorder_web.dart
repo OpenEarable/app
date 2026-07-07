@@ -9,14 +9,15 @@ class StudyDeviceRecorder {
 
   String? get warning => null;
 
+  Future<int?> respibanFileSizeBytes() async => null;
+
   Future<DateTime> start({
     required StudyDeviceSet deviceSet,
     required String directory,
     required String probandId,
     String respibanFileLabel = '',
     String earablePrefixSuffix = '',
-  }) async =>
-      DateTime.now();
+  }) async => DateTime.now();
 
   Future<void> stop() async {}
 }

@@ -30,6 +30,9 @@ class TimedRecordingController extends ChangeNotifier {
   Timer? _ticker;
   DateTime? _startTime;
   StudyRecordingStatus _status = StudyRecordingStatus.idle;
+  int? _respibanFileSizeBytes;
+  int? _respibanFileSizeDeltaBytes;
+  Future<void>? _respibanFileSizeRefresh;
   bool _disposed = false;
 
   TimedRecordingController({
@@ -43,6 +46,12 @@ class TimedRecordingController extends ChangeNotifier {
 
   /// Non-fatal warning raised while configuring devices, if any.
   String? get warning => _recorder.warning;
+
+  /// Latest actual phone-side RespiBAN CSV size, refreshed while recording.
+  int? get respibanFileSizeBytes => _respibanFileSizeBytes;
+
+  /// File-size growth observed since the previous refresh.
+  int? get respibanFileSizeDeltaBytes => _respibanFileSizeDeltaBytes;
 
   /// Whether the phase is currently recording.
   bool get isRecording => _status == StudyRecordingStatus.recording;
@@ -94,6 +103,7 @@ class TimedRecordingController extends ChangeNotifier {
       );
 
       _startTime = firstRespibanSampleAt;
+      await _refreshRespibanFileSize();
       _ticker = Timer.periodic(const Duration(seconds: 1), _onTick);
       notifyListeners();
     } catch (e, st) {
@@ -114,6 +124,7 @@ class TimedRecordingController extends ChangeNotifier {
       unawaited(stop());
       return;
     }
+    unawaited(_refreshRespibanFileSize());
     notifyListeners();
   }
 
@@ -123,14 +134,46 @@ class TimedRecordingController extends ChangeNotifier {
       return;
     }
     await _teardown();
+    await _refreshRespibanFileSize();
     _status = StudyRecordingStatus.completed;
     _startTime = null;
     notifyListeners();
   }
 
+  Future<void> _refreshRespibanFileSize() {
+    final activeRefresh = _respibanFileSizeRefresh;
+    if (activeRefresh != null) {
+      return activeRefresh;
+    }
+    final refresh = _doRefreshRespibanFileSize().whenComplete(() {
+      _respibanFileSizeRefresh = null;
+    });
+    _respibanFileSizeRefresh = refresh;
+    return refresh;
+  }
+
+  Future<void> _doRefreshRespibanFileSize() async {
+    try {
+      final previous = _respibanFileSizeBytes;
+      final current = await _recorder.respibanFileSizeBytes();
+      if (current == null) {
+        return;
+      }
+      _respibanFileSizeBytes = current;
+      _respibanFileSizeDeltaBytes =
+          previous == null ? null : current - previous;
+      if (!_disposed) {
+        notifyListeners();
+      }
+    } catch (e, st) {
+      logger.w('Failed to refresh RespiBAN file size: $e\n$st');
+    }
+  }
+
   Future<void> _teardown() async {
     _ticker?.cancel();
     _ticker = null;
+    await _respibanFileSizeRefresh;
     await _recorder.stop();
   }
 

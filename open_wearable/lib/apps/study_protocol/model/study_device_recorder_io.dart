@@ -34,12 +34,34 @@ class StudyDeviceRecorder {
   static const Duration firstRespibanSampleTimeout = Duration(seconds: 10);
 
   _RespibanCsvWriter? _respibanWriter;
+  String? _respibanFilePath;
   final List<SensorConfiguration> _appliedEarableConfigs = [];
   RespibanSensorConfiguration? _respibanConfiguration;
   String? _warning;
 
   /// Non-fatal warnings raised while configuring devices, if any.
   String? get warning => _warning;
+
+  /// Flushes pending CSV writes and returns the current RespiBAN CSV size.
+  ///
+  /// This reads the actual phone-side file instead of estimating written rows,
+  /// so the UI can reveal when data reception and disk output diverge during a
+  /// phase.
+  Future<int?> respibanFileSizeBytes() async {
+    final writer = _respibanWriter;
+    if (writer != null) {
+      return writer.flushAndMeasureSize();
+    }
+    final path = _respibanFilePath;
+    if (path == null) {
+      return null;
+    }
+    final file = File(path);
+    if (!await file.exists()) {
+      return null;
+    }
+    return file.length();
+  }
 
   /// Starts recording on the OpenEarable pair and the RespiBAN.
   ///
@@ -118,8 +140,8 @@ class StudyDeviceRecorder {
   Future<void> _configureEarable(Wearable earable, String filePrefix) async {
     try {
       await earable.requireCapability<EdgeRecorderManager>().setFilePrefix(
-            filePrefix,
-          );
+        filePrefix,
+      );
     } catch (e) {
       _addWarning('Could not set file prefix on ${earable.name}: $e');
     }
@@ -169,12 +191,15 @@ class StudyDeviceRecorder {
     final token = sanitizeProbandId(probandId);
     final sensors = respiban.requireCapability<SensorManager>().sensors;
 
-    final beltSensor =
-        sensors.whereType<RespibanRespirationSensor>().firstOrNull;
-    final accelerometerSensor =
-        sensors.whereType<RespibanAccelerometerSensor>().firstOrNull;
-    final gyroscopeSensor =
-        sensors.whereType<RespibanGyroscopeSensor>().firstOrNull;
+    final beltSensor = sensors
+        .whereType<RespibanRespirationSensor>()
+        .firstOrNull;
+    final accelerometerSensor = sensors
+        .whereType<RespibanAccelerometerSensor>()
+        .firstOrNull;
+    final gyroscopeSensor = sensors
+        .whereType<RespibanGyroscopeSensor>()
+        .firstOrNull;
 
     if (beltSensor == null) {
       throw StateError('RespiBAN respiration belt sensor not found.');
@@ -186,8 +211,10 @@ class StudyDeviceRecorder {
     // gyroscope share the same sample timestamps and are written into a
     // single file.
     final writer = _RespibanCsvWriter();
+    final filepath = '$directory/$token${label}_RespiBAN.csv';
+    _respibanFilePath = filepath;
     await writer.start(
-      filepath: '$directory/$token${label}_RespiBAN.csv',
+      filepath: filepath,
       beltStream: SensorStreams.shared(wearable: respiban, sensor: beltSensor),
       accelerometerStream: accelerometerSensor == null
           ? null
@@ -197,10 +224,7 @@ class StudyDeviceRecorder {
             ),
       gyroscopeStream: gyroscopeSensor == null
           ? null
-          : SensorStreams.shared(
-              wearable: respiban,
-              sensor: gyroscopeSensor,
-            ),
+          : SensorStreams.shared(wearable: respiban, sensor: gyroscopeSensor),
     );
     _respibanWriter = writer;
 
@@ -247,6 +271,7 @@ class StudyDeviceRecorder {
 /// row contains the belt value alongside its matching IMU values.
 class _RespibanCsvWriter {
   IOSink? _sink;
+  File? _file;
   final Completer<DateTime> _firstSampleArrival = Completer<DateTime>();
   final List<StreamSubscription<SensorValue>> _subscriptions = [];
   final SplayTreeMap<int, _RespibanRow> _pending =
@@ -267,13 +292,12 @@ class _RespibanCsvWriter {
   }) async {
     final file = File(filepath);
     await file.parent.create(recursive: true);
+    _file = file;
     _sink = file.openWrite();
     _expectsAccelerometer = accelerometerStream != null;
     _expectsGyroscope = gyroscopeStream != null;
 
-    _sink!.writeln(
-      'timestamp,Belt,Acc_X,Acc_Y,Acc_Z,Gyro_X,Gyro_Y,Gyro_Z',
-    );
+    _sink!.writeln('timestamp,Belt,Acc_X,Acc_Y,Acc_Z,Gyro_X,Gyro_Y,Gyro_Z');
 
     _subscriptions.add(beltStream.listen(_onBelt));
     if (accelerometerStream != null) {
@@ -337,6 +361,24 @@ class _RespibanCsvWriter {
 
   String _at(List<String> values, int index) =>
       index < values.length ? values[index] : '';
+
+  /// Flushes buffered sink data and returns the actual file size on disk.
+  Future<int?> flushAndMeasureSize() async {
+    final file = _file;
+    if (file == null) {
+      return null;
+    }
+    try {
+      await _sink?.flush();
+      if (!await file.exists()) {
+        return null;
+      }
+      return file.length();
+    } catch (e) {
+      logger.w('Failed to read RespiBAN CSV size: $e');
+      return null;
+    }
+  }
 
   /// Stops buffering and flushes any remaining rows before closing the file.
   Future<void> stop() async {

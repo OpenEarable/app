@@ -18,6 +18,8 @@ class TimedRecordingController extends ChangeNotifier {
 
   StudyRecordingStatus get status => StudyRecordingStatus.idle;
   String? get warning => null;
+  int? get respibanFileSizeBytes => null;
+  int? get respibanFileSizeDeltaBytes => null;
   bool get isRecording => false;
   Duration get remaining => duration;
   double get progress => 0;
