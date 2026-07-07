@@ -103,6 +103,8 @@ class AudioResponseMeasurementView extends StatefulWidget {
     this.saveResult,
     this.onResultAction,
     this.resultActionLabel = 'Continue',
+    this.preMeasurementAction,
+    this.preMeasurementActionLabel,
   }) : assert(
           left != null || right != null,
           'At least one of left or right must be provided',
@@ -124,6 +126,10 @@ class AudioResponseMeasurementView extends StatefulWidget {
   final Future<void> Function(Map<String, dynamic> result)? saveResult;
   final VoidCallback? onResultAction;
   final String resultActionLabel;
+
+  /// Optional action shown only before a measurement has started successfully.
+  final VoidCallback? preMeasurementAction;
+  final String? preMeasurementActionLabel;
 
   @override
   State<AudioResponseMeasurementView> createState() =>
@@ -337,6 +343,21 @@ class _AudioResponseMeasurementViewState
                 ],
               ),
             ),
+            if (widget.preMeasurementAction != null && !_hasAnyResult) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton.icon(
+                  onPressed: _isMeasuring || _isSavingResult
+                      ? null
+                      : widget.preMeasurementAction,
+                  icon: const Icon(Icons.skip_next),
+                  label: Text(
+                    widget.preMeasurementActionLabel ?? 'Skip',
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             Expanded(
               child: _isMeasuring || _isSavingResult

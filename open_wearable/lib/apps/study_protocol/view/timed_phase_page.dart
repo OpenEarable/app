@@ -12,7 +12,8 @@ import 'package:open_wearable/apps/study_protocol/widgets/timer_ring.dart';
 ///
 /// Records continuously on the OpenEarable pair and RespiBAN for the phase
 /// [config] duration, shows a countdown ring, and continues to the next phase
-/// when complete. Every phase must be actively started and can be skipped.
+/// when complete. Every phase must be actively started; skipping the complete
+/// seal-check/phase/seal-check unit is offered before this page is entered.
 class TimedPhasePage extends StatefulWidget {
   final StudyPhase phase;
   final TimedPhaseConfig config;
@@ -86,23 +87,6 @@ class _TimedPhasePageState extends State<TimedPhasePage> {
     );
     if (shouldStop) {
       await _controller.stop();
-    }
-  }
-
-  Future<void> _skip() async {
-    final shouldSkip = await _confirm(
-      'Skip ${widget.config.title.toLowerCase()}?',
-      'This phase will be skipped and the next phase will start.',
-      confirmLabel: 'Skip',
-    );
-    if (!shouldSkip || !mounted) {
-      return;
-    }
-    if (_controller.isRecording) {
-      await _controller.stop();
-    }
-    if (mounted) {
-      _advance();
     }
   }
 
@@ -265,22 +249,12 @@ class _TimedPhasePageState extends State<TimedPhasePage> {
                     ),
                     _buildActionButton(status),
                     const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: PlatformTextButton(
-                            onPressed: _back,
-                            child: PlatformText('Previous phase'),
-                          ),
-                        ),
-                        if (status != StudyRecordingStatus.completed)
-                          Expanded(
-                            child: PlatformTextButton(
-                              onPressed: _skip,
-                              child: PlatformText('Skip phase'),
-                            ),
-                          ),
-                      ],
+                    SizedBox(
+                      width: double.infinity,
+                      child: PlatformTextButton(
+                        onPressed: _back,
+                        child: PlatformText('Previous phase'),
+                      ),
                     ),
                   ],
                 ),

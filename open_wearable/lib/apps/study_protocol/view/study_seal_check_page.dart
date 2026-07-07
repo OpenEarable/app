@@ -27,6 +27,7 @@ class StudySealCheckPage extends StatelessWidget {
   final String directory;
   final String actionLabel;
   final VoidCallback onContinue;
+  final VoidCallback? onSkip;
 
   const StudySealCheckPage({
     super.key,
@@ -38,6 +39,7 @@ class StudySealCheckPage extends StatelessWidget {
     required this.directory,
     required this.actionLabel,
     required this.onContinue,
+    this.onSkip,
   });
 
   @override
@@ -75,6 +77,8 @@ class StudySealCheckPage extends StatelessWidget {
       ),
       resultActionLabel: actionLabel,
       onResultAction: onContinue,
+      preMeasurementAction: onSkip,
+      preMeasurementActionLabel: 'Skip $phaseTitle unit',
     );
   }
 }

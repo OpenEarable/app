@@ -321,24 +321,6 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
     }
   }
 
-  /// Ends the recovery phase early and continues to the next phase.
-  Future<void> _skipRecovery() async {
-    final confirmed = await _confirm(
-      title: 'Skip recovery?',
-      message: 'This ends the recovery recording early and continues to the '
-          'next phase.',
-      confirmLabel: 'Skip',
-      destructive: true,
-    );
-    if (!confirmed) {
-      return;
-    }
-    await _controller.finishRecovery();
-    if (mounted) {
-      _advance();
-    }
-  }
-
   /// Undoes the last measurement/stage change so it can be re-entered.
   Future<void> _undoLast() async {
     if (!_controller.canUndo) {
@@ -377,27 +359,6 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
         deviceSet: widget.deviceSet,
         directory: widget.directory,
       );
-    }
-  }
-
-  /// Skips the ergometer test and continues to the next phase.
-  Future<void> _skipTest() async {
-    if (_controller.status == ErgoStatus.ended) {
-      return;
-    }
-    final confirmed = await _confirm(
-      title: 'Skip ergometer test?',
-      message: 'This stops recording and continues to the next phase '
-          'without an end heart rate.',
-      confirmLabel: 'Skip',
-      destructive: true,
-    );
-    if (!confirmed) {
-      return;
-    }
-    await _controller.skip();
-    if (mounted) {
-      _advance();
     }
   }
 
@@ -530,7 +491,7 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
               return;
             }
             if (isRecovering) {
-              _skipRecovery();
+              return;
             } else {
               _endTest(requireConfirmation: true);
             }
@@ -556,10 +517,6 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
                   PlatformTextButton(
                     onPressed: _previousPhase,
                     child: PlatformText('Prev'),
-                  ),
-                  PlatformTextButton(
-                    onPressed: _skipTest,
-                    child: PlatformText('Skip'),
                   ),
                 ],
               ],
@@ -688,23 +645,14 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
                         ],
                       ),
                     ),
-                    SizedBox(
-                      width: double.infinity,
-                      child: PlatformElevatedButton(
-                        onPressed: finished ? _finishRecovery : _skipRecovery,
-                        material: finished
-                            ? null
-                            : (_, __) => MaterialElevatedButtonData(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: theme.colorScheme.error,
-                                    foregroundColor: theme.colorScheme.onError,
-                                  ),
-                                ),
-                        child: PlatformText(
-                          finished ? 'Continue' : 'Skip recovery',
+                    if (finished)
+                      SizedBox(
+                        width: double.infinity,
+                        child: PlatformElevatedButton(
+                          onPressed: _finishRecovery,
+                          child: PlatformText('Continue'),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),

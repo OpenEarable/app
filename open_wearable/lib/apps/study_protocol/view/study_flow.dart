@@ -110,6 +110,39 @@ Widget buildStudyPhaseEntryPage({
       deviceSet: deviceSet,
       directory: directory,
       actionLabel: 'Start ${phase.title.toLowerCase()}',
+      onSkip: () async {
+        final shouldSkip = await showPlatformDialog<bool>(
+              context: context,
+              builder: (dialogContext) => PlatformAlertDialog(
+                title: PlatformText('Skip ${phase.title} unit?'),
+                content: PlatformText(
+                  'This skips the complete unit: start seal check, '
+                  '${phase.title.toLowerCase()} phase, and end seal check.',
+                ),
+                actions: [
+                  PlatformDialogAction(
+                    child: PlatformText('Cancel'),
+                    onPressed: () => Navigator.pop(dialogContext, false),
+                  ),
+                  PlatformDialogAction(
+                    child: PlatformText('Skip unit'),
+                    onPressed: () => Navigator.pop(dialogContext, true),
+                  ),
+                ],
+              ),
+            ) ??
+            false;
+        if (!shouldSkip || !context.mounted) {
+          return;
+        }
+        _skipStudyPhaseUnit(
+          context: context,
+          current: phase,
+          session: session,
+          deviceSet: deviceSet,
+          directory: directory,
+        );
+      },
       onContinue: () {
         Navigator.of(context).pushReplacement(
           platformPageRoute(
@@ -123,6 +156,32 @@ Widget buildStudyPhaseEntryPage({
           ),
         );
       },
+    ),
+  );
+}
+
+void _skipStudyPhaseUnit({
+  required BuildContext context,
+  required StudyPhase current,
+  required StudySession session,
+  required StudyDeviceSet deviceSet,
+  required String directory,
+}) {
+  final index = studyPhaseOrder.indexOf(current);
+  if (index < 0 || index + 1 >= studyPhaseOrder.length) {
+    Navigator.of(context).pop();
+    return;
+  }
+  final next = studyPhaseOrder[index + 1];
+  Navigator.of(context).pushReplacement(
+    platformPageRoute(
+      context: context,
+      builder: (_) => buildStudyPhaseEntryPage(
+        phase: next,
+        session: session,
+        deviceSet: deviceSet,
+        directory: directory,
+      ),
     ),
   );
 }
@@ -176,7 +235,8 @@ void advanceStudyPhase({
   required StudyDeviceSet deviceSet,
   required String directory,
 }) {
-  // Every completed or skipped phase passes through its mandatory end check.
+  // Every entered phase passes through its mandatory end check. Whole-unit
+  // skips are handled before the start seal check and bypass this page.
   Navigator.of(context).pushReplacement(
     platformPageRoute(
       context: context,
