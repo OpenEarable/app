@@ -37,7 +37,10 @@ class TimedPhasePage extends StatefulWidget {
 
 class _TimedPhasePageState extends State<TimedPhasePage> {
   late final TimedRecordingController _controller;
-  bool _isBusy = false;
+  bool _isStarting = false;
+  bool _isStopping = false;
+
+  bool get _isBusy => _isStarting || _isStopping;
 
   @override
   void initState() {
@@ -63,7 +66,10 @@ class _TimedPhasePageState extends State<TimedPhasePage> {
   }
 
   Future<void> _start() async {
-    setState(() => _isBusy = true);
+    if (_isBusy) {
+      return;
+    }
+    setState(() => _isStarting = true);
     try {
       await _controller.start(
         probandId: widget.session.probandId,
@@ -74,12 +80,15 @@ class _TimedPhasePageState extends State<TimedPhasePage> {
       await _showError('Failed to start the recording: $e');
     } finally {
       if (mounted) {
-        setState(() => _isBusy = false);
+        setState(() => _isStarting = false);
       }
     }
   }
 
   Future<void> _stop() async {
+    if (_isStopping || !_controller.isRecording) {
+      return;
+    }
     final shouldStop = await _confirm(
       'Stop ${widget.config.title.toLowerCase()}?',
       'The phase is not finished yet. Stopping now will end the recording on '
@@ -87,13 +96,30 @@ class _TimedPhasePageState extends State<TimedPhasePage> {
       confirmLabel: 'Stop',
     );
     if (shouldStop) {
-      try {
-        await _controller.stop();
-      } catch (e) {
-        await _showError('Failed to stop the recording: $e');
+      await _stopRecording();
+    }
+  }
+
+  Future<void> _stopRecording({bool rethrowOnError = false}) async {
+    if (_isStopping || !_controller.isRecording) {
+      return;
+    }
+    setState(() => _isStopping = true);
+    try {
+      await _controller.stop();
+    } catch (e) {
+      await _showError('Failed to stop the recording: $e');
+      if (rethrowOnError) {
+        rethrow;
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isStopping = false);
       }
     }
   }
+
+  Future<void> _stopIfRecording() => _stopRecording(rethrowOnError: true);
 
   void _advance() {
     advanceStudyPhase(
@@ -106,7 +132,10 @@ class _TimedPhasePageState extends State<TimedPhasePage> {
   }
 
   /// Goes back to the previous phase (fresh restart), like skip but backwards.
-  Future<void> _back() async {
+  Future<void> _previousPhase() async {
+    if (_isBusy || _controller.isRecording) {
+      return;
+    }
     final shouldGoBack = await _confirm(
       'Go to previous phase?',
       'This leaves ${widget.config.title.toLowerCase()} and returns to the '
@@ -116,9 +145,7 @@ class _TimedPhasePageState extends State<TimedPhasePage> {
     if (!shouldGoBack || !mounted) {
       return;
     }
-    if (_controller.isRecording) {
-      await _controller.stop();
-    }
+    await _stopIfRecording();
     if (mounted) {
       goToPreviousStudyPhase(
         context: context,
@@ -128,6 +155,63 @@ class _TimedPhasePageState extends State<TimedPhasePage> {
         directory: widget.directory,
       );
     }
+  }
+
+  Future<void> _repeatPhase() async {
+    if (_isBusy || _controller.isRecording) {
+      return;
+    }
+    final shouldRepeat = await _confirm(
+      'Repeat ${widget.config.title.toLowerCase()}?',
+      'This stops the current recording if needed and restarts this phase from '
+          'its start seal check.',
+      confirmLabel: 'Repeat',
+    );
+    if (!shouldRepeat || !mounted) {
+      return;
+    }
+    await _stopIfRecording();
+    if (mounted) {
+      repeatStudyPhase(
+        context: context,
+        current: widget.phase,
+        session: widget.session,
+        deviceSet: widget.deviceSet,
+        directory: widget.directory,
+      );
+    }
+  }
+
+  Future<void> _nextPhase() async {
+    if (_isBusy) {
+      return;
+    }
+    final status = _controller.status;
+    if (status == StudyRecordingStatus.completed) {
+      _advance();
+      return;
+    }
+
+    final isRecording = status == StudyRecordingStatus.recording;
+    if (isRecording) {
+      return;
+    }
+    final shouldContinue = await _confirm(
+      'Skip ${widget.config.title.toLowerCase()}?',
+      'This skips this phase and continues with the next phase.',
+      confirmLabel: 'Next',
+    );
+    if (!shouldContinue || !mounted) {
+      return;
+    }
+
+    goToNextStudyPhase(
+      context: context,
+      current: widget.phase,
+      session: widget.session,
+      deviceSet: widget.deviceSet,
+      directory: widget.directory,
+    );
   }
 
   Future<bool> _confirm(
@@ -184,17 +268,16 @@ class _TimedPhasePageState extends State<TimedPhasePage> {
 
         return PopScope(
           canPop: !isRecording,
-          onPopInvokedWithResult: (didPop, _) {
-            if (!didPop) {
-              _stop();
-            }
-          },
+          onPopInvokedWithResult: (didPop, result) {},
           child: PlatformScaffold(
             material: (_, __) =>
                 MaterialScaffoldData(resizeToAvoidBottomInset: false),
             cupertino: (_, __) =>
                 CupertinoPageScaffoldData(resizeToAvoidBottomInset: false),
-            appBar: PlatformAppBar(title: PlatformText(widget.config.title)),
+            appBar: PlatformAppBar(
+              title: PlatformText(widget.config.title),
+              automaticallyImplyLeading: !isRecording,
+            ),
             body: SafeArea(child: _buildBody(context, status)),
           ),
         );
@@ -258,15 +341,11 @@ class _TimedPhasePageState extends State<TimedPhasePage> {
                         ],
                       ),
                     ),
-                    _buildActionButton(status),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: PlatformTextButton(
-                        onPressed: _back,
-                        child: PlatformText('Previous phase'),
-                      ),
-                    ),
+                    if (status != StudyRecordingStatus.completed) ...[
+                      _buildActionButton(status),
+                      const SizedBox(height: 12),
+                    ],
+                    _buildPhaseNavigation(status),
                   ],
                 ),
               ),
@@ -295,14 +374,19 @@ class _TimedPhasePageState extends State<TimedPhasePage> {
         return SizedBox(
           width: double.infinity,
           child: PlatformElevatedButton(
-            onPressed: _stop,
+            onPressed: _isStopping ? null : _stop,
             material: (_, __) => MaterialElevatedButtonData(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.error,
                 foregroundColor: Theme.of(context).colorScheme.onError,
               ),
             ),
-            child: PlatformText('Stop'),
+            child: _isStopping
+                ? _BusyButtonLabel(
+                    label: 'Stopping…',
+                    color: Theme.of(context).colorScheme.onError,
+                  )
+                : PlatformText('Stop'),
           ),
         );
       case StudyRecordingStatus.completed:
@@ -314,6 +398,114 @@ class _TimedPhasePageState extends State<TimedPhasePage> {
           ),
         );
     }
+  }
+
+  Widget _buildPhaseNavigation(StudyRecordingStatus status) {
+    final isRecording = status == StudyRecordingStatus.recording;
+    return Row(
+      children: [
+        Expanded(
+          child: PlatformTextButton(
+            onPressed: _isBusy || isRecording ? null : _previousPhase,
+            child: const _NavigationButtonLabel(
+              icon: Icons.arrow_back,
+              label: 'Previous',
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: PlatformTextButton(
+            onPressed: _isBusy || isRecording ? null : _repeatPhase,
+            child: const _NavigationButtonLabel(
+              icon: Icons.replay,
+              label: 'Repeat',
+              iconAfterLabel: true,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: status == StudyRecordingStatus.completed
+              ? PlatformElevatedButton(
+                  onPressed: _isBusy ? null : _nextPhase,
+                  child: const _NavigationButtonLabel(
+                    icon: Icons.arrow_forward,
+                    label: 'Next',
+                    iconAfterLabel: true,
+                  ),
+                )
+              : PlatformTextButton(
+                  onPressed: _isBusy || isRecording ? null : _nextPhase,
+                  child: const _NavigationButtonLabel(
+                    icon: Icons.arrow_forward,
+                    label: 'Next',
+                    iconAfterLabel: true,
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+class _NavigationButtonLabel extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool iconAfterLabel;
+
+  const _NavigationButtonLabel({
+    required this.icon,
+    required this.label,
+    this.iconAfterLabel = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final iconWidget = Icon(icon, size: 18);
+    final labelWidget = PlatformText(label);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: iconAfterLabel
+          ? [
+              labelWidget,
+              const SizedBox(width: 6),
+              iconWidget,
+            ]
+          : [
+              iconWidget,
+              const SizedBox(width: 6),
+              labelWidget,
+            ],
+    );
+  }
+}
+
+class _BusyButtonLabel extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _BusyButtonLabel({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: color,
+          ),
+        ),
+        const SizedBox(width: 8),
+        PlatformText(label),
+      ],
+    );
   }
 }
 

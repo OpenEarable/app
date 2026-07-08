@@ -186,6 +186,55 @@ void _skipStudyPhaseUnit({
   );
 }
 
+/// Restarts [current] from its start seal check.
+void repeatStudyPhase({
+  required BuildContext context,
+  required StudyPhase current,
+  required StudySession session,
+  required StudyDeviceSet deviceSet,
+  required String directory,
+}) {
+  Navigator.of(context).pushReplacement(
+    platformPageRoute(
+      context: context,
+      builder: (_) => buildStudyPhaseEntryPage(
+        phase: current,
+        session: session,
+        deviceSet: deviceSet,
+        directory: directory,
+      ),
+    ),
+  );
+}
+
+/// Moves from [current] to the next phase, or returns to the recordings list
+/// when [current] is the final phase.
+void goToNextStudyPhase({
+  required BuildContext context,
+  required StudyPhase current,
+  required StudySession session,
+  required StudyDeviceSet deviceSet,
+  required String directory,
+}) {
+  final index = studyPhaseOrder.indexOf(current);
+  if (index < 0 || index + 1 >= studyPhaseOrder.length) {
+    Navigator.of(context).pop();
+    return;
+  }
+  final next = studyPhaseOrder[index + 1];
+  Navigator.of(context).pushReplacement(
+    platformPageRoute(
+      context: context,
+      builder: (_) => buildStudyPhaseEntryPage(
+        phase: next,
+        session: session,
+        deviceSet: deviceSet,
+        directory: directory,
+      ),
+    ),
+  );
+}
+
 Widget _buildStudyPhaseExitPage({
   required StudyPhase phase,
   required StudySession session,
@@ -203,7 +252,7 @@ Widget _buildStudyPhaseExitPage({
       session: session,
       deviceSet: deviceSet,
       directory: directory,
-      actionLabel: hasNextPhase ? 'Continue' : 'Finish protocol',
+      actionLabel: hasNextPhase ? 'Next' : 'Finish protocol',
       onContinue: () {
         if (!hasNextPhase) {
           Navigator.of(context).pop();

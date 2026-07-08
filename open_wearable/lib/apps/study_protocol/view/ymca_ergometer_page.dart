@@ -50,6 +50,10 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
 
   bool _dialogActive = false;
   bool _starting = false;
+  bool _endingMeasurement = false;
+  bool _stoppingRecording = false;
+
+  bool get _isBusy => _starting || _endingMeasurement || _stoppingRecording;
 
   @override
   void initState() {
@@ -73,6 +77,9 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
   }
 
   Future<void> _start() async {
+    if (_isBusy) {
+      return;
+    }
     setState(() => _starting = true);
     try {
       await _controller.start();
@@ -287,34 +294,49 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
 
   /// Ends the test: optional confirmation, then the mandatory end heart rate.
   Future<void> _endTest({required bool requireConfirmation}) async {
-    if (_controller.status == ErgoStatus.ended) {
+    if (_endingMeasurement ||
+        _stoppingRecording ||
+        _controller.status != ErgoStatus.running) {
       return;
     }
-    if (requireConfirmation) {
-      final confirmed = await _confirm(
-        title: 'End measurement?',
-        message: 'This stops recording on all devices and ends the test.',
-        confirmLabel: 'End',
-        destructive: true,
-      );
-      if (!confirmed) {
+    setState(() => _endingMeasurement = true);
+    try {
+      if (requireConfirmation) {
+        final confirmed = await _confirm(
+          title: 'End measurement?',
+          message: 'This stops recording on all devices and ends the test.',
+          confirmLabel: 'End',
+          destructive: true,
+        );
+        if (!confirmed) {
+          return;
+        }
+      }
+
+      final endHeartRate = await _promptEndHeartRate();
+      if (endHeartRate == null) {
         return;
       }
-    }
 
-    final endHeartRate = await _promptEndHeartRate();
-    if (endHeartRate == null) {
-      return;
+      // Ending transitions into the recovery phase: recording keeps running and
+      // the page shows the recovery countdown. Advancing happens only once the
+      // recovery is finished.
+      await _controller.end(endHeartRate: endHeartRate);
+    } finally {
+      if (mounted) {
+        setState(() => _endingMeasurement = false);
+      }
     }
-
-    // Ending transitions into the recovery phase: recording keeps running and
-    // the page shows the recovery countdown. Advancing happens only once the
-    // recovery is finished.
-    await _controller.end(endHeartRate: endHeartRate);
   }
 
   /// Finishes the recovery phase (countdown complete) and continues.
   Future<void> _finishRecovery() async {
+    if (_stoppingRecording ||
+        _controller.status != ErgoStatus.recovering ||
+        _controller.isRecoveryFinished) {
+      return;
+    }
+    setState(() => _stoppingRecording = true);
     try {
       await _controller.finishRecovery();
       if (mounted) {
@@ -322,6 +344,44 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
       }
     } catch (e) {
       await _showError('Failed to stop the recording: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _stoppingRecording = false);
+      }
+    }
+  }
+
+  bool get _isPhaseNavigationLocked {
+    final status = _controller.status;
+    return _endingMeasurement ||
+        _stoppingRecording ||
+        status == ErgoStatus.running ||
+        (status == ErgoStatus.recovering && !_controller.isRecoveryFinished);
+  }
+
+  Future<void> _stopForPhaseNavigation() async {
+    if (_stoppingRecording) {
+      return;
+    }
+    final shouldShowProgress = _controller.status == ErgoStatus.running ||
+        _controller.status == ErgoStatus.recovering;
+    if (shouldShowProgress && mounted) {
+      setState(() => _stoppingRecording = true);
+    }
+    try {
+      switch (_controller.status) {
+        case ErgoStatus.idle:
+        case ErgoStatus.ended:
+          return;
+        case ErgoStatus.running:
+          await _controller.skip();
+        case ErgoStatus.recovering:
+          await _controller.finishRecovery();
+      }
+    } finally {
+      if (shouldShowProgress && mounted) {
+        setState(() => _stoppingRecording = false);
+      }
     }
   }
 
@@ -343,6 +403,9 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
 
   /// Goes back to the previous phase (fresh restart), like skip but backwards.
   Future<void> _previousPhase() async {
+    if (_isBusy || _isPhaseNavigationLocked) {
+      return;
+    }
     final confirmed = await _confirm(
       title: 'Go to previous phase?',
       message: 'This stops recording and returns to the previous phase, which '
@@ -352,11 +415,90 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
     if (!confirmed) {
       return;
     }
-    if (_controller.status == ErgoStatus.running) {
-      await _controller.skip();
+    try {
+      await _stopForPhaseNavigation();
+    } catch (e) {
+      await _showError('Failed to stop the recording: $e');
+      return;
     }
     if (mounted) {
       goToPreviousStudyPhase(
+        context: context,
+        current: StudyPhase.ergometer,
+        session: widget.session,
+        deviceSet: widget.deviceSet,
+        directory: widget.directory,
+      );
+    }
+  }
+
+  Future<void> _repeatPhase() async {
+    if (_isBusy || _isPhaseNavigationLocked) {
+      return;
+    }
+    final confirmed = await _confirm(
+      title: 'Repeat ergometer?',
+      message: 'This stops the current recording if needed and restarts the '
+          'ergometer unit from its start seal check.',
+      confirmLabel: 'Repeat',
+    );
+    if (!confirmed) {
+      return;
+    }
+    try {
+      await _stopForPhaseNavigation();
+    } catch (e) {
+      await _showError('Failed to stop the recording: $e');
+      return;
+    }
+    if (mounted) {
+      repeatStudyPhase(
+        context: context,
+        current: StudyPhase.ergometer,
+        session: widget.session,
+        deviceSet: widget.deviceSet,
+        directory: widget.directory,
+      );
+    }
+  }
+
+  Future<void> _nextPhase() async {
+    if (_isBusy || _isPhaseNavigationLocked) {
+      return;
+    }
+    if (_controller.status == ErgoStatus.ended) {
+      _advance();
+      return;
+    }
+
+    final confirmed = await _confirm(
+      title: _controller.status == ErgoStatus.idle
+          ? 'Skip ergometer?'
+          : 'Continue to next phase?',
+      message: _controller.status == ErgoStatus.idle
+          ? 'This skips the complete ergometer unit.'
+          : 'This stops the current recording and continues with the end seal '
+              'check.',
+      confirmLabel: 'Next',
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await _stopForPhaseNavigation();
+    } catch (e) {
+      await _showError('Failed to stop the recording: $e');
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+
+    if (_controller.status == ErgoStatus.ended) {
+      _advance();
+    } else {
+      goToNextStudyPhase(
         context: context,
         current: StudyPhase.ergometer,
         session: widget.session,
@@ -486,20 +628,11 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
       listenable: _controller,
       builder: (context, _) {
         final status = _controller.status;
-        final isRunning = status == ErgoStatus.running;
         final isRecovering = status == ErgoStatus.recovering;
+        final navigationLocked = _isPhaseNavigationLocked;
         return PopScope(
-          canPop: !isRunning && !isRecovering,
-          onPopInvokedWithResult: (didPop, _) {
-            if (didPop) {
-              return;
-            }
-            if (isRecovering) {
-              return;
-            } else {
-              _endTest(requireConfirmation: true);
-            }
-          },
+          canPop: !navigationLocked,
+          onPopInvokedWithResult: (didPop, result) {},
           child: PlatformScaffold(
             material: (_, __) =>
                 MaterialScaffoldData(resizeToAvoidBottomInset: false),
@@ -507,19 +640,16 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
                 CupertinoPageScaffoldData(resizeToAvoidBottomInset: false),
             appBar: PlatformAppBar(
               title: PlatformText(isRecovering ? 'Recovery' : 'Ergometer Test'),
+              automaticallyImplyLeading: !navigationLocked,
               trailingActions: [
                 // During recovery the controls live in the body; the test
                 // navigation actions apply only before/while measuring.
                 if (!isRecovering) ...[
                   if (_controller.canUndo)
                     PlatformTextButton(
-                      onPressed: _undoLast,
+                      onPressed: _isBusy ? null : _undoLast,
                       child: PlatformText('Undo'),
                     ),
-                  PlatformTextButton(
-                    onPressed: _previousPhase,
-                    child: PlatformText('Prev'),
-                  ),
                 ],
               ],
             ),
@@ -572,10 +702,14 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
           SizedBox(
             width: double.infinity,
             child: PlatformElevatedButton(
-              onPressed: _start,
-              child: PlatformText('Start ergometer test'),
+              onPressed: _isBusy ? null : _start,
+              child: PlatformText(
+                _starting ? 'Starting…' : 'Start ergometer test',
+              ),
             ),
           ),
+          const SizedBox(height: 12),
+          _buildPhaseNavigation(),
         ],
       ),
     );
@@ -657,20 +791,27 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
                         ],
                       ),
                     ),
-                    if (finished || canRetryStop || canFinishEarly)
+                    if (canRetryStop || canFinishEarly) ...[
                       SizedBox(
                         width: double.infinity,
                         child: PlatformElevatedButton(
-                          onPressed: _finishRecovery,
-                          child: PlatformText(
-                            finished
-                                ? 'Continue'
-                                : canRetryStop
-                                    ? 'Retry stop recording'
-                                    : 'Finish recovery early',
-                          ),
+                          onPressed:
+                              _stoppingRecording ? null : _finishRecovery,
+                          child: _stoppingRecording
+                              ? _BusyButtonLabel(
+                                  label: 'Stopping…',
+                                  color: theme.colorScheme.primary,
+                                )
+                              : PlatformText(
+                                  canRetryStop
+                                      ? 'Retry stop recording'
+                                      : 'Finish recovery early',
+                                ),
                         ),
                       ),
+                      const SizedBox(height: 12),
+                    ],
+                    _buildPhaseNavigation(highlightNext: finished),
                   ],
                 ),
               ),
@@ -720,41 +861,164 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
           top: false,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-            child: Row(
+            child: Column(
               children: [
-                Expanded(
-                  child: PlatformElevatedButton(
-                    onPressed: _confirmManualNextStage,
-                    material: (_, __) => MaterialElevatedButtonData(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(
-                          context,
-                        ).colorScheme.secondaryContainer,
-                        foregroundColor: Theme.of(
-                          context,
-                        ).colorScheme.onSecondaryContainer,
+                Row(
+                  children: [
+                    Expanded(
+                      child: PlatformElevatedButton(
+                        onPressed: _isBusy ? null : _confirmManualNextStage,
+                        material: (_, __) => MaterialElevatedButtonData(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.secondaryContainer,
+                            foregroundColor: Theme.of(
+                              context,
+                            ).colorScheme.onSecondaryContainer,
+                          ),
+                        ),
+                        child: PlatformText('Next stage'),
                       ),
                     ),
-                    child: PlatformText('Next stage'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: PlatformElevatedButton(
-                    onPressed: () => _endTest(requireConfirmation: true),
-                    material: (_, __) => MaterialElevatedButtonData(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.error,
-                        foregroundColor: Theme.of(context).colorScheme.onError,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: PlatformElevatedButton(
+                        onPressed: _isBusy
+                            ? null
+                            : () => _endTest(requireConfirmation: true),
+                        material: (_, __) => MaterialElevatedButtonData(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                Theme.of(context).colorScheme.error,
+                            foregroundColor:
+                                Theme.of(context).colorScheme.onError,
+                          ),
+                        ),
+                        child: _endingMeasurement
+                            ? _BusyButtonLabel(
+                                label: 'Ending…',
+                                color: Theme.of(context).colorScheme.primary,
+                              )
+                            : PlatformText('End test'),
                       ),
                     ),
-                    child: PlatformText('End test'),
-                  ),
+                  ],
                 ),
+                const SizedBox(height: 8),
+                _buildPhaseNavigation(),
               ],
             ),
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildPhaseNavigation({bool highlightNext = false}) {
+    final navigationLocked = _isBusy || _isPhaseNavigationLocked;
+    return Row(
+      children: [
+        Expanded(
+          child: PlatformTextButton(
+            onPressed: navigationLocked ? null : _previousPhase,
+            child: const _NavigationButtonLabel(
+              icon: Icons.arrow_back,
+              label: 'Previous',
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: PlatformTextButton(
+            onPressed: navigationLocked ? null : _repeatPhase,
+            child: const _NavigationButtonLabel(
+              icon: Icons.replay,
+              label: 'Repeat',
+              iconAfterLabel: true,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: highlightNext
+              ? PlatformElevatedButton(
+                  onPressed: navigationLocked ? null : _nextPhase,
+                  child: const _NavigationButtonLabel(
+                    icon: Icons.arrow_forward,
+                    label: 'Next',
+                    iconAfterLabel: true,
+                  ),
+                )
+              : PlatformTextButton(
+                  onPressed: navigationLocked ? null : _nextPhase,
+                  child: const _NavigationButtonLabel(
+                    icon: Icons.arrow_forward,
+                    label: 'Next',
+                    iconAfterLabel: true,
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+class _NavigationButtonLabel extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool iconAfterLabel;
+
+  const _NavigationButtonLabel({
+    required this.icon,
+    required this.label,
+    this.iconAfterLabel = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final iconWidget = Icon(icon, size: 18);
+    final labelWidget = PlatformText(label);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: iconAfterLabel
+          ? [
+              labelWidget,
+              const SizedBox(width: 6),
+              iconWidget,
+            ]
+          : [
+              iconWidget,
+              const SizedBox(width: 6),
+              labelWidget,
+            ],
+    );
+  }
+}
+
+class _BusyButtonLabel extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _BusyButtonLabel({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: color,
+          ),
+        ),
+        const SizedBox(width: 8),
+        PlatformText(label),
       ],
     );
   }

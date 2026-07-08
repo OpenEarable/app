@@ -33,6 +33,7 @@ class TimedRecordingController extends ChangeNotifier {
   int? _respibanFileSizeBytes;
   int? _respibanFileSizeDeltaBytes;
   Future<void>? _respibanFileSizeRefresh;
+  Future<void>? _stopFuture;
   String? _stopError;
   bool _disposed = false;
 
@@ -140,6 +141,19 @@ class TimedRecordingController extends ChangeNotifier {
     if (_status != StudyRecordingStatus.recording) {
       return;
     }
+    final activeStop = _stopFuture;
+    if (activeStop != null) {
+      return activeStop;
+    }
+
+    final stop = _performStop().whenComplete(() {
+      _stopFuture = null;
+    });
+    _stopFuture = stop;
+    return stop;
+  }
+
+  Future<void> _performStop() async {
     _stopError = null;
     try {
       await _teardown();

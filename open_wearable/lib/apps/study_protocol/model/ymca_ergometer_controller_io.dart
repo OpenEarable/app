@@ -57,6 +57,7 @@ class YmcaErgometerController extends ChangeNotifier {
   int? _respibanFileSizeBytes;
   int? _respibanFileSizeDeltaBytes;
   Future<void>? _respibanFileSizeRefresh;
+  Future<void>? _stopRecorderFuture;
 
   ErgoStatus _status = ErgoStatus.idle;
   int _currentStage = 0;
@@ -544,7 +545,19 @@ class YmcaErgometerController extends ChangeNotifier {
     if (_recorderStopped) {
       return;
     }
+    final activeStop = _stopRecorderFuture;
+    if (activeStop != null) {
+      return activeStop;
+    }
 
+    final stop = _doStopRecorderOnce().whenComplete(() {
+      _stopRecorderFuture = null;
+    });
+    _stopRecorderFuture = stop;
+    return stop;
+  }
+
+  Future<void> _doStopRecorderOnce() async {
     await _logSink?.flush();
     await _logSink?.close();
     _logSink = null;
