@@ -1,7 +1,4 @@
 PODS:
-  - flutter_archive (0.0.1):
-    - FlutterMacOS
-    - ZIPFoundation (= 0.9.19)
   - FlutterMacOS (1.0.0)
   - iOSMcuManagerLibrary (1.12):
     - SwiftCBOR (= 0.5.0)
@@ -16,7 +13,6 @@ PODS:
   - ZIPFoundation (0.9.19)
 
 DEPENDENCIES:
-  - flutter_archive (from `Flutter/ephemeral/.symlinks/plugins/flutter_archive/macos`)
   - FlutterMacOS (from `Flutter/ephemeral`)
   - mcumgr_flutter (from `Flutter/ephemeral/.symlinks/plugins/mcumgr_flutter/darwin`)
 
@@ -28,15 +24,12 @@ SPEC REPOS:
     - ZIPFoundation
 
 EXTERNAL SOURCES:
-  flutter_archive:
-    :path: Flutter/ephemeral/.symlinks/plugins/flutter_archive/macos
   FlutterMacOS:
     :path: Flutter/ephemeral
   mcumgr_flutter:
     :path: Flutter/ephemeral/.symlinks/plugins/mcumgr_flutter/darwin
 
 SPEC CHECKSUMS:
-  flutter_archive: 07888d9aeb79da005e0ad8b9d347d17cdea07f68
   FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
   iOSMcuManagerLibrary: f72db849f6dd66b1f26cd7eea776050a22c8591c
   mcumgr_flutter: b9864b2ae8334b6ba2b33f9ab4fc0a67bbe75c7a

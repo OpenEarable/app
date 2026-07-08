@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Fail this script if any subcommand fails.
+
 set -e
 
 FLUTTER_VERSION=$(cat "$CI_WORKSPACE_PATH/repository/open_wearable/.flutter_version")
@@ -16,10 +16,8 @@ echo "🟩 Verify Flutter Installation"
 flutter --version
 
 echo "🟩 Flutter Precache"
-time flutter precache --ios
+time flutter precache --macos
 
-# by default, the execution directory of this script is the ci_scripts directory
-# CI_WORKSPACE is the directory of your cloned repo
 echo "🟩 Navigate from ($PWD) to ($CI_WORKSPACE_PATH)"
 cd $CI_WORKSPACE_PATH
 
@@ -32,12 +30,12 @@ echo "🟩 Install CocoaPods via Homebrew"
 time HOMEBREW_NO_AUTO_UPDATE=1 brew install cocoapods
 
 echo "🟩 Install CocoaPods dependencies..."
-time cd ios && pod install
+time cd macos && pod install
 cd ../
 
-echo "🟩 Prepare iOS Flutter/Xcode project"
+echo "🟩 Prepare macOS Flutter/Xcode project"
 # Generate Flutter ephemeral files and Xcode config.
 # The actual signed archive/build is performed later by Xcode Cloud.
-time flutter build ios --release --config-only
+time flutter build macos --release --config-only
 
 exit 0
