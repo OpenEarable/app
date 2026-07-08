@@ -46,7 +46,7 @@ class _TimedPhasePageState extends State<TimedPhasePage> {
   void initState() {
     super.initState();
     _controller = TimedRecordingController(
-      duration: widget.config.duration,
+      duration: widget.config.durationFor(widget.session),
       respibanFileLabel: widget.config.respibanFileLabel,
       earablePrefixSuffix: widget.config.earablePrefixSuffix,
     );
@@ -309,7 +309,10 @@ class _TimedPhasePageState extends State<TimedPhasePage> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      widget.config.instruction,
+                      widget.session.timerTestMode
+                          ? '${widget.config.instruction}\n\nTest mode: this '
+                              'phase uses a 10 second timer.'
+                          : widget.config.instruction,
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,

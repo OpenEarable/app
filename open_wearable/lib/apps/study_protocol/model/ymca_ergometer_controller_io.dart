@@ -28,10 +28,10 @@ import 'ymca_models.dart';
 /// experimenter) recording is stopped and the test reaches [ErgoStatus.ended].
 class YmcaErgometerController extends ChangeNotifier {
   /// Interval between measurement prompts.
-  static const Duration measurementInterval = Duration(minutes: 1);
+  static const Duration defaultMeasurementInterval = Duration(minutes: 1);
 
   /// Length of the recovery phase that runs after the test ends.
-  static const Duration recoveryDuration = ymcaRecoveryDuration;
+  static const Duration defaultRecoveryDuration = ymcaRecoveryDuration;
 
   final StudySession session;
   final StudyDeviceSet deviceSet;
@@ -104,6 +104,14 @@ class YmcaErgometerController extends ChangeNotifier {
   /// Minute index of the measurement currently awaiting entry, if any.
   int? get dueMeasurementMinute =>
       _dueMeasurements.isEmpty ? null : _dueMeasurements.first;
+
+  Duration get measurementInterval => session.timerTestMode
+      ? StudySession.testModeTimerDuration
+      : defaultMeasurementInterval;
+
+  Duration get recoveryDuration => session.timerTestMode
+      ? StudySession.testModeTimerDuration
+      : defaultRecoveryDuration;
 
   /// Total time elapsed since the test started.
   Duration get elapsed {
@@ -518,7 +526,8 @@ class YmcaErgometerController extends ChangeNotifier {
     final sink = file.openWrite();
     sink.writeln(
       '# proband=${session.probandId}, age=${session.age}, '
-      'hr_max=$maxHeartRate, hr_submax=$submaxHeartRate',
+      'hr_max=$maxHeartRate, hr_submax=$submaxHeartRate, '
+      'timer_test_mode=${session.timerTestMode}',
     );
     sink.writeln('event,elapsed_min,stage,target_watt,actual_watt,heart_rate');
     _logSink = sink;

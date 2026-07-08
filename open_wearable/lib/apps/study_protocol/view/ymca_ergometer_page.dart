@@ -694,7 +694,8 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
           Text(
             'Recording starts when you start the test. Enter the heart rate and '
             'actual wattage each minute. Target heart rate: '
-            '${_controller.submaxHeartRate} BPM.',
+            '${_controller.submaxHeartRate} BPM.'
+            '${widget.session.timerTestMode ? '\n\nTest mode: measurement and recovery timers use 10 seconds.' : ''}',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,

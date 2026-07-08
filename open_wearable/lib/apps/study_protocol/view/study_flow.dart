@@ -47,6 +47,9 @@ class TimedPhaseConfig {
     required this.respibanFileLabel,
     required this.earablePrefixSuffix,
   });
+
+  Duration durationFor(StudySession session) =>
+      session.timerTestMode ? StudySession.testModeTimerDuration : duration;
 }
 
 /// Configuration for the timed phases (the ergometer test has its own page).

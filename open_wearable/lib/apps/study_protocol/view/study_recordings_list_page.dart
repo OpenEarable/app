@@ -163,6 +163,7 @@ class _StudyRecordingsListState extends State<StudyRecordingsList> {
   Future<StudySession?> _promptSession() async {
     _probandIdController.clear();
     _ageController.clear();
+    var timerTestMode = false;
     return showPlatformDialog<StudySession>(
       context: context,
       builder: (dialogContext) {
@@ -196,6 +197,16 @@ class _StudyRecordingsListState extends State<StudyRecordingsList> {
                           const InputDecoration(labelText: 'Age (years)'),
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Test mode'),
+                    subtitle: const Text('Use 10 second timers for testing.'),
+                    value: timerTestMode,
+                    onChanged: (value) {
+                      setDialogState(() => timerTestMode = value);
+                    },
+                  ),
                   if (error != null) ...[
                     const SizedBox(height: 8),
                     Text(
@@ -228,7 +239,11 @@ class _StudyRecordingsListState extends State<StudyRecordingsList> {
                     }
                     Navigator.pop(
                       dialogContext,
-                      StudySession(probandId: probandId, age: age),
+                      StudySession(
+                        probandId: probandId,
+                        age: age,
+                        timerTestMode: timerTestMode,
+                      ),
                     );
                   },
                 ),

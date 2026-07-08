@@ -118,9 +118,13 @@ class StudyDeviceRecorder {
           await respibanConfiguration.setMode(offValue.mode);
         }
       }
-      _respibanConfiguration = null;
     } catch (e) {
-      errors.add('RespiBAN stop failed: $e');
+      _addWarning(
+        'RespiBAN stop reported an error after recording ended. '
+        'If the belt is blinking green, it is already stopped: $e',
+      );
+    } finally {
+      _respibanConfiguration = null;
     }
 
     try {

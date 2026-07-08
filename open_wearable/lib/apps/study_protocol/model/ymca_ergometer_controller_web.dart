@@ -7,8 +7,8 @@ import 'ymca_models.dart';
 /// Web stub: the ergometer test needs local file storage and BLE devices that
 /// are unavailable on web. Exists only so the UI compiles for the web target.
 class YmcaErgometerController extends ChangeNotifier {
-  static const Duration measurementInterval = Duration(minutes: 1);
-  static const Duration recoveryDuration = ymcaRecoveryDuration;
+  static const Duration defaultMeasurementInterval = Duration(minutes: 1);
+  static const Duration defaultRecoveryDuration = ymcaRecoveryDuration;
 
   final StudySession session;
   final StudyDeviceSet deviceSet;
@@ -29,6 +29,12 @@ class YmcaErgometerController extends ChangeNotifier {
   bool get isMeasurementDue => false;
   bool get canUndo => false;
   int? get dueMeasurementMinute => null;
+  Duration get measurementInterval => session.timerTestMode
+      ? StudySession.testModeTimerDuration
+      : defaultMeasurementInterval;
+  Duration get recoveryDuration => session.timerTestMode
+      ? StudySession.testModeTimerDuration
+      : defaultRecoveryDuration;
   Duration get elapsed => Duration.zero;
   Duration get timeToNextMeasurement => measurementInterval;
   String? get pendingStageMessage => null;

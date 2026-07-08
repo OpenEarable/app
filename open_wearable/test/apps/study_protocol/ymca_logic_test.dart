@@ -9,6 +9,19 @@ void main() {
       expect(const StudySession(probandId: 'p', age: 40).maxHeartRate, 180);
     });
 
+    test('timer test mode is opt-in', () {
+      expect(const StudySession(probandId: 'p', age: 20).timerTestMode, false);
+      expect(
+        const StudySession(
+          probandId: 'p',
+          age: 20,
+          timerTestMode: true,
+        ).timerTestMode,
+        true,
+      );
+      expect(StudySession.testModeTimerDuration, const Duration(seconds: 10));
+    });
+
     test('HR_submax = 85% of HR_max, rounded', () {
       // 220 - 20 = 200; 0.85 * 200 = 170.
       expect(const StudySession(probandId: 'p', age: 20).submaxHeartRate, 170);
