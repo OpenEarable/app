@@ -428,10 +428,18 @@ class YmcaErgometerController extends ChangeNotifier {
     }
   }
 
-  /// Finishes the recovery phase (countdown elapsed or skipped early), stops
-  /// recording if it is still running and ends the test.
+  /// Finishes the recovery phase (countdown elapsed or skipped early) and stops
+  /// recording if it is still running.
+  ///
+  /// The controller intentionally keeps [ErgoStatus.recovering] with
+  /// [_recoveryFinished] set so the UI can show the completed recovery state.
+  /// Advancing to the end seal check remains an explicit "Next" action, just
+  /// like the fixed-duration phases.
   Future<void> finishRecovery() async {
     if (_status != ErgoStatus.recovering) {
+      return;
+    }
+    if (_recoveryFinished) {
       return;
     }
     _recoveryTicker?.cancel();
@@ -442,7 +450,6 @@ class YmcaErgometerController extends ChangeNotifier {
       await _refreshRespibanFileSize();
       _recoveryFinished = true;
       _stopError = null;
-      _status = ErgoStatus.ended;
       notifyListeners();
     } catch (e, st) {
       _stopError = 'Failed to stop recording on all devices: $e';

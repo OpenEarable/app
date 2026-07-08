@@ -339,9 +339,6 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
     setState(() => _stoppingRecording = true);
     try {
       await _controller.finishRecovery();
-      if (mounted) {
-        _advance();
-      }
     } catch (e) {
       await _showError('Failed to stop the recording: $e');
     } finally {
@@ -464,6 +461,11 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
 
   Future<void> _nextPhase() async {
     if (_isBusy || _isPhaseNavigationLocked) {
+      return;
+    }
+    if (_controller.status == ErgoStatus.recovering &&
+        _controller.isRecoveryFinished) {
+      _advance();
       return;
     }
     if (_controller.status == ErgoStatus.ended) {
@@ -733,6 +735,9 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
   Widget _buildRecoveryView(BuildContext context) {
     final theme = Theme.of(context);
     final finished = _controller.isRecoveryFinished;
+    final recoveryProgress = finished ? 1.0 : _controller.recoveryProgress;
+    final recoveryRemaining =
+        finished ? Duration.zero : _controller.recoveryRemaining;
     final canRetryStop =
         !finished && _controller.recoveryRemaining <= Duration.zero;
     final canFinishEarly =
@@ -772,10 +777,8 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           TimerRing(
-                            progress: _controller.recoveryProgress,
-                            label: _formatDuration(
-                              _controller.recoveryRemaining,
-                            ),
+                            progress: recoveryProgress,
+                            label: _formatDuration(recoveryRemaining),
                             caption: finished ? 'Complete' : 'Recovery',
                           ),
                           const SizedBox(height: 16),

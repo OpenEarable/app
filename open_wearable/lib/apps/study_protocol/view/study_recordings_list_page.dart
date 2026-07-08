@@ -107,8 +107,7 @@ class _StudyRecordingsListState extends State<StudyRecordingsList> {
     await Navigator.of(context).push(
       platformPageRoute(
         context: context,
-        builder: (_) => buildStudyPhaseEntryPage(
-          phase: studyPhaseOrder.first,
+        builder: (_) => buildStudyProtocolStartPage(
           session: session,
           deviceSet: deviceSet,
           directory: directory,

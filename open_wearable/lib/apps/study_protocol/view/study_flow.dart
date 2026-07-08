@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 
 import 'package:open_wearable/apps/study_protocol/model/study_devices.dart';
@@ -70,6 +70,136 @@ const Map<StudyPhase, TimedPhaseConfig> studyTimedPhaseConfigs = {
     earablePrefixSuffix: 'tread_',
   ),
 };
+
+/// First protocol step: asks the experimenter to switch on the ECG before the
+/// first seal check starts.
+Widget buildStudyProtocolStartPage({
+  required StudySession session,
+  required StudyDeviceSet deviceSet,
+  required String directory,
+}) {
+  return Builder(
+    builder: (context) => _EcgInstructionPage(
+      title: 'ECG setup',
+      stepLabel: 'Protocol setup',
+      icon: Icons.favorite,
+      instruction:
+          'Switch on the ECG with a short button press and verify that it is '
+          'blinking before continuing.',
+      actionLabel: 'ECG is blinking',
+      onContinue: () {
+        Navigator.of(context).pushReplacement(
+          platformPageRoute(
+            context: context,
+            builder: (_) => buildStudyPhaseEntryPage(
+              phase: studyPhaseOrder.first,
+              session: session,
+              deviceSet: deviceSet,
+              directory: directory,
+            ),
+          ),
+        );
+      },
+    ),
+  );
+}
+
+/// Final protocol step: asks the experimenter to switch off the ECG after the
+/// final seal check has been completed.
+Widget buildStudyProtocolStopPage() {
+  return Builder(
+    builder: (context) => _EcgInstructionPage(
+      title: 'Switch off ECG',
+      stepLabel: 'Protocol complete',
+      icon: Icons.power_settings_new,
+      instruction:
+          'Switch off the ECG now. Hold the button until the jingle sounds.',
+      actionLabel: 'ECG stopped',
+      onContinue: () => Navigator.of(context).pop(),
+    ),
+  );
+}
+
+class _EcgInstructionPage extends StatelessWidget {
+  final String title;
+  final String stepLabel;
+  final IconData icon;
+  final String instruction;
+  final String actionLabel;
+  final VoidCallback onContinue;
+
+  const _EcgInstructionPage({
+    required this.title,
+    required this.stepLabel,
+    required this.icon,
+    required this.instruction,
+    required this.actionLabel,
+    required this.onContinue,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return PlatformScaffold(
+      appBar: PlatformAppBar(title: PlatformText(title)),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              const Spacer(),
+              Container(
+                height: 72,
+                width: 72,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Icon(
+                  icon,
+                  size: 38,
+                  color: theme.colorScheme.onPrimaryContainer,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                stepLabel,
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                instruction,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const Spacer(),
+              SizedBox(
+                width: double.infinity,
+                child: PlatformElevatedButton(
+                  onPressed: onContinue,
+                  child: PlatformText(actionLabel),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 /// Builds the page for [phase].
 Widget buildStudyPhasePage({
@@ -169,7 +299,12 @@ void _skipStudyPhaseUnit({
 }) {
   final index = studyPhaseOrder.indexOf(current);
   if (index < 0 || index + 1 >= studyPhaseOrder.length) {
-    Navigator.of(context).pop();
+    Navigator.of(context).pushReplacement(
+      platformPageRoute(
+        context: context,
+        builder: (_) => buildStudyProtocolStopPage(),
+      ),
+    );
     return;
   }
   final next = studyPhaseOrder[index + 1];
@@ -218,7 +353,12 @@ void goToNextStudyPhase({
 }) {
   final index = studyPhaseOrder.indexOf(current);
   if (index < 0 || index + 1 >= studyPhaseOrder.length) {
-    Navigator.of(context).pop();
+    Navigator.of(context).pushReplacement(
+      platformPageRoute(
+        context: context,
+        builder: (_) => buildStudyProtocolStopPage(),
+      ),
+    );
     return;
   }
   final next = studyPhaseOrder[index + 1];
@@ -255,7 +395,12 @@ Widget _buildStudyPhaseExitPage({
       actionLabel: hasNextPhase ? 'Next' : 'Finish protocol',
       onContinue: () {
         if (!hasNextPhase) {
-          Navigator.of(context).pop();
+          Navigator.of(context).pushReplacement(
+            platformPageRoute(
+              context: context,
+              builder: (_) => buildStudyProtocolStopPage(),
+            ),
+          );
           return;
         }
         final next = studyPhaseOrder[index + 1];
@@ -310,7 +455,16 @@ void goToPreviousStudyPhase({
 }) {
   final index = studyPhaseOrder.indexOf(current);
   if (index <= 0) {
-    Navigator.of(context).pop();
+    Navigator.of(context).pushReplacement(
+      platformPageRoute(
+        context: context,
+        builder: (_) => buildStudyProtocolStartPage(
+          session: session,
+          deviceSet: deviceSet,
+          directory: directory,
+        ),
+      ),
+    );
     return;
   }
   final previous = studyPhaseOrder[index - 1];
