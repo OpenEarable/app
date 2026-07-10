@@ -38,7 +38,7 @@ void main() {
     expect((json['right'] as Map<String, dynamic>)['quality'], 91);
   });
 
-  test('a repeated check replaces the previous phase result', () async {
+  test('a repeated check creates numbered files', () async {
     final directory = await Directory.systemTemp.createTemp('seal_check_test_');
     addTearDown(() => directory.delete(recursive: true));
 
@@ -56,10 +56,19 @@ void main() {
       position: 'end',
       result: {'left': 2},
     );
+    final thirdPath = await saveStudySealCheckResult(
+      directory: directory.path,
+      probandId: 'P001',
+      phase: 'treadmill',
+      position: 'end',
+      result: {'left': 3},
+    );
 
-    expect(secondPath, firstPath);
+    expect(firstPath, endsWith('P001_treadmill_seal_check_end.json'));
+    expect(secondPath, endsWith('P001_treadmill_seal_check_end (2).json'));
+    expect(thirdPath, endsWith('P001_treadmill_seal_check_end (3).json'));
     final files = await directory.list().where((entry) => entry is File).length;
-    expect(files, 1);
+    expect(files, 3);
     final json = jsonDecode(await File(secondPath).readAsString())
         as Map<String, dynamic>;
     expect(json['left'], 2);

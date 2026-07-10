@@ -521,7 +521,8 @@ class YmcaErgometerController extends ChangeNotifier {
 
   Future<void> _openLog() async {
     final token = sanitizeProbandId(session.probandId);
-    final file = File('$directory/${token}_ergometer.csv');
+    final path = await uniqueStudyFilePath(directory, '${token}_ergometer.csv');
+    final file = File(path);
     await file.parent.create(recursive: true);
     final sink = file.openWrite();
     sink.writeln(

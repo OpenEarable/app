@@ -350,7 +350,8 @@ class StudyDeviceRecorder {
     // gyroscope share the same sample timestamps and are written into a
     // single file.
     final writer = _RespibanCsvWriter();
-    final filepath = '$directory/$token${label}_RespiBAN.csv';
+    final filename = '$token${label}_RespiBAN.csv';
+    final filepath = await uniqueStudyFilePath(directory, filename);
     _respibanFilePath = filepath;
     await writer.start(
       filepath: filepath,

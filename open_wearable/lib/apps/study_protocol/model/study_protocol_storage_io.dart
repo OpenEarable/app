@@ -42,6 +42,25 @@ String sanitizeProbandId(String probandId) {
   return sanitized.isEmpty ? 'unknown' : sanitized;
 }
 
+/// Returns a file path in [directory] that does not overwrite an existing file.
+///
+/// The first file keeps [filename]. Repeated recordings use the familiar
+/// `name (2).ext`, `name (3).ext`, ... pattern.
+Future<String> uniqueStudyFilePath(String directory, String filename) async {
+  final dotIndex = filename.lastIndexOf('.');
+  final hasExtension = dotIndex > 0;
+  final stem = hasExtension ? filename.substring(0, dotIndex) : filename;
+  final extension = hasExtension ? filename.substring(dotIndex) : '';
+
+  var candidate = '$directory/$filename';
+  var index = 2;
+  while (await File(candidate).exists()) {
+    candidate = '$directory/$stem ($index)$extension';
+    index += 1;
+  }
+  return candidate;
+}
+
 /// Creates a new study session directory for [probandId] and returns its path.
 ///
 /// The directory holds the phone-side RespiBAN CSV recordings. The
@@ -122,6 +141,9 @@ String _mimeTypeForPath(String path) {
   }
   if (lower.endsWith('.csv')) {
     return 'text/csv';
+  }
+  if (lower.endsWith('.json')) {
+    return 'application/json';
   }
   return 'application/octet-stream';
 }

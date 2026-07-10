@@ -33,6 +33,7 @@ class _StudyRecordingsListState extends State<StudyRecordingsList> {
   static const Duration _postProtocolRefreshDelay = Duration(
     milliseconds: 750,
   );
+  static const int _postProtocolRefreshAttempts = 4;
 
   final Set<String> _expandedFolders = {};
   final TextEditingController _probandIdController = TextEditingController();
@@ -54,7 +55,7 @@ class _StudyRecordingsListState extends State<StudyRecordingsList> {
     super.dispose();
   }
 
-  Future<void> _loadRecordings() async {
+  Future<void> _loadRecordings({String? expandFolderPath}) async {
     final recordings = await listStudyRecordingFolders();
     if (!mounted) {
       return;
@@ -64,6 +65,9 @@ class _StudyRecordingsListState extends State<StudyRecordingsList> {
       _expandedFolders.removeWhere(
         (path) => !_recordings.any((entry) => entry.path == path),
       );
+      if (expandFolderPath != null) {
+        _expandedFolders.add(expandFolderPath);
+      }
       _isLoading = false;
     });
   }
@@ -116,19 +120,22 @@ class _StudyRecordingsListState extends State<StudyRecordingsList> {
     );
 
     if (mounted) {
-      await _refreshAfterRecordingFlow();
+      await _refreshAfterRecordingFlow(directory);
     }
   }
 
-  Future<void> _refreshAfterRecordingFlow() async {
-    // Reload immediately when the protocol route returns, then once more after
-    // the navigation frame and final filesystem metadata updates have settled.
-    // Without the second read, Android can briefly show the session directory
-    // with only the first phase file until the user manually pull-refreshes.
-    await _loadRecordings();
-    await Future<void>.delayed(_postProtocolRefreshDelay);
-    if (mounted) {
-      await _loadRecordings();
+  Future<void> _refreshAfterRecordingFlow(String sessionDirectory) async {
+    // Reload repeatedly after the protocol route returns. Android can expose
+    // freshly closed files one metadata read later than the route pop; repeated
+    // reads mirror the user's manual pull-refresh and keep the session folder
+    // expanded so its full contents are visible immediately.
+    for (var attempt = 0;
+        mounted && attempt < _postProtocolRefreshAttempts;
+        attempt++) {
+      await _loadRecordings(expandFolderPath: sessionDirectory);
+      if (attempt + 1 < _postProtocolRefreshAttempts) {
+        await Future<void>.delayed(_postProtocolRefreshDelay);
+      }
     }
   }
 
@@ -377,6 +384,7 @@ class _StudyRecordingsListState extends State<StudyRecordingsList> {
               final files =
                   isExpanded ? folder.files : <LocalRecorderRecordingFile>[];
               return LocalRecorderRecordingFolderCard(
+                key: ValueKey(_folderRenderKey(folder)),
                 folder: folder,
                 isCurrentRecording: false,
                 isExpanded: isExpanded,
@@ -402,6 +410,16 @@ class _StudyRecordingsListState extends State<StudyRecordingsList> {
         ],
       ),
     );
+  }
+
+  String _folderRenderKey(LocalRecorderRecordingFolder folder) {
+    final fileSignature = folder.files
+        .map(
+          (file) =>
+              '${file.name}:${file.sizeBytes}:${file.updatedAt.microsecondsSinceEpoch}',
+        )
+        .join('|');
+    return '${folder.path}:$fileSignature';
   }
 }
 

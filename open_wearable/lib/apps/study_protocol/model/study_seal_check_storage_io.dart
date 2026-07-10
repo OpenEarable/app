@@ -5,8 +5,8 @@ import 'package:open_wearable/apps/study_protocol/model/study_protocol_storage.d
 
 /// Stores one DecoupEar seal-check result in the current study directory.
 ///
-/// Repeating a check intentionally replaces its previous file, leaving exactly
-/// one `start` and one `end` result per phase.
+/// Repeating a check creates a new numbered file instead of replacing the
+/// previous result.
 Future<String> saveStudySealCheckResult({
   required String directory,
   required String probandId,
@@ -20,7 +20,7 @@ Future<String> saveStudySealCheckResult({
   final safePosition = _sanitizeFilenamePart(position);
   final filename =
       '${sanitizeProbandId(probandId)}_${safePhase}_seal_check_$safePosition.json';
-  final file = File('$directory/$filename');
+  final file = File(await uniqueStudyFilePath(directory, filename));
   await file.parent.create(recursive: true);
   await file.writeAsString(
     const JsonEncoder.withIndent('  ').convert({
