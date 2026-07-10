@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
+import 'package:open_wearable/app_store_preview.dart';
 import 'package:open_wearable/models/wearable_display_group.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider_facade.dart';
@@ -13,6 +14,8 @@ import 'package:open_wearable/widgets/sensors/configuration/sensor_configuration
 import 'package:provider/provider.dart';
 
 import '../../../models/logger.dart';
+
+const bool _isAppStorePreview = bool.fromEnvironment('APP_STORE_PREVIEW');
 
 /// A view that displays the sensor configurations of all connected wearables.
 ///
@@ -85,6 +88,7 @@ class SensorConfigurationView extends StatelessWidget {
           ),
           if (MicrophoneConfigurationCard.isSupported)
             const MicrophoneConfigurationCard(),
+          if (_isAppStorePreview) _buildPreviewPostureImuModeCard(context),
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: _buildApplyConfigButton(
@@ -259,6 +263,60 @@ class SensorConfigurationView extends StatelessWidget {
     return PlatformElevatedButton(
       onPressed: () => _applyConfigurations(context, targets: targets),
       child: PlatformText('Apply Profiles'),
+    );
+  }
+
+  Widget _buildPreviewPostureImuModeCard(
+    BuildContext context,
+  ) {
+    return ChangeNotifierProvider<ValueNotifier<bool>>.value(
+      value: AppStorePreviewWearable.postureImuFixedModeNotifier,
+      child: Builder(
+        builder: (context) {
+          final modeNotifier = context.watch<ValueNotifier<bool>>();
+          final isFixed = modeNotifier.value;
+          final colorScheme = Theme.of(context).colorScheme;
+
+          return Card(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Posture Preview IMU',
+                          style:
+                              Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          isFixed
+                              ? previewPostureImuModeFixedLabel
+                              : previewPostureImuModeRandomLabel,
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  PlatformSwitch(
+                    value: isFixed,
+                    onChanged:
+                        AppStorePreviewWearable.setPostureImuFixedModeEnabled,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 

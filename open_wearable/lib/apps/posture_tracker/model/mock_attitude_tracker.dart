@@ -1,20 +1,40 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:open_wearable/app_store_preview.dart';
 import 'package:open_wearable/apps/posture_tracker/model/attitude.dart';
 import 'package:open_wearable/apps/posture_tracker/model/attitude_tracker.dart';
 
 class MockAttitudeTracker extends AttitudeTracker {
   Stream<Attitude> _attitudeStream = Stream.empty();
   StreamSubscription<Attitude>? _attitudeSubscription;
+  final Attitude? _fixedAttitude;
 
   @override
   bool get isTracking =>
       _attitudeSubscription != null && !_attitudeSubscription!.isPaused;
 
-  MockAttitudeTracker({Function(AttitudeTracker)? didChangeAvailability})
-      : super() {
-    _attitudeStream = Stream.periodic(Duration(milliseconds: 100), (count) {
+  MockAttitudeTracker({
+    Function(AttitudeTracker)? didChangeAvailability,
+    Attitude? fixedAttitude,
+  })
+      : _fixedAttitude = fixedAttitude,
+        super() {
+    _attitudeStream = Stream.periodic(const Duration(milliseconds: 100), (count) {
+      final fixedAttitude = AppStorePreviewWearable.isPostureImuFixedModeEnabled
+          ? Attitude(
+              roll: previewPostureFixedRollDegrees * pi / 180,
+              pitch: previewPostureFixedPitchDegrees * pi / 180,
+              yaw: 0,
+            )
+          : _fixedAttitude;
+      if (fixedAttitude != null) {
+        return Attitude(
+          roll: fixedAttitude.roll,
+          pitch: fixedAttitude.pitch,
+          yaw: fixedAttitude.yaw,
+        );
+      }
       return Attitude(
           roll: sin(count / 10) * pi / 4,
           pitch: sin(count / 20) * pi / 4,
@@ -23,10 +43,7 @@ class MockAttitudeTracker extends AttitudeTracker {
     didChangeAvailability = didChangeAvailability ?? (_) {};
 
     didChangeAvailability(this);
-    // wait for 5 seconds before setting the tracker to available
-    Timer(Duration(seconds: 3), () {
-      setAvailability(true);
-    });
+    setAvailability(true);
   }
 
   @override
