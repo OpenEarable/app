@@ -43,12 +43,20 @@ class _MeasurementInput {
 }
 
 class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
+  static const Duration _recoveryQuestionnaireReminderInterval =
+      Duration(minutes: 5);
+
   late final YmcaErgometerController _controller;
   final TextEditingController _hrController = TextEditingController();
   final TextEditingController _wattController = TextEditingController();
   final TextEditingController _endHrController = TextEditingController();
 
+  Timer? _recoveryQuestionnaireReminderTimer;
   bool _dialogActive = false;
+  bool _recoveryQuestionnaireReminderActive = false;
+  bool _recoveryQuestionnaireDialogVisible = false;
+  bool _recoveryQuestionnaireEndShown = false;
+  bool _recoveryQuestionnaireFinalPending = false;
   bool _starting = false;
   bool _endingMeasurement = false;
   bool _stoppingRecording = false;
@@ -68,6 +76,7 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
 
   @override
   void dispose() {
+    _recoveryQuestionnaireReminderTimer?.cancel();
     _controller.removeListener(_onControllerChanged);
     _controller.dispose();
     _hrController.dispose();
@@ -103,7 +112,129 @@ class _YmcaErgometerPageState extends State<YmcaErgometerPage> {
   }
 
   void _onControllerChanged() {
+    _syncRecoveryQuestionnaireReminders();
     unawaited(_processQueue());
+  }
+
+  void _syncRecoveryQuestionnaireReminders() {
+    if (widget.session.timerTestMode ||
+        _controller.status != ErgoStatus.recovering) {
+      _cancelRecoveryQuestionnaireReminders(resetEndReminder: true);
+      return;
+    }
+
+    if (!_controller.isRecoveryFinished &&
+        !_recoveryQuestionnaireReminderActive) {
+      _startRecoveryQuestionnaireReminders();
+    }
+
+    if (_controller.recoveryRemaining <= Duration.zero) {
+      _showRecoveryQuestionnaireEndReminder();
+      return;
+    }
+
+    if (_controller.isRecoveryFinished) {
+      _cancelRecoveryQuestionnaireReminders(resetEndReminder: false);
+    }
+  }
+
+  void _startRecoveryQuestionnaireReminders() {
+    _recoveryQuestionnaireReminderActive = true;
+    _recoveryQuestionnaireEndShown = false;
+    _recoveryQuestionnaireFinalPending = false;
+    _recoveryQuestionnaireReminderTimer?.cancel();
+    _recoveryQuestionnaireReminderTimer = Timer.periodic(
+      _recoveryQuestionnaireReminderInterval,
+      (_) => _onRecoveryQuestionnaireReminderTick(),
+    );
+    unawaited(_showRecoveryQuestionnaireReminder());
+  }
+
+  void _onRecoveryQuestionnaireReminderTick() {
+    if (!mounted ||
+        widget.session.timerTestMode ||
+        _controller.status != ErgoStatus.recovering) {
+      _cancelRecoveryQuestionnaireReminders(resetEndReminder: true);
+      return;
+    }
+    if (_controller.recoveryRemaining <= Duration.zero) {
+      _showRecoveryQuestionnaireEndReminder();
+      return;
+    }
+    if (_controller.isRecoveryFinished) {
+      _cancelRecoveryQuestionnaireReminders(resetEndReminder: false);
+      return;
+    }
+    unawaited(_showRecoveryQuestionnaireReminder());
+  }
+
+  void _showRecoveryQuestionnaireEndReminder() {
+    if (_recoveryQuestionnaireEndShown) {
+      return;
+    }
+    _recoveryQuestionnaireEndShown = true;
+    _recoveryQuestionnaireReminderTimer?.cancel();
+    _recoveryQuestionnaireReminderTimer = null;
+    _recoveryQuestionnaireReminderActive = false;
+    unawaited(_showRecoveryQuestionnaireReminder(isFinal: true));
+  }
+
+  void _cancelRecoveryQuestionnaireReminders({
+    required bool resetEndReminder,
+  }) {
+    _recoveryQuestionnaireReminderTimer?.cancel();
+    _recoveryQuestionnaireReminderTimer = null;
+    _recoveryQuestionnaireReminderActive = false;
+    if (resetEndReminder) {
+      _recoveryQuestionnaireEndShown = false;
+      _recoveryQuestionnaireFinalPending = false;
+    }
+  }
+
+  Future<void> _showRecoveryQuestionnaireReminder({
+    bool isFinal = false,
+  }) async {
+    if (!mounted || widget.session.timerTestMode) {
+      return;
+    }
+    if (_recoveryQuestionnaireDialogVisible) {
+      if (isFinal) {
+        _recoveryQuestionnaireFinalPending = true;
+      }
+      return;
+    }
+
+    _recoveryQuestionnaireDialogVisible = true;
+    try {
+      await showPlatformDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => PlatformAlertDialog(
+          title: PlatformText(
+            isFinal ? 'Recovery questionnaire' : 'Questionnaire reminder',
+          ),
+          content: PlatformText(
+            isFinal
+                ? 'The recovery timer has ended. Please fill out the '
+                    'questionnaire now.'
+                : 'Please fill out the questionnaire now. The recovery timer '
+                    'and data recording continue in the background.',
+          ),
+          actions: [
+            PlatformDialogAction(
+              child: PlatformText('OK'),
+              onPressed: () => Navigator.pop(dialogContext),
+            ),
+          ],
+        ),
+      );
+    } finally {
+      _recoveryQuestionnaireDialogVisible = false;
+      if (mounted && _recoveryQuestionnaireFinalPending) {
+        _recoveryQuestionnaireFinalPending = false;
+        unawaited(_showRecoveryQuestionnaireReminder(isFinal: true));
+      }
+    }
   }
 
   /// Drives the measurement/stage/end dialogs one at a time so the background
