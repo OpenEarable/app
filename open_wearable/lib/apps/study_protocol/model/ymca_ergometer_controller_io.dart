@@ -122,6 +122,15 @@ class YmcaErgometerController extends ChangeNotifier {
     return DateTime.now().difference(start);
   }
 
+  Duration _elapsedAt(DateTime timestamp) {
+    final start = _startTime;
+    if (start == null) {
+      return Duration.zero;
+    }
+    final elapsed = timestamp.difference(start);
+    return elapsed.isNegative ? Duration.zero : elapsed;
+  }
+
   /// Time until the next scheduled measurement prompt.
   Duration get timeToNextMeasurement {
     final next = _nextDueTime;
@@ -392,8 +401,14 @@ class YmcaErgometerController extends ChangeNotifier {
     _pendingStageMessage = null;
 
     _status = ErgoStatus.recovering;
-    _recoveryStartTime = DateTime.now();
-    _writeLog('recovery_start,${elapsed.inMinutes},$_currentStage,,,');
+    final recoveryStartedAt = DateTime.now();
+    final recoveryStartedElapsed = _elapsedAt(recoveryStartedAt);
+    _recoveryStartTime = recoveryStartedAt;
+    _writeLog(
+      'recovery_start,${recoveryStartedElapsed.inMinutes},$_currentStage,,,',
+      timestamp: recoveryStartedAt,
+      preciseElapsed: recoveryStartedElapsed,
+    );
     _recoveryTicker = Timer.periodic(
       const Duration(seconds: 1),
       _onRecoveryTick,
@@ -530,12 +545,23 @@ class YmcaErgometerController extends ChangeNotifier {
       'hr_max=$maxHeartRate, hr_submax=$submaxHeartRate, '
       'timer_test_mode=${session.timerTestMode}',
     );
-    sink.writeln('event,elapsed_min,stage,target_watt,actual_watt,heart_rate');
+    sink.writeln(
+      'event,elapsed_min,stage,target_watt,actual_watt,heart_rate,'
+      'elapsed_ms,timestamp_iso',
+    );
     _logSink = sink;
   }
 
-  void _writeLog(String row) {
-    _logSink?.writeln(row);
+  void _writeLog(
+    String row, {
+    DateTime? timestamp,
+    Duration? preciseElapsed,
+  }) {
+    final logTimestamp = timestamp ?? DateTime.now();
+    final logElapsed = preciseElapsed ?? _elapsedAt(logTimestamp);
+    _logSink?.writeln(
+      '$row,${logElapsed.inMilliseconds},${logTimestamp.toIso8601String()}',
+    );
   }
 
   void _writeRecoveryEndOnce() {
