@@ -17,7 +17,8 @@ class StudyDeviceRecorder {
     required String probandId,
     String respibanFileLabel = '',
     String earablePrefixSuffix = '',
-  }) async => DateTime.now();
+  }) async =>
+      DateTime.now();
 
   Future<void> stop() async {}
 }

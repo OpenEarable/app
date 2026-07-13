@@ -5,6 +5,7 @@ import 'package:open_wearable/apps/study_protocol/model/study_devices.dart';
 import 'package:open_wearable/apps/study_protocol/model/study_session.dart';
 import 'package:open_wearable/apps/study_protocol/view/study_seal_check_page.dart';
 import 'package:open_wearable/apps/study_protocol/view/timed_phase_page.dart';
+import 'package:open_wearable/apps/study_protocol/view/treadmill_pace_entry_page.dart';
 import 'package:open_wearable/apps/study_protocol/view/ymca_ergometer_page.dart';
 
 /// Ordered phases of one study session.
@@ -218,6 +219,43 @@ Widget buildStudyPhasePage({
       directory: directory,
     );
   }
+  if (phase == StudyPhase.treadmill) {
+    // The treadmill unit asks for the walking pace (km/h) and stores it before
+    // the timer starts; the pace page then navigates on to the timed phase.
+    return Builder(
+      builder: (context) => TreadmillPaceEntryPage(
+        session: session,
+        directory: directory,
+        onContinue: () {
+          Navigator.of(context).pushReplacement(
+            platformPageRoute(
+              context: context,
+              builder: (_) => _buildTimedPhasePage(
+                phase: phase,
+                session: session,
+                deviceSet: deviceSet,
+                directory: directory,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+  return _buildTimedPhasePage(
+    phase: phase,
+    session: session,
+    deviceSet: deviceSet,
+    directory: directory,
+  );
+}
+
+Widget _buildTimedPhasePage({
+  required StudyPhase phase,
+  required StudySession session,
+  required StudyDeviceSet deviceSet,
+  required String directory,
+}) {
   return TimedPhasePage(
     phase: phase,
     config: studyTimedPhaseConfigs[phase]!,
