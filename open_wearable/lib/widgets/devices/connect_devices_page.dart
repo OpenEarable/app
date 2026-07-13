@@ -425,7 +425,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          'Only show devices with ',
+          'Filter for "',
           style: Theme.of(context).textTheme.labelSmall,
         ),
         InkWell(
@@ -444,7 +444,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
           ),
         ),
         Text(
-          ' in their name',
+          '" in the device name',
           style: Theme.of(context).textTheme.labelSmall,
         ),
         Transform.scale(
