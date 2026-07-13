@@ -34,6 +34,8 @@ class ConnectDevicesPage extends StatefulWidget {
 class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
   bool _hasBlePermissions = false;
   bool _hasMicPermission = true;
+  bool _showOnlyOpenEarableDevices = false;
+  String _deviceNameFilterText = 'OpenEarable';
   final Map<String, bool> _connectingDevices = {};
 
   late ConnectDevicesScanSnapshot _scanSnapshot;
@@ -134,12 +136,17 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
         .where((device) => !connectedDeviceIds.contains(device.id))
         .toList();
     final thisDeviceEntry = _thisDeviceEntry;
-    final availableDevices = [
+    final allAvailableDevices = [
       if (thisDeviceEntry != null &&
           !connectedDeviceIds.contains(thisDeviceEntry.id))
         thisDeviceEntry,
       ...scannedDevices.where((device) => device.id != thisDeviceEntry?.id),
     ];
+    final availableDevices = _showOnlyOpenEarableDevices
+        ? allAvailableDevices
+            .where((device) => device.name.contains(_deviceNameFilterText))
+            .toList()
+        : allAvailableDevices;
 
     return PlatformScaffold(
       appBar: PlatformAppBar(
@@ -249,6 +256,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
               context,
               title: 'Available',
               count: availableDevices.length,
+              trailing: _buildOpenEarableFilterToggle(context),
             ),
             if (availableDevices.isEmpty)
               _buildEmptyCard(
@@ -256,9 +264,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                 title: _scanSnapshot.isScanning
                     ? 'Scanning for devices...'
                     : 'No devices found yet',
-                subtitle: _scanSnapshot.isScanning
-                    ? 'Make sure your wearable is turned on and nearby.'
-                    : 'Press scan again or pull to refresh.',
+                subtitle: _emptyAvailableDevicesMessage(),
               )
             else
               ...availableDevices.map((device) {
@@ -368,6 +374,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
     BuildContext context, {
     required String title,
     required int count,
+    Widget? trailing,
   }) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
@@ -381,6 +388,18 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
           ),
           const SizedBox(width: 8),
           _StatusPill(label: '$count'),
+          if (trailing != null) ...[
+            const SizedBox(width: 8),
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: trailing,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -399,6 +418,85 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
         subtitle: Text(subtitle),
       ),
     );
+  }
+
+  Widget _buildOpenEarableFilterToggle(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'Only show devices with ',
+          style: Theme.of(context).textTheme.labelSmall,
+        ),
+        InkWell(
+          borderRadius: BorderRadius.circular(6),
+          onTap: _editDeviceNameFilterText,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            child: Text(
+              _deviceNameFilterText,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.w700,
+                    decoration: TextDecoration.underline,
+                  ),
+            ),
+          ),
+        ),
+        Text(
+          ' in their name',
+          style: Theme.of(context).textTheme.labelSmall,
+        ),
+        Transform.scale(
+          scale: 0.75,
+          child: Switch.adaptive(
+            value: _showOnlyOpenEarableDevices,
+            onChanged: (value) {
+              setState(() {
+                _showOnlyOpenEarableDevices = value;
+              });
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _editDeviceNameFilterText() async {
+    var editedText = _deviceNameFilterText;
+    final nextText = await showPlatformDialog<String>(
+      context: context,
+      builder: (dialogContext) => PlatformAlertDialog(
+        title: const Text('Device name filter'),
+        content: TextFormField(
+          initialValue: editedText,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'Name contains'),
+          textInputAction: TextInputAction.done,
+          onChanged: (value) => editedText = value,
+          onFieldSubmitted: (value) => Navigator.of(dialogContext).pop(value),
+        ),
+        actions: [
+          PlatformDialogAction(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          PlatformDialogAction(
+            onPressed: () => Navigator.of(dialogContext).pop(editedText),
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    );
+
+    final trimmedText = nextText?.trim();
+    if (trimmedText == null || trimmedText.isEmpty || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _deviceNameFilterText = trimmedText;
+    });
   }
 
   Widget _buildTrailingWidget(
@@ -444,6 +542,15 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
     if (elapsed.inMinutes < 1) return '${elapsed.inSeconds}s ago';
     if (elapsed.inHours < 1) return '${elapsed.inMinutes}m ago';
     return '${elapsed.inHours}h ago';
+  }
+
+  String _emptyAvailableDevicesMessage() {
+    if (_showOnlyOpenEarableDevices) {
+      return 'No device names match "$_deviceNameFilterText".';
+    }
+    return _scanSnapshot.isScanning
+        ? 'Make sure your wearable is turned on and nearby.'
+        : 'Press scan again or pull to refresh.';
   }
 
   Future<void> _addThisDeviceToDiscovered() async {
