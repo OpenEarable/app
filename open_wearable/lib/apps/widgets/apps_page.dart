@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/apps/seal_check/audio_response_measurement_view.dart';
 import 'package:open_wearable/apps/heart_tracker/widgets/heart_tracker_page.dart';
 import 'package:open_wearable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_wearable/apps/posture_tracker/view/posture_tracker_view.dart';
@@ -45,6 +46,9 @@ const List<String> _postureSupportedDevices = [
 const List<String> _heartSupportedDevices = [
   "OpenEarable",
   "OpenRing",
+];
+const List<String> _sealCheckSupportedDevices = [
+  "OpenEarable",
 ];
 
 Sensor? _findOpticalTemperatureSensor(List<Sensor> sensors) {
@@ -165,6 +169,27 @@ final List<AppInfo> _apps = [
           body: Center(
             child: PlatformText("No PPG Sensor Found"),
           ),
+        );
+      },
+    ),
+  ),
+  AppInfo(
+    logoPath: "lib/apps/audio_response_measure/assets/seal-check-icon.png",
+    title: "Seal Check",
+    description: "Measure ear seal quality",
+    supportedDevices: _sealCheckSupportedDevices,
+    accentColor: _appAccentColor,
+    widget: SelectEarableView(
+      supportedDevicePrefixes: _sealCheckSupportedDevices,
+      startApp: (wearable, _) async {
+        final manager = wearable.requireCapability<AudioResponseManager>();
+        final position = wearable.hasCapability<StereoDevice>()
+            ? await wearable.requireCapability<StereoDevice>().position
+            : null;
+
+        return SealCheckMeasurementView(
+          left: position == DevicePosition.right ? null : manager,
+          right: position == DevicePosition.right ? manager : null,
         );
       },
     ),
