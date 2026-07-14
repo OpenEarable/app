@@ -174,7 +174,7 @@ final List<AppInfo> _apps = [
     ),
   ),
   AppInfo(
-    logoPath: "lib/apps/audio_response_measure/assets/seal-check-icon.png",
+    logoPath: "lib/apps/seal_check/assets/seal-check-icon.png",
     title: "Seal Check",
     description: "Measure ear seal quality",
     supportedDevices: _sealCheckSupportedDevices,
