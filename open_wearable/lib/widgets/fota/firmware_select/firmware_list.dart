@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/models/beta_firmware_title_resolver.dart';
 import 'package:open_wearable/models/firmware_version_matcher.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 import 'package:provider/provider.dart';
@@ -18,6 +19,7 @@ class FirmwareList extends StatefulWidget {
 class _FirmwareListState extends State<FirmwareList> {
   late Future<List<FirmwareEntry>> _firmwareFuture;
   final _repository = UnifiedFirmwareRepository();
+  final _betaTitleResolver = BetaFirmwareTitleResolver();
   String? firmwareVersion;
   bool _expanded = false;
 
@@ -46,7 +48,9 @@ class _FirmwareListState extends State<FirmwareList> {
     }
 
     try {
-      beta = await _repository.getBetaFirmwares();
+      beta = await _betaTitleResolver.resolve(
+        await _repository.getBetaFirmwares(),
+      );
     } catch (error) {
       betaError = error;
       // Beta feed is optional. Ignore failures.
