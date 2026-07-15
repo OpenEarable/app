@@ -263,7 +263,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
                 context,
                 title: _scanSnapshot.isScanning
                     ? 'Scanning for devices...'
-                    : 'No devices found yet',
+                    : 'No devices found',
                 subtitle: _emptyAvailableDevicesMessage(),
               )
             else
@@ -421,32 +421,45 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
   }
 
   Widget _buildOpenEarableFilterToggle(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          'Filter for "',
-          style: Theme.of(context).textTheme.labelSmall,
+          'Device name filter',
+          style: theme.textTheme.labelSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
         ),
+        const SizedBox(width: 6),
         InkWell(
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(999),
           onTap: _editDeviceNameFilterText,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          child: Container(
+            constraints: const BoxConstraints(minWidth: 78, maxWidth: 128),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.9),
+              ),
+            ),
             child: Text(
               _deviceNameFilterText,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontWeight: FontWeight.w700,
-                    decoration: TextDecoration.underline,
-                  ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: colorScheme.onSurface,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ),
-        Text(
-          '" in the device name',
-          style: Theme.of(context).textTheme.labelSmall,
-        ),
+        const SizedBox(width: 2),
         Transform.scale(
           scale: 0.75,
           child: Switch.adaptive(
@@ -546,7 +559,7 @@ class _ConnectDevicesPageState extends State<ConnectDevicesPage> {
 
   String _emptyAvailableDevicesMessage() {
     if (_showOnlyOpenEarableDevices) {
-      return 'No device names match "$_deviceNameFilterText".';
+      return 'No devices match "$_deviceNameFilterText".';
     }
     return _scanSnapshot.isScanning
         ? 'Make sure your wearable is turned on and nearby.'
