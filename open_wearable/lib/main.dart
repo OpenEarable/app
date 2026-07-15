@@ -14,6 +14,7 @@ import 'package:open_wearable/models/app_upgrade_coordinator.dart';
 import 'package:open_wearable/models/app_upgrade_highlight.dart';
 import 'package:open_wearable/models/auto_connect_preferences.dart';
 import 'package:open_wearable/models/connector_settings.dart';
+import 'package:open_wearable/models/labels/label_sensor.dart';
 import 'package:open_wearable/models/log_file_manager.dart';
 import 'package:open_wearable/models/fota_post_update_verification.dart';
 import 'package:open_wearable/models/permissions_helper.dart';
@@ -35,6 +36,8 @@ import 'package:open_wearable/widgets/onboarding/permissions_onboarding_page.dar
 import 'models/bluetooth_auto_connector.dart';
 import 'models/logger.dart';
 import 'view_models/app_banner_controller.dart';
+import 'view_models/label_provider.dart';
+import 'view_models/label_set_provider.dart';
 import 'view_models/wearables_provider.dart';
 
 void main() async {
@@ -54,12 +57,42 @@ void main() async {
         ChangeNotifierProvider(
           create: (context) => FirmwareUpdateRequestProvider(),
         ),
-        ChangeNotifierProxyProvider<WearablesProvider, SensorRecorderProvider>(
+        ChangeNotifierProvider(
+          create: (context) => LabelSetProvider(),
+        ),
+        ChangeNotifierProxyProvider<LabelSetProvider, LabelProvider>(
+          create: (context) => LabelProvider(null),
+          update: (context, labelSetProvider, labelProvider) {
+            labelProvider?.setLabelSet(labelSetProvider.selectedLabelSet);
+            return labelProvider!;
+          },
+        ),
+        ChangeNotifierProxyProvider2<WearablesProvider, LabelSetProvider,
+            SensorRecorderProvider>(
           create: (context) => SensorRecorderProvider(),
-          update: (context, wearablesProvider, recorderProvider) {
+          update: (
+            context,
+            wearablesProvider,
+            labelSetProvider,
+            recorderProvider,
+          ) {
             final provider = recorderProvider ?? SensorRecorderProvider();
+            final labelSet = labelSetProvider.selectedLabelSet;
+            final wearables = [...wearablesProvider.wearables];
+            if (labelSet != null) {
+              final labelProvider = context.read<LabelProvider>();
+              wearables.add(
+                LabelWearable(
+                  labelSet: labelSet,
+                  labelStream: labelProvider.activeLabelStream,
+                ),
+              );
+            }
+            logger.t(
+              'Updating SensorRecorderProvider with label set: $labelSet',
+            );
             provider.synchronizeConnectedWearables(
-              wearablesProvider.wearables,
+              wearables,
             );
             return provider;
           },
