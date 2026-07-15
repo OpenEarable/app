@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/models/firmware_version_matcher.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 import 'package:provider/provider.dart';
 
@@ -691,7 +692,7 @@ class _FirmwareListState extends State<FirmwareList> {
     if (version == null) {
       return false;
     }
-    return firmware.version == version || firmware.version.contains(version);
+    return firmwareVersionsMatch(firmware.version, version);
   }
 
   FirmwareEntry? _findCurrentEntry(List<FirmwareEntry> orderedEntries) {
@@ -702,7 +703,7 @@ class _FirmwareListState extends State<FirmwareList> {
 
     for (final entry in orderedEntries) {
       final fwVersion = entry.firmware.version;
-      if (fwVersion == version || fwVersion.contains(version)) {
+      if (firmwareVersionsMatch(fwVersion, version)) {
         return entry;
       }
     }
@@ -710,11 +711,7 @@ class _FirmwareListState extends State<FirmwareList> {
   }
 
   String? get _normalizedDeviceVersion {
-    final version = firmwareVersion?.replaceAll('\x00', '').trim();
-    if (version == null || version.isEmpty) {
-      return null;
-    }
-    return version;
+    return normalizeFirmwareVersion(firmwareVersion);
   }
 
   void _installFirmware(RemoteFirmware firmware) {
