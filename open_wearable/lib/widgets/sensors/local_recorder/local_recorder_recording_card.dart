@@ -10,6 +10,7 @@ class LocalRecorderRecordingCard extends StatelessWidget {
   final VoidCallback? onStartRecording;
   final VoidCallback? onStopAndTurnOff;
   final VoidCallback? onStopRecordingOnly;
+  final Widget? labelControls;
 
   const LocalRecorderRecordingCard({
     super.key,
@@ -21,6 +22,7 @@ class LocalRecorderRecordingCard extends StatelessWidget {
     required this.onStartRecording,
     required this.onStopAndTurnOff,
     required this.onStopRecordingOnly,
+    this.labelControls,
   });
 
   @override
@@ -124,6 +126,10 @@ class LocalRecorderRecordingCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 14),
+            if (labelControls != null) ...[
+              labelControls!,
+              const SizedBox(height: 14),
+            ],
             if (!isRecording)
               SizedBox(
                 width: double.infinity,
@@ -153,8 +159,7 @@ class LocalRecorderRecordingCard extends StatelessWidget {
                         backgroundColor:
                             colorScheme.errorContainer.withValues(alpha: 0.45),
                       ),
-                      onPressed:
-                          isHandlingStopAction ? null : onStopAndTurnOff,
+                      onPressed: isHandlingStopAction ? null : onStopAndTurnOff,
                       icon: const Icon(Icons.power_settings_new),
                       label: const Text('Stop + Off'),
                     ),
