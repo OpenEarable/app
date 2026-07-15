@@ -6,8 +6,11 @@ import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_dialogs.dart';
 import 'package:provider/provider.dart';
+import 'package:open_wearable/view_models/label_set_provider.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider_facade.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
+import 'package:open_wearable/widgets/sensors/local_recorder/labels/active_label_bar.dart';
+import 'package:open_wearable/widgets/sensors/local_recorder/labels/label_set_selector.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_empty_state_card.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_file_actions.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_files.dart';
@@ -298,6 +301,25 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
         final canStartRecording = recorder.hasSensorsConnected && !isRecording;
         final hasRecordings = _recordings.isNotEmpty;
         final latestRecording = hasRecordings ? _recordings.first : null;
+        final selectedLabelSet =
+            context.watch<LabelSetProvider>().selectedLabelSet;
+        final labelControls = !isRecording || selectedLabelSet != null
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (!isRecording) const LabelSetSelector(),
+                  if (selectedLabelSet != null) ...[
+                    if (!isRecording) const SizedBox(height: 12),
+                    Text(
+                      'Active Label',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    ActiveLabelBar(labelSet: selectedLabelSet),
+                  ],
+                ],
+              )
+            : null;
 
         return SafeArea(
           top: false,
@@ -321,6 +343,7 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
                     recorder,
                     mode: _StopRecordingMode.stopOnly,
                   ),
+                  labelControls: labelControls,
                 ),
                 const SizedBox(height: SensorPageSpacing.sectionGap),
                 Text(
