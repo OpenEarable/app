@@ -62,6 +62,7 @@ dependencies:
   pub_semver: ^2.2.0
   flutter_headset_detector: ^3.1.0
   record: ^7.0.0
+  path: ^1.9.1
   web: ^1.1.1
 
 dev_dependencies:
