@@ -6,9 +6,14 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 /// Row that shows the current file prefix of an [EdgeRecorderManager]
 /// and lets the user change it.
 class EdgeRecorderPrefixRow extends StatefulWidget {
-  const EdgeRecorderPrefixRow({super.key, required this.manager});
+  const EdgeRecorderPrefixRow({
+    super.key,
+    required this.manager,
+    this.pairedManager,
+  });
 
   final EdgeRecorderManager manager;
+  final EdgeRecorderManager? pairedManager;
 
   @override
   State<EdgeRecorderPrefixRow> createState() => _RecorderPrefixRowState();
@@ -83,7 +88,12 @@ class _RecorderPrefixRowState extends State<EdgeRecorderPrefixRow> {
     );
 
     if (result == true) {
-      await widget.manager.setFilePrefix(_editPrefixController.text.trim());
+      final prefix = _editPrefixController.text.trim();
+      await Future.wait([
+        widget.manager.setFilePrefix(prefix),
+        if (widget.pairedManager != null)
+          widget.pairedManager!.setFilePrefix(prefix),
+      ]);
       if (!mounted) {
         return;
       }
