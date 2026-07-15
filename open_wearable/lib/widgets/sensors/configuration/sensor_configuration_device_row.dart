@@ -384,10 +384,15 @@ class _SensorConfigurationDeviceRowState
     ];
 
     if (device.hasCapability<EdgeRecorderManager>()) {
+      final pairedEdgeRecorderManager = widget.pairedDevice != null &&
+              widget.pairedDevice!.hasCapability<EdgeRecorderManager>()
+          ? widget.pairedDevice!.requireCapability<EdgeRecorderManager>()
+          : null;
       content.addAll([
         const InsetSectionDivider(),
         EdgeRecorderPrefixRow(
           manager: device.requireCapability<EdgeRecorderManager>(),
+          pairedManager: pairedEdgeRecorderManager,
         ),
       ]);
     }
