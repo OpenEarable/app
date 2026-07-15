@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/models/device_name_formatter.dart';
+import 'package:open_wearable/models/firmware_version_matcher.dart';
 
 /// Metadata returned when a post-update verification check is armed.
 class ArmedFotaPostUpdateVerification {
@@ -323,7 +324,7 @@ class FotaPostUpdateVerificationCoordinator {
         final version = await firmwareCap
             .readDeviceFirmwareVersion()
             .timeout(const Duration(seconds: 4));
-        final normalized = _normalizeVersion(version);
+        final normalized = normalizeFirmwareVersion(version);
         if (normalized != null) {
           return normalized;
         }
@@ -450,23 +451,20 @@ class FotaPostUpdateVerificationCoordinator {
 
   String? _extractExpectedFirmwareVersion(SelectedFirmware? firmware) {
     if (firmware is RemoteFirmware) {
-      return _normalizeVersion(firmware.version);
+      return normalizeFirmwareVersion(firmware.version);
     }
 
     if (firmware is LocalFirmware) {
       final match =
           RegExp(r'(\d+\.\d+\.\d+(?:[-+][\w.-]+)?)').firstMatch(firmware.name);
-      return _normalizeVersion(match?.group(1));
+      return normalizeFirmwareVersion(match?.group(1));
     }
 
     return null;
   }
 
   bool _firmwareVersionsMatch(String expected, String actual) {
-    if (actual == expected) {
-      return true;
-    }
-    return actual.contains(expected) || expected.contains(actual);
+    return firmwareVersionsMatch(expected, actual);
   }
 
   String _buildMessage({
@@ -531,14 +529,6 @@ class FotaPostUpdateVerificationCoordinator {
       return null;
     }
     return trimmed.toLowerCase();
-  }
-
-  String? _normalizeVersion(String? value) {
-    final cleaned = value?.replaceAll('\x00', '').trim();
-    if (cleaned == null || cleaned.isEmpty) {
-      return null;
-    }
-    return cleaned;
   }
 
   String? _normalizeSideLabel(String? sideLabel) {
