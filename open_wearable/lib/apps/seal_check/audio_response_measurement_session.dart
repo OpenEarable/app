@@ -38,6 +38,58 @@ class AudioResponsePoint {
       };
 }
 
+/// Phase currently being performed by a seal-check measurement session.
+enum AudioResponseMeasurementPhase {
+  /// The pregenerated tone is being uploaded to one or more wearables.
+  uploadingTone,
+
+  /// Uploaded tones are being played and measured by the wearables.
+  measuringResponse,
+}
+
+/// Progress information emitted while a seal-check measurement is running.
+class AudioResponseMeasurementProgress {
+  /// Creates a progress snapshot for the current session phase.
+  const AudioResponseMeasurementProgress({
+    required this.phase,
+    required this.completedUploads,
+    required this.totalUploads,
+    required this.acknowledgedSamples,
+    required this.totalSamples,
+  })  : assert(completedUploads >= 0),
+        assert(totalUploads >= 0),
+        assert(completedUploads <= totalUploads),
+        assert(acknowledgedSamples >= 0),
+        assert(totalSamples >= 0),
+        assert(acknowledgedSamples <= totalSamples);
+
+  /// Current session phase.
+  final AudioResponseMeasurementPhase phase;
+
+  /// Number of tone uploads that have completed successfully.
+  final int completedUploads;
+
+  /// Number of tone uploads required before measuring starts.
+  final int totalUploads;
+
+  /// Number of uploaded samples acknowledged by the selected wearables.
+  final int acknowledgedSamples;
+
+  /// Number of samples that must be acknowledged before measuring starts.
+  final int totalSamples;
+
+  /// Acknowledged sample fraction, or `null` when there is no upload work.
+  double? get uploadFraction {
+    if (totalSamples == 0) return null;
+    return acknowledgedSamples / totalSamples;
+  }
+}
+
+/// Receives progress updates from [AudioResponseMeasurementSession.measure].
+typedef AudioResponseMeasurementProgressCallback = void Function(
+  AudioResponseMeasurementProgress progress,
+);
+
 /// Typed result used by the Seal Check app.
 class AudioResponseMeasurement {
   /// Creates an app measurement from a protocol [result].
@@ -121,16 +173,89 @@ class AudioResponseMeasurementSession {
   int _nextTransferId = 1;
   int _nextMeasurementId = 1;
 
-  /// Measures all selected managers in parallel.
+  /// Measures all selected managers.
+  ///
+  /// The pregenerated tone is uploaded once per manager and cached for later
+  /// measurements. [onProgress] receives upload and measurement phase changes.
   Future<({AudioResponseMeasurement? left, AudioResponseMeasurement? right})>
-      measure() async {
+      measure({
+    AudioResponseMeasurementProgressCallback? onProgress,
+  }) async {
     final measurementId = _takeMeasurementId();
-    final results = await Future.wait([
-      if (left != null)
-        _measure(left!, measurementId).then((value) => (true, value)),
-      if (right != null)
-        _measure(right!, measurementId).then((value) => (false, value)),
-    ]);
+    final managers = _selectedManagers();
+    final uploads = managers
+        .where((entry) => !_bufferUploads.containsKey(entry.manager))
+        .toList(growable: false);
+
+    if (uploads.isNotEmpty) {
+      final uploadStates =
+          Map<AudioResponseManager, _UploadProgressState>.fromEntries(
+        uploads.map(
+          (entry) => MapEntry(
+            entry.manager,
+            _UploadProgressState(totalSamples: samples.length),
+          ),
+        ),
+      );
+
+      void reportUploadProgress() {
+        onProgress?.call(
+          AudioResponseMeasurementProgress(
+            phase: AudioResponseMeasurementPhase.uploadingTone,
+            completedUploads:
+                uploadStates.values.where((state) => state.completed).length,
+            totalUploads: uploadStates.length,
+            acknowledgedSamples: uploadStates.values.fold<int>(
+              0,
+              (sum, state) => sum + state.acknowledgedSamples,
+            ),
+            totalSamples: uploadStates.values.fold<int>(
+              0,
+              (sum, state) => sum + state.totalSamples,
+            ),
+          ),
+        );
+      }
+
+      reportUploadProgress();
+
+      for (final entry in uploads) {
+        final state = uploadStates[entry.manager]!;
+        await _ensureBufferUploaded(
+          entry.manager,
+          onProgress: (progress) {
+            state.acknowledgedSamples = progress.acknowledgedSamples.clamp(
+              0,
+              state.totalSamples,
+            );
+            state.completed =
+                progress.phase == AudioResponseUploadPhase.completed;
+            reportUploadProgress();
+          },
+        );
+        state
+          ..acknowledgedSamples = state.totalSamples
+          ..completed = true;
+        reportUploadProgress();
+      }
+    }
+
+    onProgress?.call(
+      const AudioResponseMeasurementProgress(
+        phase: AudioResponseMeasurementPhase.measuringResponse,
+        completedUploads: 0,
+        totalUploads: 0,
+        acknowledgedSamples: 0,
+        totalSamples: 0,
+      ),
+    );
+
+    final results = await Future.wait(
+      managers.map(
+        (entry) => _measureUploaded(entry.manager, measurementId)
+            .then((value) => (entry.isLeft, value)),
+      ),
+    );
 
     AudioResponseMeasurement? leftResult;
     AudioResponseMeasurement? rightResult;
@@ -144,11 +269,16 @@ class AudioResponseMeasurementSession {
     return (left: leftResult, right: rightResult);
   }
 
-  Future<AudioResponseMeasurement> _measure(
+  List<({bool isLeft, AudioResponseManager manager})> _selectedManagers() => [
+        if (left != null) (isLeft: true, manager: left!),
+        if (right != null) (isLeft: false, manager: right!),
+      ];
+
+  Future<AudioResponseMeasurement> _measureUploaded(
     AudioResponseManager manager,
     int measurementId,
   ) async {
-    final transferId = await _ensureBufferUploaded(manager);
+    final transferId = await _bufferUploads[manager]!;
     final result = await manager.measureAudioResponse(
       AudioResponseConfig(
         id: measurementId,
@@ -161,13 +291,16 @@ class AudioResponseMeasurementSession {
     return AudioResponseMeasurement.fromProtocol(result);
   }
 
-  Future<int> _ensureBufferUploaded(AudioResponseManager manager) async {
+  Future<int> _ensureBufferUploaded(
+    AudioResponseManager manager, {
+    AudioResponseUploadProgressCallback? onProgress,
+  }) async {
     final existingUpload = _bufferUploads[manager];
     if (existingUpload != null) {
       return existingUpload;
     }
 
-    final upload = _uploadBuffer(manager);
+    final upload = _uploadBufferWithRetry(manager, onProgress: onProgress);
     _bufferUploads[manager] = upload;
     try {
       return await upload;
@@ -179,14 +312,33 @@ class AudioResponseMeasurementSession {
     }
   }
 
-  Future<int> _uploadBuffer(AudioResponseManager manager) async {
+  Future<int> _uploadBuffer(
+    AudioResponseManager manager, {
+    AudioResponseUploadProgressCallback? onProgress,
+  }) async {
     final transferId = _takeTransferId();
     await manager.uploadAudioBuffer(
       transferId: transferId,
       samples: samples,
       samplingRate: samplingRate,
+      onProgress: onProgress,
     );
     return transferId;
+  }
+
+  Future<int> _uploadBufferWithRetry(
+    AudioResponseManager manager, {
+    AudioResponseUploadProgressCallback? onProgress,
+  }) async {
+    try {
+      return await _uploadBuffer(manager, onProgress: onProgress);
+    } on StateError catch (error) {
+      if (!_isClosedTransferStatusStream(error)) {
+        rethrow;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+      return _uploadBuffer(manager, onProgress: onProgress);
+    }
   }
 
   int _takeTransferId() {
@@ -201,6 +353,18 @@ class AudioResponseMeasurementSession {
         _nextMeasurementId == 0xff ? 1 : _nextMeasurementId + 1;
     return id;
   }
+}
+
+class _UploadProgressState {
+  _UploadProgressState({required this.totalSamples});
+
+  final int totalSamples;
+  int acknowledgedSamples = 0;
+  bool completed = false;
+}
+
+bool _isClosedTransferStatusStream(StateError error) {
+  return error.message == 'Audio response transfer status stream closed';
 }
 
 bool _isUint16Frequency(int frequency) => frequency > 0 && frequency <= 0xffff;

@@ -71,6 +71,7 @@ class _SealCheckMeasurementViewState extends State<SealCheckMeasurementView> {
   StackTrace? _stack;
   AudioResponseMeasurement? _leftResult;
   AudioResponseMeasurement? _rightResult;
+  AudioResponseMeasurementProgress? _progress;
   bool _showRawValues = false;
   late final AudioResponseMeasurementSession _session;
 
@@ -134,16 +135,18 @@ class _SealCheckMeasurementViewState extends State<SealCheckMeasurementView> {
       _stack = null;
       _leftResult = null;
       _rightResult = null;
+      _progress = null;
     });
 
     try {
-      final results = await _session.measure();
+      final results = await _session.measure(onProgress: _handleProgress);
       if (!mounted) return;
 
       setState(() {
         _leftResult = results.left;
         _rightResult = results.right;
         _isMeasuring = false;
+        _progress = null;
       });
     } catch (e, st) {
       if (!mounted) return;
@@ -151,8 +154,16 @@ class _SealCheckMeasurementViewState extends State<SealCheckMeasurementView> {
         _error = e;
         _stack = st;
         _isMeasuring = false;
+        _progress = null;
       });
     }
+  }
+
+  void _handleProgress(AudioResponseMeasurementProgress progress) {
+    if (!mounted) return;
+    setState(() {
+      _progress = progress;
+    });
   }
 
   @override
@@ -162,12 +173,6 @@ class _SealCheckMeasurementViewState extends State<SealCheckMeasurementView> {
     return PlatformScaffold(
       appBar: PlatformAppBar(
         title: Text(widget.title),
-        trailingActions: [
-          PlatformIconButton(
-            onPressed: _isMeasuring ? null : _startMeasurement,
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -233,17 +238,46 @@ class _SealCheckMeasurementViewState extends State<SealCheckMeasurementView> {
   }
 
   Widget _buildLoading(ThemeData theme) {
+    final progress = _progress;
+    final isUploading =
+        progress?.phase == AudioResponseMeasurementPhase.uploadingTone;
+    final uploadFraction = progress?.uploadFraction;
+    final progressLabel = isUploading && uploadFraction != null
+        ? '${(uploadFraction * 100).round()}%'
+        : null;
+    final statusText = switch (progress?.phase) {
+      AudioResponseMeasurementPhase.uploadingTone => progress?.totalUploads == 1
+          ? 'Uploading seal-check tone…'
+          : 'Uploading seal-check tones…',
+      AudioResponseMeasurementPhase.measuringResponse =>
+        _hasBothSides ? 'Measuring left + right…' : 'Running seal check…',
+      null => 'Preparing seal check…',
+    };
+
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const CircularProgressIndicator(),
-          const SizedBox(height: 16),
-          Text(
-            _hasBothSides ? 'Measuring left + right…' : 'Running seal check…',
-            style: theme.textTheme.titleMedium,
-          ),
-        ],
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            LinearProgressIndicator(
+              value: isUploading ? uploadFraction : null,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              statusText,
+              style: theme.textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
+            if (progressLabel != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                progressLabel,
+                style: theme.textTheme.bodyMedium,
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
