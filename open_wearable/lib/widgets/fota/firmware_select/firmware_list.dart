@@ -458,7 +458,7 @@ class _FirmwareListState extends State<FirmwareList> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Beta firmware is experimental and is not recommended to be used. Use at your own risk.',
+              'Beta firmware is experimental. Use at your own risk.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurface,
                     fontWeight: FontWeight.w600,
