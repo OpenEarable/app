@@ -533,7 +533,7 @@ packages:
     description:
       path: "."
       ref: "feature/audio-response"
-      resolved-ref: d031c751f05835c87e94913b3c57f5859a903125
+      resolved-ref: b6ac787c04f018f7b76ca23d69599295b59e4a0d
       url: "https://github.com/OpenEarable/open_earable_flutter.git"
     source: git
     version: "2.3.10"
@@ -1050,10 +1050,10 @@ packages:
     dependency: "direct main"
     description:
       name: universal_ble
-      sha256: da15f61251299daf9c290bb8e40ded1e5313c4636fef6c796a7a656a06c93b4a
+      sha256: ff3c4ea34e1360ba593c68f68ff2d0cd598dcb054b0de1d89c0936dbb5dd9707
       url: "https://pub.dev"
     source: hosted
-    version: "2.0.4"
+    version: "2.0.2"
   url_launcher:
     dependency: "direct main"
     description:
