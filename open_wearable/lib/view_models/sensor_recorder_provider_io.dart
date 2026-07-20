@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
 import '../models/audio_input_source.dart';
+import '../models/labels/label_sensor.dart';
 import '../models/logger.dart';
 import '../models/sensor_streams.dart';
 import '../widgets/sensors/local_recorder/local_recorder_models.dart';
@@ -270,8 +271,9 @@ class SensorRecorderProvider with ChangeNotifier {
   }
 
   void _updateConnected() {
-    _hasSensorsConnected = !(_recorders.isEmpty ||
-        _recorders.values.every((sensors) => sensors.isEmpty));
+    _hasSensorsConnected = _recorders.entries.any(
+      (entry) => entry.key is! LabelWearable && entry.value.isNotEmpty,
+    );
     logger.i('Has sensors connected: $_hasSensorsConnected');
     notifyListeners();
   }

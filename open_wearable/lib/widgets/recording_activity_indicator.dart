@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../view_models/label_provider.dart';
 import '../view_models/sensor_recorder_provider_facade.dart';
 
 /// Shared pulse ticker so every recording indicator stays in sync.
@@ -11,9 +13,27 @@ class _RecordingPulseTicker {
 
   static const int _periodMs = 900;
   static const Duration tick = Duration(milliseconds: 40);
-  static final Stream<DateTime> stream =
-      Stream<DateTime>.periodic(tick, (_) => DateTime.now())
-          .asBroadcastStream();
+  static Timer? _timer;
+  static final StreamController<DateTime> _controller =
+      StreamController<DateTime>.broadcast(
+    onListen: _start,
+    onCancel: _stop,
+  );
+
+  static Stream<DateTime> get stream => _controller.stream;
+
+  static void _start() {
+    _timer ??= Timer.periodic(tick, (_) {
+      if (!_controller.isClosed) {
+        _controller.add(DateTime.now());
+      }
+    });
+  }
+
+  static void _stop() {
+    _timer?.cancel();
+    _timer = null;
+  }
 
   static double opacityAt(DateTime now, DateTime origin) {
     final elapsedMs = now.difference(origin).inMilliseconds;
@@ -43,6 +63,9 @@ class RecordingActivityIndicator extends StatelessWidget {
     );
     final recordingStart = context.select<SensorRecorderProvider, DateTime?>(
       (provider) => provider.recordingStart,
+    );
+    final activeLabelColor = context.select<LabelProvider, Color?>(
+      (provider) => provider.activeLabel?.color,
     );
 
     final colorScheme = Theme.of(context).colorScheme;
@@ -74,11 +97,51 @@ class RecordingActivityIndicator extends StatelessWidget {
         builder: (context, snapshot) {
           final now = snapshot.data ?? DateTime.now();
           final opacity = _RecordingPulseTicker.opacityAt(now, anchor);
-          return Opacity(
-            opacity: opacity,
-            child: icon,
+          return _RecordingDotWithLabelBorder(
+            size: size,
+            borderColor: activeLabelColor,
+            child: Opacity(
+              opacity: opacity,
+              child: icon,
+            ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _RecordingDotWithLabelBorder extends StatelessWidget {
+  const _RecordingDotWithLabelBorder({
+    required this.size,
+    required this.borderColor,
+    required this.child,
+  });
+
+  final double size;
+  final Color? borderColor;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final outerSize = size + 8;
+    final borderWidth = (size * 0.12).clamp(1.5, 2.5).toDouble();
+    final color = borderColor;
+
+    return SizedBox.square(
+      key: const ValueKey('recording-label-border'),
+      dimension: outerSize,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: color == null
+              ? null
+              : Border.all(
+                  color: color,
+                  width: borderWidth,
+                ),
+        ),
+        child: Center(child: child),
       ),
     );
   }
