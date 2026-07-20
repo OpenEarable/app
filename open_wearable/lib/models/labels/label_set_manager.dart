@@ -49,7 +49,10 @@ class LabelSetManager extends ChangeNotifier {
 
   /// Replace one specific set with an updated instance.
   Future<void> replaceLabelSet(LabelSet oldSet, LabelSet newSet) async {
-    final index = _labelSets.indexOf(oldSet);
+    var index = _labelSets.indexOf(oldSet);
+    if (index < 0) {
+      index = _labelSets.indexWhere((set) => set.name == oldSet.name);
+    }
     if (index >= 0) {
       _labelSets[index] = newSet;
       await _save();

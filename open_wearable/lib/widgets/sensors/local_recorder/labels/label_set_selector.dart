@@ -3,16 +3,22 @@ import 'package:flutter/widget_previews.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/labels/label_sets_page.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/labels/labelset_dropdown.dart';
-import 'package:open_wearable/widgets/sensors/local_recorder/labels/labelset_editor_page.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../view_models/label_set_provider.dart';
 
 class LabelSetSelector extends StatelessWidget {
-  const LabelSetSelector({super.key});
+  const LabelSetSelector({
+    super.key,
+    this.showHelperText = true,
+  });
+
+  final bool showHelperText;
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -23,21 +29,11 @@ class LabelSetSelector extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             IconButton(
-              tooltip: 'Create label set',
-              icon: const Icon(Icons.add),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  platformPageRoute(
-                    context: context,
-                    builder: (context) => LabelSetEditorPage(),
-                  ),
-                );
-              },
-            ),
-            IconButton(
               tooltip: 'Manage label sets',
-              icon: const Icon(Icons.edit),
+              icon: Icon(
+                Icons.edit_outlined,
+                color: colorScheme.primary,
+              ),
               onPressed: () {
                 Navigator.push(
                   context,
@@ -50,11 +46,13 @@ class LabelSetSelector extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 6),
-        Text(
-          'Pick a label set to enable in-recording labeling.',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
+        if (showHelperText) ...[
+          const SizedBox(height: 6),
+          Text(
+            'Pick a label set to add labels while recording.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
       ],
     );
   }

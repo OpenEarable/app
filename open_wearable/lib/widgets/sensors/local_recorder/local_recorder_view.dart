@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
+import 'package:open_wearable/models/labels/label_set.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_dialogs.dart';
 import 'package:provider/provider.dart';
 import 'package:open_wearable/view_models/label_set_provider.dart';
@@ -23,11 +24,6 @@ import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 
 Logger _logger = Logger();
 
-enum _StopRecordingMode {
-  stopOnly,
-  stopAndTurnOffSensors,
-}
-
 // MARK: - LocalRecorderView
 
 class LocalRecorderView extends StatefulWidget {
@@ -44,6 +40,7 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
   Duration _elapsedRecording = Duration.zero;
   bool _lastRecordingState = false;
   bool _isHandlingStopAction = false;
+  bool _turnOffSensorsWhenStopping = false;
   DateTime? _activeRecordingStart;
   SensorRecorderProvider? _recorder;
 
@@ -129,23 +126,19 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
     return true;
   }
 
-  Future<void> _handleStopRecording(
-    SensorRecorderProvider recorder, {
-    required _StopRecordingMode mode,
-  }) async {
+  Future<void> _handleStopRecording(SensorRecorderProvider recorder) async {
     if (_isHandlingStopAction) return;
+    final shouldTurnOffSensors = _turnOffSensorsWhenStopping;
+
     setState(() {
       _isHandlingStopAction = true;
     });
 
-    final wearablesProvider = mode == _StopRecordingMode.stopAndTurnOffSensors
-        ? context.read<WearablesProvider>()
-        : null;
+    final wearablesProvider =
+        shouldTurnOffSensors ? context.read<WearablesProvider>() : null;
 
     try {
-      await recorder.stopRecording(
-        mode == _StopRecordingMode.stopAndTurnOffSensors,
-      );
+      await recorder.stopRecording(shouldTurnOffSensors);
       if (wearablesProvider != null) {
         final futures = wearablesProvider.sensorConfigurationProviders.values
             .map((provider) => provider.turnOffAllSensors());
@@ -169,6 +162,7 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
     _activeRecordingStart = reference;
     _recordingTimer?.cancel();
     setState(() {
+      _turnOffSensorsWhenStopping = false;
       _elapsedRecording = DateTime.now().difference(reference);
     });
     _recordingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -186,6 +180,7 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
     _activeRecordingStart = null;
     if (!mounted) return;
     setState(() {
+      _turnOffSensorsWhenStopping = false;
       _elapsedRecording = Duration.zero;
     });
   }
@@ -304,20 +299,9 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
         final selectedLabelSet =
             context.watch<LabelSetProvider>().selectedLabelSet;
         final labelControls = !isRecording || selectedLabelSet != null
-            ? Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (!isRecording) const LabelSetSelector(),
-                  if (selectedLabelSet != null) ...[
-                    if (!isRecording) const SizedBox(height: 12),
-                    Text(
-                      'Active Label',
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    const SizedBox(height: 8),
-                    ActiveLabelBar(labelSet: selectedLabelSet),
-                  ],
-                ],
+            ? _LocalRecorderLabelSection(
+                isRecording: isRecording,
+                labelSet: selectedLabelSet,
               )
             : null;
 
@@ -333,16 +317,15 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
                   hasSensorsConnected: recorder.hasSensorsConnected,
                   canStartRecording: canStartRecording,
                   isHandlingStopAction: _isHandlingStopAction,
+                  turnOffSensorsWhenStopping: _turnOffSensorsWhenStopping,
                   elapsedRecordingLabel: _formatDuration(_elapsedRecording),
                   onStartRecording: () => _startRecording(recorder),
-                  onStopAndTurnOff: () => _handleStopRecording(
-                    recorder,
-                    mode: _StopRecordingMode.stopAndTurnOffSensors,
-                  ),
-                  onStopRecordingOnly: () => _handleStopRecording(
-                    recorder,
-                    mode: _StopRecordingMode.stopOnly,
-                  ),
+                  onTurnOffSensorsWhenStoppingChanged: (value) {
+                    setState(() {
+                      _turnOffSensorsWhenStopping = value;
+                    });
+                  },
+                  onStopRecording: () => _handleStopRecording(recorder),
                   labelControls: labelControls,
                 ),
                 const SizedBox(height: SensorPageSpacing.sectionGap),
@@ -415,6 +398,44 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
           ),
         );
       },
+    );
+  }
+}
+
+class _LocalRecorderLabelSection extends StatelessWidget {
+  const _LocalRecorderLabelSection({
+    required this.isRecording,
+    required this.labelSet,
+  });
+
+  final bool isRecording;
+  final LabelSet? labelSet;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final set = labelSet;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (!isRecording) const LabelSetSelector(showHelperText: false),
+        if (set != null) ...[
+          if (!isRecording) const SizedBox(height: 14),
+          Text(
+            isRecording ? 'Current Segment' : 'Available Labels',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          ActiveLabelBar(
+            labelSet: set,
+            selectionEnabled: isRecording,
+            showNoLabelOption: isRecording,
+          ),
+        ],
+      ],
     );
   }
 }
