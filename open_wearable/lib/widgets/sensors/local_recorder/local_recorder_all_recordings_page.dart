@@ -195,6 +195,8 @@ class _LocalRecorderAllRecordingsPageState
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return PlatformScaffold(
       appBar: PlatformAppBar(
         title: Text(
@@ -210,7 +212,10 @@ class _LocalRecorderAllRecordingsPageState
             ),
           if (_selectionMode && _selectedFolderPaths.isNotEmpty)
             PlatformIconButton(
-              icon: const Icon(Icons.delete_outline),
+              icon: Icon(
+                Icons.delete_outline,
+                color: colorScheme.error,
+              ),
               onPressed: _isBusy ? null : _deleteSelectedFolders,
             ),
           if (_selectionMode)

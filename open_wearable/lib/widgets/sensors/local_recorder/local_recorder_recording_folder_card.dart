@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:open_wearable/widgets/recording_activity_indicator.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_models.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 
@@ -61,13 +62,10 @@ class LocalRecorderRecordingFolderCard extends StatelessWidget {
               isCurrentRecording ? 'Active recording' : updatedLabel,
             ),
             trailing: isCurrentRecording
-                ? SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: colorScheme.error,
-                    ),
+                ? const RecordingActivityIndicator(
+                    size: 14,
+                    showIdleOutline: false,
+                    padding: EdgeInsets.zero,
                   )
                 : Row(
                     mainAxisSize: MainAxisSize.min,
