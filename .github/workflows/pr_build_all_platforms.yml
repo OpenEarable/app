@@ -35,6 +35,18 @@ jobs:
             artifact_name: android-apk
             artifact_path: open_wearable/build/app/outputs/flutter-apk/app-release.apk
             android: true
+          - target: ios
+            name: iOS
+            os: macos-latest
+            build_command: flutter build ios --release --no-codesign
+            artifact_name: ios-runner
+            artifact_path: open_wearable/build/ios/iphoneos/Runner.app
+          - target: macos
+            name: macOS
+            os: macos-latest
+            build_command: flutter build macos --release
+            artifact_name: macos-app
+            artifact_path: open_wearable/build/macos/Build/Products/Release/open_wearable.app
           - target: linux
             name: Linux
             os: ubuntu-latest
@@ -115,6 +127,8 @@ jobs:
             const repoUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}`;
             const artifactLabels = new Map([
               ['android-apk', 'Android APK'],
+              ['ios-runner', 'iOS Runner'],
+              ['macos-app', 'macOS App'],
               ['linux-bundle', 'Linux Bundle'],
               ['windows-runner', 'Windows Runner'],
               ['web-bundle', 'Web Bundle'],
