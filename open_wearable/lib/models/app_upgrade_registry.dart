@@ -179,6 +179,44 @@ class AppUpgradeRegistry {
         ),
       ],
     ),
+    AppUpgradeHighlight(
+      version: '1.5.0',
+      eyebrow: 'OpenWearables 1.5.0',
+      title: 'Add labels while\nyou record',
+      summary:
+          'Mark important moments in local recordings and find devices faster.',
+      heroDescription:
+          'OpenWearables 1.5.0 brings reusable recording labels to the local recorder. '
+          'Create label sets, choose one before recording, and tap labels during a session so key events are saved with your sensor data.',
+      accentColor: Color(0xFF8F6A67),
+      useHeroGradient: false,
+      features: <AppUpgradeFeatureHighlight>[
+        AppUpgradeFeatureHighlight(
+          icon: Icons.label_rounded,
+          title: 'Recording labels',
+          description:
+              'Create reusable label sets and mark events while recording. Label states are saved alongside sensor data with timestamps for easier review and analysis.',
+        ),
+        AppUpgradeFeatureHighlight(
+          icon: Icons.filter_alt_rounded,
+          title: 'Device name filter',
+          description:
+              'Filter the available device list by name, starting with OpenEarable, so nearby Bluetooth devices are easier to scan and connect.',
+        ),
+        AppUpgradeFeatureHighlight(
+          icon: Icons.verified_rounded,
+          title: 'Smarter firmware matching',
+          description:
+              'Firmware lists and post-update checks now better recognize installed versions, including beta and pull-request builds.',
+        ),
+        AppUpgradeFeatureHighlight(
+          icon: Icons.auto_fix_high_rounded,
+          title: 'Workflow polish',
+          description:
+              'Small fixes make label-set editing, delete confirmations, selected dropdowns, color indicators, and update verification feel more predictable.',
+        ),
+      ],
+    ),
   ];
 
   /// Returns the configured highlight for [version], if any.

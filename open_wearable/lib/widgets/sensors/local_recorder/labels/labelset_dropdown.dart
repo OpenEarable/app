@@ -14,17 +14,19 @@ class LabelSetDropdown extends StatelessWidget {
     return Consumer<LabelSetProvider>(
       builder: (context, provider, _) {
         final sets = provider.labelSets;
+        final selectedSet = provider.selectedLabelSet;
 
         return DropdownButtonFormField<LabelSet?>(
-          initialValue: provider.selectedLabelSet,
+          key: ValueKey(selectedSet?.name ?? 'no-label-set'),
+          initialValue: selectedSet,
           decoration: const InputDecoration(
-            labelText: 'Label set',
+            hintText: 'Label set',
             border: OutlineInputBorder(),
           ),
           items: [
             const DropdownMenuItem(
               value: null,
-              child: Text('None'),
+              child: Text('No Labels'),
             ),
             ...sets.map(
               (set) => DropdownMenuItem(
