@@ -16,10 +16,11 @@ class LabelSetsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final provider = context.watch<LabelSetProvider>();
     final sets = provider.labelSets;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Label sets'),
+        title: const Text('Label Sets'),
         actions: [
           IconButton(
             tooltip: 'Create',
@@ -51,7 +52,7 @@ class LabelSetsPage extends StatelessWidget {
                     children: [
                       IconButton(
                         tooltip: 'Edit',
-                        icon: const Icon(Icons.edit),
+                        icon: const Icon(Icons.edit_outlined),
                         onPressed: () async {
                           await Navigator.of(context).push(
                             MaterialPageRoute(
@@ -63,7 +64,10 @@ class LabelSetsPage extends StatelessWidget {
                       ),
                       IconButton(
                         tooltip: 'Delete',
-                        icon: const Icon(Icons.delete),
+                        icon: Icon(
+                          Icons.delete_outline,
+                          color: colorScheme.error,
+                        ),
                         onPressed: () async {
                           final ok = await showDialog<bool>(
                                 context: context,
@@ -79,6 +83,9 @@ class LabelSetsPage extends StatelessWidget {
                                       child: const Text('Cancel'),
                                     ),
                                     TextButton(
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: colorScheme.error,
+                                      ),
                                       onPressed: () =>
                                           Navigator.pop(context, true),
                                       child: const Text('Delete'),

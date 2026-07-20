@@ -9,6 +9,7 @@ import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_mode
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_storage_web.dart';
 
 import '../models/audio_input_source.dart';
+import '../models/labels/label_sensor.dart';
 import '../models/logger.dart';
 import '../models/sensor_streams.dart';
 import 'audio_input_controller.dart';
@@ -201,7 +202,12 @@ class SensorRecorderProvider with ChangeNotifier {
   }
 
   void _updateConnected() {
-    _hasSensorsConnected = _wearablesById.isNotEmpty;
+    _hasSensorsConnected = _wearablesById.values.any(
+      (wearable) =>
+          wearable is! LabelWearable &&
+          wearable.hasCapability<SensorManager>() &&
+          wearable.requireCapability<SensorManager>().sensors.isNotEmpty,
+    );
     logger.i('Has sensors connected: $_hasSensorsConnected');
     _notifyListenersIfActive();
   }
