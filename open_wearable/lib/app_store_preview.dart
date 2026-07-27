@@ -167,6 +167,8 @@ class AppStorePreviewWearable extends Wearable
         PowerSavingModeManager {
   static const _sampleInterval = Duration(milliseconds: 20);
   static const _slowSensorInterval = Duration(milliseconds: 200);
+  static const _disabledPreviewSensorPollInterval = Duration(milliseconds: 100);
+  static const _minimumPreviewSensorInterval = Duration(milliseconds: 5);
   static const int _simulatedFirmwareDeviceId = 0x00007E42;
   static const String _simulatedAppleDeviceId =
       '2303BBB4-CDF7-4AF2-8E7C-000000007E42';
@@ -181,11 +183,13 @@ class AppStorePreviewWearable extends Wearable
   static final ValueNotifier<bool> _postureImuFixedModeNotifier =
       ValueNotifier(false);
   static bool _isPostureImuFixedModeEnabled = false;
-  final List<Sensor> _sensors;
+  late final List<Sensor> _sensors;
   final StreamController<Map<SensorConfiguration, SensorConfigurationValue>>
       _sensorConfigurationController = StreamController.broadcast();
   final Map<SensorConfiguration, SensorConfigurationValue>
       _configurationValues = {};
+  final Map<String, _PreviewSensorConfiguration> _sensorConfigurationsByName = {};
+  final Map<String, int> _sensorConfigurationRevisionsByName = {};
   late final List<SensorConfiguration> _sensorConfigurations;
 
   @override
@@ -213,15 +217,19 @@ class AppStorePreviewWearable extends Wearable
   late PowerSavingMode _powerSavingMode = _powerSavingModes.first;
 
   AppStorePreviewWearable()
-      : _sensors = _buildSensors(),
-        super(
+      : super(
           // Matches the firmware's `OpenEarable-%04X` advertising format.
           name: _simulatedBluetoothName,
           disconnectNotifier: _disconnectNotifier,
         ) {
+    _sensors = _buildSensors();
     _sensorConfigurations = _buildSensorConfigurations();
     for (final configuration in _sensorConfigurations) {
       final dynamic previewConfiguration = configuration;
+      if (configuration is _PreviewSensorConfiguration) {
+        _sensorConfigurationsByName[configuration.name] = configuration;
+        _sensorConfigurationRevisionsByName[configuration.name] = 0;
+      }
       _configurationValues[configuration] =
           previewConfiguration.currentValue as SensorConfigurationValue;
     }
@@ -404,6 +412,10 @@ class AppStorePreviewWearable extends Wearable
     SensorConfigurationValue value,
   ) {
     _configurationValues[configuration] = value;
+    final currentRevision =
+        _sensorConfigurationRevisionsByName[configuration.name] ?? 0;
+    _sensorConfigurationRevisionsByName[configuration.name] =
+        currentRevision + 1;
     _publishConfigurationState();
   }
 
@@ -413,7 +425,7 @@ class AppStorePreviewWearable extends Wearable
     }
   }
 
-  static List<Sensor> _buildSensors() {
+  List<Sensor> _buildSensors() {
     return [
       _PreviewSensor(
         sensorName: 'ACCELEROMETER',
@@ -422,6 +434,11 @@ class AppStorePreviewWearable extends Wearable
         axisNames: const ['X', 'Y', 'Z'],
         axisUnits: const ['m/s²', 'm/s²', 'm/s²'],
         sampleValues: _accelerometerValues,
+        currentSampleInterval: () => _sampleIntervalForConfiguration(
+          '9-Axis IMU',
+          fallback: _sampleInterval,
+        ),
+        configurationRevision: () => _configurationRevisionFor('9-Axis IMU'),
       ),
       _PreviewSensor(
         sensorName: 'GYROSCOPE',
@@ -430,6 +447,11 @@ class AppStorePreviewWearable extends Wearable
         axisNames: const ['X', 'Y', 'Z'],
         axisUnits: const ['°/s', '°/s', '°/s'],
         sampleValues: _gyroscopeValues,
+        currentSampleInterval: () => _sampleIntervalForConfiguration(
+          '9-Axis IMU',
+          fallback: _sampleInterval,
+        ),
+        configurationRevision: () => _configurationRevisionFor('9-Axis IMU'),
       ),
       _PreviewSensor(
         sensorName: 'MAGNETOMETER',
@@ -438,6 +460,11 @@ class AppStorePreviewWearable extends Wearable
         axisNames: const ['X', 'Y', 'Z'],
         axisUnits: const ['µT', 'µT', 'µT'],
         sampleValues: _magnetometerValues,
+        currentSampleInterval: () => _sampleIntervalForConfiguration(
+          '9-Axis IMU',
+          fallback: _sampleInterval,
+        ),
+        configurationRevision: () => _configurationRevisionFor('9-Axis IMU'),
       ),
       _PreviewSensor(
         sensorName: 'PHOTOPLETHYSMOGRAPH',
@@ -446,6 +473,11 @@ class AppStorePreviewWearable extends Wearable
         axisNames: const ['RED', 'IR', 'GREEN', 'AMBIENT'],
         axisUnits: const ['ADC', 'ADC', 'ADC', 'ADC'],
         sampleValues: _ppgValues,
+        currentSampleInterval: () => _sampleIntervalForConfiguration(
+          'Pulse Oximeter',
+          fallback: _sampleInterval,
+        ),
+        configurationRevision: () => _configurationRevisionFor('Pulse Oximeter'),
       ),
       _PreviewSensor(
         sensorName: 'OPTICAL_TEMPERATURE_SENSOR',
@@ -455,6 +487,12 @@ class AppStorePreviewWearable extends Wearable
         axisUnits: const ['°C'],
         sampleValues: (seconds) => [_skinTemperatureValue(seconds)],
         sampleInterval: _slowSensorInterval,
+        currentSampleInterval: () => _sampleIntervalForConfiguration(
+          'Skin Temperature Sensor',
+          fallback: _slowSensorInterval,
+        ),
+        configurationRevision: () =>
+            _configurationRevisionFor('Skin Temperature Sensor'),
       ),
       _PreviewSensor(
         sensorName: 'TEMPERATURE_SENSOR',
@@ -464,6 +502,12 @@ class AppStorePreviewWearable extends Wearable
         axisUnits: const ['°C'],
         sampleValues: (seconds) => [_barometerTemperatureValue(seconds)],
         sampleInterval: _slowSensorInterval,
+        currentSampleInterval: () => _sampleIntervalForConfiguration(
+          'Ear Canal Pressure Sensor',
+          fallback: _slowSensorInterval,
+        ),
+        configurationRevision: () =>
+            _configurationRevisionFor('Ear Canal Pressure Sensor'),
       ),
       _PreviewSensor(
         sensorName: 'BAROMETER',
@@ -473,6 +517,12 @@ class AppStorePreviewWearable extends Wearable
         axisUnits: const ['Pa'],
         sampleValues: (seconds) => [_pressureValue(seconds)],
         sampleInterval: _slowSensorInterval,
+        currentSampleInterval: () => _sampleIntervalForConfiguration(
+          'Ear Canal Pressure Sensor',
+          fallback: _slowSensorInterval,
+        ),
+        configurationRevision: () =>
+            _configurationRevisionFor('Ear Canal Pressure Sensor'),
       ),
       _PreviewSensor(
         sensorName: 'ACCELEROMETER',
@@ -481,9 +531,49 @@ class AppStorePreviewWearable extends Wearable
         axisNames: const ['X', 'Y', 'Z'],
         axisUnits: const ['g', 'g', 'g'],
         sampleValues: _boneConductionValues,
+        currentSampleInterval: () => _sampleIntervalForConfiguration(
+          'Bone Conduction Accelerometer',
+          fallback: _sampleInterval,
+        ),
+        configurationRevision: () =>
+            _configurationRevisionFor('Bone Conduction Accelerometer'),
       ),
     ];
   }
+
+  Duration? _sampleIntervalForConfiguration(
+    String configurationName, {
+    required Duration fallback,
+  }) {
+    final configuration = _sensorConfigurationsByName[configurationName];
+    final appliedValue =
+        configuration == null ? null : _configurationValues[configuration];
+    final previewValue = appliedValue is _PreviewSensorConfigurationValue
+        ? appliedValue
+        : null;
+    if (previewValue == null) {
+      return fallback;
+    }
+
+    final isStreaming = previewValue.options.any(
+      (option) => option is StreamSensorConfigOption,
+    );
+    if (!isStreaming || previewValue.frequencyHz <= 0) {
+      return null;
+    }
+
+    final configuredInterval = Duration(
+      microseconds:
+          (Duration.microsecondsPerSecond / previewValue.frequencyHz).round(),
+    );
+    if (configuredInterval < _minimumPreviewSensorInterval) {
+      return _minimumPreviewSensorInterval;
+    }
+    return configuredInterval;
+  }
+
+  int _configurationRevisionFor(String configurationName) =>
+      _sensorConfigurationRevisionsByName[configurationName] ?? 0;
 
   /// Simulates gravity-compensated acceleration for a device mounted a short
   /// distance from the head's rotation center. At rest, all axes sit near 0.
@@ -1336,10 +1426,13 @@ class _PreviewOrientation {
 
 class _PreviewSensor extends Sensor<SensorDoubleValue> {
   static const _historyWindow = Duration(seconds: 5);
+  static const _maxSeedHistorySamples = 600;
   final List<String> _axisNames;
   final List<String> _axisUnits;
   final List<double> Function(double seconds) _sampleValues;
   final Duration _sampleInterval;
+  final Duration? Function()? _currentSampleInterval;
+  final int Function()? _configurationRevision;
 
   _PreviewSensor({
     required super.sensorName,
@@ -1349,10 +1442,14 @@ class _PreviewSensor extends Sensor<SensorDoubleValue> {
     required List<String> axisUnits,
     required List<double> Function(double seconds) sampleValues,
     Duration sampleInterval = AppStorePreviewWearable._sampleInterval,
+    Duration? Function()? currentSampleInterval,
+    int Function()? configurationRevision,
   })  : _axisNames = axisNames,
         _axisUnits = axisUnits,
         _sampleValues = sampleValues,
         _sampleInterval = sampleInterval,
+        _currentSampleInterval = currentSampleInterval,
+        _configurationRevision = configurationRevision,
         super(timestampExponent: -3);
 
   @override
@@ -1363,25 +1460,104 @@ class _PreviewSensor extends Sensor<SensorDoubleValue> {
 
   @override
   Stream<SensorDoubleValue> get sensorStream async* {
-    final startedAt = DateTime.now().millisecondsSinceEpoch;
-    final historySamples =
-        (_historyWindow.inMilliseconds / _sampleInterval.inMilliseconds)
-            .round();
+    var activeRevision = _configurationRevision?.call() ?? 0;
+    final initialInterval = _resolvedSampleInterval();
+    int? lastTimestamp;
 
     // Seed the five-second window so a screenshot is ready on the first frame.
-    for (var index = historySamples; index >= 0; index--) {
-      final timestamp = startedAt - index * _sampleInterval.inMilliseconds;
-      yield _valueAt(timestamp);
+    if (initialInterval != null) {
+      final startedAt = DateTime.now().millisecondsSinceEpoch;
+      yield* _seedHistory(
+        baseTimestamp: startedAt,
+        sampleInterval: initialInterval,
+      );
+      lastTimestamp = startedAt;
     }
 
-    var sampleIndex = 1;
     while (true) {
-      await Future<void>.delayed(_sampleInterval);
-      final timestamp =
-          startedAt + sampleIndex * _sampleInterval.inMilliseconds;
-      sampleIndex++;
+      final currentRevision = _configurationRevision?.call() ?? activeRevision;
+      if (currentRevision != activeRevision) {
+        activeRevision = currentRevision;
+        final updatedInterval = _resolvedSampleInterval();
+        if (updatedInterval != null) {
+          final resetTimestamp = _resetTimestampAfterConfigurationChange(
+            previousTimestamp: lastTimestamp,
+          );
+          yield* _seedHistory(
+            baseTimestamp: resetTimestamp,
+            sampleInterval: updatedInterval,
+          );
+          lastTimestamp = resetTimestamp;
+        }
+        continue;
+      }
+
+      final sampleInterval = _resolvedSampleInterval();
+      if (sampleInterval == null) {
+        await Future<void>.delayed(
+          AppStorePreviewWearable._disabledPreviewSensorPollInterval,
+        );
+        continue;
+      }
+
+      await Future<void>.delayed(sampleInterval);
+      final timestamp = _nextTimestampAfter(
+        lastTimestamp,
+        sampleInterval: sampleInterval,
+      );
+      lastTimestamp = timestamp;
       yield _valueAt(timestamp);
     }
+  }
+
+  Duration? _resolvedSampleInterval() =>
+      _currentSampleInterval?.call() ?? _sampleInterval;
+
+  int _historySampleCountFor(Duration sampleInterval) {
+    final sampleCount =
+        (_historyWindow.inMicroseconds / sampleInterval.inMicroseconds).round();
+    return sampleCount.clamp(1, _maxSeedHistorySamples);
+  }
+
+  Stream<SensorDoubleValue> _seedHistory({
+    required int baseTimestamp,
+    required Duration sampleInterval,
+  }) async* {
+    final historySamples = _historySampleCountFor(sampleInterval);
+    final intervalMs = _intervalMilliseconds(sampleInterval);
+    for (var index = historySamples; index >= 0; index--) {
+      yield _valueAt(baseTimestamp - index * intervalMs);
+    }
+  }
+
+  int _nextTimestampAfter(
+    int? previousTimestamp, {
+    required Duration sampleInterval,
+  }) {
+    final nowTimestamp = DateTime.now().millisecondsSinceEpoch;
+    if (previousTimestamp != null) {
+      return math.max(
+        nowTimestamp,
+        previousTimestamp + _intervalMilliseconds(sampleInterval),
+      );
+    }
+    return nowTimestamp;
+  }
+
+  int _resetTimestampAfterConfigurationChange({
+    required int? previousTimestamp,
+  }) {
+    final nowTimestamp = DateTime.now().millisecondsSinceEpoch;
+    final resetTimestamp = (previousTimestamp ?? nowTimestamp) +
+        _historyWindow.inMilliseconds +
+        1;
+    return math.max(nowTimestamp, resetTimestamp);
+  }
+
+  int _intervalMilliseconds(Duration sampleInterval) {
+    final intervalMilliseconds =
+        sampleInterval.inMicroseconds / Duration.microsecondsPerMillisecond;
+    return math.max(1, intervalMilliseconds.round());
   }
 
   SensorDoubleValue _valueAt(int timestamp) {
