@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 
+const double _gainSliderMinDb = -69.0;
+const double _gainSliderMaxDb = 24.0;
+const int _gainSliderDivisions = 31;
+
 class MicrophoneGainControls extends StatefulWidget {
   final Wearable? device;
   final Wearable? pairedDevice;
@@ -16,14 +20,15 @@ class MicrophoneGainControls extends StatefulWidget {
 }
 
 class _MicrophoneGainControlsState extends State<MicrophoneGainControls> {
-  int _leftRegister = MicrophoneGain.defaultRegister;
-  int _rightRegister = MicrophoneGain.defaultRegister;
-  int _lastLeftRegister = MicrophoneGain.defaultRegister;
-  int _lastRightRegister = MicrophoneGain.defaultRegister;
+  int _externalRegister = MicrophoneGain.defaultRegister;
+  int _internalRegister = MicrophoneGain.defaultRegister;
+  int _lastExternalRegister = MicrophoneGain.defaultRegister;
+  int _lastInternalRegister = MicrophoneGain.defaultRegister;
   bool _linked = true;
   bool _muted = false;
   bool _loading = true;
   bool _writing = false;
+  bool _pairedOutOfSync = false;
   String? _error;
 
   MicrophoneGainManager? get _manager =>
@@ -54,8 +59,7 @@ class _MicrophoneGainControlsState extends State<MicrophoneGainControls> {
 
   @override
   Widget build(BuildContext context) {
-    final manager = _manager;
-    if (manager == null) {
+    if (_manager == null) {
       return const SizedBox.shrink();
     }
 
@@ -68,7 +72,9 @@ class _MicrophoneGainControlsState extends State<MicrophoneGainControls> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.45),
+          color: _pairedOutOfSync
+              ? colorScheme.error.withValues(alpha: 0.7)
+              : colorScheme.outlineVariant.withValues(alpha: 0.45),
         ),
       ),
       child: Column(
@@ -76,19 +82,17 @@ class _MicrophoneGainControlsState extends State<MicrophoneGainControls> {
         children: [
           Row(
             children: [
-              Expanded(
-                child: Text(
-                  'Microphone Gain',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
-                ),
+              Text(
+                'Microphone Gain',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
               ),
-              IconButton(
-                tooltip: 'Refresh',
-                onPressed: _loading || _writing ? null : _readGain,
-                icon: const Icon(Icons.refresh_rounded, size: 18),
-              ),
+              if (_pairedOutOfSync) ...[
+                const SizedBox(width: 8),
+                _OutOfSyncIndicator(color: colorScheme.error),
+              ],
+              const Spacer(),
             ],
           ),
           const SizedBox(height: 2),
@@ -102,7 +106,7 @@ class _MicrophoneGainControlsState extends State<MicrophoneGainControls> {
               ),
               Expanded(
                 child: Text(
-                  'Link channels',
+                  'Link microphones',
                   style: Theme.of(
                     context,
                   ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
@@ -124,19 +128,19 @@ class _MicrophoneGainControlsState extends State<MicrophoneGainControls> {
           ] else ...[
             const SizedBox(height: 8),
             _GainSlider(
-              label: 'Left',
-              register: _leftRegister,
-              fallbackRegister: _lastLeftRegister,
+              label: 'External',
+              register: _externalRegister,
+              fallbackRegister: _lastExternalRegister,
               enabled: !disabled,
-              onChanged: (db) => _updateGain(left: true, db: db),
+              onChanged: (db) => _updateGain(external: true, db: db),
               onChangeEnd: (_) => _writeGain(),
             ),
             _GainSlider(
-              label: 'Right',
-              register: _rightRegister,
-              fallbackRegister: _lastRightRegister,
+              label: 'Internal',
+              register: _internalRegister,
+              fallbackRegister: _lastInternalRegister,
               enabled: !disabled && !_linked,
-              onChanged: (db) => _updateGain(left: false, db: db),
+              onChanged: (db) => _updateGain(external: false, db: db),
               onChangeEnd: (_) => _writeGain(),
             ),
           ],
@@ -156,14 +160,20 @@ class _MicrophoneGainControlsState extends State<MicrophoneGainControls> {
 
   Future<void> _readGain() async {
     final manager = _manager;
+    final pairedManager = _pairedManager;
     if (manager == null) {
       if (!mounted) return;
       setState(() {
         _loading = false;
         _error = null;
+        _pairedOutOfSync = false;
       });
       return;
     }
+
+    final hasPairedTarget = widget.pairedDevice != null &&
+        widget.pairedDevice?.deviceId != widget.device?.deviceId &&
+        pairedManager != null;
 
     setState(() {
       _loading = true;
@@ -172,16 +182,21 @@ class _MicrophoneGainControlsState extends State<MicrophoneGainControls> {
 
     try {
       final gain = await manager.getMicrophoneGain();
+      final pairedGain =
+          hasPairedTarget ? await pairedManager.getMicrophoneGain() : null;
       if (!mounted) return;
+
       setState(() {
-        _leftRegister = gain.leftRegister;
-        _rightRegister = gain.rightRegister;
+        _externalRegister = gain.externalRegister;
+        _internalRegister = gain.internalRegister;
         _muted = gain.isMuted;
-        _linked = gain.leftRegister == gain.rightRegister;
+        _linked = gain.externalRegister == gain.internalRegister;
         if (!gain.isMuted) {
-          _lastLeftRegister = gain.leftRegister;
-          _lastRightRegister = gain.rightRegister;
+          _lastExternalRegister = gain.externalRegister;
+          _lastInternalRegister = gain.internalRegister;
         }
+        _pairedOutOfSync =
+            pairedGain != null && !_sameMicrophoneGain(gain, pairedGain);
         _loading = false;
       });
     } catch (_) {
@@ -193,12 +208,17 @@ class _MicrophoneGainControlsState extends State<MicrophoneGainControls> {
     }
   }
 
+  bool _sameMicrophoneGain(MicrophoneGain first, MicrophoneGain second) {
+    return first.externalRegister == second.externalRegister &&
+        first.internalRegister == second.internalRegister;
+  }
+
   void _setLinked(bool linked) {
     setState(() {
       _linked = linked;
       if (linked) {
-        _rightRegister = _leftRegister;
-        _lastRightRegister = _lastLeftRegister;
+        _internalRegister = _externalRegister;
+        _lastInternalRegister = _lastExternalRegister;
       }
     });
     if (linked && !_muted) {
@@ -206,20 +226,20 @@ class _MicrophoneGainControlsState extends State<MicrophoneGainControls> {
     }
   }
 
-  void _updateGain({required bool left, required double db}) {
-    final register = MicrophoneGain.dbToRegister(db);
+  void _updateGain({required bool external, required double db}) {
+    final register = MicrophoneGain.dbToRegister(db.roundToDouble());
     setState(() {
       if (_linked) {
-        _leftRegister = register;
-        _rightRegister = register;
-        _lastLeftRegister = register;
-        _lastRightRegister = register;
-      } else if (left) {
-        _leftRegister = register;
-        _lastLeftRegister = register;
+        _externalRegister = register;
+        _internalRegister = register;
+        _lastExternalRegister = register;
+        _lastInternalRegister = register;
+      } else if (external) {
+        _externalRegister = register;
+        _lastExternalRegister = register;
       } else {
-        _rightRegister = register;
-        _lastRightRegister = register;
+        _internalRegister = register;
+        _lastInternalRegister = register;
       }
     });
   }
@@ -227,18 +247,19 @@ class _MicrophoneGainControlsState extends State<MicrophoneGainControls> {
   Future<void> _toggleMute() async {
     setState(() {
       if (_muted) {
-        _leftRegister = _lastLeftRegister;
-        _rightRegister = _linked ? _lastLeftRegister : _lastRightRegister;
+        _externalRegister = _lastExternalRegister;
+        _internalRegister =
+            _linked ? _lastExternalRegister : _lastInternalRegister;
         _muted = false;
       } else {
-        _lastLeftRegister = _leftRegister == MicrophoneGain.muteRegister
+        _lastExternalRegister = _externalRegister == MicrophoneGain.muteRegister
             ? MicrophoneGain.defaultRegister
-            : _leftRegister;
-        _lastRightRegister = _rightRegister == MicrophoneGain.muteRegister
+            : _externalRegister;
+        _lastInternalRegister = _internalRegister == MicrophoneGain.muteRegister
             ? MicrophoneGain.defaultRegister
-            : _rightRegister;
-        _leftRegister = MicrophoneGain.muteRegister;
-        _rightRegister = MicrophoneGain.muteRegister;
+            : _internalRegister;
+        _externalRegister = MicrophoneGain.muteRegister;
+        _internalRegister = MicrophoneGain.muteRegister;
         _muted = true;
       }
     });
@@ -258,13 +279,17 @@ class _MicrophoneGainControlsState extends State<MicrophoneGainControls> {
 
     try {
       final gain = MicrophoneGain(
-        leftRegister: _leftRegister,
-        rightRegister: _rightRegister,
+        externalRegister: _externalRegister,
+        internalRegister: _internalRegister,
       );
       await manager.setMicrophoneGain(gain);
       if (_hasPairedTarget) {
         await _pairedManager!.setMicrophoneGain(gain);
       }
+      if (!mounted) return;
+      setState(() {
+        _pairedOutOfSync = false;
+      });
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -279,6 +304,40 @@ class _MicrophoneGainControlsState extends State<MicrophoneGainControls> {
         });
       }
     }
+  }
+}
+
+class _OutOfSyncIndicator extends StatelessWidget {
+  final Color color;
+
+  const _OutOfSyncIndicator({required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: 'Paired devices report different microphone gains',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(999),
+          color: color.withValues(alpha: 0.12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.sync_problem_rounded, color: color, size: 14),
+            const SizedBox(width: 4),
+            Text(
+              'Out of sync',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -305,6 +364,7 @@ class _GainSlider extends StatelessWidget {
         register == MicrophoneGain.muteRegister ? fallbackRegister : register;
     final db = MicrophoneGain.registerToDb(displayRegister) ??
         MicrophoneGain.registerToDb(MicrophoneGain.defaultRegister)!;
+    final sliderValue = db.clamp(_gainSliderMinDb, _gainSliderMaxDb).toDouble();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -322,17 +382,17 @@ class _GainSlider extends StatelessWidget {
             Text(
               register == MicrophoneGain.muteRegister
                   ? 'Muted'
-                  : '${_formatDb(db)} (${_formatRegister(register)})',
+                  : '${_formatDb(sliderValue)} (${_formatRegister(register)})',
               style: Theme.of(context).textTheme.labelMedium,
             ),
           ],
         ),
         Slider.adaptive(
-          min: MicrophoneGain.minGainDb,
-          max: MicrophoneGain.maxGainDb,
-          divisions: MicrophoneGain.minGainRegister,
-          value: db,
-          label: _formatDb(db),
+          min: _gainSliderMinDb,
+          max: _gainSliderMaxDb,
+          divisions: _gainSliderDivisions,
+          value: sliderValue,
+          label: _formatDb(sliderValue),
           onChanged: enabled ? onChanged : null,
           onChangeEnd: enabled ? onChangeEnd : null,
         ),
@@ -343,7 +403,7 @@ class _GainSlider extends StatelessWidget {
   String _formatDb(double db) {
     final value = db.abs() < 0.001 ? 0.0 : db;
     final sign = value > 0 ? '+' : '';
-    return '$sign${value.toStringAsFixed(2)} dB';
+    return '$sign${value.round()} dB';
   }
 
   String _formatRegister(int register) {
