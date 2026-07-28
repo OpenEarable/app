@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider_facade.dart';
+import 'package:open_wearable/widgets/app_toast.dart';
 import 'package:provider/provider.dart';
 
 import 'stereo_pair_option_selector.dart';
+
+const String _microphoneChangeRequiresRestartMessage =
+    'Microphone input might only take effect after starting a new stream or recording.';
 
 /// Selects which microphone is streamed over LE Audio for a wearable.
 class MicrophoneSelectionWidget extends StatelessWidget {
@@ -21,6 +25,8 @@ class MicrophoneSelectionWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    var didShowActiveStreamWarning = false;
+
     return StereoPairOptionSelector<Microphone, MicrophoneManager>(
       device: device,
       applyScope: applyScope,
@@ -31,13 +37,29 @@ class MicrophoneSelectionWidget extends StatelessWidget {
       managerFor: (wearable) => wearable.requireCapability<MicrophoneManager>(),
       readSelection: (manager) => manager.getMicrophone(),
       applySelection: (manager, microphone) async {
-        manager.setMicrophone(microphone);
+        SensorRecorderProvider? recorderProvider;
         try {
-          context
-              .read<SensorRecorderProvider>()
-              .notifyMicrophoneConfigurationChanged();
+          recorderProvider = context.read<SensorRecorderProvider>();
         } catch (_) {
           // The selector can be embedded outside the recorder provider tree.
+        }
+
+        final isRecording = recorderProvider?.isRecording ?? false;
+        final isStreaming = recorderProvider?.isAudioMonitoringActive ?? false;
+
+        await manager.setMicrophone(microphone);
+        recorderProvider?.notifyMicrophoneConfigurationChanged();
+
+        if ((isRecording || isStreaming) &&
+            !didShowActiveStreamWarning &&
+            context.mounted) {
+          didShowActiveStreamWarning = true;
+          AppToast.show(
+            context,
+            message: _microphoneChangeRequiresRestartMessage,
+            type: AppToastType.warning,
+            icon: Icons.warning_amber_rounded,
+          );
         }
       },
       optionsFor: (manager) => manager.availableMicrophones,
