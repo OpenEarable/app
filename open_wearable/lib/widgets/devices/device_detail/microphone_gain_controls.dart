@@ -20,10 +20,10 @@ class MicrophoneGainControls extends StatefulWidget {
 }
 
 class _MicrophoneGainControlsState extends State<MicrophoneGainControls> {
-  int _externalRegister = MicrophoneGain.defaultRegister;
-  int _internalRegister = MicrophoneGain.defaultRegister;
-  int _lastExternalRegister = MicrophoneGain.defaultRegister;
-  int _lastInternalRegister = MicrophoneGain.defaultRegister;
+  int _outerRegister = MicrophoneGain.defaultRegister;
+  int _innerRegister = MicrophoneGain.defaultRegister;
+  int _lastOuterRegister = MicrophoneGain.defaultRegister;
+  int _lastInnerRegister = MicrophoneGain.defaultRegister;
   bool _linked = true;
   bool _muted = false;
   bool _loading = true;
@@ -128,19 +128,19 @@ class _MicrophoneGainControlsState extends State<MicrophoneGainControls> {
           ] else ...[
             const SizedBox(height: 8),
             _GainSlider(
-              label: 'External',
-              register: _externalRegister,
-              fallbackRegister: _lastExternalRegister,
+              label: 'Outer',
+              register: _outerRegister,
+              fallbackRegister: _lastOuterRegister,
               enabled: !disabled,
-              onChanged: (db) => _updateGain(external: true, db: db),
+              onChanged: (db) => _updateGain(outer: true, db: db),
               onChangeEnd: (_) => _writeGain(),
             ),
             _GainSlider(
-              label: 'Internal',
-              register: _internalRegister,
-              fallbackRegister: _lastInternalRegister,
+              label: 'Inner',
+              register: _innerRegister,
+              fallbackRegister: _lastInnerRegister,
               enabled: !disabled && !_linked,
-              onChanged: (db) => _updateGain(external: false, db: db),
+              onChanged: (db) => _updateGain(outer: false, db: db),
               onChangeEnd: (_) => _writeGain(),
             ),
           ],
@@ -186,14 +186,16 @@ class _MicrophoneGainControlsState extends State<MicrophoneGainControls> {
           hasPairedTarget ? await pairedManager.getMicrophoneGain() : null;
       if (!mounted) return;
 
+      final outerRegister = _outerRegisterFrom(gain);
+      final innerRegister = _innerRegisterFrom(gain);
       setState(() {
-        _externalRegister = gain.externalRegister;
-        _internalRegister = gain.internalRegister;
+        _outerRegister = outerRegister;
+        _innerRegister = innerRegister;
         _muted = gain.isMuted;
-        _linked = gain.externalRegister == gain.internalRegister;
+        _linked = outerRegister == innerRegister;
         if (!gain.isMuted) {
-          _lastExternalRegister = gain.externalRegister;
-          _lastInternalRegister = gain.internalRegister;
+          _lastOuterRegister = outerRegister;
+          _lastInnerRegister = innerRegister;
         }
         _pairedOutOfSync =
             pairedGain != null && !_sameMicrophoneGain(gain, pairedGain);
@@ -209,16 +211,16 @@ class _MicrophoneGainControlsState extends State<MicrophoneGainControls> {
   }
 
   bool _sameMicrophoneGain(MicrophoneGain first, MicrophoneGain second) {
-    return first.externalRegister == second.externalRegister &&
-        first.internalRegister == second.internalRegister;
+    return _outerRegisterFrom(first) == _outerRegisterFrom(second) &&
+        _innerRegisterFrom(first) == _innerRegisterFrom(second);
   }
 
   void _setLinked(bool linked) {
     setState(() {
       _linked = linked;
       if (linked) {
-        _internalRegister = _externalRegister;
-        _lastInternalRegister = _lastExternalRegister;
+        _innerRegister = _outerRegister;
+        _lastInnerRegister = _lastOuterRegister;
       }
     });
     if (linked && !_muted) {
@@ -226,20 +228,20 @@ class _MicrophoneGainControlsState extends State<MicrophoneGainControls> {
     }
   }
 
-  void _updateGain({required bool external, required double db}) {
+  void _updateGain({required bool outer, required double db}) {
     final register = MicrophoneGain.dbToRegister(db.roundToDouble());
     setState(() {
       if (_linked) {
-        _externalRegister = register;
-        _internalRegister = register;
-        _lastExternalRegister = register;
-        _lastInternalRegister = register;
-      } else if (external) {
-        _externalRegister = register;
-        _lastExternalRegister = register;
+        _outerRegister = register;
+        _innerRegister = register;
+        _lastOuterRegister = register;
+        _lastInnerRegister = register;
+      } else if (outer) {
+        _outerRegister = register;
+        _lastOuterRegister = register;
       } else {
-        _internalRegister = register;
-        _lastInternalRegister = register;
+        _innerRegister = register;
+        _lastInnerRegister = register;
       }
     });
   }
@@ -247,19 +249,19 @@ class _MicrophoneGainControlsState extends State<MicrophoneGainControls> {
   Future<void> _toggleMute() async {
     setState(() {
       if (_muted) {
-        _externalRegister = _lastExternalRegister;
-        _internalRegister =
-            _linked ? _lastExternalRegister : _lastInternalRegister;
+        _outerRegister = _lastOuterRegister;
+        _innerRegister =
+            _linked ? _lastOuterRegister : _lastInnerRegister;
         _muted = false;
       } else {
-        _lastExternalRegister = _externalRegister == MicrophoneGain.muteRegister
+        _lastOuterRegister = _outerRegister == MicrophoneGain.muteRegister
             ? MicrophoneGain.defaultRegister
-            : _externalRegister;
-        _lastInternalRegister = _internalRegister == MicrophoneGain.muteRegister
+            : _outerRegister;
+        _lastInnerRegister = _innerRegister == MicrophoneGain.muteRegister
             ? MicrophoneGain.defaultRegister
-            : _internalRegister;
-        _externalRegister = MicrophoneGain.muteRegister;
-        _internalRegister = MicrophoneGain.muteRegister;
+            : _innerRegister;
+        _outerRegister = MicrophoneGain.muteRegister;
+        _innerRegister = MicrophoneGain.muteRegister;
         _muted = true;
       }
     });
@@ -278,9 +280,9 @@ class _MicrophoneGainControlsState extends State<MicrophoneGainControls> {
     });
 
     try {
-      final gain = MicrophoneGain(
-        externalRegister: _externalRegister,
-        internalRegister: _internalRegister,
+      final gain = _microphoneGainFromRegisters(
+        outerRegister: _outerRegister,
+        innerRegister: _innerRegister,
       );
       await manager.setMicrophoneGain(gain);
       if (_hasPairedTarget) {
@@ -305,6 +307,20 @@ class _MicrophoneGainControlsState extends State<MicrophoneGainControls> {
       }
     }
   }
+}
+
+int _outerRegisterFrom(MicrophoneGain gain) => gain.outerRegister;
+
+int _innerRegisterFrom(MicrophoneGain gain) => gain.innerRegister;
+
+MicrophoneGain _microphoneGainFromRegisters({
+  required int outerRegister,
+  required int innerRegister,
+}) {
+  return MicrophoneGain(
+    outerRegister: outerRegister,
+    innerRegister: innerRegister,
+  );
 }
 
 class _OutOfSyncIndicator extends StatelessWidget {

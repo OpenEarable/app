@@ -77,10 +77,10 @@ bool _microphonesEqualByKey(Microphone? a, Microphone b) {
 /// Converts a microphone identifier into a user-facing label.
 String _labelForMicrophone(Microphone microphone) {
   final normalized = _normalizedMicrophoneKey(microphone);
-  if (normalized.contains('inner') || normalized.contains('internal')) {
+  if (normalized.contains('inner')) {
     return 'Inner (In-Ear Sounds)';
   }
-  if (normalized.contains('outer') || normalized.contains('external')) {
+  if (normalized.contains('outer')) {
     return 'Outer (Ambient Sounds)';
   }
   return _toTitleCase(microphone.key);
@@ -89,10 +89,10 @@ String _labelForMicrophone(Microphone microphone) {
 /// Describes the effect of streaming a microphone source.
 String _subtitleForMicrophone(Microphone microphone) {
   final normalized = _normalizedMicrophoneKey(microphone);
-  if (normalized.contains('inner') || normalized.contains('internal')) {
+  if (normalized.contains('inner')) {
     return 'Stream the inner mic over LE Audio';
   }
-  if (normalized.contains('outer') || normalized.contains('external')) {
+  if (normalized.contains('outer')) {
     return 'Stream the outer mic over LE Audio';
   }
   return 'Microphone source for LE Audio stream';
@@ -101,10 +101,10 @@ String _subtitleForMicrophone(Microphone microphone) {
 /// Chooses the icon that represents a microphone source.
 IconData _iconForMicrophone(Microphone microphone) {
   final normalized = _normalizedMicrophoneKey(microphone);
-  if (normalized.contains('inner') || normalized.contains('internal')) {
+  if (normalized.contains('inner')) {
     return Icons.hearing_rounded;
   }
-  if (normalized.contains('outer') || normalized.contains('external')) {
+  if (normalized.contains('outer')) {
     return Icons.surround_sound_rounded;
   }
   return Icons.mic_rounded;
