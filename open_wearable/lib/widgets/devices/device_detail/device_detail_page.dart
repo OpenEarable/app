@@ -243,14 +243,6 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
             ),
           ),
         ),
-      if (widget.device.hasCapability<MicrophoneGainManager>())
-        Card(
-          margin: EdgeInsets.zero,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: MicrophoneGainControls(device: widget.device),
-          ),
-        ),
       if (widget.device.hasCapability<MicrophoneManager>())
         Card(
           margin: EdgeInsets.zero,
@@ -260,6 +252,14 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
               device: widget.device,
               applyScope: StereoPairApplyScope.individualOnly,
             ),
+          ),
+        ),
+      if (widget.device.hasCapability<MicrophoneGainManager>())
+        Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: MicrophoneGainControls(device: widget.device),
           ),
         ),
       if (widget.device.hasCapability<PowerSavingModeManager>())

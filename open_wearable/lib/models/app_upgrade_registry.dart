@@ -182,12 +182,12 @@ class AppUpgradeRegistry {
     AppUpgradeHighlight(
       version: '1.5.0',
       eyebrow: 'OpenWearables 1.5.0',
-      title: 'Label recordings and\ntune your earables',
+      title: 'Labels and more control\nfor your OpenEarables',
       summary:
-          'Mark important moments, check ear-tip seals, and fine-tune microphone gain.',
+          'Label recordings, check the seal, tune microphones, and choose compatible devices.',
       heroDescription:
-          'OpenWearables 1.5.0 adds richer tools for experiments and everyday device setup. '
-          'Annotate recordings as they happen, run a guided Seal Check, adjust microphone gain, and find compatible devices more easily.',
+          'OpenWearables 1.5.0 adds reusable recording labels, Seal Check, and microphone gain controls. '
+          'Capability-aware device selection helps you start each app with a compatible wearable.',
       accentColor: Color(0xFF8F6A67),
       useHeroGradient: false,
       features: <AppUpgradeFeatureHighlight>[
@@ -198,22 +198,22 @@ class AppUpgradeRegistry {
               'Create reusable label sets and mark events while recording. Label states are saved alongside sensor data with timestamps for easier review and analysis.',
         ),
         AppUpgradeFeatureHighlight(
-          icon: Icons.hearing_rounded,
+          icon: Icons.graphic_eq_rounded,
           title: 'Seal Check',
           description:
-              'Run a guided audio-response measurement for one or both earables and get a clear seal-quality result with live progress.',
+              'Measure the ear seal and review the audio-response graph directly in the app.',
         ),
         AppUpgradeFeatureHighlight(
           icon: Icons.mic_rounded,
           title: 'Microphone gain controls',
           description:
-              'Adjust inner and outer microphone gain, link channels, mute microphones, and keep stereo pairs in sync from the device controls.',
+              'Adjust inner and outer mic levels, link both channels, mute them, or reset the gain.',
         ),
         AppUpgradeFeatureHighlight(
-          icon: Icons.bluetooth_searching_rounded,
+          icon: Icons.devices_rounded,
           title: 'Smarter device selection',
           description:
-              'Filter nearby devices by name and see which connected wearables support an app before starting a workflow.',
+              'Find compatible wearables faster with clearer, capability-aware app selection.',
         ),
       ],
     ),
