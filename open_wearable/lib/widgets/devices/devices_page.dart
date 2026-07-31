@@ -799,16 +799,6 @@ class _PairedDeviceSheet extends StatelessWidget {
                     ),
                   ),
                 ],
-                if (supportsMicrophoneGain) ...[
-                  const SizedBox(height: 12),
-                  MicrophoneGainControls(
-                    key: ValueKey(
-                      'pair_microphone_gain_${leftDevice.deviceId}_${rightDevice.deviceId}',
-                    ),
-                    device: leftDevice,
-                    pairedDevice: rightDevice,
-                  ),
-                ],
                 if (microphoneSelectionDevice != null) ...[
                   const SizedBox(height: 12),
                   MicrophoneSelectionWidget(
@@ -825,6 +815,16 @@ class _PairedDeviceSheet extends StatelessWidget {
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
+                  ),
+                ],
+                if (supportsMicrophoneGain) ...[
+                  const SizedBox(height: 12),
+                  MicrophoneGainControls(
+                    key: ValueKey(
+                      'pair_microphone_gain_${leftDevice.deviceId}_${rightDevice.deviceId}',
+                    ),
+                    device: leftDevice,
+                    pairedDevice: rightDevice,
                   ),
                 ],
                 if (powerSavingModeDevice != null) ...[

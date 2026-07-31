@@ -9,8 +9,12 @@ void main() {
       expect(highlight, isNotNull);
       expect(highlight?.version, '1.5.0');
       expect(
+        highlight?.title,
+        'Labels and more control\nfor your OpenEarables',
+      );
+      expect(
         highlight?.features.map((feature) => feature.title),
-        <String>[
+        [
           'Recording labels',
           'Seal Check',
           'Microphone gain controls',

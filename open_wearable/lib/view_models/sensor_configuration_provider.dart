@@ -55,6 +55,11 @@ class SensorConfigurationProvider with ChangeNotifier {
   }) : _sensorConfigurationManager = sensorConfigurationManager {
     _sensorConfigurationSubscription =
         _sensorConfigurationManager.sensorConfigurationStream.listen((event) {
+      final hadReceivedConfigurationReport = _hasReceivedConfigurationReport;
+      final previousReportedConfigurations =
+          Map<String, SensorConfigurationValue>.of(
+        _lastReportedConfigurations,
+      );
       _hasReceivedConfigurationReport = true;
       _lastReportedConfigurations
         ..clear()
@@ -70,7 +75,11 @@ class SensorConfigurationProvider with ChangeNotifier {
         ..clear()
         ..addAll(_lastReportedConfigurations.keys);
 
-      var hasStateChange = false;
+      var hasStateChange = !hadReceivedConfigurationReport ||
+          !_reportedConfigurationsMatch(
+            previousReportedConfigurations,
+            _lastReportedConfigurations,
+          );
       for (final e in event.entries) {
         final sensorConfiguration = e.key;
         final sensorConfigurationValue = e.value;
@@ -240,6 +249,22 @@ class SensorConfigurationProvider with ChangeNotifier {
     }
 
     return _normalizeName(current.key) == _normalizeName(expected.key);
+  }
+
+  bool _reportedConfigurationsMatch(
+    Map<String, SensorConfigurationValue> first,
+    Map<String, SensorConfigurationValue> second,
+  ) {
+    if (first.length != second.length) {
+      return false;
+    }
+    for (final entry in first.entries) {
+      final other = second[entry.key];
+      if (other == null || !_configurationValuesMatch(entry.value, other)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   Set<String> _optionNameSet(SensorConfigurationValue value) {

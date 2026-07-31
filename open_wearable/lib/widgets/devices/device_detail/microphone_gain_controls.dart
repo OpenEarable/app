@@ -4,6 +4,7 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 const double _gainSliderMinDb = -69.0;
 const double _gainSliderMaxDb = 24.0;
 const int _gainSliderDivisions = 31;
+const Color _appliedConfigurationGreen = Color(0xFF2E7D32);
 
 class MicrophoneGainControls extends StatefulWidget {
   final Wearable? device;
@@ -63,96 +64,143 @@ class _MicrophoneGainControlsState extends State<MicrophoneGainControls> {
       return const SizedBox.shrink();
     }
 
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final disabled = _loading || _writing || _muted;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: _pairedOutOfSync
-              ? colorScheme.error.withValues(alpha: 0.7)
-              : colorScheme.outlineVariant.withValues(alpha: 0.45),
+    final header = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Microphone Gain', style: theme.textTheme.titleSmall),
+        const SizedBox(height: 4),
+        Text(
+          'Adjust inner and outer mic levels.',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
         ),
-      ),
+      ],
+    );
+
+    final controls = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_pairedOutOfSync) ...[
+          const _OutOfSyncBanner(),
+          const SizedBox(height: 8),
+        ],
+        if (_loading) ...[
+          const LinearProgressIndicator(minHeight: 2),
+        ] else ...[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _GainLinkControl(
+                linked: _linked,
+                onChanged: _loading || _writing ? null : _setLinked,
+              ),
+              const SizedBox(width: 2),
+              Expanded(
+                child: Column(
+                  children: [
+                    _GainSlider(
+                      label: 'Outer',
+                      register: _outerRegister,
+                      fallbackRegister: _lastOuterRegister,
+                      enabled: !disabled,
+                      onChanged: (db) => _updateGain(outer: true, db: db),
+                      onChangeEnd: (_) => _writeGain(),
+                    ),
+                    const SizedBox(
+                      key: Key('microphone-gain-row-spacing'),
+                      height: 4,
+                    ),
+                    _GainSlider(
+                      label: 'Inner',
+                      register: _innerRegister,
+                      fallbackRegister: _lastInnerRegister,
+                      enabled: !disabled,
+                      onChanged: (db) => _updateGain(outer: false, db: db),
+                      onChangeEnd: (_) => _writeGain(),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _loading || _writing ? null : _resetToDefault,
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 48),
+                  ),
+                  icon: const Icon(Icons.restart_alt_rounded, size: 18),
+                  label: const Text('Reset'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton.tonalIcon(
+                  onPressed: _loading || _writing ? null : _toggleMute,
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 48),
+                    backgroundColor: _muted
+                        ? colorScheme.errorContainer
+                        : Colors.transparent,
+                    foregroundColor: _muted
+                        ? colorScheme.onErrorContainer
+                        : colorScheme.onSurfaceVariant,
+                    side: BorderSide(
+                      color: _muted
+                          ? Colors.transparent
+                          : colorScheme.outlineVariant,
+                    ),
+                  ),
+                  icon: Icon(
+                    _muted ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+                    size: 18,
+                  ),
+                  label: Text(_muted ? 'Unmute' : 'Mute'),
+                ),
+              ),
+            ],
+          ),
+        ],
+        if (_error != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            _error!,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: colorScheme.error,
+            ),
+          ),
+        ],
+      ],
+    );
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Text(
-                'Microphone Gain',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+          header,
+          const SizedBox(height: 8),
+          if (_hasPairedTarget)
+            Card(
+              margin: EdgeInsets.zero,
+              child: Padding(
+                key: const Key('microphone-gain-controls-padding'),
+                padding: const EdgeInsets.all(12),
+                child: controls,
               ),
-              if (_pairedOutOfSync) ...[
-                const SizedBox(width: 8),
-                _OutOfSyncIndicator(color: colorScheme.error),
-              ],
-              const Spacer(),
-            ],
-          ),
-          const SizedBox(height: 2),
-          Row(
-            children: [
-              Checkbox.adaptive(
-                value: _linked,
-                onChanged: _loading || _writing
-                    ? null
-                    : (value) => _setLinked(value ?? false),
-              ),
-              Expanded(
-                child: Text(
-                  'Link microphones',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
-                ),
-              ),
-              FilledButton.tonalIcon(
-                onPressed: _loading || _writing ? null : _toggleMute,
-                icon: Icon(
-                  _muted ? Icons.volume_up_rounded : Icons.volume_off_rounded,
-                  size: 18,
-                ),
-                label: Text(_muted ? 'Unmute' : 'Mute'),
-              ),
-            ],
-          ),
-          if (_loading) ...[
-            const SizedBox(height: 8),
-            const LinearProgressIndicator(minHeight: 2),
-          ] else ...[
-            const SizedBox(height: 8),
-            _GainSlider(
-              label: 'Outer',
-              register: _outerRegister,
-              fallbackRegister: _lastOuterRegister,
-              enabled: !disabled,
-              onChanged: (db) => _updateGain(outer: true, db: db),
-              onChangeEnd: (_) => _writeGain(),
-            ),
-            _GainSlider(
-              label: 'Inner',
-              register: _innerRegister,
-              fallbackRegister: _lastInnerRegister,
-              enabled: !disabled && !_linked,
-              onChanged: (db) => _updateGain(outer: false, db: db),
-              onChangeEnd: (_) => _writeGain(),
-            ),
-          ],
-          if (_error != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              _error!,
-              style: Theme.of(
-                context,
-              ).textTheme.labelSmall?.copyWith(color: colorScheme.error),
-            ),
-          ],
+            )
+          else
+            controls,
         ],
       ),
     );
@@ -267,6 +315,18 @@ class _MicrophoneGainControlsState extends State<MicrophoneGainControls> {
     await _writeGain();
   }
 
+  Future<void> _resetToDefault() async {
+    setState(() {
+      _outerRegister = MicrophoneGain.defaultRegister;
+      _innerRegister = MicrophoneGain.defaultRegister;
+      _lastOuterRegister = MicrophoneGain.defaultRegister;
+      _lastInnerRegister = MicrophoneGain.defaultRegister;
+      _linked = true;
+      _muted = false;
+    });
+    await _writeGain();
+  }
+
   Future<void> _writeGain() async {
     final manager = _manager;
     if (manager == null) {
@@ -322,37 +382,172 @@ MicrophoneGain _microphoneGainFromRegisters({
   );
 }
 
-class _OutOfSyncIndicator extends StatelessWidget {
-  final Color color;
-
-  const _OutOfSyncIndicator({required this.color});
+class _OutOfSyncBanner extends StatelessWidget {
+  const _OutOfSyncBanner();
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: 'Paired devices report different microphone gains',
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(999),
-          color: color.withValues(alpha: 0.12),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.sync_problem_rounded, color: color, size: 14),
-            const SizedBox(width: 4),
-            Text(
-              'Out of sync',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w700,
-                  ),
+    final theme = Theme.of(context);
+    final errorColor = theme.colorScheme.error;
+
+    return Container(
+      key: const Key('microphone-gain-mismatch-warning'),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: errorColor.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: errorColor.withValues(alpha: 0.38)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.sync_problem_rounded, color: errorColor, size: 17),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(
+              'Left and right gains differ',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: errorColor,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GainLinkControl extends StatelessWidget {
+  final bool linked;
+  final ValueChanged<bool>? onChanged;
+
+  const _GainLinkControl({
+    required this.linked,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final connectorColor = linked
+        ? _appliedConfigurationGreen
+        : colorScheme.onSurfaceVariant.withValues(alpha: 0.65);
+    final linkedBackground = Color.alphaBlend(
+      _appliedConfigurationGreen.withValues(alpha: 0.12),
+      colorScheme.surface,
+    );
+    final tooltip = linked
+        ? 'Unlink inner and outer microphones'
+        : 'Link inner and outer microphones';
+
+    return Semantics(
+      button: true,
+      toggled: linked,
+      label: tooltip,
+      child: Tooltip(
+        message: tooltip,
+        child: SizedBox(
+          key: const Key('microphone-gain-link-control'),
+          width: 40,
+          height: 100,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _GainConnectorPainter(
+                    color: connectorColor,
+                    linked: linked,
+                  ),
+                ),
+              ),
+              Material(
+                key: const Key('microphone-gain-link-button-surface'),
+                color: linked
+                    ? linkedBackground
+                    : colorScheme.surfaceContainerHighest,
+                shape: CircleBorder(
+                  side: BorderSide(
+                    color: connectorColor.withValues(alpha: 0.7),
+                  ),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: onChanged == null ? null : () => onChanged!(!linked),
+                  child: SizedBox.square(
+                    dimension: 32,
+                    child: Icon(
+                      linked ? Icons.link_rounded : Icons.link_off_rounded,
+                      size: 18,
+                      color: connectorColor,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+}
+
+class _GainConnectorPainter extends CustomPainter {
+  final Color color;
+  final bool linked;
+
+  const _GainConnectorPainter({
+    required this.color,
+    required this.linked,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.75
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    final connectorX = size.width * 0.45;
+    const topY = 24.0;
+    final bottomY = size.height - 24;
+
+    canvas.drawLine(
+      Offset(connectorX, topY),
+      Offset(size.width, topY),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(connectorX, bottomY),
+      Offset(size.width, bottomY),
+      paint,
+    );
+
+    if (linked) {
+      canvas.drawLine(
+        Offset(connectorX, topY),
+        Offset(connectorX, bottomY),
+        paint,
+      );
+    } else {
+      canvas.drawLine(
+        Offset(connectorX, topY),
+        Offset(connectorX, size.height * 0.38),
+        paint,
+      );
+      canvas.drawLine(
+        Offset(connectorX, size.height * 0.62),
+        Offset(connectorX, bottomY),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _GainConnectorPainter oldDelegate) {
+    return oldDelegate.color != color || oldDelegate.linked != linked;
   }
 }
 
@@ -381,47 +576,58 @@ class _GainSlider extends StatelessWidget {
         MicrophoneGain.registerToDb(MicrophoneGain.defaultRegister)!;
     final sliderValue = db.clamp(_gainSliderMinDb, _gainSliderMaxDb).toDouble();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    final displayValue = register == MicrophoneGain.muteRegister
+        ? 'Muted'
+        : _formatDb(sliderValue);
+
+    return Row(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                label,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+        SizedBox(
+          width: 42,
+          child: Text(
+            label,
+            maxLines: 1,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+          ),
+        ),
+        Expanded(
+          child: SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 12,
               ),
             ),
-            Text(
-              register == MicrophoneGain.muteRegister
-                  ? 'Muted'
-                  : '${_formatDb(sliderValue)} (${_formatRegister(register)})',
-              style: Theme.of(context).textTheme.labelMedium,
+            child: Slider.adaptive(
+              min: _gainSliderMinDb,
+              max: _gainSliderMaxDb,
+              divisions: _gainSliderDivisions,
+              value: sliderValue,
+              label: _formatDb(sliderValue),
+              onChanged: enabled ? onChanged : null,
+              onChangeEnd: enabled ? onChangeEnd : null,
             ),
-          ],
+          ),
         ),
-        Slider.adaptive(
-          min: _gainSliderMinDb,
-          max: _gainSliderMaxDb,
-          divisions: _gainSliderDivisions,
-          value: sliderValue,
-          label: _formatDb(sliderValue),
-          onChanged: enabled ? onChanged : null,
-          onChangeEnd: enabled ? onChangeEnd : null,
+        SizedBox(
+          width: 58,
+          child: Text(
+            displayValue,
+            maxLines: 1,
+            softWrap: false,
+            textAlign: TextAlign.end,
+            style: Theme.of(context).textTheme.labelMedium,
+          ),
         ),
       ],
     );
   }
+}
 
-  String _formatDb(double db) {
-    final value = db.abs() < 0.001 ? 0.0 : db;
-    final sign = value > 0 ? '+' : '';
-    return '$sign${value.round()} dB';
-  }
-
-  String _formatRegister(int register) {
-    return '0x${register.toRadixString(16).padLeft(2, '0').toUpperCase()}';
-  }
+String _formatDb(double db) {
+  final value = db.abs() < 0.001 ? 0.0 : db;
+  final sign = value > 0 ? '+' : '';
+  return '$sign${value.round()} dB';
 }

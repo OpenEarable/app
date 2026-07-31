@@ -8,7 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/apps/seal_check/audio_response_measurement_session.dart';
-import 'package:open_wearable/apps/seal_check/seal_check_quality.dart';
+import 'package:open_wearable/apps/seal_check/seal_check_quality.dart'
+    show sealCheckTargetMagnitudes;
 
 // NOTE: We intentionally do NOT support writing files on web here.
 // If you want web downloads, we can add a proper conditional import helper.
@@ -347,72 +348,9 @@ class _SealCheckMeasurementViewState extends State<SealCheckMeasurementView> {
         ? 1.0
         : allMags.reduce((a, b) => a + b) / allMags.length;
 
-    final leftQuality =
-        leftPoints.isNotEmpty ? computeSealCheckQuality(leftPoints) : null;
-    final rightQuality =
-        rightPoints.isNotEmpty ? computeSealCheckQuality(rightPoints) : null;
-
     return SingleChildScrollView(
       child: Column(
         children: [
-          // Summary cards
-          Row(
-            children: [
-              if (leftQuality != null) ...[
-                Expanded(
-                  child: Card(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Left Quality',
-                            style: theme.textTheme.labelMedium,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${leftQuality.round()} / 100',
-                            style: theme.textTheme.titleLarge,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                if (rightQuality != null) const SizedBox(width: 8),
-              ],
-              if (rightQuality != null)
-                Expanded(
-                  child: Card(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Right Quality',
-                            style: theme.textTheme.labelMedium,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${rightQuality.round()} / 100',
-                            style: theme.textTheme.titleLarge,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
           SizedBox(
             height: 320,
             child: Card(
@@ -710,14 +648,11 @@ class _SealCheckMeasurementViewState extends State<SealCheckMeasurementView> {
 
     // Single side: show table directly without tabs
     if (tabs.length == 1) {
-      return SizedBox(
-        height: 300,
-        child: _buildRawValuesTable(
-          theme,
-          tabs.first.points,
-          normMag,
-          label: tabs.first.label,
-        ),
+      return _buildRawValuesTable(
+        theme,
+        tabs.first.points,
+        normMag,
+        label: tabs.first.label,
       );
     }
 
