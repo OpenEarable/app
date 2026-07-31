@@ -60,13 +60,13 @@ dependencies:
   go_router: ^17.2.3
   audioplayers: ^6.7.0
   wakelock_plus: ^1.5.2
-  path: ^1.9.1
   package_info_plus: ^9.0.1
   sensors_plus: ^7.0.0
   device_info_plus: ^12.4.0
   pub_semver: ^2.2.0
   flutter_headset_detector: ^3.1.0
   record: ^7.0.0
+  path: ^1.9.1
   web: ^1.1.1
 
 dev_dependencies:
