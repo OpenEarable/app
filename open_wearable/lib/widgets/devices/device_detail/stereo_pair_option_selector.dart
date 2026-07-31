@@ -458,7 +458,7 @@ class _StereoPairOptionSelectorState<T, M>
                         : 'Also update $pairName.'
                     : 'Only update this device.',
               ),
-          ),
+            ),
           const SizedBox(height: 6),
           _buildOptions(options),
           if (_errorText != null) ...[

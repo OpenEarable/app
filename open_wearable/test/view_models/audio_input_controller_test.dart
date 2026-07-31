@@ -38,7 +38,8 @@ void main() {
       expect(controller.waveformData, isEmpty);
     });
 
-    test('moves monitoring into recording without stopping recording', () async {
+    test('moves monitoring into recording without stopping recording',
+        () async {
       final platform = _FakeAudioInputPlatform();
       final controller = AudioInputController(platform: platform);
 

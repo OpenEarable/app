@@ -250,8 +250,7 @@ class _MicrophoneGainControlsState extends State<MicrophoneGainControls> {
     setState(() {
       if (_muted) {
         _outerRegister = _lastOuterRegister;
-        _innerRegister =
-            _linked ? _lastOuterRegister : _lastInnerRegister;
+        _innerRegister = _linked ? _lastOuterRegister : _lastInnerRegister;
         _muted = false;
       } else {
         _lastOuterRegister = _outerRegister == MicrophoneGain.muteRegister
