@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/view_models/label_provider.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/home_page.dart';
@@ -15,6 +16,7 @@ void main() {
         providers: [
           ChangeNotifierProvider(create: (_) => WearablesProvider()),
           ChangeNotifierProvider(create: (_) => SensorRecorderProvider()),
+          ChangeNotifierProvider(create: (_) => LabelProvider(null)),
           ChangeNotifierProvider(
             create: (_) => FirmwareUpdateRequestProvider(),
           ),
