@@ -8,7 +8,15 @@ void main() {
 
       expect(highlight, isNotNull);
       expect(highlight?.version, '1.5.0');
-      expect(highlight?.features.first.title, 'Recording labels');
+      expect(
+        highlight?.features.map((feature) => feature.title),
+        <String>[
+          'Recording labels',
+          'Seal Check',
+          'Microphone gain controls',
+          'Smarter device selection',
+        ],
+      );
       expect(AppUpgradeRegistry.latest?.version, '1.5.0');
       expect(AppUpgradeRegistry.all.first.version, '1.5.0');
     });
