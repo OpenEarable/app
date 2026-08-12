@@ -1,5 +1,5 @@
 import 'package:open_earable_flutter/open_earable_flutter.dart';
-import 'package:open_wearable/models/labels/label_set.dart';
+import 'package:open_wearable/models/labels/label_group.dart';
 
 import 'label.dart';
 
@@ -9,7 +9,7 @@ import 'label.dart';
 /// alongside sensor data.
 class LabelWearable extends Wearable implements SensorManager {
   LabelWearable({
-    required this.labelSet,
+    required this.labelGroup,
     required Stream<(int, List<Label>)> labelStream,
   })  : _labelStream = labelStream,
         super(
@@ -17,13 +17,13 @@ class LabelWearable extends Wearable implements SensorManager {
           disconnectNotifier: WearableDisconnectNotifier(),
         );
 
-  final LabelSet labelSet;
+  final LabelGroup labelGroup;
   final Stream<(int, List<Label>)> _labelStream;
 
   @override
   List<Sensor> get sensors => [
         LabelSensor(
-          labelSet: labelSet,
+          labelGroup: labelGroup,
           labelStream: _labelStream,
         ),
       ];
@@ -39,30 +39,31 @@ class LabelWearable extends Wearable implements SensorManager {
 
 class LabelSensor extends Sensor<SensorLabelValue> {
   LabelSensor({
-    required this.labelSet,
+    required this.labelGroup,
     required Stream<(int, List<Label>)> labelStream,
   })  : _labelStream = labelStream,
         super(
-          sensorName: "Label_${labelSet.name}",
+          sensorName: labelGroup.name,
           chartTitle: "",
           shortChartTitle: "",
         );
 
-  final LabelSet labelSet;
+  final LabelGroup labelGroup;
   final Stream<(int, List<Label>)> _labelStream;
 
   @override
   List<String> get axisNames =>
-      labelSet.labels.map((label) => label.name).toList()
+      labelGroup.labels.map((label) => label.name).toList()
         ..sort((a, b) => a.compareTo(b));
 
   @override
-  List<String> get axisUnits => labelSet.labels.map((_) => "isActive").toList();
+  List<String> get axisUnits =>
+      labelGroup.labels.map((_) => "isActive").toList();
 
   @override
   Stream<SensorLabelValue> get sensorStream => _labelStream.map(
         (data) => SensorLabelValue(
-          set: labelSet,
+          group: labelGroup,
           selectedLabels: data.$2,
           timestamp: data.$1,
         ),
@@ -75,20 +76,20 @@ class SensorLabelValue extends SensorValue {
   final Map<Label, bool> labelStates;
 
   SensorLabelValue({
-    required LabelSet set,
+    required LabelGroup group,
     required List<Label> selectedLabels,
     required super.timestamp,
-  })  : labelStates = _buildLabelStates(set, selectedLabels),
+  })  : labelStates = _buildLabelStates(group, selectedLabels),
         super(
-          valueStrings: _buildValueStrings(set, selectedLabels),
+          valueStrings: _buildValueStrings(group, selectedLabels),
         );
 
   /// Builds the sorted label -> active map.
   static Map<Label, bool> _buildLabelStates(
-    LabelSet set,
+    LabelGroup group,
     List<Label> selectedLabels,
   ) {
-    final sortedLabels = [...set.labels]
+    final sortedLabels = [...group.labels]
       ..sort((a, b) => a.name.compareTo(b.name));
 
     return {
@@ -98,10 +99,10 @@ class SensorLabelValue extends SensorValue {
 
   /// Builds the valueStrings in the same deterministic order.
   static List<String> _buildValueStrings(
-    LabelSet set,
+    LabelGroup group,
     List<Label> selectedLabels,
   ) {
-    final sortedLabels = [...set.labels]
+    final sortedLabels = [...group.labels]
       ..sort((a, b) => a.name.compareTo(b.name));
 
     return sortedLabels

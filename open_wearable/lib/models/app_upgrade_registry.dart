@@ -195,7 +195,7 @@ class AppUpgradeRegistry {
           icon: Icons.label_rounded,
           title: 'Recording labels',
           description:
-              'Create reusable label sets and mark events while recording. Label states are saved alongside sensor data with timestamps for easier review and analysis.',
+              'Create reusable label groups and mark events while recording. Label states are saved alongside sensor data with timestamps for easier review and analysis.',
         ),
         AppUpgradeFeatureHighlight(
           icon: Icons.graphic_eq_rounded,

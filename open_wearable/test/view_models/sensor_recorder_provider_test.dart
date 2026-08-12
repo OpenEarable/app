@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:logger/logger.dart';
 import 'package:open_wearable/models/labels/label.dart';
 import 'package:open_wearable/models/labels/label_sensor.dart';
-import 'package:open_wearable/models/labels/label_set.dart';
+import 'package:open_wearable/models/labels/label_group.dart';
 import 'package:open_wearable/models/logger.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider_facade.dart';
 
@@ -14,7 +14,7 @@ void main() {
     initLogger(Logger());
   });
 
-  test('does not treat a selected label set as connected sensors', () async {
+  test('does not treat a selected label group as connected sensors', () async {
     final provider = SensorRecorderProvider();
     final labelStream = StreamController<(int, List<Label>)>.broadcast();
     addTearDown(provider.dispose);
@@ -22,7 +22,7 @@ void main() {
 
     await provider.addWearable(
       LabelWearable(
-        labelSet: const LabelSet(
+        labelGroup: const LabelGroup(
           name: 'Activities',
           labels: [
             Label(name: 'Walking', color: Color(0xff4caf50)),

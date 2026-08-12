@@ -4,14 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
-import 'package:open_wearable/models/labels/label_set.dart';
+import 'package:open_wearable/models/labels/label_group.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_dialogs.dart';
 import 'package:provider/provider.dart';
-import 'package:open_wearable/view_models/label_set_provider.dart';
+import 'package:open_wearable/view_models/label_group_provider.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider_facade.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/labels/active_label_bar.dart';
-import 'package:open_wearable/widgets/sensors/local_recorder/labels/label_set_selector.dart';
+import 'package:open_wearable/widgets/sensors/local_recorder/labels/label_group_selector.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_empty_state_card.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_file_actions.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_files.dart';
@@ -296,12 +296,12 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
         final canStartRecording = recorder.hasSensorsConnected && !isRecording;
         final hasRecordings = _recordings.isNotEmpty;
         final latestRecording = hasRecordings ? _recordings.first : null;
-        final selectedLabelSet =
-            context.watch<LabelSetProvider>().selectedLabelSet;
-        final labelControls = !isRecording || selectedLabelSet != null
+        final selectedLabelGroup =
+            context.watch<LabelGroupProvider>().selectedLabelGroup;
+        final labelControls = !isRecording || selectedLabelGroup != null
             ? _LocalRecorderLabelSection(
                 isRecording: isRecording,
-                labelSet: selectedLabelSet,
+                labelGroup: selectedLabelGroup,
               )
             : null;
 
@@ -405,22 +405,22 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
 class _LocalRecorderLabelSection extends StatelessWidget {
   const _LocalRecorderLabelSection({
     required this.isRecording,
-    required this.labelSet,
+    required this.labelGroup,
   });
 
   final bool isRecording;
-  final LabelSet? labelSet;
+  final LabelGroup? labelGroup;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final set = labelSet;
+    final group = labelGroup;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (!isRecording) const LabelSetSelector(showHelperText: false),
-        if (set != null) ...[
+        if (!isRecording) const LabelGroupSelector(showHelperText: false),
+        if (group != null) ...[
           if (!isRecording) const SizedBox(height: 14),
           Text(
             isRecording ? 'Current Segment' : 'Available Labels',
@@ -430,7 +430,7 @@ class _LocalRecorderLabelSection extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           ActiveLabelBar(
-            labelSet: set,
+            labelGroup: group,
             selectionEnabled: isRecording,
             showNoLabelOption: isRecording,
           ),
