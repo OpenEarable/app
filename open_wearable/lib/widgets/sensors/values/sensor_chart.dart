@@ -641,20 +641,20 @@ class _SensorChartState extends State<SensorChart> {
     SensorConfiguration configuration,
     SensorConfigurationProvider? sensorConfigurationProvider,
   ) {
-    final selectedValue =
-        sensorConfigurationProvider?.getSelectedConfigurationValue(
-      configuration,
-    );
-    if (selectedValue is SensorFrequencyConfigurationValue) {
-      return selectedValue;
-    }
-
     final reportedValue =
         sensorConfigurationProvider?.getLastReportedConfigurationValue(
       configuration,
     );
     if (reportedValue is SensorFrequencyConfigurationValue) {
       return reportedValue;
+    }
+
+    final selectedValue =
+        sensorConfigurationProvider?.getSelectedConfigurationValue(
+      configuration,
+    );
+    if (selectedValue is SensorFrequencyConfigurationValue) {
+      return selectedValue;
     }
 
     final dynamic configurationDynamic = configuration;

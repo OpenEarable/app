@@ -34,6 +34,10 @@ class _ButterworthFirstOrderStage implements _IirFilterStage {
     );
     final output =
         coefficients.b0 * input + coefficients.b1 * _x1 - coefficients.a1 * _y1;
+    if (!output.isFinite) {
+      reset();
+      return _prime(input);
+    }
     _x1 = input;
     _y1 = output;
     return output;
@@ -88,6 +92,10 @@ class _ButterworthBiquadStage implements _IirFilterStage {
         coefficients.b2 * _x2 -
         coefficients.a1 * _y1 -
         coefficients.a2 * _y2;
+    if (!output.isFinite) {
+      reset();
+      return _prime(input);
+    }
     _x2 = _x1;
     _x1 = input;
     _y2 = _y1;
@@ -146,6 +154,10 @@ class _NotchBiquadStage implements _IirFilterStage {
         coefficients.b2 * _x2 -
         coefficients.a1 * _y1 -
         coefficients.a2 * _y2;
+    if (!output.isFinite) {
+      reset();
+      return _prime(input);
+    }
     _x2 = _x1;
     _x1 = input;
     _y2 = _y1;
