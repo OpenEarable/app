@@ -10,17 +10,20 @@ import 'package:open_wearable/widgets/devices/device_status_pills.dart';
 import 'package:open_wearable/widgets/devices/wearable_icon.dart';
 import 'package:provider/provider.dart';
 
+/// Lets the user choose a compatible wearable before launching an app.
 class SelectEarableView extends StatefulWidget {
   final Future<Widget> Function(
     Wearable,
     SensorConfigurationProvider,
   ) startApp;
   final List<String> supportedDevicePrefixes;
+  final List<WearableCapabilityRequirement> requiredCapabilities;
 
   const SelectEarableView({
     super.key,
     required this.startApp,
     this.supportedDevicePrefixes = const [],
+    this.requiredCapabilities = const [],
   });
 
   @override
@@ -41,19 +44,24 @@ class _SelectEarableViewState extends State<SelectEarableView> {
       ),
       body: Consumer<WearablesProvider>(
         builder: (context, wearablesProvider, _) {
-          final compatibleWearables = wearablesProvider.wearables
+          final supportedWearables = wearablesProvider.wearables
               .where(
-                (wearable) => wearableIsCompatibleWithApp(
-                  wearableName: wearable.name,
+                (wearable) => wearableMatchesSupportedDevicePrefixes(
+                  wearable: wearable,
                   supportedDevicePrefixes: widget.supportedDevicePrefixes,
                 ),
               )
               .toList(growable: false);
+          final selectableWearables = supportedWearables
+              .where(
+                (wearable) => _missingRequirements(wearable).isEmpty,
+              )
+              .toList(growable: false);
 
-          _refreshGroupFutureIfNeeded(compatibleWearables);
+          _refreshGroupFutureIfNeeded(supportedWearables);
           final selectedDeviceId = _selectedWearable?.deviceId;
           final hasSelectedCompatibleWearable = selectedDeviceId != null &&
-              compatibleWearables.any(
+              selectableWearables.any(
                 (wearable) => wearable.deviceId == selectedDeviceId,
               );
 
@@ -62,8 +70,7 @@ class _SelectEarableViewState extends State<SelectEarableView> {
               Expanded(
                 child: _buildBody(
                   context,
-                  compatibleWearables: compatibleWearables,
-                  wearablesProvider: wearablesProvider,
+                  supportedWearables: supportedWearables,
                 ),
               ),
               SafeArea(
@@ -75,7 +82,7 @@ class _SelectEarableViewState extends State<SelectEarableView> {
                     onPressed: hasSelectedCompatibleWearable && !_isStartingApp
                         ? () => _startSelectedApp(
                               wearablesProvider,
-                              compatibleWearables,
+                              selectableWearables,
                             )
                         : null,
                     child: _isStartingApp
@@ -112,10 +119,9 @@ class _SelectEarableViewState extends State<SelectEarableView> {
 
   Widget _buildBody(
     BuildContext context, {
-    required List<Wearable> compatibleWearables,
-    required WearablesProvider wearablesProvider,
+    required List<Wearable> supportedWearables,
   }) {
-    if (compatibleWearables.isEmpty) {
+    if (supportedWearables.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -133,7 +139,7 @@ class _SelectEarableViewState extends State<SelectEarableView> {
       builder: (context, snapshot) {
         final groups = _sortGroupsForSelection(
           snapshot.data ??
-              compatibleWearables
+              supportedWearables
                   .map(
                     (wearable) =>
                         WearableDisplayGroup.single(wearable: wearable),
@@ -153,17 +159,22 @@ class _SelectEarableViewState extends State<SelectEarableView> {
           itemBuilder: (context, index) {
             final group = groups[index];
             final wearable = group.primary;
-            final isSelected = selectedId == wearable.deviceId;
+            final missingRequirements = _missingRequirements(wearable);
+            final isSelectable = missingRequirements.isEmpty;
+            final isSelected = isSelectable && selectedId == wearable.deviceId;
 
             return _SelectableWearableCard(
               wearable: wearable,
               position: group.primaryPosition,
               selected: isSelected,
-              onTap: () {
-                setState(() {
-                  _selectedWearable = wearable;
-                });
-              },
+              disabledReason: _disabledReason(missingRequirements),
+              onTap: isSelectable
+                  ? () {
+                      setState(() {
+                        _selectedWearable = wearable;
+                      });
+                    }
+                  : null,
             );
           },
         );
@@ -199,6 +210,12 @@ class _SelectEarableViewState extends State<SelectEarableView> {
     }
 
     indexed.sort((a, b) {
+      final bySelectable = _selectableRank(a.value.primary)
+          .compareTo(_selectableRank(b.value.primary));
+      if (bySelectable != 0) {
+        return bySelectable;
+      }
+
       final aBase = normalizedName(a.value.primary.name).toLowerCase();
       final bBase = normalizedName(b.value.primary.name).toLowerCase();
       final byBase = aBase.compareTo(bBase);
@@ -225,16 +242,37 @@ class _SelectEarableViewState extends State<SelectEarableView> {
     return indexed.map((entry) => entry.value).toList(growable: false);
   }
 
+  int _selectableRank(Wearable wearable) {
+    return _missingRequirements(wearable).isEmpty ? 0 : 1;
+  }
+
+  List<WearableCapabilityRequirement> _missingRequirements(Wearable wearable) {
+    return missingWearableCapabilityRequirements(
+      wearable: wearable,
+      requirements: widget.requiredCapabilities,
+    );
+  }
+
+  String? _disabledReason(List<WearableCapabilityRequirement> requirements) {
+    if (requirements.isEmpty) {
+      return null;
+    }
+
+    final labels =
+        requirements.map((requirement) => requirement.label).join(', ');
+    return 'Missing $labels';
+  }
+
   Future<void> _startSelectedApp(
     WearablesProvider wearablesProvider,
-    List<Wearable> compatibleWearables,
+    List<Wearable> selectableWearables,
   ) async {
     final selectedId = _selectedWearable?.deviceId;
     if (selectedId == null) {
       return;
     }
 
-    final selectedWearable = compatibleWearables
+    final selectedWearable = selectableWearables
         .where((wearable) => wearable.deviceId == selectedId)
         .firstOrNull;
 
@@ -318,12 +356,14 @@ class _SelectableWearableCard extends StatelessWidget {
   final Wearable wearable;
   final DevicePosition? position;
   final bool selected;
-  final VoidCallback onTap;
+  final String? disabledReason;
+  final VoidCallback? onTap;
 
   const _SelectableWearableCard({
     required this.wearable,
     required this.position,
     required this.selected,
+    required this.disabledReason,
     required this.onTap,
   });
 
@@ -333,9 +373,18 @@ class _SelectableWearableCard extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final iconVariant = _iconVariantForPosition(position);
     final hasWearableIcon = _hasWearableIcon(iconVariant);
+    final isEnabled = onTap != null;
+    final disabledCardColor = theme.brightness == Brightness.dark
+        ? const Color(0xFF2E2E2E)
+        : const Color(0xFFE7E7E7);
+    final disabledTextColor = theme.brightness == Brightness.dark
+        ? const Color(0xFFB8B8B8)
+        : const Color(0xFF6F6F6F);
     final cardColor = selected
         ? colorScheme.primaryContainer.withValues(alpha: 0.34)
-        : colorScheme.surface;
+        : isEnabled
+            ? colorScheme.surface
+            : disabledCardColor;
     final pills = _buildDeviceStatusPills();
 
     return Card(
@@ -343,80 +392,99 @@ class _SelectableWearableCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (hasWearableIcon) ...[
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: SizedBox(
-                    width: 56,
-                    height: 56,
-                    child: WearableIcon(
-                      wearable: wearable,
-                      initialVariant: iconVariant,
-                      hideWhileResolvingStereoPosition: true,
-                      hideWhenResolvedVariantIsSingle: true,
-                      fallback: const SizedBox.shrink(),
+        child: _DisabledGreyscale(
+          enabled: !isEnabled,
+          child: Opacity(
+            opacity: isEnabled ? 1 : 0.66,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (hasWearableIcon) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: SizedBox(
+                        width: 56,
+                        height: 56,
+                        child: WearableIcon(
+                          wearable: wearable,
+                          initialVariant: iconVariant,
+                          hideWhileResolvingStereoPosition: true,
+                          hideWhenResolvedVariantIsSingle: true,
+                          fallback: const SizedBox.shrink(),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-              ],
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+                    const SizedBox(width: 12),
+                  ],
+                  Expanded(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            formatWearableDisplayName(wearable.name),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                formatWearableDisplayName(wearable.name),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodyLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: isEnabled ? null : disabledTextColor,
+                                ),
+                              ),
                             ),
-                          ),
+                            const SizedBox(width: 8),
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 170),
+                              child: Text(
+                                wearable.deviceId,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.right,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: isEnabled
+                                      ? theme.colorScheme.onSurfaceVariant
+                                      : disabledTextColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            if (selected) ...[
+                              const SizedBox(width: 6),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 1),
+                                child: Icon(
+                                  Icons.check_circle_rounded,
+                                  color: colorScheme.primary,
+                                  size: 18,
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
-                        const SizedBox(width: 8),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 170),
-                          child: Text(
-                            wearable.deviceId,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.right,
+                        if (disabledReason case final reason?) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            reason,
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
+                              color: disabledTextColor,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                        ),
-                        if (selected) ...[
-                          const SizedBox(width: 6),
-                          Padding(
-                            padding: const EdgeInsets.only(top: 1),
-                            child: Icon(
-                              Icons.check_circle_rounded,
-                              color: colorScheme.primary,
-                              size: 18,
-                            ),
-                          ),
+                        ],
+                        if (pills.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          _buildStatusPillLine(pills),
                         ],
                       ],
                     ),
-                    if (pills.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      _buildStatusPillLine(pills),
-                    ],
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -454,5 +522,48 @@ class _SelectableWearableCard extends StatelessWidget {
 
   Widget _buildStatusPillLine(List<Widget> pills) {
     return DevicePillLine(pills: pills);
+  }
+}
+
+class _DisabledGreyscale extends StatelessWidget {
+  final bool enabled;
+  final Widget child;
+
+  const _DisabledGreyscale({
+    required this.enabled,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (!enabled) {
+      return child;
+    }
+
+    return ColorFiltered(
+      colorFilter: const ColorFilter.matrix([
+        0.2126,
+        0.7152,
+        0.0722,
+        0,
+        0,
+        0.2126,
+        0.7152,
+        0.0722,
+        0,
+        0,
+        0.2126,
+        0.7152,
+        0.0722,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+      ]),
+      child: child,
+    );
   }
 }

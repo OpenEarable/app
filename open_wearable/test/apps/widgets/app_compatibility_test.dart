@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/apps/widgets/app_compatibility.dart';
 
 void main() {
@@ -35,4 +36,66 @@ void main() {
       isTrue,
     );
   });
+
+  group('wearableSatisfiesAppRequirements', () {
+    test('accepts a supported wearable with all required capabilities', () {
+      final wearable = _FakeWearable(name: 'OpenEarable-2-L');
+      wearable.registerCapability<_ExampleCapability>(
+        const _ExampleCapability(),
+      );
+
+      expect(
+        wearableSatisfiesAppRequirements(
+          wearable: wearable,
+          supportedDevicePrefixes: const ['OpenEarable'],
+          requiredCapabilities: [
+            WearableCapabilityRequirement.capability<_ExampleCapability>(
+              label: 'example capability',
+            ),
+          ],
+        ),
+        isTrue,
+      );
+    });
+
+    test('rejects a supported wearable missing a required capability', () {
+      final wearable = _FakeWearable(name: 'OpenEarable-2-L');
+
+      final requirement =
+          WearableCapabilityRequirement.capability<_ExampleCapability>(
+        label: 'example capability',
+      );
+
+      expect(
+        wearableSatisfiesAppRequirements(
+          wearable: wearable,
+          supportedDevicePrefixes: const ['OpenEarable'],
+          requiredCapabilities: [requirement],
+        ),
+        isFalse,
+      );
+      expect(
+        missingWearableCapabilityRequirements(
+          wearable: wearable,
+          requirements: [requirement],
+        ),
+        [requirement],
+      );
+    });
+  });
+}
+
+class _FakeWearable extends Wearable {
+  _FakeWearable({required super.name})
+      : super(disconnectNotifier: WearableDisconnectNotifier());
+
+  @override
+  String get deviceId => 'fake-device';
+
+  @override
+  Future<void> disconnect() async {}
+}
+
+class _ExampleCapability {
+  const _ExampleCapability();
 }

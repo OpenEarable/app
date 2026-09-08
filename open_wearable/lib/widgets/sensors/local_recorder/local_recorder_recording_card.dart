@@ -194,80 +194,103 @@ class _RecorderActionArea extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!isRecording) {
-      return _IdleRecorderActions(
-        hasSensorsConnected: hasSensorsConnected,
-        canStartRecording: canStartRecording,
-        onStartRecording: onStartRecording,
-      );
-    }
-
-    return _RecordingRecorderActions(
-      elapsedRecordingLabel: elapsedRecordingLabel,
-      isHandlingStopAction: isHandlingStopAction,
-      turnOffSensorsWhenStopping: turnOffSensorsWhenStopping,
-      onTurnOffSensorsWhenStoppingChanged: onTurnOffSensorsWhenStoppingChanged,
-      onStopRecording: onStopRecording,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _RecorderPrimaryButton(
+          isRecording: isRecording,
+          canStartRecording: canStartRecording,
+          isHandlingStopAction: isHandlingStopAction,
+          onStartRecording: onStartRecording,
+          onStopRecording: onStopRecording,
+        ),
+        if (!isRecording && !hasSensorsConnected)
+          const _NoSensorsMessage()
+        else if (isRecording) ...[
+          const SizedBox(height: 8),
+          _RecordingDetails(
+            elapsedRecordingLabel: elapsedRecordingLabel,
+            isHandlingStopAction: isHandlingStopAction,
+            turnOffSensorsWhenStopping: turnOffSensorsWhenStopping,
+            onTurnOffSensorsWhenStoppingChanged:
+                onTurnOffSensorsWhenStoppingChanged,
+          ),
+        ],
+      ],
     );
   }
 }
 
-class _IdleRecorderActions extends StatelessWidget {
-  const _IdleRecorderActions({
-    required this.hasSensorsConnected,
+class _RecorderPrimaryButton extends StatelessWidget {
+  const _RecorderPrimaryButton({
+    required this.isRecording,
     required this.canStartRecording,
+    required this.isHandlingStopAction,
     required this.onStartRecording,
+    required this.onStopRecording,
   });
 
-  final bool hasSensorsConnected;
+  final bool isRecording;
   final bool canStartRecording;
+  final bool isHandlingStopAction;
   final VoidCallback? onStartRecording;
+  final VoidCallback? onStopRecording;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return SizedBox(
+      width: double.infinity,
+      child: FilledButton.icon(
+        style: isRecording
+            ? FilledButton.styleFrom(
+                backgroundColor: colorScheme.error,
+                foregroundColor: colorScheme.onError,
+              )
+            : null,
+        onPressed: isRecording
+            ? (isHandlingStopAction ? null : onStopRecording)
+            : (canStartRecording ? onStartRecording : null),
+        icon: Icon(isRecording ? Icons.stop : Icons.play_arrow),
+        label: Text(isRecording ? 'Stop Recording' : 'Start Recording'),
+      ),
+    );
+  }
+}
+
+class _NoSensorsMessage extends StatelessWidget {
+  const _NoSensorsMessage();
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton.icon(
-            onPressed: canStartRecording ? onStartRecording : null,
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Start Recording'),
-          ),
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Text(
+        'No connected sensors detected yet.',
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: colorScheme.onSurfaceVariant,
         ),
-        if (!hasSensorsConnected)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              'No connected sensors detected yet.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-      ],
+      ),
     );
   }
 }
 
-class _RecordingRecorderActions extends StatelessWidget {
-  const _RecordingRecorderActions({
+class _RecordingDetails extends StatelessWidget {
+  const _RecordingDetails({
     required this.elapsedRecordingLabel,
     required this.isHandlingStopAction,
     required this.turnOffSensorsWhenStopping,
     required this.onTurnOffSensorsWhenStoppingChanged,
-    required this.onStopRecording,
   });
 
   final String elapsedRecordingLabel;
   final bool isHandlingStopAction;
   final bool turnOffSensorsWhenStopping;
   final ValueChanged<bool>? onTurnOffSensorsWhenStoppingChanged;
-  final VoidCallback? onStopRecording;
 
   @override
   Widget build(BuildContext context) {
@@ -277,6 +300,12 @@ class _RecordingRecorderActions extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _StopSensorsOption(
+          value: turnOffSensorsWhenStopping,
+          onChanged:
+              isHandlingStopAction ? null : onTurnOffSensorsWhenStoppingChanged,
+        ),
+        const SizedBox(height: 8),
         Text(
           'Elapsed Time',
           style: theme.textTheme.labelMedium?.copyWith(
@@ -289,25 +318,6 @@ class _RecordingRecorderActions extends StatelessWidget {
           style: theme.textTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.w700,
             color: colorScheme.onSurface,
-          ),
-        ),
-        const SizedBox(height: 14),
-        _StopSensorsOption(
-          value: turnOffSensorsWhenStopping,
-          onChanged:
-              isHandlingStopAction ? null : onTurnOffSensorsWhenStoppingChanged,
-        ),
-        const SizedBox(height: 10),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton.icon(
-            style: FilledButton.styleFrom(
-              backgroundColor: colorScheme.error,
-              foregroundColor: colorScheme.onError,
-            ),
-            onPressed: isHandlingStopAction ? null : onStopRecording,
-            icon: const Icon(Icons.stop),
-            label: const Text('Stop Recording'),
           ),
         ),
       ],
@@ -333,7 +343,7 @@ class _StopSensorsOption extends StatelessWidget {
       borderRadius: BorderRadius.circular(8),
       onTap: onChanged == null ? null : () => onChanged!(!value),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 2),
         child: Row(
           children: [
             Checkbox(

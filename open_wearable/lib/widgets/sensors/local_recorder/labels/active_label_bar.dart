@@ -3,19 +3,19 @@ import 'package:flutter/widget_previews.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../models/labels/label.dart';
-import '../../../../models/labels/label_set.dart';
+import '../../../../models/labels/label_group.dart';
 import '../../../../view_models/label_provider.dart';
 
 /// A bar displaying the active label and allowing selection.
 class ActiveLabelBar extends StatelessWidget {
   const ActiveLabelBar({
     super.key,
-    required this.labelSet,
+    required this.labelGroup,
     required this.selectionEnabled,
     this.showNoLabelOption = false,
   });
 
-  final LabelSet labelSet;
+  final LabelGroup labelGroup;
   final bool selectionEnabled;
   final bool showNoLabelOption;
 
@@ -37,7 +37,7 @@ class ActiveLabelBar extends StatelessWidget {
                 enabled: selectionEnabled,
                 onTap: () => labelProvider.setActiveLabel(null),
               ),
-            ...labelSet.labels.map((label) {
+            ...labelGroup.labels.map((label) {
               final bool isActive = label == labelProvider.activeLabel;
               return _LabelChip(
                 name: label.name,
@@ -157,7 +157,7 @@ class _LabelChip extends StatelessWidget {
 
 @Preview(name: "ActiveLabelBar")
 Widget activeLabelBarPreview() {
-  final labelSet = LabelSet(
+  final labelGroup = LabelGroup(
     name: 'Activity Labels',
     labels: [
       Label(name: 'Walking', color: Colors.green),
@@ -173,9 +173,9 @@ Widget activeLabelBarPreview() {
     body: Center(
       child: ChangeNotifierProvider(
         create: (_) =>
-            LabelProvider(labelSet)..setActiveLabel(labelSet.labels[1]),
+            LabelProvider(labelGroup)..setActiveLabel(labelGroup.labels[1]),
         child: ActiveLabelBar(
-          labelSet: labelSet,
+          labelGroup: labelGroup,
           selectionEnabled: true,
         ),
       ),

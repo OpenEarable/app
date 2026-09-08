@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/apps/seal_check/audio_response_measurement_view.dart';
 import 'package:open_wearable/apps/heart_tracker/widgets/heart_tracker_page.dart';
 import 'package:open_wearable/apps/posture_tracker/model/earable_attitude_tracker.dart';
 import 'package:open_wearable/apps/posture_tracker/view/posture_tracker_view.dart';
@@ -14,11 +15,13 @@ import 'package:open_wearable/widgets/recording_activity_indicator.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 import 'package:provider/provider.dart';
 
+/// Metadata and launch configuration for one built-in wearable app.
 class AppInfo {
   final String logoPath;
   final String title;
   final String description;
   final List<String> supportedDevices;
+  final List<WearableCapabilityRequirement> requiredCapabilities;
   final Color accentColor;
   final Widget widget;
   final double? svgIconInset;
@@ -30,6 +33,7 @@ class AppInfo {
     required this.title,
     required this.description,
     required this.supportedDevices,
+    required this.requiredCapabilities,
     required this.accentColor,
     required this.widget,
     this.svgIconInset,
@@ -45,6 +49,24 @@ const List<String> _postureSupportedDevices = [
 const List<String> _heartSupportedDevices = [
   "OpenEarable",
   "OpenRing",
+];
+const List<String> _sealCheckSupportedDevices = [
+  "OpenEarable",
+];
+final List<WearableCapabilityRequirement> _postureRequiredCapabilities = [
+  WearableCapabilityRequirement.capability<SensorManager>(
+    label: 'sensor streaming',
+  ),
+];
+final List<WearableCapabilityRequirement> _heartRequiredCapabilities = [
+  WearableCapabilityRequirement.capability<SensorManager>(
+    label: 'sensor streaming',
+  ),
+];
+final List<WearableCapabilityRequirement> _sealCheckRequiredCapabilities = [
+  WearableCapabilityRequirement.capability<AudioResponseManager>(
+    label: 'audio response measurement',
+  ),
 ];
 
 Sensor? _findOpticalTemperatureSensor(List<Sensor> sensors) {
@@ -89,9 +111,11 @@ final List<AppInfo> _apps = [
     title: "Posture Tracker",
     description: "Get feedback on bad posture",
     supportedDevices: _postureSupportedDevices,
+    requiredCapabilities: _postureRequiredCapabilities,
     accentColor: _appAccentColor,
     widget: SelectEarableView(
       supportedDevicePrefixes: _postureSupportedDevices,
+      requiredCapabilities: _postureRequiredCapabilities,
       startApp: (wearable, sensorConfigProvider) async {
         return PostureTrackerView(
           EarableAttitudeTracker(
@@ -110,9 +134,11 @@ final List<AppInfo> _apps = [
     title: "Heart Tracker",
     description: "Heart rate and HRV visualization",
     supportedDevices: _heartSupportedDevices,
+    requiredCapabilities: _heartRequiredCapabilities,
     accentColor: _appAccentColor,
     widget: SelectEarableView(
       supportedDevicePrefixes: _heartSupportedDevices,
+      requiredCapabilities: _heartRequiredCapabilities,
       startApp: (wearable, _) async {
         if (wearable.hasCapability<SensorManager>()) {
           final sensors = wearable.requireCapability<SensorManager>().sensors;
@@ -169,10 +195,34 @@ final List<AppInfo> _apps = [
       },
     ),
   ),
+  AppInfo(
+    logoPath: "lib/apps/seal_check/assets/seal-check-icon.png",
+    title: "Seal Check",
+    description: "Measure ear seal quality",
+    supportedDevices: _sealCheckSupportedDevices,
+    requiredCapabilities: _sealCheckRequiredCapabilities,
+    accentColor: _appAccentColor,
+    widget: SelectEarableView(
+      supportedDevicePrefixes: _sealCheckSupportedDevices,
+      requiredCapabilities: _sealCheckRequiredCapabilities,
+      startApp: (wearable, _) async {
+        final manager = wearable.requireCapability<AudioResponseManager>();
+        final position = wearable.hasCapability<StereoDevice>()
+            ? await wearable.requireCapability<StereoDevice>().position
+            : null;
+
+        return SealCheckMeasurementView(
+          left: position == DevicePosition.right ? null : manager,
+          right: position == DevicePosition.right ? manager : null,
+        );
+      },
+    ),
+  ),
 ];
 
 int getAvailableAppsCount() => _apps.length;
 
+/// Counts apps that have at least one connected wearable from a supported family.
 int getCompatibleAppsCountForWearables(Iterable<Wearable> wearables) {
   final names = wearables.map((wearable) => wearable.name).toList();
   if (names.isEmpty) return 0;

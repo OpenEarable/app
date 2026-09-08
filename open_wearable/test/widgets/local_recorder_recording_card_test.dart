@@ -6,6 +6,40 @@ import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_reco
 import 'package:provider/provider.dart';
 
 void main() {
+  Future<void> pumpRecordingCard(
+    WidgetTester tester, {
+    required bool isRecording,
+  }) async {
+    final recorderProvider = SensorRecorderProvider();
+    final labelProvider = LabelProvider(null);
+    addTearDown(recorderProvider.dispose);
+    addTearDown(labelProvider.dispose);
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SensorRecorderProvider>.value(
+            value: recorderProvider,
+          ),
+          ChangeNotifierProvider<LabelProvider>.value(value: labelProvider),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: LocalRecorderRecordingCard(
+              isRecording: isRecording,
+              hasSensorsConnected: true,
+              canStartRecording: !isRecording,
+              isHandlingStopAction: false,
+              elapsedRecordingLabel: '00:00:12',
+              onStartRecording: () {},
+              onStopRecording: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   testWidgets('uses the full available card width', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -26,6 +60,21 @@ void main() {
     final card = tester.widget<Card>(find.byType(Card));
 
     expect(card.margin, EdgeInsets.zero);
+  });
+
+  testWidgets('keeps start and stop buttons in the same position',
+      (tester) async {
+    await pumpRecordingCard(tester, isRecording: false);
+    final startTopLeft = tester.getTopLeft(
+      find.widgetWithText(FilledButton, 'Start Recording'),
+    );
+
+    await pumpRecordingCard(tester, isRecording: true);
+    final stopTopLeft = tester.getTopLeft(
+      find.widgetWithText(FilledButton, 'Stop Recording'),
+    );
+
+    expect(stopTopLeft, startTopLeft);
   });
 
   testWidgets('uses an unchecked sensor shutdown option while recording',

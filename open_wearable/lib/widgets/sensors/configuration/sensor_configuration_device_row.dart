@@ -108,10 +108,10 @@ class _SensorConfigurationDeviceRowState
                         fit: FlexFit.loose,
                         child: PlatformText(
                           title,
-                          style:
-                              Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyLarge
+                              ?.copyWith(fontWeight: FontWeight.bold),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -173,8 +173,9 @@ class _SensorConfigurationDeviceRowState
       );
     }
 
-    final firmwareVersion =
-        await _readFirmwareVersionForProfiles(widget.device);
+    final firmwareVersion = await _readFirmwareVersionForProfiles(
+      widget.device,
+    );
     return DeviceProfileScopeMatch.forDevice(
       deviceName: _profileDeviceName(),
       firmwareVersion: firmwareVersion,
@@ -441,9 +442,7 @@ class _SensorConfigurationDeviceRowState
           const Divider(),
           const Padding(
             padding: EdgeInsets.all(12),
-            child: Text(
-              'Could not load saved profiles. Please try again.',
-            ),
+            child: Text('Could not load saved profiles. Please try again.'),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
@@ -480,9 +479,7 @@ class _SensorConfigurationDeviceRowState
         uniqueNameScope: scopeMatch.nameScope,
         reservedProfileNames: const {_builtInOffProfileTitle},
         reservedProfilesByName: {
-          _builtInOffProfileTitle: _buildBuiltInOffProfileConfig(
-            widget.device,
-          ),
+          _builtInOffProfileTitle: _buildBuiltInOffProfileConfig(widget.device),
         },
         onSaved: _refreshProfiles,
       ),
@@ -501,10 +498,7 @@ class _SensorConfigurationDeviceRowState
     } else {
       content.addAll(
         profileKeys.map(
-          (key) => _buildProfileTile(
-            key,
-            scopeMatch: scopeMatch,
-          ),
+          (key) => _buildProfileTile(key, scopeMatch: scopeMatch),
         ),
       );
     }
@@ -525,10 +519,7 @@ class _SensorConfigurationDeviceRowState
     final title = switch ((isBuiltIn, matchedScope)) {
       (true, _) => _builtInOffProfileTitle,
       (false, final scope?) =>
-        SensorConfigurationStorage.displayNameFromScopedKey(
-          key,
-          scope: scope,
-        ),
+        SensorConfigurationStorage.displayNameFromScopedKey(key, scope: scope),
       _ => key,
     };
 
@@ -595,10 +586,7 @@ class _SensorConfigurationDeviceRowState
                         ? colorScheme.onSurfaceVariant
                         : stateColor,
                   ),
-                  title: PlatformText(
-                    title,
-                    style: titleStyle,
-                  ),
+                  title: PlatformText(title, style: titleStyle),
                   subtitle: PlatformText(subtitle),
                   onTap: () => _loadProfile(key: key, title: title),
                   trailing: Row(
@@ -608,10 +596,8 @@ class _SensorConfigurationDeviceRowState
                         ProfileApplicationBadge(state: state),
                       PlatformIconButton(
                         icon: const Icon(Icons.more_horiz),
-                        onPressed: () => _showProfileActions(
-                          key: key,
-                          title: title,
-                        ),
+                        onPressed: () =>
+                            _showProfileActions(key: key, title: title),
                       ),
                     ],
                   ),
@@ -795,10 +781,7 @@ class _SensorConfigurationDeviceRowState
     _updateContent();
   }
 
-  void _showProfileActions({
-    required String key,
-    required String title,
-  }) {
+  void _showProfileActions({required String key, required String title}) {
     final isBuiltIn = _isBuiltInProfileKey(key);
     final actions = _buildProfileActions(
       key: key,
@@ -987,9 +970,7 @@ class _SensorConfigurationDeviceRowState
                               style: Theme.of(sheetContext)
                                   .textTheme
                                   .titleMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                                  ?.copyWith(fontWeight: FontWeight.w700),
                             ),
                           ],
                         ),
@@ -1015,9 +996,8 @@ class _SensorConfigurationDeviceRowState
                       : ListView.builder(
                           padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
                           itemCount: details.length,
-                          itemBuilder: (context, index) => ProfileDetailCard(
-                            entry: details[index],
-                          ),
+                          itemBuilder: (context, index) =>
+                              ProfileDetailCard(entry: details[index]),
                         ),
                 ),
               ],
@@ -1034,10 +1014,13 @@ class _SensorConfigurationDeviceRowState
     required SensorConfigurationValue profileValue,
     required SensorConfigurationProvider provider,
   }) {
-    final resolved =
-        SensorProfileService.describeSensorConfigurationValue(profileValue);
-    final selectedMatches =
-        provider.selectedMatchesConfigurationValue(sensorConfig, profileValue);
+    final resolved = SensorProfileService.describeSensorConfigurationValue(
+      profileValue,
+    );
+    final selectedMatches = provider.selectedMatchesConfigurationValue(
+      sensorConfig,
+      profileValue,
+    );
     final applied =
         selectedMatches && provider.isConfigurationApplied(sensorConfig);
     final status = switch ((selectedMatches, applied)) {
@@ -1191,12 +1174,7 @@ class _SensorConfigurationDeviceRowState
     AppToastType type = AppToastType.info,
     IconData? icon,
   }) {
-    AppToast.show(
-      context,
-      message: message,
-      type: type,
-      icon: icon,
-    );
+    AppToast.show(context, message: message, type: type, icon: icon);
   }
 }
 

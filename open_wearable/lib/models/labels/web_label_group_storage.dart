@@ -2,16 +2,16 @@
 import 'dart:convert';
 import 'package:web/web.dart' as web;
 
-import 'label_set.dart';
-import 'label_set_storage.dart';
+import 'label_group.dart';
+import 'label_group_storage.dart';
 
-class WebLabelSetStorage implements LabelSetStorage {
-  WebLabelSetStorage({this.storageKey = 'openwearable_label_sets'});
+class WebLabelGroupStorage implements LabelGroupStorage {
+  WebLabelGroupStorage({this.storageKey = 'openwearable_label_groups'});
 
   final String storageKey;
 
   @override
-  Future<List<LabelSet>> loadLabelSets() async {
+  Future<List<LabelGroup>> loadLabelGroups() async {
     try {
       final stored = web.window.localStorage.getItem(storageKey);
       if (stored == null || stored.trim().isEmpty) {
@@ -19,7 +19,7 @@ class WebLabelSetStorage implements LabelSetStorage {
       }
       final jsonList = jsonDecode(stored) as List<dynamic>;
       return jsonList
-          .map((e) => LabelSet.fromJson(e as Map<String, dynamic>))
+          .map((e) => LabelGroup.fromJson(e as Map<String, dynamic>))
           .toList();
     } catch (_) {
       return [];
@@ -27,12 +27,12 @@ class WebLabelSetStorage implements LabelSetStorage {
   }
 
   @override
-  Future<void> saveLabelSets(List<LabelSet> sets) async {
-    final jsonList = sets.map((s) => s.toJson()).toList();
+  Future<void> saveLabelGroups(List<LabelGroup> groups) async {
+    final jsonList = groups.map((group) => group.toJson()).toList();
     final encoded = jsonEncode(jsonList);
     web.window.localStorage.setItem(storageKey, encoded);
   }
 }
 
 /// Factory used by conditional import.
-LabelSetStorage createLabelSetStorage() => WebLabelSetStorage();
+LabelGroupStorage createLabelGroupStorage() => WebLabelGroupStorage();

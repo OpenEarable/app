@@ -30,10 +30,7 @@ class SensorConfigurationValueRow extends StatelessWidget {
     final primaryProvider = context.watch<SensorConfigurationProvider>();
     final secondaryProvider = pairedProvider;
     if (secondaryProvider == null) {
-      return _buildRow(
-        context,
-        primaryProvider: primaryProvider,
-      );
+      return _buildRow(context, primaryProvider: primaryProvider);
     }
 
     return ListenableBuilder(
@@ -53,14 +50,13 @@ class SensorConfigurationValueRow extends StatelessWidget {
   }) {
     const sensorOnGreen = Color(0xFF2E7D32);
     final colorScheme = Theme.of(context).colorScheme;
-    final selectedValue =
-        primaryProvider.getSelectedConfigurationValue(sensorConfiguration);
+    final selectedValue = primaryProvider.getSelectedConfigurationValue(
+      sensorConfiguration,
+    );
     final selectedOptions =
         sensorConfiguration is ConfigurableSensorConfiguration
             ? primaryProvider
-                .getSelectedConfigurationOptions(
-                  sensorConfiguration,
-                )
+                .getSelectedConfigurationOptions(sensorConfiguration)
                 .toList(growable: false)
             : const <SensorConfigurationOption>[];
 
@@ -73,12 +69,16 @@ class SensorConfigurationValueRow extends StatelessWidget {
       if (mirroredConfig == null) {
         isMixed = true;
       } else {
-        final mirroredValue =
-            secondaryProvider.getSelectedConfigurationValue(mirroredConfig);
-        final mirroredApplied =
-            secondaryProvider.isConfigurationApplied(mirroredConfig);
-        final valuesMatch =
-            _configurationValuesMatchNullable(selectedValue, mirroredValue);
+        final mirroredValue = secondaryProvider.getSelectedConfigurationValue(
+          mirroredConfig,
+        );
+        final mirroredApplied = secondaryProvider.isConfigurationApplied(
+          mirroredConfig,
+        );
+        final valuesMatch = _configurationValuesMatchNullable(
+          selectedValue,
+          mirroredValue,
+        );
         final applyStateMatches = isApplied == mirroredApplied;
         if (!valuesMatch || !applyStateMatches) {
           isMixed = true;
@@ -214,9 +214,7 @@ class SensorConfigurationValueRow extends StatelessWidget {
                                   style: Theme.of(modalContext)
                                       .textTheme
                                       .titleMedium
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.w700,
-                                      ),
+                                      ?.copyWith(fontWeight: FontWeight.w700),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
@@ -225,9 +223,9 @@ class SensorConfigurationValueRow extends StatelessWidget {
                                       .textTheme
                                       .bodySmall
                                       ?.copyWith(
-                                        color: Theme.of(modalContext)
-                                            .colorScheme
-                                            .onSurfaceVariant,
+                                        color: Theme.of(
+                                          modalContext,
+                                        ).colorScheme.onSurfaceVariant,
                                       ),
                                 ),
                               ],
@@ -360,9 +358,7 @@ class _OptionsCompactBadge extends StatelessWidget {
         decoration: BoxDecoration(
           color: colorScheme.surface,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: accentColor.withValues(alpha: 0.38),
-          ),
+          border: Border.all(color: accentColor.withValues(alpha: 0.38)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -397,10 +393,7 @@ class _SamplingRatePill extends StatelessWidget {
   final String label;
   final Color foreground;
 
-  const _SamplingRatePill({
-    required this.label,
-    required this.foreground,
-  });
+  const _SamplingRatePill({required this.label, required this.foreground});
 
   @override
   Widget build(BuildContext context) {
@@ -414,9 +407,7 @@ class _SamplingRatePill extends StatelessWidget {
         decoration: BoxDecoration(
           color: colorScheme.surface,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: foreground.withValues(alpha: 0.42),
-          ),
+          border: Border.all(color: foreground.withValues(alpha: 0.42)),
         ),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minWidth: 38),
@@ -448,9 +439,7 @@ class _MixedStatePill extends StatelessWidget {
         decoration: BoxDecoration(
           color: colorScheme.error.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: colorScheme.error.withValues(alpha: 0.38),
-          ),
+          border: Border.all(color: colorScheme.error.withValues(alpha: 0.38)),
         ),
         child: Text(
           'Mixed',
