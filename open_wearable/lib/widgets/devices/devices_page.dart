@@ -11,6 +11,7 @@ import 'package:open_wearable/widgets/connector_activity_indicator.dart';
 import 'package:open_wearable/widgets/devices/connect_devices_page.dart';
 import 'package:open_wearable/widgets/devices/device_detail/audio_mode_widget.dart';
 import 'package:open_wearable/widgets/devices/device_detail/device_detail_page.dart';
+import 'package:open_wearable/widgets/devices/device_detail/device_detail_dialog.dart';
 import 'package:open_wearable/widgets/devices/device_detail/microphone_gain_controls.dart';
 import 'package:open_wearable/widgets/devices/device_detail/microphone_selection_widget.dart';
 import 'package:open_wearable/widgets/devices/device_detail/power_saving_mode_widget.dart';
@@ -627,18 +628,7 @@ class DeviceRow extends StatelessWidget {
   void _openDeviceDetail(BuildContext context, Wearable device) {
     final isLargeScreen = MediaQuery.of(context).size.width > 600;
     if (isLargeScreen) {
-      showGeneralDialog(
-        context: context,
-        pageBuilder: (context, animation1, animation2) {
-          return Center(
-            child: SizedBox(
-              width: MediaQuery.of(context).size.width * 0.5,
-              height: MediaQuery.of(context).size.height * 0.5,
-              child: DeviceDetailPage(device: device),
-            ),
-          );
-        },
-      );
+      showDeviceDetailDialog(context, device: device);
       return;
     }
     context.push('/device-detail', extra: device);

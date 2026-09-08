@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 /// recorder-related handoff.
 class AppBackgroundExecutionBridge {
   static const MethodChannel _channel = MethodChannel(
-    'edu.kit.teco.open_wearable/lifecycle',
+    'edu.kit.teco.openWearable/lifecycle',
   );
 
   static Future<void> beginSensorShutdownWindow() async {

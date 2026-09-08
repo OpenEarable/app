@@ -6,7 +6,7 @@ import 'package:open_wearable/models/device_name_formatter.dart';
 import 'package:open_wearable/view_models/sensor_recorder_provider_facade.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/connector_activity_indicator.dart';
-import 'package:open_wearable/widgets/devices/device_detail/device_detail_page.dart';
+import 'package:open_wearable/widgets/devices/device_detail/device_detail_dialog.dart';
 import 'package:open_wearable/widgets/recording_activity_indicator.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 import 'package:provider/provider.dart';
@@ -87,18 +87,7 @@ class OverviewPage extends StatelessWidget {
 
       final isLargeScreen = MediaQuery.of(context).size.width > 600;
       if (isLargeScreen) {
-        showGeneralDialog(
-          context: context,
-          pageBuilder: (dialogContext, animation1, animation2) {
-            return Center(
-              child: SizedBox(
-                width: MediaQuery.of(dialogContext).size.width * 0.5,
-                height: MediaQuery.of(dialogContext).size.height * 0.5,
-                child: DeviceDetailPage(device: wearable),
-              ),
-            );
-          },
-        );
+        showDeviceDetailDialog(context, device: wearable);
         return;
       }
       context.push('/device-detail', extra: wearable);

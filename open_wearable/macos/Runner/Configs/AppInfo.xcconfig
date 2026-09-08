@@ -10,5 +10,10 @@ PRODUCT_NAME = open_wearable
 // The application's bundle identifier
 PRODUCT_BUNDLE_IDENTIFIER = edu.kit.teco.openWearable
 
+// Keep macOS archive metadata aligned with the iOS target and pubspec versioning.
+MARKETING_VERSION = $(FLUTTER_BUILD_NAME)
+CURRENT_PROJECT_VERSION = $(FLUTTER_BUILD_NUMBER)
+VERSIONING_SYSTEM = apple-generic
+
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2025 com.example. All rights reserved.

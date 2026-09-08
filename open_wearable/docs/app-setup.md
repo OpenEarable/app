@@ -1,6 +1,6 @@
 # App Setup and Architecture
 
-This document describes the high-level setup of the OpenWearable Flutter app (`open_wearable/`), including startup, routing, shell layout, and lifecycle behavior.
+This document describes the high-level setup of the OpenWearables Flutter app (`open_wearable/`), including startup, routing, shell layout, and lifecycle behavior.
 
 ## 1. Runtime Entry Point
 

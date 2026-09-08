@@ -33,8 +33,8 @@ import UIKit
   ) -> Bool {    
     let controller: FlutterViewController = window?.rootViewController as! FlutterViewController
     let openFolderChannel = FlutterMethodChannel(name: "edu.teco.open_folder", binaryMessenger: controller.binaryMessenger)
-    let systemSettingsChannel = FlutterMethodChannel(name: "edu.kit.teco.open_wearable/system_settings", binaryMessenger: controller.binaryMessenger)
-    lifecycleChannel = FlutterMethodChannel(name: "edu.kit.teco.open_wearable/lifecycle", binaryMessenger: controller.binaryMessenger)
+    let systemSettingsChannel = FlutterMethodChannel(name: "edu.kit.teco.openWearable/system_settings", binaryMessenger: controller.binaryMessenger)
+    lifecycleChannel = FlutterMethodChannel(name: "edu.kit.teco.openWearable/lifecycle", binaryMessenger: controller.binaryMessenger)
     
     openFolderChannel.setMethodCallHandler { (call: FlutterMethodCall, result: @escaping FlutterResult) in
       if call.method == "openFolder", let args = call.arguments as? [String: Any], let path = args["path"] as? String {

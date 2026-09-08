@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CFBundleDisplayName</key>
+	<string>OpenWearables</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleExecutable</key>
@@ -20,12 +22,16 @@
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.utilities</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>OpenWearable requires Bluetooth access to connect to your wearable device.</string>
+	<string>OpenWearables requires Bluetooth access to connect to your wearable device.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
-	<string>OpenWearable requires Bluetooth access to connect to your wearable device.</string>
+	<string>OpenWearables requires Bluetooth access to connect to your wearable device.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>This app records microphone audio with local sensor recording sessions.</string>
 	<key>NSHumanReadableCopyright</key>

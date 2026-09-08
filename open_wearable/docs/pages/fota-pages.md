@@ -41,7 +41,7 @@
 - Does:
   - Reads and groups reported MCUboot image slots by image index.
   - Shows active, confirmed, pending, permanent, bootable, version, and hash metadata for each slot.
-  - Lets users confirm and erase eligible inactive secondary slots through `eraseFirmwareSlot`.
+  - Lets users erase eligible inactive secondary slots through `eraseFirmwareSlot`.
   - Keeps protected slots read-only and offers mcumgr web as a fallback recovery tool.
 - Provides:
   - Firmware slot inspection and recovery controls for stuck FOTA states.

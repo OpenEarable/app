@@ -328,7 +328,10 @@ class _SingleCutoffFieldsState extends State<_SingleCutoffFields> {
   void didUpdateWidget(covariant _SingleCutoffFields oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.frequencyHz != oldWidget.frequencyHz) {
-      _replaceText(_frequencyController, _formatNumber(widget.frequencyHz));
+      _replaceFrequencyTextIfChanged(
+        _frequencyController,
+        widget.frequencyHz,
+      );
     }
     if (widget.order != oldWidget.order) {
       _replaceText(_orderController, widget.order.toString());
@@ -373,7 +376,7 @@ class _SingleCutoffFieldsState extends State<_SingleCutoffFields> {
       return;
     }
     widget.onChanged(
-      double.parse(_frequencyController.text),
+      _parseFrequency(_frequencyController.text)!,
       int.parse(_orderController.text),
     );
   }
@@ -434,10 +437,10 @@ class _NotchFieldsState extends State<_NotchFields> {
   void didUpdateWidget(covariant _NotchFields oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.centerHz != oldWidget.centerHz) {
-      _replaceText(_centerController, _formatNumber(widget.centerHz));
+      _replaceFrequencyTextIfChanged(_centerController, widget.centerHz);
     }
     if (widget.widthHz != oldWidget.widthHz) {
-      _replaceText(_widthController, _formatNumber(widget.widthHz));
+      _replaceFrequencyTextIfChanged(_widthController, widget.widthHz);
     }
     if (widget.order != oldWidget.order) {
       _replaceText(_orderController, widget.order.toString());
@@ -493,8 +496,8 @@ class _NotchFieldsState extends State<_NotchFields> {
       return;
     }
     widget.onChanged(
-      double.parse(_centerController.text),
-      double.parse(_widthController.text),
+      _parseFrequency(_centerController.text)!,
+      _parseFrequency(_widthController.text)!,
       int.parse(_orderController.text),
     );
   }
@@ -566,7 +569,7 @@ class _FrequencyInputField extends StatelessWidget {
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [
-        FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+        FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
       ],
       decoration: _filterInputDecoration(
         context,
@@ -690,11 +693,22 @@ String? _validateNotchOrder(String? value) {
 }
 
 double? _parseFrequency(String? value) {
-  final trimmed = value?.trim();
+  final trimmed = value?.trim().replaceAll(',', '.');
   if (trimmed == null || trimmed.isEmpty) {
     return null;
   }
   return double.tryParse(trimmed);
+}
+
+void _replaceFrequencyTextIfChanged(
+  TextEditingController controller,
+  double value,
+) {
+  final parsed = _parseFrequency(controller.text);
+  if (parsed != null && (parsed - value).abs() < 1e-9) {
+    return;
+  }
+  _replaceText(controller, _formatNumber(value));
 }
 
 void _replaceText(TextEditingController controller, String value) {
