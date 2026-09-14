@@ -17,12 +17,15 @@ on:
           - production
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   deploy_for_android:
     runs-on: ubuntu-latest
+    outputs:
+      released_sha: ${{ steps.version.outputs.released_sha }}
+      released_version: ${{ steps.version.outputs.released_version }}
+      next_version: ${{ steps.version.outputs.next_version }}
     env:
       RELEASE_TYPE: ${{ github.event.inputs.release_type }}
     steps:
@@ -30,6 +33,29 @@ jobs:
         uses: actions/checkout@v6
         with:
           ref: ${{ github.event.inputs.branch }}
+
+      - name: Validate and prepare production version bump
+        id: version
+        if: ${{ github.event.inputs.release_type == 'production' }}
+        shell: bash
+        run: |
+          version=$(awk '$1 == "version:" { print $2; exit }' open_wearable/pubspec.yaml)
+          version=${version//\"/}
+          version=${version//\'/}
+          version_pattern='^([0-9]+)\.([0-9]+)\.([0-9]+)(\+[0-9]+)?$'
+          if ! [[ "$version" =~ $version_pattern ]]; then
+            echo "::error::Version '$version' must use major.minor.patch with an optional numeric +build suffix."
+            exit 1
+          fi
+
+          major=${BASH_REMATCH[1]}
+          minor=${BASH_REMATCH[2]}
+          patch=${BASH_REMATCH[3]}
+          build_suffix=${BASH_REMATCH[4]}
+          next_version="${major}.${minor}.$((10#$patch + 1))${build_suffix}"
+          echo "released_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "released_version=$version" >> "$GITHUB_OUTPUT"
+          echo "next_version=$next_version" >> "$GITHUB_OUTPUT"
 
       - name: Set up ruby env
         uses: ruby/setup-ruby@v1
@@ -73,60 +99,70 @@ jobs:
         env:
           OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PASSWORD }}
 
-      - name: Open and merge version bump PR
-        if: ${{ github.event.inputs.release_type == 'production' }}
+      - name: Summarize successful Play Store upload
+        run: |
+          printf 'Successfully uploaded the Android app to the **%s** track on Google Play.\n' \
+            "$RELEASE_TYPE" >> "$GITHUB_STEP_SUMMARY"
+
+  create_version_bump_pr:
+    name: Create version bump PR for review
+    needs: deploy_for_android
+    if: ${{ github.event.inputs.release_type == 'production' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout released commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.deploy_for_android.outputs.released_sha }}
+
+      - name: Open version bump PR
         shell: bash
         env:
           VERSION_FILE: open_wearable/pubspec.yaml
           BASE_BRANCH: ${{ github.event.inputs.branch }}
+          RELEASED_VERSION: ${{ needs.deploy_for_android.outputs.released_version }}
+          NEXT_VERSION: ${{ needs.deploy_for_android.outputs.next_version }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          line=$(grep '^version:' "$VERSION_FILE")
-          raw_version=${line#version: }
-          version=${raw_version//\"/}
-          echo "Current version: $version"
-
-          semver=${version%%+*}
-          build=${version#*+}
-          if [ "$semver" = "$build" ]; then
-            echo "::error::Version '$version' must include build metadata, for example 1.2.3+45."
-            exit 1
-          fi
-
-          IFS='.' read -r major minor patch <<< "$semver"
-          if ! [[ "$major" =~ ^[0-9]+$ && "$minor" =~ ^[0-9]+$ && "$patch" =~ ^[0-9]+$ ]]; then
-            echo "::error::Version '$version' must use numeric major.minor.patch values."
-            exit 1
-          fi
-
-          new_patch=$((patch + 1))
-          new_version="${major}.${minor}.${new_patch}+${build}"
-          bump_branch="automation/bump-version-${new_version}-${GITHUB_RUN_ID}"
-          commit_message="chore(version): bump version to ${new_version}"
-
-          git switch -c "$bump_branch"
-          sed -i "s|^version: .*|version: $new_version|" "$VERSION_FILE"
-          echo "New version set to: $new_version"
-
-          git add "$VERSION_FILE"
-          git commit -m "$commit_message"
-          git push --set-upstream origin "$bump_branch"
-
-          pr_url=$(gh pr create \
+          bump_branch="automation/bump-version-${NEXT_VERSION}-${GITHUB_RUN_ID}"
+          commit_message="chore(version): bump version to ${NEXT_VERSION}"
+          pr_url=$(gh pr list \
             --base "$BASE_BRANCH" \
             --head "$bump_branch" \
-            --title "$commit_message" \
-            --body "Bumps the app version after the production Play Store release.")
+            --state all \
+            --json url \
+            --jq '.[0].url // empty')
 
-          gh pr review "$pr_url" \
-            --approve \
-            --body "Automated approval for version bump after production release."
+          if [ -z "$pr_url" ]; then
+            # Reuse a branch left by a previous attempt if PR creation failed.
+            remote_branch=$(git ls-remote --heads origin "refs/heads/$bump_branch")
+            if [ -z "$remote_branch" ]; then
+              git switch -c "$bump_branch"
+              sed -i "s|^version:.*|version: $NEXT_VERSION|" "$VERSION_FILE"
+              git add "$VERSION_FILE"
+              git commit -m "$commit_message"
+              git push --set-upstream origin "$bump_branch"
+            fi
 
-          gh pr merge "$pr_url" \
-            --squash \
-            --delete-branch \
-            --subject "$commit_message" \
-            --body "Merged automatically after the production Play Store release."
+            body_file=$(mktemp)
+            printf '%s\n' \
+              "The production Play Store upload of version $RELEASED_VERSION succeeded." \
+              "" \
+              "Bumps the app version to $NEXT_VERSION for the next release." \
+              "Please review and merge this PR using the repository's normal approval process." \
+              > "$body_file"
+            pr_url=$(gh pr create \
+              --base "$BASE_BRANCH" \
+              --head "$bump_branch" \
+              --title "$commit_message" \
+              --body-file "$body_file")
+          fi
+
+          printf 'Version bump PR: %s\n\nReview and merge the PR if it is still open. The production upload has already succeeded.\n' \
+            "$pr_url" >> "$GITHUB_STEP_SUMMARY"
