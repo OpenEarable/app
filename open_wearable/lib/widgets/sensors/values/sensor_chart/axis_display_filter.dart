@@ -41,13 +41,18 @@ class _AxisDisplayFilterCache {
 }
 
 class _AxisDisplayFilter {
+  static const int _initialIntervalCount = 8;
+  static const int _rateCheckIntervalCount = 16;
+
   final _AxisFilterConfig config;
   final double timestampScale;
   final List<_IirFilterStage> _highPassStages;
   final List<_IirFilterStage> _lowPassStages;
   final List<_IirFilterStage> _notchStages;
+  final List<double> _measuredIntervals = <double>[];
 
   int? _previousTimestamp;
+  double? _designDt;
 
   _AxisDisplayFilter({
     required this.config,
@@ -61,7 +66,10 @@ class _AxisDisplayFilter {
       return input;
     }
 
-    final dt = _timeDeltaSeconds(timestamp);
+    final dt = _stableTimeDelta(_timeDeltaSeconds(timestamp));
+    if (dt == null) {
+      return input;
+    }
     var output = input;
     for (final stage in _highPassStages) {
       output = stage.apply(output, dt);
@@ -78,6 +86,12 @@ class _AxisDisplayFilter {
 
   void reset() {
     _previousTimestamp = null;
+    _designDt = null;
+    _measuredIntervals.clear();
+    _resetStages();
+  }
+
+  void _resetStages() {
     for (final stage in _highPassStages) {
       stage.reset();
     }
@@ -87,6 +101,44 @@ class _AxisDisplayFilter {
     for (final stage in _notchStages) {
       stage.reset();
     }
+  }
+
+  double? _stableTimeDelta(double measuredDt) {
+    if (measuredDt <= 0 || !measuredDt.isFinite) {
+      return _designDt;
+    }
+
+    _measuredIntervals.add(measuredDt);
+    final designDt = _designDt;
+    if (designDt == null) {
+      if (_measuredIntervals.length < _initialIntervalCount) {
+        return null;
+      }
+      _designDt = _medianInterval(_measuredIntervals);
+      _measuredIntervals.clear();
+      return _designDt;
+    }
+
+    if (_measuredIntervals.length >= _rateCheckIntervalCount) {
+      final recentDt = _medianInterval(_measuredIntervals);
+      _measuredIntervals.clear();
+      // Keep IIR coefficients fixed through timestamp jitter. A sustained rate
+      // change needs new coefficients and a reset of the filter state.
+      if (recentDt < designDt * 0.8 || recentDt > designDt * 1.25) {
+        _designDt = recentDt;
+        _resetStages();
+      }
+    }
+    return _designDt;
+  }
+
+  static double _medianInterval(List<double> intervals) {
+    final sorted = intervals.toList()..sort();
+    final middle = sorted.length ~/ 2;
+    if (sorted.length.isOdd) {
+      return sorted[middle];
+    }
+    return (sorted[middle - 1] + sorted[middle]) / 2;
   }
 
   double _timeDeltaSeconds(int timestamp) {
