@@ -3,8 +3,8 @@ import 'package:flutter/widget_previews.dart';
 import 'package:provider/provider.dart';
 
 import 'package:open_wearable/models/labels/label.dart';
-import 'package:open_wearable/models/labels/label_set.dart';
-import 'package:open_wearable/view_models/label_set_provider.dart';
+import 'package:open_wearable/models/labels/label_group.dart';
+import 'package:open_wearable/view_models/label_group_provider.dart';
 
 const _labelColors = <Color>[
   Colors.red,
@@ -29,43 +29,43 @@ const _labelColors = <Color>[
   Colors.black,
 ];
 
-/// A page for creating or editing a label set.
-class LabelSetEditorPage extends StatefulWidget {
-  const LabelSetEditorPage({
+/// A page for creating or editing a label group.
+class LabelGroupEditorPage extends StatefulWidget {
+  const LabelGroupEditorPage({
     super.key,
-    this.initialSet,
-  }) : isCreate = initialSet == null;
+    this.initialGroup,
+  }) : isCreate = initialGroup == null;
 
-  final LabelSet? initialSet;
+  final LabelGroup? initialGroup;
   final bool isCreate;
 
   @override
-  State<LabelSetEditorPage> createState() => _LabelSetEditorPageState();
+  State<LabelGroupEditorPage> createState() => _LabelGroupEditorPageState();
 }
 
-class _LabelSetEditorPageState extends State<LabelSetEditorPage> {
+class _LabelGroupEditorPageState extends State<LabelGroupEditorPage> {
   late final TextEditingController _nameController;
   final List<Label> _labels = [];
-  LabelSet? _persistedSet;
+  LabelGroup? _persistedGroup;
   Future<void> _persistQueue = Future<void>.value();
-  late LabelSetProvider _labelSetProvider;
+  late LabelGroupProvider _labelGroupProvider;
   late bool _isCreateMode;
 
   @override
   void initState() {
     super.initState();
     _isCreateMode = widget.isCreate;
-    _persistedSet = widget.initialSet;
+    _persistedGroup = widget.initialGroup;
     _nameController =
-        TextEditingController(text: widget.initialSet?.name ?? '');
+        TextEditingController(text: widget.initialGroup?.name ?? '');
     _nameController.addListener(_handleNameChanged);
-    _labels.addAll(widget.initialSet?.labels ?? const []);
+    _labels.addAll(widget.initialGroup?.labels ?? const []);
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _labelSetProvider = context.read<LabelSetProvider>();
+    _labelGroupProvider = context.read<LabelGroupProvider>();
   }
 
   @override
@@ -76,50 +76,50 @@ class _LabelSetEditorPageState extends State<LabelSetEditorPage> {
   }
 
   void _handleNameChanged() {
-    _persistCurrentSet();
+    _persistCurrentGroup();
     setState(() {});
   }
 
-  bool get _hasNewSetWithoutLabels =>
+  bool get _hasNewGroupWithoutLabels =>
       _isCreateMode &&
       _nameController.text.trim().isNotEmpty &&
       _labels.isEmpty;
 
-  bool get _hasLabelsWithoutSetName =>
+  bool get _hasLabelsWithoutGroupName =>
       _nameController.text.trim().isEmpty && _labels.isNotEmpty;
 
   bool get _requiresLeaveConfirmation =>
-      _hasNewSetWithoutLabels || _hasLabelsWithoutSetName;
+      _hasNewGroupWithoutLabels || _hasLabelsWithoutGroupName;
 
-  LabelSet? _currentSet() {
+  LabelGroup? _currentGroup() {
     final name = _nameController.text.trim();
     if (name.isEmpty || (_isCreateMode && _labels.isEmpty)) {
       return null;
     }
 
-    return LabelSet(
+    return LabelGroup(
       name: name,
       labels: List<Label>.unmodifiable(_labels),
     );
   }
 
-  Future<void> _persistCurrentSet() {
-    final set = _currentSet();
-    if (set == null) {
-      if (_isCreateMode && _persistedSet != null) {
+  Future<void> _persistCurrentGroup() {
+    final group = _currentGroup();
+    if (group == null) {
+      if (_isCreateMode && _persistedGroup != null) {
         return _deletePersistedDraft();
       }
       return _persistQueue;
     }
 
     _persistQueue = _persistQueue.then((_) async {
-      final previousSet = _persistedSet;
-      if (previousSet == null) {
-        await _labelSetProvider.addOrUpdateSet(set);
+      final previousGroup = _persistedGroup;
+      if (previousGroup == null) {
+        await _labelGroupProvider.addOrUpdateGroup(group);
       } else {
-        await _labelSetProvider.replaceSet(previousSet, set);
+        await _labelGroupProvider.replaceGroup(previousGroup, group);
       }
-      _persistedSet = set;
+      _persistedGroup = group;
     }).catchError((Object error, StackTrace stackTrace) {
       _reportAutosaveError(error, stackTrace);
       return null;
@@ -130,11 +130,11 @@ class _LabelSetEditorPageState extends State<LabelSetEditorPage> {
 
   Future<void> _deletePersistedDraft() {
     _persistQueue = _persistQueue.then((_) async {
-      final previousSet = _persistedSet;
-      if (previousSet == null) return;
+      final previousGroup = _persistedGroup;
+      if (previousGroup == null) return;
 
-      await _labelSetProvider.deleteSet(previousSet);
-      _persistedSet = null;
+      await _labelGroupProvider.deleteGroup(previousGroup);
+      _persistedGroup = null;
     }).catchError((Object error, StackTrace stackTrace) {
       _reportAutosaveError(error, stackTrace);
       return null;
@@ -148,17 +148,17 @@ class _LabelSetEditorPageState extends State<LabelSetEditorPage> {
       FlutterErrorDetails(
         exception: error,
         stack: stackTrace,
-        library: 'label set editor',
-        context: ErrorDescription('while autosaving a label set'),
+        library: 'label group editor',
+        context: ErrorDescription('while autosaving a label group'),
       ),
     );
   }
 
-  Future<void> _confirmCreateSet() async {
-    if (_currentSet() == null) return;
+  Future<void> _confirmCreateGroup() async {
+    if (_currentGroup() == null) return;
 
-    await _persistCurrentSet();
-    if (!mounted || _persistedSet == null) return;
+    await _persistCurrentGroup();
+    if (!mounted || _persistedGroup == null) return;
 
     setState(() {
       _isCreateMode = false;
@@ -168,23 +168,23 @@ class _LabelSetEditorPageState extends State<LabelSetEditorPage> {
   Future<void> _handlePopInvoked(bool didPop) async {
     if (didPop) return;
 
-    final shouldLeave = await _confirmLeaveUnsavableSet();
+    final shouldLeave = await _confirmLeaveUnsavableGroup();
     if (!mounted || !shouldLeave) return;
 
     Navigator.of(context).pop();
   }
 
-  Future<bool> _confirmLeaveUnsavableSet() async {
+  Future<bool> _confirmLeaveUnsavableGroup() async {
     if (!_requiresLeaveConfirmation) {
       return true;
     }
 
-    final title = _hasLabelsWithoutSetName
-        ? 'Leave without set name?'
+    final title = _hasLabelsWithoutGroupName
+        ? 'Leave without group name?'
         : 'Leave without labels?';
-    final message = _hasLabelsWithoutSetName
-        ? 'This label set cannot be saved because no set name was given. Leave anyway?'
-        : 'No labels have been added to this label set, so no set will be created. Leave anyway?';
+    final message = _hasLabelsWithoutGroupName
+        ? 'This label group cannot be saved because no group name was given. Leave anyway?'
+        : 'No labels have been added to this label group, so no group will be created. Leave anyway?';
 
     return await showDialog<bool>(
           context: context,
@@ -231,7 +231,7 @@ class _LabelSetEditorPageState extends State<LabelSetEditorPage> {
         _labels[index] = updated;
       }
     });
-    _persistCurrentSet();
+    _persistCurrentGroup();
   }
 
   Future<void> _confirmAndDeleteLabel({
@@ -244,7 +244,7 @@ class _LabelSetEditorPageState extends State<LabelSetEditorPage> {
           builder: (_) => AlertDialog(
             title: const Text('Delete label?'),
             content: Text(
-              'Delete "${label.name}" from this label set?',
+              'Delete "${label.name}" from this label group?',
             ),
             actions: [
               TextButton(
@@ -267,13 +267,13 @@ class _LabelSetEditorPageState extends State<LabelSetEditorPage> {
     if (index >= _labels.length || _labels[index] != label) return;
 
     setState(() => _labels.removeAt(index));
-    _persistCurrentSet();
+    _persistCurrentGroup();
   }
 
   @override
   Widget build(BuildContext context) {
-    final title = _isCreateMode ? 'Create label set' : 'Edit label set';
-    final canConfirmCreate = _isCreateMode && _currentSet() != null;
+    final title = _isCreateMode ? 'Create label group' : 'Edit label group';
+    final canConfirmCreate = _isCreateMode && _currentGroup() != null;
 
     return PopScope(
       canPop: !_requiresLeaveConfirmation,
@@ -286,7 +286,7 @@ class _LabelSetEditorPageState extends State<LabelSetEditorPage> {
               IconButton(
                 tooltip: 'Save',
                 icon: const Icon(Icons.check),
-                onPressed: canConfirmCreate ? _confirmCreateSet : null,
+                onPressed: canConfirmCreate ? _confirmCreateGroup : null,
               ),
           ],
         ),
@@ -296,7 +296,7 @@ class _LabelSetEditorPageState extends State<LabelSetEditorPage> {
             TextField(
               controller: _nameController,
               decoration: const InputDecoration(
-                labelText: 'Set name',
+                labelText: 'Group name',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -503,8 +503,9 @@ class _ColorPickerRowState extends State<_ColorPickerRow> {
             c.computeLuminance() > 0.5 ? Colors.black : Colors.white;
 
         return Tooltip(
-          message:
-              isUnavailable ? 'Already used in this label set' : 'Select color',
+          message: isUnavailable
+              ? 'Already used in this label group'
+              : 'Select color',
           child: Material(
             key: ValueKey('label-color-$colorValue'),
             color: Colors.transparent,
@@ -559,12 +560,12 @@ class _ColorPickerRowState extends State<_ColorPickerRow> {
   }
 }
 
-@Preview(name: 'LabelSetEditorPage')
-Widget labelSetEditorPagePreview() {
+@Preview(name: 'LabelGroupEditorPage')
+Widget labelGroupEditorPagePreview() {
   return const MaterialApp(
-    home: LabelSetEditorPage(
-      initialSet: LabelSet(
-        name: 'Sample Set',
+    home: LabelGroupEditorPage(
+      initialGroup: LabelGroup(
+        name: 'Sample Group',
         labels: [
           Label(name: 'Walking', color: Colors.green),
           Label(name: 'Running', color: Colors.red),

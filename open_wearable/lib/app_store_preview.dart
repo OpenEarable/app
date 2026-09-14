@@ -1242,7 +1242,7 @@ class AppStorePreviewWearable extends Wearable
   Future<AudioMode> getAudioMode() async => _audioMode;
 
   @override
-  void setMicrophone(PreviewMicrophone microphone) {
+  Future<void> setMicrophone(PreviewMicrophone microphone) async {
     _microphone = microphone;
   }
 

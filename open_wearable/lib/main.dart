@@ -38,7 +38,7 @@ import 'models/bluetooth_auto_connector.dart';
 import 'models/logger.dart';
 import 'view_models/app_banner_controller.dart';
 import 'view_models/label_provider.dart';
-import 'view_models/label_set_provider.dart';
+import 'view_models/label_group_provider.dart';
 import 'view_models/wearables_provider.dart';
 
 const bool _isAppStorePreview = bool.fromEnvironment('APP_STORE_PREVIEW');
@@ -67,38 +67,38 @@ void main() async {
           create: (context) => FirmwareUpdateRequestProvider(),
         ),
         ChangeNotifierProvider(
-          create: (context) => LabelSetProvider(),
+          create: (context) => LabelGroupProvider(),
         ),
-        ChangeNotifierProxyProvider<LabelSetProvider, LabelProvider>(
+        ChangeNotifierProxyProvider<LabelGroupProvider, LabelProvider>(
           create: (context) => LabelProvider(null),
-          update: (context, labelSetProvider, labelProvider) {
-            labelProvider?.setLabelSet(labelSetProvider.selectedLabelSet);
+          update: (context, labelGroupProvider, labelProvider) {
+            labelProvider?.setLabelGroup(labelGroupProvider.selectedLabelGroup);
             return labelProvider!;
           },
         ),
-        ChangeNotifierProxyProvider2<WearablesProvider, LabelSetProvider,
+        ChangeNotifierProxyProvider2<WearablesProvider, LabelGroupProvider,
             SensorRecorderProvider>(
           create: (context) => SensorRecorderProvider(),
           update: (
             context,
             wearablesProvider,
-            labelSetProvider,
+            labelGroupProvider,
             recorderProvider,
           ) {
             final provider = recorderProvider ?? SensorRecorderProvider();
-            final labelSet = labelSetProvider.selectedLabelSet;
+            final labelGroup = labelGroupProvider.selectedLabelGroup;
             final wearables = [...wearablesProvider.wearables];
-            if (labelSet != null) {
+            if (labelGroup != null) {
               final labelProvider = context.read<LabelProvider>();
               wearables.add(
                 LabelWearable(
-                  labelSet: labelSet,
+                  labelGroup: labelGroup,
                   labelStream: labelProvider.activeLabelStream,
                 ),
               );
             }
             logger.t(
-              'Updating SensorRecorderProvider with label set: $labelSet',
+              'Updating SensorRecorderProvider with label group: $labelGroup',
             );
             provider.synchronizeConnectedWearables(
               wearables,

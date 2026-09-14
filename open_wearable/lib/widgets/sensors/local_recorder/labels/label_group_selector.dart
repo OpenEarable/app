@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widget_previews.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:open_wearable/widgets/sensors/local_recorder/labels/label_sets_page.dart';
-import 'package:open_wearable/widgets/sensors/local_recorder/labels/labelset_dropdown.dart';
+import 'package:open_wearable/widgets/sensors/local_recorder/labels/label_groups_page.dart';
+import 'package:open_wearable/widgets/sensors/local_recorder/labels/label_group_dropdown.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../view_models/label_set_provider.dart';
+import '../../../../view_models/label_group_provider.dart';
 
-class LabelSetSelector extends StatelessWidget {
-  const LabelSetSelector({
+class LabelGroupSelector extends StatelessWidget {
+  const LabelGroupSelector({
     super.key,
     this.showHelperText = true,
   });
@@ -25,11 +25,11 @@ class LabelSetSelector extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: LabelSetDropdown(),
+              child: LabelGroupDropdown(),
             ),
             const SizedBox(width: 8),
             IconButton(
-              tooltip: 'Manage label sets',
+              tooltip: 'Manage label groups',
               icon: Icon(
                 Icons.edit_outlined,
                 color: colorScheme.primary,
@@ -39,7 +39,7 @@ class LabelSetSelector extends StatelessWidget {
                   context,
                   platformPageRoute(
                     context: context,
-                    builder: (context) => LabelSetsPage(),
+                    builder: (context) => LabelGroupsPage(),
                   ),
                 );
               },
@@ -49,7 +49,7 @@ class LabelSetSelector extends StatelessWidget {
         if (showHelperText) ...[
           const SizedBox(height: 6),
           Text(
-            'Pick a label set to add labels while recording.',
+            'Pick a label group to add labels while recording.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
@@ -58,14 +58,14 @@ class LabelSetSelector extends StatelessWidget {
   }
 }
 
-@Preview(name: "LabelSetSelector")
-Widget labelSetSelectorPreview() {
-  return ChangeNotifierProvider<LabelSetProvider>(
-    create: (_) => LabelSetProvider(),
+@Preview(name: "LabelGroupSelector")
+Widget labelGroupSelectorPreview() {
+  return ChangeNotifierProvider<LabelGroupProvider>(
+    create: (_) => LabelGroupProvider(),
     child: Scaffold(
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: LabelSetSelector(),
+        child: LabelGroupSelector(),
       ),
     ),
   );

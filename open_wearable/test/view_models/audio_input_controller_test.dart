@@ -37,6 +37,22 @@ void main() {
       expect(controller.isMonitoringActive, isFalse);
       expect(controller.waveformData, isEmpty);
     });
+
+    test('moves monitoring into recording without stopping recording',
+        () async {
+      final platform = _FakeAudioInputPlatform();
+      final controller = AudioInputController(platform: platform);
+
+      await controller.selectSource(AudioInputSource.systemDefault);
+      expect(await controller.applySelectedSource(), isTrue);
+      await controller.startRecording('/tmp/recording');
+
+      expect(platform.monitoringStarts, 1);
+      expect(platform.monitoringStops, 1);
+      expect(platform.recordingStarts, 1);
+      expect(platform.recordingStops, 0);
+      expect(controller.isRecordingActive, isTrue);
+    });
   });
 }
 
@@ -45,6 +61,11 @@ class _FakeAudioInputPlatform implements AudioInputPlatform {
 
   final bool throwWhenStoppingMonitoring;
   ValueChanged<double>? _onLevel;
+  int monitoringStarts = 0;
+  int monitoringStops = 0;
+  int recordingStarts = 0;
+  int recordingStops = 0;
+  int sourceRefreshes = 0;
 
   void emitLevel(double level) {
     _onLevel?.call(level);
@@ -52,6 +73,7 @@ class _FakeAudioInputPlatform implements AudioInputPlatform {
 
   @override
   Future<List<AudioInputSource>> listAudioInputSources() async {
+    sourceRefreshes++;
     return const [AudioInputSource.systemDefault];
   }
 
@@ -60,12 +82,14 @@ class _FakeAudioInputPlatform implements AudioInputPlatform {
     AudioInputSource source,
     ValueChanged<double> onLevel,
   ) async {
+    monitoringStarts++;
     _onLevel = onLevel;
     return true;
   }
 
   @override
   Future<void> stopMonitoring() async {
+    monitoringStops++;
     if (throwWhenStoppingMonitoring) {
       throw StateError('stop failed');
     }
@@ -78,12 +102,14 @@ class _FakeAudioInputPlatform implements AudioInputPlatform {
     String recordingFolderPath,
     ValueChanged<double> onLevel,
   ) async {
+    recordingStarts++;
     _onLevel = onLevel;
     return true;
   }
 
   @override
   Future<List<LocalRecorderDraftFile>> stopRecording() async {
+    recordingStops++;
     _onLevel = null;
     return const [];
   }

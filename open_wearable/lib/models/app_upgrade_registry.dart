@@ -182,12 +182,12 @@ class AppUpgradeRegistry {
     AppUpgradeHighlight(
       version: '1.5.0',
       eyebrow: 'OpenWearables 1.5.0',
-      title: 'Add labels while\nyou record',
+      title: 'Labels and more control\nfor your OpenEarables',
       summary:
-          'Mark important moments in local recordings and find devices faster.',
+          'Label recordings, check the seal, tune microphones, and choose compatible devices.',
       heroDescription:
-          'OpenWearables 1.5.0 brings reusable recording labels to the local recorder. '
-          'Create label sets, choose one before recording, and tap labels during a session so key events are saved with your sensor data.',
+          'OpenWearables 1.5.0 adds reusable recording labels, Seal Check, and microphone gain controls. '
+          'Capability-aware device selection helps you start each app with a compatible wearable.',
       accentColor: Color(0xFF8F6A67),
       useHeroGradient: false,
       features: <AppUpgradeFeatureHighlight>[
@@ -195,25 +195,25 @@ class AppUpgradeRegistry {
           icon: Icons.label_rounded,
           title: 'Recording labels',
           description:
-              'Create reusable label sets and mark events while recording. Label states are saved alongside sensor data with timestamps for easier review and analysis.',
+              'Create reusable label groups and mark events while recording. Label states are saved alongside sensor data with timestamps for easier review and analysis.',
         ),
         AppUpgradeFeatureHighlight(
-          icon: Icons.filter_alt_rounded,
-          title: 'Device name filter',
+          icon: Icons.graphic_eq_rounded,
+          title: 'Seal Check',
           description:
-              'Filter the available device list by name, starting with OpenEarable, so nearby Bluetooth devices are easier to scan and connect.',
+              'Measure the ear seal and review the audio-response graph directly in the app.',
         ),
         AppUpgradeFeatureHighlight(
-          icon: Icons.verified_rounded,
-          title: 'Smarter firmware matching',
+          icon: Icons.mic_rounded,
+          title: 'Microphone gain controls',
           description:
-              'Firmware lists and post-update checks now better recognize installed versions, including beta and pull-request builds.',
+              'Adjust inner and outer mic levels, link both channels, mute them, or reset the gain.',
         ),
         AppUpgradeFeatureHighlight(
-          icon: Icons.auto_fix_high_rounded,
-          title: 'Workflow polish',
+          icon: Icons.devices_rounded,
+          title: 'Smarter device selection',
           description:
-              'Small fixes make label-set editing, delete confirmations, selected dropdowns, color indicators, and update verification feel more predictable.',
+              'Find compatible wearables faster with clearer, capability-aware app selection.',
         ),
       ],
     ),

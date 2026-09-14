@@ -2,25 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widget_previews.dart';
 import 'package:provider/provider.dart';
 
-import 'package:open_wearable/view_models/label_set_provider.dart';
+import 'package:open_wearable/view_models/label_group_provider.dart';
 
 import '../../../../models/labels/label.dart';
-import '../../../../models/labels/label_set.dart';
-import 'labelset_editor_page.dart';
+import '../../../../models/labels/label_group.dart';
+import 'label_group_editor_page.dart';
 
-/// A page that lists all label sets and allows managing them.
-class LabelSetsPage extends StatelessWidget {
-  const LabelSetsPage({super.key});
+/// A page that lists all label groups and allows managing them.
+class LabelGroupsPage extends StatelessWidget {
+  const LabelGroupsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<LabelSetProvider>();
-    final sets = provider.labelSets;
+    final provider = context.watch<LabelGroupProvider>();
+    final groups = provider.labelGroups;
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Label Sets'),
+        title: const Text('Label Groups'),
         actions: [
           IconButton(
             tooltip: 'Create',
@@ -28,25 +28,25 @@ class LabelSetsPage extends StatelessWidget {
             onPressed: () async {
               await Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => const LabelSetEditorPage(),
+                  builder: (_) => const LabelGroupEditorPage(),
                 ),
               );
             },
           ),
         ],
       ),
-      body: sets.isEmpty
+      body: groups.isEmpty
           ? const Center(
-              child: Text('No label sets yet. Tap + to create one.'),
+              child: Text('No label groups yet. Tap + to create one.'),
             )
           : ListView.separated(
-              itemCount: sets.length,
+              itemCount: groups.length,
               separatorBuilder: (_, __) => const Divider(height: 1),
               itemBuilder: (context, index) {
-                final set = sets[index];
+                final group = groups[index];
                 return ListTile(
-                  title: Text(set.name),
-                  subtitle: Text('${set.labels.length} labels'),
+                  title: Text(group.name),
+                  subtitle: Text('${group.labels.length} labels'),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -57,7 +57,7 @@ class LabelSetsPage extends StatelessWidget {
                           await Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) =>
-                                  LabelSetEditorPage(initialSet: set),
+                                  LabelGroupEditorPage(initialGroup: group),
                             ),
                           );
                         },
@@ -72,9 +72,9 @@ class LabelSetsPage extends StatelessWidget {
                           final ok = await showDialog<bool>(
                                 context: context,
                                 builder: (_) => AlertDialog(
-                                  title: const Text('Delete label set?'),
+                                  title: const Text('Delete label group?'),
                                   content: Text(
-                                    'Delete "${set.name}"? This cannot be undone.',
+                                    'Delete "${group.name}"? This cannot be undone.',
                                   ),
                                   actions: [
                                     TextButton(
@@ -97,7 +97,9 @@ class LabelSetsPage extends StatelessWidget {
 
                           if (!ok) return;
                           if (!context.mounted) return;
-                          await context.read<LabelSetProvider>().deleteSet(set);
+                          await context
+                              .read<LabelGroupProvider>()
+                              .deleteGroup(group);
                         },
                       ),
                     ],
@@ -105,7 +107,8 @@ class LabelSetsPage extends StatelessWidget {
                   onTap: () async {
                     await Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => LabelSetEditorPage(initialSet: set),
+                        builder: (_) =>
+                            LabelGroupEditorPage(initialGroup: group),
                       ),
                     );
                   },
@@ -116,11 +119,11 @@ class LabelSetsPage extends StatelessWidget {
   }
 }
 
-@Preview(name: 'LabelSetsPage')
-Widget labelSetsPagePreview() {
-  final provider = LabelSetProvider();
-  provider.addOrUpdateSet(
-    LabelSet(
+@Preview(name: 'LabelGroupsPage')
+Widget labelGroupsPagePreview() {
+  final provider = LabelGroupProvider();
+  provider.addOrUpdateGroup(
+    LabelGroup(
       name: 'Activities',
       labels: [
         Label(name: 'Walking', color: Colors.green),
@@ -128,8 +131,8 @@ Widget labelSetsPagePreview() {
       ],
     ),
   );
-  provider.addOrUpdateSet(
-    LabelSet(
+  provider.addOrUpdateGroup(
+    LabelGroup(
       name: 'Postures',
       labels: [
         Label(name: 'Sitting', color: Colors.blue),
@@ -137,10 +140,10 @@ Widget labelSetsPagePreview() {
       ],
     ),
   );
-  return ChangeNotifierProvider<LabelSetProvider>.value(
+  return ChangeNotifierProvider<LabelGroupProvider>.value(
     value: provider,
     child: const Scaffold(
-      body: LabelSetsPage(),
+      body: LabelGroupsPage(),
     ),
   );
 }

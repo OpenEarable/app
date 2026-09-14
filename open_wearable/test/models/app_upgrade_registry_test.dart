@@ -8,7 +8,19 @@ void main() {
 
       expect(highlight, isNotNull);
       expect(highlight?.version, '1.5.0');
-      expect(highlight?.features.first.title, 'Recording labels');
+      expect(
+        highlight?.title,
+        'Labels and more control\nfor your OpenEarables',
+      );
+      expect(
+        highlight?.features.map((feature) => feature.title),
+        [
+          'Recording labels',
+          'Seal Check',
+          'Microphone gain controls',
+          'Smarter device selection',
+        ],
+      );
       expect(AppUpgradeRegistry.latest?.version, '1.5.0');
       expect(AppUpgradeRegistry.all.first.version, '1.5.0');
     });

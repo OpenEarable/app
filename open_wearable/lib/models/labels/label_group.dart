@@ -1,30 +1,30 @@
-// A set of labels, identified by a name.
+// A named group of labels.
 import 'label.dart';
 
-class LabelSet {
+class LabelGroup {
   final String name;
   final List<Label> labels;
 
-  const LabelSet({
+  const LabelGroup({
     required this.name,
     required this.labels,
   });
 
-  /// Create a modified copy (e.g., renamed set, updated labels list).
-  LabelSet copyWith({
+  /// Create a modified copy (e.g., renamed group, updated label list).
+  LabelGroup copyWith({
     String? name,
     List<Label>? labels,
   }) {
-    return LabelSet(
+    return LabelGroup(
       name: name ?? this.name,
       labels: labels ?? this.labels,
     );
   }
 
-  /// JSON -> LabelSet
-  factory LabelSet.fromJson(Map<String, dynamic> json) {
+  /// JSON -> LabelGroup
+  factory LabelGroup.fromJson(Map<String, dynamic> json) {
     final labelsJson = json['labels'] as List<dynamic>? ?? [];
-    return LabelSet(
+    return LabelGroup(
       name: json['name'] as String,
       labels: labelsJson
           .map((e) => Label.fromJson(e as Map<String, dynamic>))
@@ -32,7 +32,7 @@ class LabelSet {
     );
   }
 
-  /// LabelSet -> JSON
+  /// LabelGroup -> JSON
   Map<String, dynamic> toJson() {
     return {
       'name': name,

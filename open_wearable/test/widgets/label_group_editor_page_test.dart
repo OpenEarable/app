@@ -1,65 +1,65 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:open_wearable/models/labels/label.dart';
-import 'package:open_wearable/models/labels/label_set.dart';
-import 'package:open_wearable/models/labels/label_set_manager.dart';
-import 'package:open_wearable/models/labels/label_set_storage.dart';
+import 'package:open_wearable/models/labels/label_group.dart';
+import 'package:open_wearable/models/labels/label_group_manager.dart';
+import 'package:open_wearable/models/labels/label_group_storage.dart';
 import 'package:open_wearable/view_models/label_provider.dart';
-import 'package:open_wearable/view_models/label_set_provider.dart';
+import 'package:open_wearable/view_models/label_group_provider.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/labels/active_label_bar.dart';
-import 'package:open_wearable/widgets/sensors/local_recorder/labels/label_set_selector.dart';
-import 'package:open_wearable/widgets/sensors/local_recorder/labels/labelset_dropdown.dart';
-import 'package:open_wearable/widgets/sensors/local_recorder/labels/labelset_editor_page.dart';
+import 'package:open_wearable/widgets/sensors/local_recorder/labels/label_group_selector.dart';
+import 'package:open_wearable/widgets/sensors/local_recorder/labels/label_group_dropdown.dart';
+import 'package:open_wearable/widgets/sensors/local_recorder/labels/label_group_editor_page.dart';
 import 'package:provider/provider.dart';
 
 void main() {
-  testWidgets('autosaves label set name edits without save controls',
+  testWidgets('autosaves label group name edits without save controls',
       (tester) async {
-    final initialSet = LabelSet(
+    final initialGroup = LabelGroup(
       name: 'Activities',
       labels: [
         Label(name: 'Walking', color: Colors.green),
       ],
     );
-    final provider = _providerWithStorage([initialSet]);
+    final provider = _providerWithStorage([initialGroup]);
     addTearDown(provider.dispose);
 
     await tester.pumpWidget(
       _TestApp(
         provider: provider,
-        child: LabelSetEditorPage(initialSet: initialSet),
+        child: LabelGroupEditorPage(initialGroup: initialGroup),
       ),
     );
     await tester.pumpAndSettle();
 
     expect(find.byTooltip('Save'), findsNothing);
-    expect(find.text('Save label set'), findsNothing);
+    expect(find.text('Save label group'), findsNothing);
 
     await tester.enterText(find.byType(TextField).first, 'Movement');
     await tester.pumpAndSettle();
 
     expect(
-      provider.labelSets.map((set) => set.name),
+      provider.labelGroups.map((group) => group.name),
       <String>['Movement'],
     );
-    expect(provider.labelSets.single.labels.single.name, 'Walking');
+    expect(provider.labelGroups.single.labels.single.name, 'Walking');
   });
 
   testWidgets('shows a contrast checkmark on the selected color',
       (tester) async {
-    final initialSet = LabelSet(
+    final initialGroup = LabelGroup(
       name: 'Contrast',
       labels: [
         Label(name: 'Dark label', color: Colors.black),
       ],
     );
-    final provider = _providerWithStorage([initialSet]);
+    final provider = _providerWithStorage([initialGroup]);
     addTearDown(provider.dispose);
 
     await tester.pumpWidget(
       _TestApp(
         provider: provider,
-        child: LabelSetEditorPage(initialSet: initialSet),
+        child: LabelGroupEditorPage(initialGroup: initialGroup),
       ),
     );
     await tester.pumpAndSettle();
@@ -73,21 +73,21 @@ void main() {
     expect(selectedCheck.color, Colors.white);
   });
 
-  testWidgets('prevents reusing a label color within the same label set',
+  testWidgets('prevents reusing a label color within the same label group',
       (tester) async {
-    final initialSet = LabelSet(
+    final initialGroup = LabelGroup(
       name: 'Activities',
       labels: [
         Label(name: 'Walking', color: Colors.green),
       ],
     );
-    final provider = _providerWithStorage([initialSet]);
+    final provider = _providerWithStorage([initialGroup]);
     addTearDown(provider.dispose);
 
     await tester.pumpWidget(
       _TestApp(
         provider: provider,
-        child: LabelSetEditorPage(initialSet: initialSet),
+        child: LabelGroupEditorPage(initialGroup: initialGroup),
       ),
     );
     await tester.pumpAndSettle();
@@ -107,7 +107,7 @@ void main() {
     await tester.tap(find.widgetWithText(TextButton, 'Save'));
     await tester.pumpAndSettle();
 
-    final labelColors = provider.labelSets.single.labels
+    final labelColors = provider.labelGroups.single.labels
         .map((label) => label.color.toARGB32())
         .toList();
     expect(labelColors, hasLength(2));
@@ -115,7 +115,7 @@ void main() {
     expect(labelColors.last, isNot(Colors.green.toARGB32()));
   });
 
-  testWidgets('uses natural label set selector wording', (tester) async {
+  testWidgets('uses natural label group selector wording', (tester) async {
     final provider = _providerWithStorage();
     addTearDown(provider.dispose);
 
@@ -124,16 +124,16 @@ void main() {
         provider: provider,
         child: const Padding(
           padding: EdgeInsets.all(16),
-          child: LabelSetSelector(),
+          child: LabelGroupSelector(),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.byTooltip('Create label set'), findsNothing);
-    expect(find.byTooltip('Manage label sets'), findsOneWidget);
+    expect(find.byTooltip('Create label group'), findsNothing);
+    expect(find.byTooltip('Manage label groups'), findsOneWidget);
     expect(
-      find.text('Pick a label set to add labels while recording.'),
+      find.text('Pick a label group to add labels while recording.'),
       findsOneWidget,
     );
     expect(find.textContaining('in-recording'), findsNothing);
@@ -147,7 +147,7 @@ void main() {
     await tester.pumpWidget(
       _TestApp(
         provider: provider,
-        child: const LabelSetEditorPage(),
+        child: const LabelGroupEditorPage(),
       ),
     );
     await tester.pumpAndSettle();
@@ -169,7 +169,8 @@ void main() {
     expect(saveButton.onPressed, isNotNull);
   });
 
-  testWidgets('create checkmark confirms a valid set and switches to edit mode',
+  testWidgets(
+      'create checkmark confirms a valid group and switches to edit mode',
       (tester) async {
     final provider = _providerWithStorage();
     addTearDown(provider.dispose);
@@ -177,12 +178,12 @@ void main() {
     await tester.pumpWidget(
       _TestApp(
         provider: provider,
-        child: const LabelSetEditorPage(),
+        child: const LabelGroupEditorPage(),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Create label set'), findsOneWidget);
+    expect(find.text('Create label group'), findsOneWidget);
     var saveAction = _createPageSaveAction(tester);
     expect(saveAction.onPressed, isNull);
 
@@ -199,17 +200,17 @@ void main() {
     await tester.tap(find.widgetWithText(TextButton, 'Save'));
     await tester.pumpAndSettle();
 
-    expect(provider.labelSets.single.name, 'Activities');
-    expect(provider.labelSets.single.labels.single.name, 'Walking');
+    expect(provider.labelGroups.single.name, 'Activities');
+    expect(provider.labelGroups.single.labels.single.name, 'Walking');
     saveAction = _createPageSaveAction(tester);
     expect(saveAction.onPressed, isNotNull);
 
     await tester.tap(find.byTooltip('Save'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Edit label set'), findsOneWidget);
+    expect(find.text('Edit label group'), findsOneWidget);
     expect(find.byTooltip('Save'), findsNothing);
-    expect(provider.labelSets.single.name, 'Activities');
+    expect(provider.labelGroups.single.name, 'Activities');
   });
 
   testWidgets('removes an autosaved create draft when it becomes invalid',
@@ -220,7 +221,7 @@ void main() {
     await tester.pumpWidget(
       _TestApp(
         provider: provider,
-        child: const LabelSetEditorPage(),
+        child: const LabelGroupEditorPage(),
       ),
     );
     await tester.pumpAndSettle();
@@ -233,20 +234,20 @@ void main() {
     await tester.tap(find.widgetWithText(TextButton, 'Save'));
     await tester.pumpAndSettle();
 
-    expect(provider.labelSets, hasLength(1));
+    expect(provider.labelGroups, hasLength(1));
 
     await tester.tap(find.byTooltip('Delete'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(TextButton, 'Delete'));
     await tester.pumpAndSettle();
 
-    expect(provider.labelSets, isEmpty);
-    expect(find.text('Create label set'), findsOneWidget);
+    expect(provider.labelGroups, isEmpty);
+    expect(find.text('Create label group'), findsOneWidget);
     final saveAction = _createPageSaveAction(tester);
     expect(saveAction.onPressed, isNull);
   });
 
-  testWidgets('warns before leaving a new named label set with no labels',
+  testWidgets('warns before leaving a new named label group with no labels',
       (tester) async {
     final provider = _providerWithStorage();
     addTearDown(provider.dispose);
@@ -263,16 +264,16 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Leave without labels?'), findsOneWidget);
-    expect(provider.labelSets, isEmpty);
+    expect(provider.labelGroups, isEmpty);
 
     await tester.tap(find.text('Leave'));
     await tester.pumpAndSettle();
 
     expect(find.text('Open editor'), findsOneWidget);
-    expect(provider.labelSets, isEmpty);
+    expect(provider.labelGroups, isEmpty);
   });
 
-  testWidgets('warns before leaving labels without a label set name',
+  testWidgets('warns before leaving labels without a label group name',
       (tester) async {
     final provider = _providerWithStorage();
     addTearDown(provider.dispose);
@@ -292,31 +293,31 @@ void main() {
     await tester.tap(find.byTooltip('Back'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Leave without set name?'), findsOneWidget);
+    expect(find.text('Leave without group name?'), findsOneWidget);
     expect(
       find.text(
-        'This label set cannot be saved because no set name was given. Leave anyway?',
+        'This label group cannot be saved because no group name was given. Leave anyway?',
       ),
       findsOneWidget,
     );
-    expect(provider.labelSets, isEmpty);
+    expect(provider.labelGroups, isEmpty);
 
     await tester.tap(find.text('Leave'));
     await tester.pumpAndSettle();
 
     expect(find.text('Open editor'), findsOneWidget);
-    expect(provider.labelSets, isEmpty);
+    expect(provider.labelGroups, isEmpty);
   });
 
-  testWidgets('dropdown shows selected label set without floating label text',
+  testWidgets('dropdown shows selected label group without floating label text',
       (tester) async {
-    final initialSet = LabelSet(
+    final initialGroup = LabelGroup(
       name: 'Activities',
       labels: [
         Label(name: 'Walking', color: Colors.green),
       ],
     );
-    final provider = _providerWithStorage([initialSet]);
+    final provider = _providerWithStorage([initialGroup]);
     addTearDown(provider.dispose);
 
     await tester.pumpWidget(
@@ -324,7 +325,7 @@ void main() {
         provider: provider,
         child: const Padding(
           padding: EdgeInsets.all(16),
-          child: LabelSetDropdown(),
+          child: LabelGroupDropdown(),
         ),
       ),
     );
@@ -333,22 +334,22 @@ void main() {
     expect(find.text('No Labels'), findsOneWidget);
     expect(find.text('None'), findsNothing);
 
-    provider.selectLabelSet(initialSet);
+    provider.selectLabelGroup(initialGroup);
     await tester.pumpAndSettle();
 
     expect(find.text('Activities'), findsOneWidget);
-    expect(find.text('Label set'), findsNothing);
+    expect(find.text('Label group'), findsNothing);
   });
 
   testWidgets('label chips keep their size when selected', (tester) async {
-    final labelSet = LabelSet(
+    final labelGroup = LabelGroup(
       name: 'Activities',
       labels: [
         Label(name: 'Walking', color: Colors.green),
         Label(name: 'Running', color: Colors.red),
       ],
     );
-    final labelProvider = LabelProvider(labelSet);
+    final labelProvider = LabelProvider(labelGroup);
     addTearDown(labelProvider.dispose);
 
     await tester.pumpWidget(
@@ -357,7 +358,7 @@ void main() {
         child: MaterialApp(
           home: Scaffold(
             body: ActiveLabelBar(
-              labelSet: labelSet,
+              labelGroup: labelGroup,
               selectionEnabled: true,
             ),
           ),
@@ -381,14 +382,14 @@ void main() {
 
   testWidgets('recording label bar can clear the current segment label',
       (tester) async {
-    final labelSet = LabelSet(
+    final labelGroup = LabelGroup(
       name: 'Activities',
       labels: [
         Label(name: 'Walking', color: Colors.green),
         Label(name: 'Running', color: Colors.red),
       ],
     );
-    final labelProvider = LabelProvider(labelSet);
+    final labelProvider = LabelProvider(labelGroup);
     addTearDown(labelProvider.dispose);
 
     await tester.pumpWidget(
@@ -397,7 +398,7 @@ void main() {
         child: MaterialApp(
           home: Scaffold(
             body: ActiveLabelBar(
-              labelSet: labelSet,
+              labelGroup: labelGroup,
               selectionEnabled: true,
               showNoLabelOption: true,
             ),
@@ -412,7 +413,7 @@ void main() {
 
     await tester.tap(find.text('Walking'));
     await tester.pumpAndSettle();
-    expect(labelProvider.activeLabel, labelSet.labels.first);
+    expect(labelProvider.activeLabel, labelGroup.labels.first);
     expect(find.byIcon(Icons.radio_button_unchecked), findsNothing);
 
     await tester.tap(find.text('No Label'));
@@ -420,22 +421,22 @@ void main() {
     expect(labelProvider.activeLabel, isNull);
   });
 
-  testWidgets('confirms before deleting a label from a label set',
+  testWidgets('confirms before deleting a label from a label group',
       (tester) async {
-    final initialSet = LabelSet(
+    final initialGroup = LabelGroup(
       name: 'Activities',
       labels: [
         Label(name: 'Walking', color: Colors.green),
         Label(name: 'Running', color: Colors.red),
       ],
     );
-    final provider = _providerWithStorage([initialSet]);
+    final provider = _providerWithStorage([initialGroup]);
     addTearDown(provider.dispose);
 
     await tester.pumpWidget(
       _TestApp(
         provider: provider,
-        child: LabelSetEditorPage(initialSet: initialSet),
+        child: LabelGroupEditorPage(initialGroup: initialGroup),
       ),
     );
     await tester.pumpAndSettle();
@@ -444,12 +445,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Delete label?'), findsOneWidget);
-    expect(find.text('Delete "Walking" from this label set?'), findsOneWidget);
+    expect(
+      find.text('Delete "Walking" from this label group?'),
+      findsOneWidget,
+    );
 
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
 
-    expect(provider.labelSets.single.labels.map((label) => label.name), [
+    expect(provider.labelGroups.single.labels.map((label) => label.name), [
       'Walking',
       'Running',
     ]);
@@ -459,7 +463,7 @@ void main() {
     await tester.tap(find.widgetWithText(TextButton, 'Delete'));
     await tester.pumpAndSettle();
 
-    expect(provider.labelSets.single.labels.map((label) => label.name), [
+    expect(provider.labelGroups.single.labels.map((label) => label.name), [
       'Running',
     ]);
   });
@@ -473,10 +477,10 @@ IconButton _createPageSaveAction(WidgetTester tester) {
   return tester.widget<IconButton>(finder);
 }
 
-LabelSetProvider _providerWithStorage([List<LabelSet> initialSets = const []]) {
-  return LabelSetProvider(
-    manager: LabelSetManager(
-      storage: _MemoryLabelSetStorage(initialSets),
+LabelGroupProvider _providerWithStorage([List<LabelGroup>? groups]) {
+  return LabelGroupProvider(
+    manager: LabelGroupManager(
+      storage: _MemoryLabelGroupStorage(groups ?? const []),
     ),
   );
 }
@@ -487,12 +491,12 @@ class _TestApp extends StatelessWidget {
     required this.child,
   });
 
-  final LabelSetProvider provider;
+  final LabelGroupProvider provider;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<LabelSetProvider>.value(
+    return ChangeNotifierProvider<LabelGroupProvider>.value(
       value: provider,
       child: MaterialApp(
         home: Scaffold(
@@ -506,11 +510,11 @@ class _TestApp extends StatelessWidget {
 class _EditorRouteApp extends StatelessWidget {
   const _EditorRouteApp({required this.provider});
 
-  final LabelSetProvider provider;
+  final LabelGroupProvider provider;
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<LabelSetProvider>.value(
+    return ChangeNotifierProvider<LabelGroupProvider>.value(
       value: provider,
       child: MaterialApp(
         home: Builder(
@@ -520,7 +524,7 @@ class _EditorRouteApp extends StatelessWidget {
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(
-                      builder: (_) => const LabelSetEditorPage(),
+                      builder: (_) => const LabelGroupEditorPage(),
                     ),
                   );
                 },
@@ -534,19 +538,19 @@ class _EditorRouteApp extends StatelessWidget {
   }
 }
 
-class _MemoryLabelSetStorage implements LabelSetStorage {
-  _MemoryLabelSetStorage(List<LabelSet> initialSets)
-      : _sets = List<LabelSet>.of(initialSets);
+class _MemoryLabelGroupStorage implements LabelGroupStorage {
+  _MemoryLabelGroupStorage(List<LabelGroup> initialGroups)
+      : _groups = List<LabelGroup>.of(initialGroups);
 
-  List<LabelSet> _sets;
+  List<LabelGroup> _groups;
 
   @override
-  Future<List<LabelSet>> loadLabelSets() async {
-    return List<LabelSet>.of(_sets);
+  Future<List<LabelGroup>> loadLabelGroups() async {
+    return List<LabelGroup>.of(_groups);
   }
 
   @override
-  Future<void> saveLabelSets(List<LabelSet> sets) async {
-    _sets = List<LabelSet>.of(sets);
+  Future<void> saveLabelGroups(List<LabelGroup> groups) async {
+    _groups = List<LabelGroup>.of(groups);
   }
 }

@@ -35,7 +35,11 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.9
   open_file: ^3.5.11
-  open_earable_flutter: ^2.3.10
+  # Use the Git source until audio response and microphone gain are published.
+  open_earable_flutter:
+    git:
+      url: https://github.com/OpenEarable/open_earable_flutter.git
+      ref: main
   universal_ble: ^2.0.4
   permission_handler: ^12.0.1
   flutter_platform_widgets: ^10.0.1
@@ -76,6 +80,11 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
 
+dependency_overrides:
+  file_picker: 11.0.2
+  mcumgr_flutter: 0.9.1
+  universal_ble: 2.0.2
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
@@ -91,6 +100,7 @@ flutter:
   assets:
     - lib/apps/posture_tracker/assets/
     - lib/apps/heart_tracker/assets/
+    - lib/apps/seal_check/assets/
     - lib/assets/devices/phone-app.png
     - android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
 

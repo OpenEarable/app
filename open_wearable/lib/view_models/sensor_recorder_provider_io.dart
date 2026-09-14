@@ -29,9 +29,6 @@ import 'audio_input_controller.dart';
 /// - Recording status (`isRecording`, `recordingStart`, etc.).
 /// - Recorder access used by recorder UI pages.
 class SensorRecorderProvider with ChangeNotifier {
-  static const Duration _microphoneConfigurationSettleDelay =
-      Duration(milliseconds: 300);
-
   final Map<Wearable, Map<Sensor, Recorder>> _recorders = {};
   final Map<String, String> _recordingFilepathsBySensorIdentity = {};
   Future<void> _pendingSynchronization = Future<void>.value();
@@ -77,12 +74,6 @@ class SensorRecorderProvider with ChangeNotifier {
 
   void notifyMicrophoneConfigurationChanged() {
     _bumpMicrophoneConfigurationRevision();
-    Future<void>.delayed(_microphoneConfigurationSettleDelay, () {
-      if (_disposed) {
-        return;
-      }
-      _bumpMicrophoneConfigurationRevision();
-    });
   }
 
   void _bumpMicrophoneConfigurationRevision() {

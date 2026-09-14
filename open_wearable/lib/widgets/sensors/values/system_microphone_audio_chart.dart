@@ -399,10 +399,10 @@ class _SystemMicrophoneAudioChartState
           RegExp(r'[^a-z0-9]'),
           '',
         );
-    if (normalized.contains('inner') || normalized.contains('internal')) {
+    if (normalized.contains('inner')) {
       return 'Inner';
     }
-    if (normalized.contains('outer') || normalized.contains('external')) {
+    if (normalized.contains('outer')) {
       return 'Outer';
     }
     return null;
