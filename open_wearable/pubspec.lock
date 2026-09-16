@@ -540,11 +540,11 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: main
-      resolved-ref: fec08981e70a16c52d4f73144966150964a4bd59
+      ref: "codex/conditional-microphone-gain-capability"
+      resolved-ref: a66e393901af3d1f57f3fd60e56fa289807bd923
       url: "https://github.com/OpenEarable/open_earable_flutter.git"
     source: git
-    version: "2.4.0"
+    version: "2.4.1"
   open_earable_protocols:
     dependency: transitive
     description:
