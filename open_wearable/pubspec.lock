@@ -539,12 +539,11 @@ packages:
   open_earable_flutter:
     dependency: "direct main"
     description:
-      path: "."
-      ref: main
-      resolved-ref: fec08981e70a16c52d4f73144966150964a4bd59
-      url: "https://github.com/OpenEarable/open_earable_flutter.git"
-    source: git
-    version: "2.4.0"
+      name: open_earable_flutter
+      sha256: "0134b1785a56c8076a28e5d56b618c465e28ecdf3cc3492fbda77e80776bdfbb"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.4.1"
   open_earable_protocols:
     dependency: transitive
     description:
