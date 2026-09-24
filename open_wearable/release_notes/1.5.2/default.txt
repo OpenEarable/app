@@ -1,0 +1,1 @@
+Improved the stability of live notch filtering and updated Apple platform compatibility.

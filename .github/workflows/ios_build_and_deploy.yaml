@@ -1,0 +1,129 @@
+name: iOS Build and Submit to App Store
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_call:
+    inputs:
+      release_tag:
+        description: "Version tag to release"
+        required: true
+        type: string
+      release_mode:
+        description: "Release automatically after App Review or wait for manual release"
+        required: false
+        default: "after_approval"
+        type: string
+    secrets:
+      APP_STORE_CONNECT_APP_ID:
+        required: true
+      APP_STORE_CONNECT_ISSUER_ID:
+        required: true
+      APP_STORE_CONNECT_KEY_ID:
+        required: true
+      APP_STORE_CONNECT_PRIVATE_KEY:
+        required: true
+      XCODE_CLOUD_IOS_WORKFLOW_ID:
+        required: true
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Version tag to release, for example v1.5.2"
+        required: true
+        type: string
+      release_mode:
+        description: "When to publish after App Review"
+        required: true
+        default: "after_approval"
+        type: choice
+        options:
+          - after_approval
+          - manual
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-app-store-${{ inputs.release_tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  submit_ios:
+    name: Build in Xcode Cloud and submit iOS
+    runs-on: ubuntu-latest
+    timeout-minutes: 130
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
+      RELEASE_MODE: ${{ inputs.release_mode || 'after_approval' }}
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+          fetch-depth: 0
+
+      - name: Validate release inputs
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version=$(awk '$1 == "version:" { print $2; exit }' open_wearable/pubspec.yaml)
+          version=${version//\"/}
+          version=${version//\'/}
+          public_version=${version%%+*}
+          expected_tag="v${public_version}"
+
+          if [ "$RELEASE_TAG" != "$expected_tag" ]; then
+            echo "::error::Tag '$RELEASE_TAG' does not match pubspec version '$public_version'."
+            exit 1
+          fi
+
+          notes_dir="open_wearable/release_notes/${public_version}"
+          if [ ! -s "$notes_dir/default.txt" ]; then
+            echo "::error::Missing release notes at $notes_dir/default.txt."
+            exit 1
+          fi
+
+          case "$RELEASE_MODE" in
+            after_approval) release_type=AFTER_APPROVAL ;;
+            manual) release_type=MANUAL ;;
+            *)
+              echo "::error::Unsupported release mode '$RELEASE_MODE'."
+              exit 1
+              ;;
+          esac
+
+          echo "version=$public_version" >> "$GITHUB_OUTPUT"
+          echo "git_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "notes_dir=$notes_dir" >> "$GITHUB_OUTPUT"
+          echo "release_type=$release_type" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.2.3
+
+      - name: Wait for Xcode Cloud and submit to App Review
+        env:
+          APP_STORE_CONNECT_APP_ID: ${{ secrets.APP_STORE_CONNECT_APP_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+          XCODE_CLOUD_WORKFLOW_ID: ${{ secrets.XCODE_CLOUD_IOS_WORKFLOW_ID }}
+        run: |
+          ruby .github/scripts/app_store_connect_release.rb \
+            --workflow-id "$XCODE_CLOUD_WORKFLOW_ID" \
+            --app-id "$APP_STORE_CONNECT_APP_ID" \
+            --platform IOS \
+            --version "${{ steps.release.outputs.version }}" \
+            --tag "$RELEASE_TAG" \
+            --git-sha "${{ steps.release.outputs.git_sha }}" \
+            --release-notes-dir "${{ steps.release.outputs.notes_dir }}" \
+            --release-type "${{ steps.release.outputs.release_type }}"
+
+      - name: Summarize submission
+        run: |
+          printf 'Submitted iOS **%s** to App Review with release mode **%s**.\n' \
+            "${{ steps.release.outputs.version }}" "$RELEASE_MODE" >> "$GITHUB_STEP_SUMMARY"
