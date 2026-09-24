@@ -39,7 +39,6 @@ on:
         options:
           - after_approval
           - manual
-
 permissions:
   contents: read
 
