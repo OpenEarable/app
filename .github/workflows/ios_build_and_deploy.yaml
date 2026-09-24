@@ -1,9 +1,6 @@
 name: iOS Build and Submit to App Store
 
 on:
-  push:
-    tags:
-      - "v*"
   workflow_call:
     inputs:
       release_tag:
@@ -80,9 +77,14 @@ jobs:
             exit 1
           fi
 
-          notes_dir="open_wearable/release_notes/${public_version}"
+          version_notes_dir="open_wearable/release_notes/${public_version}"
+          notes_dir="$version_notes_dir"
           if [ ! -s "$notes_dir/default.txt" ]; then
-            echo "::error::Missing release notes at $notes_dir/default.txt."
+            notes_dir="open_wearable/release_notes"
+            echo "Using generic release notes because $version_notes_dir/default.txt is missing."
+          fi
+          if [ ! -s "$notes_dir/default.txt" ]; then
+            echo "::error::Missing version-specific release notes at $version_notes_dir/default.txt and fallback release notes at $notes_dir/default.txt."
             exit 1
           fi
 
@@ -105,7 +107,7 @@ jobs:
         with:
           ruby-version: 3.2.3
 
-      - name: Wait for Xcode Cloud and submit to App Review
+      - name: Start Xcode Cloud and submit to App Review
         env:
           APP_STORE_CONNECT_APP_ID: ${{ secrets.APP_STORE_CONNECT_APP_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}

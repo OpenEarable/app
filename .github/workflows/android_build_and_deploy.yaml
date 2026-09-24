@@ -77,6 +77,7 @@ jobs:
       public_version: ${{ steps.version.outputs.public_version }}
       release_tag: ${{ steps.version.outputs.release_tag }}
       next_version: ${{ steps.version.outputs.next_version }}
+      release_notes_path: ${{ steps.version.outputs.release_notes_path }}
     env:
       RELEASE_TYPE: ${{ inputs.release_type }}
     steps:
@@ -108,11 +109,19 @@ jobs:
           next_version="${major}.${minor}.$((10#$patch + 1))${build_suffix}"
 
           if [ "$RELEASE_TYPE" = "production" ]; then
-            notes_path="open_wearable/release_notes/${public_version}/default.txt"
+            version_notes_path="open_wearable/release_notes/${public_version}/default.txt"
+            fallback_notes_path="open_wearable/release_notes/default.txt"
+            notes_path="$version_notes_path"
             if [ ! -s "$notes_path" ]; then
-              echo "::error::Missing release notes at $notes_path."
+              notes_path="$fallback_notes_path"
+              echo "Using generic release notes because $version_notes_path is missing."
+            fi
+            if [ ! -s "$notes_path" ]; then
+              echo "::error::Missing version-specific release notes at $version_notes_path and fallback release notes at $fallback_notes_path."
               exit 1
             fi
+          else
+            notes_path=""
           fi
 
           echo "released_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
@@ -120,6 +129,7 @@ jobs:
           echo "public_version=$public_version" >> "$GITHUB_OUTPUT"
           echo "release_tag=v${public_version}" >> "$GITHUB_OUTPUT"
           echo "next_version=$next_version" >> "$GITHUB_OUTPUT"
+          echo "release_notes_path=$notes_path" >> "$GITHUB_OUTPUT"
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
@@ -148,8 +158,7 @@ jobs:
         run: |
           changelog_dir="open_wearable/android/fastlane/metadata/android/en-US/changelogs"
           mkdir -p "$changelog_dir"
-          cp "open_wearable/release_notes/${{ steps.version.outputs.public_version }}/default.txt" \
-            "$changelog_dir/default.txt"
+          cp "${{ steps.version.outputs.release_notes_path }}" "$changelog_dir/default.txt"
 
       - name: Set up Fastlane
         working-directory: open_wearable/android
@@ -209,11 +218,12 @@ jobs:
           RELEASED_SHA: ${{ needs.deploy_for_android.outputs.released_sha }}
           RELEASED_VERSION: ${{ needs.deploy_for_android.outputs.released_version }}
           RELEASE_TAG: ${{ needs.deploy_for_android.outputs.release_tag }}
+          NOTES_PATH: ${{ needs.deploy_for_android.outputs.release_notes_path }}
         run: |
           set -euo pipefail
 
           public_version=${RELEASED_VERSION%%+*}
-          notes_path="open_wearable/release_notes/${public_version}/default.txt"
+          notes_path="$NOTES_PATH"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 

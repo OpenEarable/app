@@ -1,0 +1,61 @@
+name: Apple App Store Build and Submit
+
+on:
+  workflow_call:
+    inputs:
+      release_tag:
+        description: "Existing version tag to release"
+        required: true
+        type: string
+      release_mode:
+        description: "When to publish after App Review"
+        required: false
+        default: "after_approval"
+        type: string
+    secrets:
+      APP_STORE_CONNECT_APP_ID:
+        required: true
+      APP_STORE_CONNECT_ISSUER_ID:
+        required: true
+      APP_STORE_CONNECT_KEY_ID:
+        required: true
+      APP_STORE_CONNECT_PRIVATE_KEY:
+        required: true
+      XCODE_CLOUD_IOS_WORKFLOW_ID:
+        required: true
+      XCODE_CLOUD_MACOS_WORKFLOW_ID:
+        required: true
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Existing version tag to release, for example v1.5.2"
+        required: true
+        type: string
+      release_mode:
+        description: "When to publish after App Review"
+        required: true
+        default: "after_approval"
+        type: choice
+        options:
+          - after_approval
+          - manual
+
+permissions:
+  contents: read
+
+jobs:
+  submit_ios:
+    name: Build and submit iOS
+    uses: ./.github/workflows/ios_build_and_deploy.yaml
+    with:
+      release_tag: ${{ inputs.release_tag }}
+      release_mode: ${{ inputs.release_mode }}
+    secrets: inherit
+
+  submit_macos:
+    name: Build and submit macOS
+    uses: ./.github/workflows/macos_build_and_deploy.yaml
+    with:
+      release_tag: ${{ inputs.release_tag }}
+      release_mode: ${{ inputs.release_mode }}
+    secrets: inherit

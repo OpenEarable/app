@@ -76,42 +76,43 @@ class AppStoreConnectClient
     uri.query = URI.encode_www_form(query) unless query.empty?
 
     attempts = 0
-    begin
+    loop do
       attempts += 1
-      request = request_class.new(uri)
-      request["Authorization"] = "Bearer #{token}"
-      request["Accept"] = "application/json"
-      if body
-        request["Content-Type"] = "application/json"
-        request.body = JSON.generate(body)
-      end
+      begin
+        request = request_class.new(uri)
+        request["Authorization"] = "Bearer #{token}"
+        request["Accept"] = "application/json"
+        if body
+          request["Content-Type"] = "application/json"
+          request.body = JSON.generate(body)
+        end
 
-      response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|
-        http.open_timeout = 30
-        http.read_timeout = 60
-        http.request(request)
-      end
+        response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|
+          http.open_timeout = 30
+          http.read_timeout = 60
+          http.request(request)
+        end
 
-      if response.code.to_i.between?(200, 299)
-        return {} if response.body.nil? || response.body.empty?
+        if response.code.to_i.between?(200, 299)
+          return {} if response.body.nil? || response.body.empty?
 
-        return JSON.parse(response.body)
-      end
+          return JSON.parse(response.body)
+        end
 
-      if (response.code.to_i == 429 || response.code.to_i >= 500) && attempts < 4
+        unless (response.code.to_i == 429 || response.code.to_i >= 500) && attempts < 4
+          raise AppStoreConnectError, api_error(response)
+        end
+
         delay = [response["retry-after"].to_i, 5 * attempts].max
         warn "Apple API returned HTTP #{response.code}; retrying in #{delay} seconds"
-        sleep delay
-        retry
+      rescue IOError, SocketError, SystemCallError, Timeout::Error => error
+        raise if attempts >= 4
+
+        delay = 5 * attempts
+        warn "Apple API request failed (#{error.message}); retrying in #{delay} seconds"
       end
 
-      raise AppStoreConnectError, api_error(response)
-    rescue IOError, SocketError, SystemCallError, Timeout::Error => error
-      raise if attempts >= 4
-
-      warn "Apple API request failed (#{error.message}); retrying"
-      sleep 5 * attempts
-      retry
+      sleep delay
     end
   end
 
@@ -150,7 +151,8 @@ class AppStoreRelease
     validate_release_notes!
     return puts("Release inputs are valid") if @options[:validate_only]
 
-    build_run = wait_for_xcode_cloud_run
+    build_run = start_xcode_cloud_run
+    wait_for_xcode_cloud_run(build_run.fetch("id"))
     build = wait_for_processed_build(build_run.fetch("id"))
     version = find_or_create_version
 
@@ -185,45 +187,62 @@ class AppStoreRelease
     raise AppStoreConnectError, "Release notes exceed Apple's 4000-character limit: #{path}"
   end
 
-  def wait_for_xcode_cloud_run
-    puts "Waiting for Xcode Cloud workflow #{@options[:workflow_id]} at #{@options[:tag]}"
+  def start_xcode_cloud_run
+    source_reference = wait_for_source_reference
+    puts "Starting Xcode Cloud workflow #{@options[:workflow_id]} at #{@options[:tag]}"
+    @client.post(
+      "/v1/ciBuildRuns",
+      data: {
+        type: "ciBuildRuns",
+        attributes: {},
+        relationships: {
+          workflow: { data: { type: "ciWorkflows", id: @options[:workflow_id] } },
+          sourceBranchOrTag: { data: { type: "scmGitReferences", id: source_reference.fetch("id") } }
+        }
+      }
+    ).fetch("data")
+  end
+
+  def wait_for_source_reference
+    canonical_name = "refs/tags/#{@options[:tag]}"
     loop do
+      repository = @client.get("/v1/ciWorkflows/#{@options[:workflow_id]}/repository").fetch("data")
       response = @client.get(
-        "/v1/ciWorkflows/#{@options[:workflow_id]}/buildRuns",
-        "sort" => "-number",
-        "limit" => 25,
-        "include" => "sourceBranchOrTag"
+        "/v1/scmRepositories/#{repository.fetch('id')}/gitReferences",
+        "fields[scmGitReferences]" => "name,canonicalName,isDeleted,kind",
+        "limit" => 200
       )
-      references = Array(response["included"]).each_with_object({}) do |resource, index|
-        index[resource["id"]] = resource if resource["type"] == "scmGitReferences"
+      reference = Array(response["data"]).find do |candidate|
+        candidate.dig("attributes", "canonicalName") == canonical_name &&
+          !candidate.dig("attributes", "isDeleted")
       end
-      matching_runs = Array(response["data"]).select do |run|
-        commit_sha = run.dig("attributes", "sourceCommit", "commitSha").to_s
-        reference_id = run.dig("relationships", "sourceBranchOrTag", "data", "id")
-        reference = references[reference_id]
-        names = [reference&.dig("attributes", "name"), reference&.dig("attributes", "canonicalName")]
-        same_commit = commit_sha == @options[:git_sha] || commit_sha.start_with?(@options[:git_sha]) ||
-                      @options[:git_sha].start_with?(commit_sha)
-        same_commit && names.compact.any? do |name|
-          name == @options[:tag] || name == "refs/tags/#{@options[:tag]}"
-        end
-      end
-      run = matching_runs.max_by { |candidate| candidate.dig("attributes", "number").to_i }
+      return reference if reference
 
-      if run
-        progress = run.dig("attributes", "executionProgress")
-        if progress == "COMPLETE"
-          status = run.dig("attributes", "completionStatus")
-          raise AppStoreConnectError, "Xcode Cloud build finished with #{status}" unless status == "SUCCEEDED"
+      puts "Xcode Cloud has not indexed #{@options[:tag]} yet"
+      wait_or_timeout!
+    end
+  end
 
-          puts "Xcode Cloud build ##{run.dig('attributes', 'number')} succeeded"
-          return run
-        end
-        puts "Xcode Cloud build ##{run.dig('attributes', 'number')} is #{progress}"
-      else
-        puts "The tag-triggered Xcode Cloud build has not appeared yet"
+  def wait_for_xcode_cloud_run(build_run_id)
+    puts "Waiting for Xcode Cloud build #{build_run_id}"
+    loop do
+      run = @client.get("/v1/ciBuildRuns/#{build_run_id}").fetch("data")
+      commit_sha = run.dig("attributes", "sourceCommit", "commitSha").to_s
+      if !commit_sha.empty? && commit_sha != @options[:git_sha]
+        raise AppStoreConnectError,
+              "Xcode Cloud build source commit #{commit_sha} does not match release commit #{@options[:git_sha]}"
       end
 
+      progress = run.dig("attributes", "executionProgress")
+      if progress == "COMPLETE"
+        status = run.dig("attributes", "completionStatus")
+        raise AppStoreConnectError, "Xcode Cloud build finished with #{status}" unless status == "SUCCEEDED"
+
+        puts "Xcode Cloud build ##{run.dig('attributes', 'number')} succeeded"
+        return run
+      end
+
+      puts "Xcode Cloud build ##{run.dig('attributes', 'number')} is #{progress}"
       wait_or_timeout!
     end
   end
@@ -313,7 +332,8 @@ class AppStoreRelease
   end
 
   def update_release_notes(version_id)
-    localizations = wait_for_localizations(version_id)
+    localizations = app_store_version_localizations(version_id)
+    localizations = copy_previous_localizations(version_id) if localizations.empty?
     default_note = File.read(File.join(@options[:release_notes_dir], "default.txt"), encoding: "UTF-8").strip
 
     localizations.each do |localization|
@@ -332,20 +352,63 @@ class AppStoreRelease
     end
   end
 
-  def wait_for_localizations(version_id)
-    6.times do
-      response = @client.get(
-        "/v1/appStoreVersions/#{version_id}/appStoreVersionLocalizations",
-        "limit" => 200
-      )
-      localizations = Array(response["data"])
-      return localizations unless localizations.empty?
+  def app_store_version_localizations(version_id)
+    response = @client.get(
+      "/v1/appStoreVersions/#{version_id}/appStoreVersionLocalizations",
+      "limit" => 200
+    )
+    Array(response["data"])
+  end
 
-      sleep 10
+  def copy_previous_localizations(version_id)
+    source_localizations = previous_version_localizations(version_id)
+    raise AppStoreConnectError,
+          "No prior App Store version localizations are available to seed version #{@options[:version]}" if source_localizations.empty?
+
+    default_note = File.read(File.join(@options[:release_notes_dir], "default.txt"), encoding: "UTF-8").strip
+    source_localizations.map do |source|
+      locale = source.dig("attributes", "locale")
+      localized_path = File.join(@options[:release_notes_dir], "#{locale}.txt")
+      note = File.file?(localized_path) ? File.read(localized_path, encoding: "UTF-8").strip : default_note
+      attributes = source.fetch("attributes", {}).slice(
+        "description",
+        "keywords",
+        "marketingUrl",
+        "promotionalText",
+        "supportUrl"
+      ).compact
+      attributes.merge!("locale" => locale, "whatsNew" => note)
+
+      localization = @client.post(
+        "/v1/appStoreVersionLocalizations",
+        data: {
+          type: "appStoreVersionLocalizations",
+          attributes: attributes,
+          relationships: {
+            appStoreVersion: { data: { type: "appStoreVersions", id: version_id } }
+          }
+        }
+      ).fetch("data")
+      puts "Created App Store localization for #{locale}"
+      localization
+    end
+  end
+
+  def previous_version_localizations(version_id)
+    response = @client.get(
+      "/v1/apps/#{@options[:app_id]}/appStoreVersions",
+      "filter[platform]" => @options[:platform],
+      "sort" => "-versionString",
+      "limit" => 200
+    )
+    Array(response["data"]).each do |version|
+      next if version.fetch("id") == version_id
+
+      localizations = app_store_version_localizations(version.fetch("id"))
+      return localizations unless localizations.empty?
     end
 
-    raise AppStoreConnectError,
-          "The new App Store version has no localizations. Configure its store metadata in App Store Connect first."
+    []
   end
 
   def attach_build(version_id, build_id)

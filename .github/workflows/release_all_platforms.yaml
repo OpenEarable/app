@@ -1,0 +1,138 @@
+name: Release All Platforms
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch or tag to release"
+        required: true
+        default: "main"
+        type: string
+      platforms:
+        description: "Platforms to release"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - android
+          - app_store
+      release_mode:
+        description: "When to publish Apple releases after App Review"
+        required: true
+        default: "after_approval"
+        type: choice
+        options:
+          - after_approval
+          - manual
+      create_version_bump_pr:
+        description: "Open the post-release version bump PR"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  prepare_apple_release:
+    name: Tag Apple-only release
+    if: ${{ inputs.platforms == 'app_store' }}
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.release.outputs.release_tag }}
+    steps:
+      - name: Checkout release source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+
+      - name: Create or verify immutable version tag
+        id: release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          version=$(awk '$1 == "version:" { print $2; exit }' open_wearable/pubspec.yaml)
+          version=${version//\"/}
+          version=${version//\'/}
+          version_pattern='^([0-9]+)\.([0-9]+)\.([0-9]+)(\+[0-9]+)?$'
+          if ! [[ "$version" =~ $version_pattern ]]; then
+            echo "::error::Version '$version' must use major.minor.patch with an optional numeric +build suffix."
+            exit 1
+          fi
+
+          public_version=${version%%+*}
+          release_tag="v${public_version}"
+          released_sha=$(git rev-parse HEAD)
+          version_notes_path="open_wearable/release_notes/${public_version}/default.txt"
+          fallback_notes_path="open_wearable/release_notes/default.txt"
+          notes_path="$version_notes_path"
+          if [ ! -s "$notes_path" ]; then
+            notes_path="$fallback_notes_path"
+            echo "Using generic release notes because $version_notes_path is missing."
+          fi
+          if [ ! -s "$notes_path" ]; then
+            echo "::error::Missing version-specific release notes at $version_notes_path and fallback release notes at $fallback_notes_path."
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if git ls-remote --exit-code --tags origin "refs/tags/$release_tag" >/dev/null 2>&1; then
+            git fetch origin "refs/tags/$release_tag:refs/tags/$release_tag"
+            tagged_sha=$(git rev-list -n 1 "$release_tag")
+            if [ "$tagged_sha" != "$released_sha" ]; then
+              echo "::error::Tag $release_tag already points to $tagged_sha, not $released_sha."
+              exit 1
+            fi
+          else
+            git tag -a "$release_tag" "$released_sha" -m "OpenWearable $public_version"
+            git push origin "$release_tag"
+          fi
+
+          if gh release view "$release_tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "$release_tag" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "OpenWearable $public_version" \
+              --notes-file "$notes_path"
+          else
+            gh release create "$release_tag" \
+              --repo "$GITHUB_REPOSITORY" \
+              --verify-tag \
+              --title "OpenWearable $public_version" \
+              --notes-file "$notes_path"
+          fi
+
+          echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
+
+  release_android:
+    name: Release Android
+    if: ${{ inputs.platforms == 'all' || inputs.platforms == 'android' }}
+    uses: ./.github/workflows/android_build_and_deploy.yaml
+    with:
+      ref: ${{ inputs.ref }}
+      release_type: production
+      publish_github_release: true
+      create_version_bump_pr: ${{ inputs.create_version_bump_pr }}
+    secrets: inherit
+
+  release_apple:
+    name: Release iOS and macOS
+    if: >-
+      ${{ always() && (inputs.platforms == 'all' || inputs.platforms == 'app_store') &&
+          (inputs.platforms == 'app_store' || needs.release_android.result == 'success') &&
+          (inputs.platforms == 'all' || needs.prepare_apple_release.result == 'success') }}
+    needs:
+      - prepare_apple_release
+      - release_android
+    uses: ./.github/workflows/app_store_build_and_deploy.yaml
+    with:
+      release_tag: ${{ inputs.platforms == 'app_store' && needs.prepare_apple_release.outputs.release_tag || needs.release_android.outputs.release_tag }}
+      release_mode: ${{ inputs.release_mode }}
+    secrets: inherit

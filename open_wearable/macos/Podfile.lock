@@ -30,13 +30,13 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/mcumgr_flutter/darwin
 
 SPEC CHECKSUMS:
-  FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
+  FlutterMacOS: c232990155153907050900a2e175c7773903ba4e
   iOSMcuManagerLibrary: f72db849f6dd66b1f26cd7eea776050a22c8591c
   mcumgr_flutter: b9864b2ae8334b6ba2b33f9ab4fc0a67bbe75c7a
   SwiftCBOR: aa87349b4ccddd19f861aa544f7c27d43dee5772
   SwiftProtobuf: 3fafd1b2fb97e6d95ad9c8adb2215da9afec7c83
   ZIPFoundation: b8c29ea7ae353b309bc810586181fd073cb3312c
 
-PODFILE CHECKSUM: 463a7f221fb14c9e3a027094353cdef1b5c69604
+PODFILE CHECKSUM: b8959a7c9c7d85e56c248baab1b0a5907867aa6f
 
-COCOAPODS: 1.16.2
+COCOAPODS: 1.17.0
