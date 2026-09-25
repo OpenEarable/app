@@ -1,0 +1,9 @@
+{
+  "id" : "a0319be9-78d7-470a-8d38-eccf3355ae20",
+  "targets" : [
+    {
+      "id" : "5D6E7D70-9D8F-425C-9727-AD60401DE764",
+      "name" : "open_wearable"
+    }
+  ]
+}

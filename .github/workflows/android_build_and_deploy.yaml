@@ -1,20 +1,79 @@
 name: Android Build and Deploy to Play Store
 
 on:
+  workflow_call:
+    inputs:
+      ref:
+        description: "Branch or tag to deploy"
+        required: true
+        type: string
+      release_type:
+        description: "Google Play track"
+        required: true
+        type: string
+      publish_github_release:
+        description: "Create the version tag and GitHub Release"
+        required: false
+        default: true
+        type: boolean
+      create_version_bump_pr:
+        description: "Open the post-release version bump PR"
+        required: false
+        default: true
+        type: boolean
+      version_bump_base_ref:
+        description: "Branch to target with the post-release version bump PR"
+        required: false
+        default: ""
+        type: string
+    outputs:
+      released_sha:
+        value: ${{ jobs.deploy_for_android.outputs.released_sha }}
+      released_version:
+        value: ${{ jobs.deploy_for_android.outputs.released_version }}
+      public_version:
+        value: ${{ jobs.deploy_for_android.outputs.public_version }}
+      release_tag:
+        value: ${{ jobs.deploy_for_android.outputs.release_tag }}
+      next_version:
+        value: ${{ jobs.deploy_for_android.outputs.next_version }}
+    secrets:
+      OPEN_WEARABLE_APP_ANDROID_DEPLOYMENT_KEY_PATH__FILE:
+        required: true
+      OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PASSWORD:
+        required: true
+      OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PATH__FILE:
+        required: true
   workflow_dispatch:
     inputs:
-      branch:
-        description: "Branch to deploy"
+      ref:
+        description: "Branch or tag to deploy"
         required: true
         default: "main"
+        type: string
       release_type:
-        description: "Release type"
+        description: "Google Play track"
         required: true
         default: "internal"
         type: choice
         options:
           - internal
           - production
+      publish_github_release:
+        description: "Create the version tag and GitHub Release for production"
+        required: true
+        default: true
+        type: boolean
+      create_version_bump_pr:
+        description: "Open a version bump PR after production"
+        required: true
+        default: true
+        type: boolean
+      version_bump_base_ref:
+        description: "Branch to target with the post-release version bump PR"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -25,20 +84,24 @@ jobs:
     outputs:
       released_sha: ${{ steps.version.outputs.released_sha }}
       released_version: ${{ steps.version.outputs.released_version }}
+      public_version: ${{ steps.version.outputs.public_version }}
+      release_tag: ${{ steps.version.outputs.release_tag }}
       next_version: ${{ steps.version.outputs.next_version }}
+      release_notes_path: ${{ steps.version.outputs.release_notes_path }}
     env:
-      RELEASE_TYPE: ${{ github.event.inputs.release_type }}
+      RELEASE_TYPE: ${{ inputs.release_type }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.inputs.branch }}
+          ref: ${{ inputs.ref }}
 
-      - name: Validate and prepare production version bump
+      - name: Validate release version
         id: version
-        if: ${{ github.event.inputs.release_type == 'production' }}
         shell: bash
         run: |
+          set -euo pipefail
+
           version=$(awk '$1 == "version:" { print $2; exit }' open_wearable/pubspec.yaml)
           version=${version//\"/}
           version=${version//\'/}
@@ -52,16 +115,36 @@ jobs:
           minor=${BASH_REMATCH[2]}
           patch=${BASH_REMATCH[3]}
           build_suffix=${BASH_REMATCH[4]}
+          public_version=${version%%+*}
           next_version="${major}.${minor}.$((10#$patch + 1))${build_suffix}"
+
+          if [ "$RELEASE_TYPE" = "production" ]; then
+            version_notes_path="open_wearable/release_notes/${public_version}/default.txt"
+            fallback_notes_path="open_wearable/release_notes/default.txt"
+            notes_path="$version_notes_path"
+            if [ ! -s "$notes_path" ]; then
+              notes_path="$fallback_notes_path"
+              echo "Using generic release notes because $version_notes_path is missing."
+            fi
+            if [ ! -s "$notes_path" ]; then
+              echo "::error::Missing version-specific release notes at $version_notes_path and fallback release notes at $fallback_notes_path."
+              exit 1
+            fi
+          else
+            notes_path=""
+          fi
+
           echo "released_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           echo "released_version=$version" >> "$GITHUB_OUTPUT"
+          echo "public_version=$public_version" >> "$GITHUB_OUTPUT"
+          echo "release_tag=v${public_version}" >> "$GITHUB_OUTPUT"
           echo "next_version=$next_version" >> "$GITHUB_OUTPUT"
+          echo "release_notes_path=$notes_path" >> "$GITHUB_OUTPUT"
 
-      - name: Set up ruby env
+      - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: 3.2.3
-          bundler-cache: true
 
       - name: Set up Android build
         uses: ./.github/actions/android-build-prepare
@@ -70,44 +153,112 @@ jobs:
           clean: "true"
           analyze: "true"
 
-      - name: Decode and save OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PATH
+      - name: Decode Android signing key
         run: |
           echo "${{ secrets.OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PATH__FILE }}" | base64 --decode > android_keystore_temp.keystore
-          echo "OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PATH=$(realpath android_keystore_temp.keystore)" >> $GITHUB_ENV
+          echo "OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PATH=$(realpath android_keystore_temp.keystore)" >> "$GITHUB_ENV"
 
-      - name: Decode and save OPEN_WEARABLE_APP_ANDROID_DEPLOYMENT_KEY_PATH
+      - name: Decode Google Play service account
         run: |
           echo "${{ secrets.OPEN_WEARABLE_APP_ANDROID_DEPLOYMENT_KEY_PATH__FILE }}" | base64 --decode > android_deployment_key.json
-          echo "OPEN_WEARABLE_APP_ANDROID_DEPLOYMENT_KEY_PATH=$(realpath android_deployment_key.json)" >> $GITHUB_ENV
+          echo "OPEN_WEARABLE_APP_ANDROID_DEPLOYMENT_KEY_PATH=$(realpath android_deployment_key.json)" >> "$GITHUB_ENV"
 
-      - name: Set up fastlane
-        run: (cd open_wearable/android && bundle install)
-
-      - name: Build & deploy Android (Internal)
-        if: ${{ github.event.inputs.release_type == 'internal' }}
+      - name: Prepare Google Play release notes
+        if: ${{ inputs.release_type == 'production' }}
         run: |
-          cd open_wearable/android
-          bundle exec fastlane internal_deploy
+          changelog_dir="open_wearable/android/fastlane/metadata/android/en-US/changelogs"
+          mkdir -p "$changelog_dir"
+          cp "${{ steps.version.outputs.release_notes_path }}" "$changelog_dir/default.txt"
+
+      - name: Set up Fastlane
+        working-directory: open_wearable/android
+        run: bundle install
+
+      - name: Build and deploy Android internal release
+        if: ${{ inputs.release_type == 'internal' }}
+        working-directory: open_wearable/android
+        run: bundle exec fastlane internal_deploy
         env:
           OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PASSWORD }}
 
-      - name: Build & deploy Android (Production)
-        if: ${{ github.event.inputs.release_type == 'production' }}
-        run: |
-          cd open_wearable/android
-          bundle exec fastlane production_deploy
+      - name: Build and deploy Android production release
+        if: ${{ inputs.release_type == 'production' }}
+        working-directory: open_wearable/android
+        run: bundle exec fastlane production_deploy
         env:
           OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PASSWORD }}
+
+      - name: Upload signed release APK
+        if: ${{ inputs.release_type == 'production' }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: android-release-${{ steps.version.outputs.public_version }}
+          path: open_wearable/build/app/outputs/apk/release/app-release.apk
+          if-no-files-found: error
 
       - name: Summarize successful Play Store upload
         run: |
-          printf 'Successfully uploaded the Android app to the **%s** track on Google Play.\n' \
-            "$RELEASE_TYPE" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Successfully uploaded Android **%s** to the **%s** track on Google Play.\n' \
+            "${{ steps.version.outputs.public_version }}" "$RELEASE_TYPE" >> "$GITHUB_STEP_SUMMARY"
+
+  publish_github_release:
+    name: Tag version and publish GitHub Release
+    needs: deploy_for_android
+    if: ${{ inputs.release_type == 'production' && inputs.publish_github_release }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout workflow source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          path: workflow-source
+
+      - name: Checkout released source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.deploy_for_android.outputs.released_sha }}
+          path: release-source
+          fetch-depth: 0
+
+      - name: Download signed APK
+        uses: actions/download-artifact@v7
+        with:
+          name: android-release-${{ needs.deploy_for_android.outputs.public_version }}
+          path: release-apk
+
+      - name: Create or verify immutable version tag
+        id: release
+        uses: ./workflow-source/.github/actions/prepare-versioned-release
+        with:
+          source-directory: release-source
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Create or update GitHub Release
+        uses: ./workflow-source/.github/actions/publish-versioned-release
+        with:
+          source-directory: release-source
+          release-tag: ${{ steps.release.outputs.release_tag }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Upload signed APK to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release.outputs.release_tag }}
+          PUBLIC_VERSION: ${{ needs.deploy_for_android.outputs.public_version }}
+        run: |
+          gh release upload "$RELEASE_TAG" \
+            "release-apk/app-release.apk#OpenWearable-${PUBLIC_VERSION}.apk" \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber
 
   create_version_bump_pr:
     name: Create version bump PR for review
     needs: deploy_for_android
-    if: ${{ github.event.inputs.release_type == 'production' }}
+    if: ${{ inputs.release_type == 'production' && inputs.create_version_bump_pr }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -122,11 +273,13 @@ jobs:
         shell: bash
         env:
           VERSION_FILE: open_wearable/pubspec.yaml
-          BASE_BRANCH: ${{ github.event.inputs.branch }}
+          BASE_BRANCH: ${{ inputs.version_bump_base_ref || inputs.ref }}
           RELEASED_VERSION: ${{ needs.deploy_for_android.outputs.released_version }}
           NEXT_VERSION: ${{ needs.deploy_for_android.outputs.next_version }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
@@ -140,7 +293,6 @@ jobs:
             --jq '.[0].url // empty')
 
           if [ -z "$pr_url" ]; then
-            # Reuse a branch left by a previous attempt if PR creation failed.
             remote_branch=$(git ls-remote --heads origin "refs/heads/$bump_branch")
             if [ -z "$remote_branch" ]; then
               git switch -c "$bump_branch"
@@ -164,5 +316,4 @@ jobs:
               --body-file "$body_file")
           fi
 
-          printf 'Version bump PR: %s\n\nReview and merge the PR if it is still open. The production upload has already succeeded.\n' \
-            "$pr_url" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Version bump PR: %s\n' "$pr_url" >> "$GITHUB_STEP_SUMMARY"

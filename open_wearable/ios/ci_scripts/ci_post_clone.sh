@@ -38,6 +38,10 @@ cd ../
 echo "🟩 Prepare iOS Flutter/Xcode project"
 # Generate Flutter ephemeral files and Xcode config.
 # The actual signed archive/build is performed later by Xcode Cloud.
-time flutter build ios --release --config-only
+build_args=(ios --release --config-only)
+if [[ -n "${CI_BUILD_NUMBER:-}" ]]; then
+  build_args+=(--build-number="$CI_BUILD_NUMBER")
+fi
+time flutter build "${build_args[@]}"
 
 exit 0

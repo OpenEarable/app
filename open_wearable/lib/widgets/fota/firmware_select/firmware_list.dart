@@ -140,17 +140,17 @@ class _FirmwareListState extends State<FirmwareList> {
 
     if (confirmed != true || !mounted) return;
 
-    FilePickerResult? result = await FilePicker.pickFiles(
+    final files = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['zip', 'bin'],
     );
-    if (result == null || !mounted) return;
+    if (files.isEmpty || !mounted) return;
 
-    final ext = result.files.first.extension;
+    final firstResult = files.first;
+    final ext = firstResult.extension;
     final fwType =
         ext == 'zip' ? FirmwareType.multiImage : FirmwareType.singleImage;
 
-    final firstResult = result.files.first;
     final path = firstResult.path;
     if (path == null || path.isEmpty) {
       return;

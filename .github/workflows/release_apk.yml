@@ -1,4 +1,4 @@
-name: release apk
+name: Android APK Build
 
 on:
   push:
@@ -20,52 +20,6 @@ jobs:
         run: flutter build apk --release
       - uses: actions/upload-artifact@v6
         with:
-          name: release-apk
+          name: main-release-apk-${{ github.sha }}
           path: open_wearable/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
-
-  release:
-    permissions:
-      contents: write
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Download APK Artifact
-        uses: actions/download-artifact@v7
-        with:
-          name: release-apk
-          path: ${{ github.workspace }}/release-apk
-
-      - name: Create Release and Upload APK
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
-        run: |
-          set -euo pipefail
-
-          tag_name="${GITHUB_SHA::7}"
-          commit_subject="${COMMIT_MESSAGE%%$'\n'*}"
-          if [[ -z "$commit_subject" ]]; then
-            commit_subject="$tag_name"
-          fi
-          release_title="Release ${commit_subject:0:248}"
-          apk_path="$GITHUB_WORKSPACE/release-apk/app-release.apk"
-
-          if gh release view "$tag_name" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release edit "$tag_name" \
-              --repo "$GITHUB_REPOSITORY" \
-              --title "$release_title" \
-              --notes "$COMMIT_MESSAGE"
-          else
-            gh release create "$tag_name" \
-              --repo "$GITHUB_REPOSITORY" \
-              --target "$GITHUB_SHA" \
-              --title "$release_title" \
-              --notes "$COMMIT_MESSAGE"
-          fi
-
-          gh release upload "$tag_name" \
-            "$apk_path#app-release.apk" \
-            --repo "$GITHUB_REPOSITORY" \
-            --clobber

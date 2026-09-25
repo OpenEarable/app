@@ -33,6 +33,16 @@ platform :android do
           "android.injected.signing.key.password" => ENV["OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PASSWORD"],
         }
       )
+      gradle(
+        task: 'assemble',
+        build_type: 'Release',
+        properties: {
+          "android.injected.signing.store.file" => ENV["OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PATH"],
+          "android.injected.signing.store.password" => ENV["OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PASSWORD"],
+          "android.injected.signing.key.alias" => "upload",
+          "android.injected.signing.key.password" => ENV["OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PASSWORD"],
+        }
+      )
       upload_to_play_store(
         track: 'internal',
         skip_upload_changelogs: false,
@@ -52,6 +62,16 @@ platform :android do
         properties: {
           # This injection seems not to be supported anymore and got replaced in build.gradle
           # "android.injected.version.code" => version,
+          "android.injected.signing.store.file" => ENV["OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PATH"],
+          "android.injected.signing.store.password" => ENV["OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PASSWORD"],
+          "android.injected.signing.key.alias" => "upload",
+          "android.injected.signing.key.password" => ENV["OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PASSWORD"],
+        }
+      )
+      gradle(
+        task: 'assemble',
+        build_type: 'Release',
+        properties: {
           "android.injected.signing.store.file" => ENV["OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PATH"],
           "android.injected.signing.store.password" => ENV["OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PASSWORD"],
           "android.injected.signing.key.alias" => "upload",
