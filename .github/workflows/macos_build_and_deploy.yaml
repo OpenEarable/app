@@ -7,6 +7,10 @@ on:
         description: "Version tag to release"
         required: true
         type: string
+      ref:
+        description: "Optional branch or tag from which to create the release tag"
+        required: false
+        type: string
       release_mode:
         description: "Release automatically after App Review or wait for manual release"
         required: false
@@ -25,9 +29,10 @@ on:
         required: true
   workflow_dispatch:
     inputs:
-      release_tag:
-        description: "Version tag to release, for example v1.5.2"
+      ref:
+        description: "Branch or existing release tag to release"
         required: true
+        default: "main"
         type: string
       release_mode:
         description: "When to publish after App Review"
@@ -39,19 +44,49 @@ on:
           - manual
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
-  group: macos-app-store-${{ inputs.release_tag || github.ref_name }}
+  group: macos-app-store-${{ inputs.release_tag || inputs.ref || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
+  prepare_release:
+    name: Create or verify release tag
+    if: ${{ inputs.ref != '' }}
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.release.outputs.release_tag }}
+    steps:
+      - name: Checkout workflow source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          path: workflow-source
+
+      - name: Checkout release source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+          path: release-source
+          fetch-depth: 0
+
+      - name: Create or verify immutable version tag
+        id: release
+        uses: ./workflow-source/.github/actions/prepare-versioned-release
+        with:
+          source-directory: release-source
+        env:
+          GH_TOKEN: ${{ github.token }}
+
   submit_macos:
     name: Build in Xcode Cloud and submit macOS
+    needs: prepare_release
+    if: ${{ always() && (inputs.ref == '' || needs.prepare_release.result == 'success') }}
     runs-on: ubuntu-latest
     timeout-minutes: 130
     env:
-      RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
+      RELEASE_TAG: ${{ inputs.ref != '' && needs.prepare_release.outputs.release_tag || inputs.release_tag }}
       RELEASE_MODE: ${{ inputs.release_mode || 'after_approval' }}
     steps:
       - name: Checkout release tag

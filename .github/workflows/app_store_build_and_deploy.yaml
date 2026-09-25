@@ -7,6 +7,10 @@ on:
         description: "Existing version tag to release"
         required: true
         type: string
+      ref:
+        description: "Optional branch or tag from which to create the release tag"
+        required: false
+        type: string
       release_mode:
         description: "When to publish after App Review"
         required: false
@@ -27,9 +31,10 @@ on:
         required: true
   workflow_dispatch:
     inputs:
-      release_tag:
-        description: "Existing version tag to release, for example v1.5.2"
+      ref:
+        description: "Branch or existing release tag to release"
         required: true
+        default: "main"
         type: string
       release_mode:
         description: "When to publish after App Review"
@@ -40,21 +45,53 @@ on:
           - after_approval
           - manual
 permissions:
-  contents: read
+  contents: write
 
 jobs:
+  prepare_release:
+    name: Create or verify release tag
+    if: ${{ inputs.ref != '' }}
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.release.outputs.release_tag }}
+    steps:
+      - name: Checkout workflow source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          path: workflow-source
+
+      - name: Checkout release source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+          path: release-source
+          fetch-depth: 0
+
+      - name: Create or verify immutable version tag
+        id: release
+        uses: ./workflow-source/.github/actions/prepare-versioned-release
+        with:
+          source-directory: release-source
+        env:
+          GH_TOKEN: ${{ github.token }}
+
   submit_ios:
     name: Build and submit iOS
+    needs: prepare_release
+    if: ${{ always() && (inputs.ref == '' || needs.prepare_release.result == 'success') }}
     uses: ./.github/workflows/ios_build_and_deploy.yaml
     with:
-      release_tag: ${{ inputs.release_tag }}
+      release_tag: ${{ inputs.ref != '' && needs.prepare_release.outputs.release_tag || inputs.release_tag }}
       release_mode: ${{ inputs.release_mode }}
     secrets: inherit
 
   submit_macos:
     name: Build and submit macOS
+    needs: prepare_release
+    if: ${{ always() && (inputs.ref == '' || needs.prepare_release.result == 'success') }}
     uses: ./.github/workflows/macos_build_and_deploy.yaml
     with:
-      release_tag: ${{ inputs.release_tag }}
+      release_tag: ${{ inputs.ref != '' && needs.prepare_release.outputs.release_tag || inputs.release_tag }}
       release_mode: ${{ inputs.release_mode }}
     secrets: inherit

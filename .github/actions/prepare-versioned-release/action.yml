@@ -1,0 +1,88 @@
+name: Prepare versioned release
+description: Create or verify the immutable version tag and GitHub Release for the checked-out commit.
+
+inputs:
+  source-directory:
+    description: Repository directory that contains the release source.
+    required: false
+    default: .
+
+outputs:
+  release_tag:
+    description: The immutable tag for the version in pubspec.yaml.
+    value: ${{ steps.prepare.outputs.release_tag }}
+
+runs:
+  using: composite
+  steps:
+    - id: prepare
+      shell: bash
+      run: |
+        set -euo pipefail
+        cd "${{ inputs.source-directory }}"
+
+        version=$(awk '$1 == "version:" { print $2; exit }' open_wearable/pubspec.yaml)
+        version=${version//\"/}
+        version=${version//\'/}
+        version_pattern='^([0-9]+)\.([0-9]+)\.([0-9]+)(\+[0-9]+)?$'
+        if ! [[ "$version" =~ $version_pattern ]]; then
+          echo "::error::Version '$version' must use major.minor.patch with an optional numeric +build suffix."
+          exit 1
+        fi
+
+        public_version=${version%%+*}
+        release_tag="v${public_version}"
+        released_sha=$(git rev-parse HEAD)
+        version_notes_path="open_wearable/release_notes/${public_version}/default.txt"
+        fallback_notes_path="open_wearable/release_notes/default.txt"
+        notes_path="$version_notes_path"
+        if [ ! -s "$notes_path" ]; then
+          notes_path="$fallback_notes_path"
+          echo "Using generic release notes because $version_notes_path is missing."
+        fi
+        if [ ! -s "$notes_path" ]; then
+          echo "::error::Missing version-specific release notes at $version_notes_path and fallback release notes at $fallback_notes_path."
+          exit 1
+        fi
+
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+
+        if git ls-remote --exit-code --tags origin "refs/tags/$release_tag" >/dev/null 2>&1; then
+          git fetch origin "refs/tags/$release_tag:refs/tags/$release_tag"
+          tagged_sha=$(git rev-list -n 1 "$release_tag")
+          if [ "$tagged_sha" != "$released_sha" ]; then
+            echo "::error::Tag $release_tag already points to $tagged_sha, not $released_sha. Select $release_tag as the release ref to use the existing version."
+            exit 1
+          fi
+        else
+          git tag -a "$release_tag" "$released_sha" -m "OpenWearable $public_version"
+          if ! git push origin "$release_tag"; then
+            git fetch --force origin "refs/tags/$release_tag:refs/tags/$release_tag"
+            tagged_sha=$(git rev-list -n 1 "$release_tag")
+            if [ "$tagged_sha" != "$released_sha" ]; then
+              echo "::error::Tag $release_tag already points to $tagged_sha, not $released_sha. Select $release_tag as the release ref to use the existing version."
+              exit 1
+            fi
+          fi
+        fi
+
+        if gh release view "$release_tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+          gh release edit "$release_tag" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "OpenWearable $public_version" \
+            --notes-file "$notes_path"
+        else
+          if ! gh release create "$release_tag" \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --title "OpenWearable $public_version" \
+            --notes-file "$notes_path"; then
+            gh release edit "$release_tag" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "OpenWearable $public_version" \
+              --notes-file "$notes_path"
+          fi
+        fi
+
+        echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
