@@ -95,3 +95,37 @@ jobs:
       release_tag: ${{ inputs.ref != '' && needs.prepare_release.outputs.release_tag || inputs.release_tag }}
       release_mode: ${{ inputs.release_mode }}
     secrets: inherit
+
+  publish_github_release:
+    name: Publish GitHub Release
+    needs:
+      - prepare_release
+      - submit_ios
+      - submit_macos
+    if: >-
+      ${{ always() && needs.submit_ios.result == 'success' && needs.submit_macos.result == 'success' &&
+          (inputs.ref == '' || needs.prepare_release.result == 'success') }}
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ inputs.ref != '' && needs.prepare_release.outputs.release_tag || inputs.release_tag }}
+    steps:
+      - name: Checkout workflow source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          path: workflow-source
+
+      - name: Checkout release tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+          path: release-source
+          fetch-depth: 0
+
+      - name: Create or update GitHub Release
+        uses: ./workflow-source/.github/actions/publish-versioned-release
+        with:
+          source-directory: release-source
+          release-tag: ${{ env.RELEASE_TAG }}
+        env:
+          GH_TOKEN: ${{ github.token }}

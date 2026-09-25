@@ -21,6 +21,11 @@ on:
         required: false
         default: true
         type: boolean
+      version_bump_base_ref:
+        description: "Branch to target with the post-release version bump PR"
+        required: false
+        default: ""
+        type: string
     outputs:
       released_sha:
         value: ${{ jobs.deploy_for_android.outputs.released_sha }}
@@ -64,6 +69,11 @@ on:
         required: true
         default: true
         type: boolean
+      version_bump_base_ref:
+        description: "Branch to target with the post-release version bump PR"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -275,7 +285,7 @@ jobs:
         shell: bash
         env:
           VERSION_FILE: open_wearable/pubspec.yaml
-          BASE_BRANCH: ${{ inputs.ref }}
+          BASE_BRANCH: ${{ inputs.version_bump_base_ref || inputs.ref }}
           RELEASED_VERSION: ${{ needs.deploy_for_android.outputs.released_version }}
           NEXT_VERSION: ${{ needs.deploy_for_android.outputs.next_version }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

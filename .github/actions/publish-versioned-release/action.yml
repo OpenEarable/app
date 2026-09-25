@@ -1,0 +1,69 @@
+name: Publish versioned release
+description: Create or update the GitHub Release for a verified release tag.
+
+inputs:
+  source-directory:
+    description: Repository directory checked out at the release tag.
+    required: false
+    default: .
+  release-tag:
+    description: Immutable release tag to publish.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        set -euo pipefail
+        cd "${{ inputs.source-directory }}"
+
+        version=$(awk '$1 == "version:" { print $2; exit }' open_wearable/pubspec.yaml)
+        version=${version//\"/}
+        version=${version//\'/}
+        public_version=${version%%+*}
+        expected_tag="v${public_version}"
+        release_tag="${{ inputs.release-tag }}"
+
+        if [ "$release_tag" != "$expected_tag" ]; then
+          echo "::error::Tag $release_tag does not match pubspec version $public_version."
+          exit 1
+        fi
+
+        tagged_sha=$(git rev-list -n 1 "$release_tag")
+        if [ "$tagged_sha" != "$(git rev-parse HEAD)" ]; then
+          echo "::error::Release source is not checked out at $release_tag."
+          exit 1
+        fi
+
+        version_notes_path="open_wearable/release_notes/${public_version}/default.txt"
+        fallback_notes_path="open_wearable/release_notes/default.txt"
+        notes_path="$version_notes_path"
+        if [ ! -s "$notes_path" ]; then
+          notes_path="$fallback_notes_path"
+          echo "Using generic release notes because $version_notes_path is missing."
+        fi
+        if [ ! -s "$notes_path" ]; then
+          echo "::error::Missing version-specific release notes at $version_notes_path and fallback release notes at $fallback_notes_path."
+          exit 1
+        fi
+
+        if gh release view "$release_tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+          gh release edit "$release_tag" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "OpenWearable $public_version" \
+            --notes-file "$notes_path"
+        else
+          if ! gh release create "$release_tag" \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --title "OpenWearable $public_version" \
+            --notes-file "$notes_path"; then
+            # Another successful platform workflow may have published the
+            # release between the view and create calls.
+            gh release edit "$release_tag" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "OpenWearable $public_version" \
+              --notes-file "$notes_path"
+          fi
+        fi

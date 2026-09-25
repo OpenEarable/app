@@ -36,9 +36,9 @@ permissions:
   pull-requests: write
 
 jobs:
-  prepare_apple_release:
-    name: Tag Apple-only release
-    if: ${{ inputs.platforms == 'app_store' }}
+  prepare_release:
+    name: Create or verify release tag
+    if: ${{ inputs.platforms == 'all' || inputs.platforms == 'app_store' }}
     runs-on: ubuntu-latest
     outputs:
       release_tag: ${{ steps.release.outputs.release_tag }}
@@ -66,13 +66,17 @@ jobs:
 
   release_android:
     name: Release Android
-    if: ${{ inputs.platforms == 'all' || inputs.platforms == 'android' }}
+    needs: prepare_release
+    if: >-
+      ${{ always() && (inputs.platforms == 'all' || inputs.platforms == 'android') &&
+          (inputs.platforms == 'android' || needs.prepare_release.result == 'success') }}
     uses: ./.github/workflows/android_build_and_deploy.yaml
     with:
-      ref: ${{ inputs.ref }}
+      ref: ${{ inputs.platforms == 'all' && needs.prepare_release.outputs.release_tag || inputs.ref }}
       release_type: production
-      publish_github_release: true
+      publish_github_release: ${{ inputs.platforms == 'android' }}
       create_version_bump_pr: ${{ inputs.create_version_bump_pr }}
+      version_bump_base_ref: ${{ inputs.ref }}
     secrets: inherit
 
   release_apple:
@@ -80,12 +84,12 @@ jobs:
     if: >-
       ${{ always() && (inputs.platforms == 'all' || inputs.platforms == 'app_store') &&
           (inputs.platforms == 'app_store' || needs.release_android.result == 'success') &&
-          (inputs.platforms == 'all' || needs.prepare_apple_release.result == 'success') }}
+          needs.prepare_release.result == 'success' }}
     needs:
-      - prepare_apple_release
+      - prepare_release
       - release_android
     uses: ./.github/workflows/app_store_build_and_deploy.yaml
     with:
-      release_tag: ${{ inputs.platforms == 'app_store' && needs.prepare_apple_release.outputs.release_tag || needs.release_android.outputs.release_tag }}
+      release_tag: ${{ needs.prepare_release.outputs.release_tag }}
       release_mode: ${{ inputs.release_mode }}
     secrets: inherit

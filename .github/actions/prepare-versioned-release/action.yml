@@ -1,5 +1,5 @@
 name: Prepare versioned release
-description: Create or verify the immutable version tag and GitHub Release for the checked-out commit.
+description: Create or verify the immutable version tag for the checked-out commit.
 
 inputs:
   source-directory:
@@ -64,24 +64,6 @@ runs:
               echo "::error::Tag $release_tag already points to $tagged_sha, not $released_sha. Select $release_tag as the release ref to use the existing version."
               exit 1
             fi
-          fi
-        fi
-
-        if gh release view "$release_tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-          gh release edit "$release_tag" \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "OpenWearable $public_version" \
-            --notes-file "$notes_path"
-        else
-          if ! gh release create "$release_tag" \
-            --repo "$GITHUB_REPOSITORY" \
-            --verify-tag \
-            --title "OpenWearable $public_version" \
-            --notes-file "$notes_path"; then
-            gh release edit "$release_tag" \
-              --repo "$GITHUB_REPOSITORY" \
-              --title "OpenWearable $public_version" \
-              --notes-file "$notes_path"
           fi
         fi
 

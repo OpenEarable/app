@@ -164,3 +164,30 @@ jobs:
         run: |
           printf 'Submitted macOS **%s** to App Review with release mode **%s**.\n' \
             "${{ steps.release.outputs.version }}" "$RELEASE_MODE" >> "$GITHUB_STEP_SUMMARY"
+
+  publish_github_release:
+    name: Publish GitHub Release
+    needs: submit_macos
+    if: ${{ inputs.ref != '' && needs.submit_macos.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout workflow source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          path: workflow-source
+
+      - name: Checkout release tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.prepare_release.outputs.release_tag }}
+          path: release-source
+          fetch-depth: 0
+
+      - name: Create or update GitHub Release
+        uses: ./workflow-source/.github/actions/publish-versioned-release
+        with:
+          source-directory: release-source
+          release-tag: ${{ needs.prepare_release.outputs.release_tag }}
+        env:
+          GH_TOKEN: ${{ github.token }}
