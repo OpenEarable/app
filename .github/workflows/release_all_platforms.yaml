@@ -92,4 +92,5 @@ jobs:
     with:
       release_tag: ${{ needs.prepare_release.outputs.release_tag }}
       release_mode: ${{ inputs.release_mode }}
+      android_artifact_name: ${{ inputs.platforms == 'all' && format('android-release-{0}', needs.release_android.outputs.public_version) || '' }}
     secrets: inherit

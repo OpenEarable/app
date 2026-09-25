@@ -16,6 +16,11 @@ on:
         required: false
         default: "after_approval"
         type: string
+      android_artifact_name:
+        description: "Optional signed Android APK artifact to attach to the GitHub Release"
+        required: false
+        default: ""
+        type: string
     secrets:
       APP_STORE_CONNECT_APP_ID:
         required: true
@@ -129,3 +134,21 @@ jobs:
           release-tag: ${{ env.RELEASE_TAG }}
         env:
           GH_TOKEN: ${{ github.token }}
+
+      - name: Download signed Android APK
+        if: ${{ inputs.android_artifact_name != '' }}
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.android_artifact_name }}
+          path: release-apk
+
+      - name: Upload signed Android APK to GitHub Release
+        if: ${{ inputs.android_artifact_name != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ env.RELEASE_TAG }}
+        run: |
+          gh release upload "$RELEASE_TAG" \
+            "release-apk/app-release.apk#OpenWearable-${RELEASE_TAG#v}.apk" \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber

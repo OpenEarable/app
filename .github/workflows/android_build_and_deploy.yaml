@@ -209,10 +209,17 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Checkout released commit
+      - name: Checkout workflow source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          path: workflow-source
+
+      - name: Checkout released source
         uses: actions/checkout@v6
         with:
           ref: ${{ needs.deploy_for_android.outputs.released_sha }}
+          path: release-source
           fetch-depth: 0
 
       - name: Download signed APK
@@ -221,49 +228,30 @@ jobs:
           name: android-release-${{ needs.deploy_for_android.outputs.public_version }}
           path: release-apk
 
-      - name: Create immutable version tag and GitHub Release
-        shell: bash
+      - name: Create or verify immutable version tag
+        id: release
+        uses: ./workflow-source/.github/actions/prepare-versioned-release
+        with:
+          source-directory: release-source
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASED_SHA: ${{ needs.deploy_for_android.outputs.released_sha }}
-          RELEASED_VERSION: ${{ needs.deploy_for_android.outputs.released_version }}
-          RELEASE_TAG: ${{ needs.deploy_for_android.outputs.release_tag }}
-          NOTES_PATH: ${{ needs.deploy_for_android.outputs.release_notes_path }}
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Create or update GitHub Release
+        uses: ./workflow-source/.github/actions/publish-versioned-release
+        with:
+          source-directory: release-source
+          release-tag: ${{ steps.release.outputs.release_tag }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Upload signed APK to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release.outputs.release_tag }}
+          PUBLIC_VERSION: ${{ needs.deploy_for_android.outputs.public_version }}
         run: |
-          set -euo pipefail
-
-          public_version=${RELEASED_VERSION%%+*}
-          notes_path="$NOTES_PATH"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          if git ls-remote --exit-code --tags origin "refs/tags/$RELEASE_TAG" >/dev/null 2>&1; then
-            git fetch origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
-            tagged_sha=$(git rev-list -n 1 "$RELEASE_TAG")
-            if [ "$tagged_sha" != "$RELEASED_SHA" ]; then
-              echo "::error::Tag $RELEASE_TAG already points to $tagged_sha, not $RELEASED_SHA."
-              exit 1
-            fi
-          else
-            git tag -a "$RELEASE_TAG" "$RELEASED_SHA" -m "OpenWearable $public_version"
-            git push origin "$RELEASE_TAG"
-          fi
-
-          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release edit "$RELEASE_TAG" \
-              --repo "$GITHUB_REPOSITORY" \
-              --title "OpenWearable $public_version" \
-              --notes-file "$notes_path"
-          else
-            gh release create "$RELEASE_TAG" \
-              --repo "$GITHUB_REPOSITORY" \
-              --verify-tag \
-              --title "OpenWearable $public_version" \
-              --notes-file "$notes_path"
-          fi
-
           gh release upload "$RELEASE_TAG" \
-            "release-apk/app-release.apk#OpenWearable-${public_version}.apk" \
+            "release-apk/app-release.apk#OpenWearable-${PUBLIC_VERSION}.apk" \
             --repo "$GITHUB_REPOSITORY" \
             --clobber
 
