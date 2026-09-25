@@ -39,81 +39,22 @@ on:
         options:
           - after_approval
           - manual
-  push:
-    branches:
-      - app-store-deploy-workflow
-
 permissions:
   contents: read
 
 jobs:
-  prepare_push_release:
-    name: Tag branch build
-    if: ${{ github.event_name == 'push' }}
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    outputs:
-      release_tag: ${{ steps.release.outputs.release_tag }}
-    steps:
-      - name: Checkout pushed commit
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 0
-
-      - name: Create or verify version tag
-        id: release
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          version=$(awk '$1 == "version:" { print $2; exit }' open_wearable/pubspec.yaml)
-          version=${version//\"/}
-          version=${version//\'/}
-          version_pattern='^([0-9]+)\.([0-9]+)\.([0-9]+)(\+[0-9]+)?$'
-          if ! [[ "$version" =~ $version_pattern ]]; then
-            echo "::error::Version '$version' must use major.minor.patch with an optional numeric +build suffix."
-            exit 1
-          fi
-
-          public_version=${version%%+*}
-          release_tag="v${public_version}"
-          released_sha=$(git rev-parse HEAD)
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          if git ls-remote --exit-code --tags origin "refs/tags/$release_tag" >/dev/null 2>&1; then
-            git fetch origin "refs/tags/$release_tag:refs/tags/$release_tag"
-            tagged_sha=$(git rev-list -n 1 "$release_tag")
-            if [ "$tagged_sha" != "$released_sha" ]; then
-              echo "::error::Tag $release_tag already points to $tagged_sha, not $released_sha."
-              exit 1
-            fi
-          else
-            git tag -a "$release_tag" "$released_sha" -m "OpenWearable $public_version"
-            git push origin "$release_tag"
-          fi
-
-          echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
-
   submit_ios:
     name: Build and submit iOS
-    needs: prepare_push_release
-    if: ${{ always() && (github.event_name != 'push' || needs.prepare_push_release.result == 'success') }}
     uses: ./.github/workflows/ios_build_and_deploy.yaml
     with:
-      release_tag: ${{ github.event_name == 'push' && needs.prepare_push_release.outputs.release_tag || inputs.release_tag }}
-      release_mode: ${{ github.event_name == 'push' && 'after_approval' || inputs.release_mode }}
+      release_tag: ${{ inputs.release_tag }}
+      release_mode: ${{ inputs.release_mode }}
     secrets: inherit
 
   submit_macos:
     name: Build and submit macOS
-    needs: prepare_push_release
-    if: ${{ always() && (github.event_name != 'push' || needs.prepare_push_release.result == 'success') }}
     uses: ./.github/workflows/macos_build_and_deploy.yaml
     with:
-      release_tag: ${{ github.event_name == 'push' && needs.prepare_push_release.outputs.release_tag || inputs.release_tag }}
-      release_mode: ${{ github.event_name == 'push' && 'after_approval' || inputs.release_mode }}
+      release_tag: ${{ inputs.release_tag }}
+      release_mode: ${{ inputs.release_mode }}
     secrets: inherit
