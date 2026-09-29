@@ -539,18 +539,18 @@ packages:
   open_earable_flutter:
     dependency: "direct main"
     description:
-      name: open_earable_flutter
-      sha256: "0134b1785a56c8076a28e5d56b618c465e28ecdf3cc3492fbda77e80776bdfbb"
-      url: "https://pub.dev"
-    source: hosted
+      path: "../../open_earable_flutter"
+      relative: true
+    source: path
     version: "2.4.1"
   open_earable_protocols:
     dependency: transitive
     description:
-      name: open_earable_protocols
-      sha256: c11cae4914827c1d7617d44647a5c49304f0c2a2c02c907c595682cfade6ddb2
-      url: "https://pub.dev"
-    source: hosted
+      path: "generated/dart"
+      ref: main
+      resolved-ref: a4b6c08f5a2b7b59f53b7f02a209299c1f2c1864
+      url: "https://github.com/OpenEarable/protocol.git"
+    source: git
     version: "0.0.2"
   open_file:
     dependency: "direct main"
