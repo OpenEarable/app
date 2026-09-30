@@ -92,12 +92,18 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  fonts:
+    - family: RobotoMono
+      fonts:
+        - asset: lib/assets/fonts/RobotoMono.ttf
+
   # To add assets to your application, add an assets section, like this:
   assets:
     - lib/apps/posture_tracker/assets/
     - lib/apps/heart_tracker/assets/
     - lib/apps/seal_check/assets/
     - lib/assets/devices/phone-app.png
+    - lib/assets/fonts/OFL.txt
     - android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
 
   # An image asset can refer to one or more resolution-specific "variants", seeq
