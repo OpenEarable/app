@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/models/device_name_formatter.dart';
 import 'package:open_wearable/models/firmware_version_matcher.dart';
+import 'package:open_wearable/models/firmware_image_version.dart';
 
 /// Metadata returned when a post-update verification check is armed.
 class ArmedFotaPostUpdateVerification {
@@ -99,7 +100,7 @@ class FotaPostUpdateVerificationCoordinator {
           _resolveSideLabelFromName(request.peripheral?.name),
     );
     final expectedFirmwareVersion =
-        _extractExpectedFirmwareVersion(request.firmware);
+        expectedFirmwareVersionForRequest(request);
 
     if (expectedName == null && expectedDeviceId == null) {
       return null;
@@ -447,20 +448,6 @@ class FotaPostUpdateVerificationCoordinator {
   /// completion without mutating coordinator state.
   void _publishPendingIds() {
     _pendingIdsController.add(Set<String>.unmodifiable(_pendingById.keys));
-  }
-
-  String? _extractExpectedFirmwareVersion(SelectedFirmware? firmware) {
-    if (firmware is RemoteFirmware) {
-      return normalizeFirmwareVersion(firmware.version);
-    }
-
-    if (firmware is LocalFirmware) {
-      final match =
-          RegExp(r'(\d+\.\d+\.\d+(?:[-+][\w.-]+)?)').firstMatch(firmware.name);
-      return normalizeFirmwareVersion(match?.group(1));
-    }
-
-    return null;
   }
 
   bool _firmwareVersionsMatch(String expected, String actual) {

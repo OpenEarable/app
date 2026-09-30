@@ -1,0 +1,154 @@
+name: Apple App Store Build and Submit
+
+on:
+  workflow_call:
+    inputs:
+      release_tag:
+        description: "Existing version tag to release"
+        required: true
+        type: string
+      ref:
+        description: "Optional branch or tag from which to create the release tag"
+        required: false
+        type: string
+      release_mode:
+        description: "When to publish after App Review"
+        required: false
+        default: "after_approval"
+        type: string
+      android_artifact_name:
+        description: "Optional signed Android APK artifact to attach to the GitHub Release"
+        required: false
+        default: ""
+        type: string
+    secrets:
+      APP_STORE_CONNECT_APP_ID:
+        required: true
+      APP_STORE_CONNECT_ISSUER_ID:
+        required: true
+      APP_STORE_CONNECT_KEY_ID:
+        required: true
+      APP_STORE_CONNECT_PRIVATE_KEY:
+        required: true
+      XCODE_CLOUD_IOS_WORKFLOW_ID:
+        required: true
+      XCODE_CLOUD_MACOS_WORKFLOW_ID:
+        required: true
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch or existing release tag to release"
+        required: true
+        default: "main"
+        type: string
+      release_mode:
+        description: "When to publish after App Review"
+        required: true
+        default: "after_approval"
+        type: choice
+        options:
+          - after_approval
+          - manual
+permissions:
+  contents: write
+
+jobs:
+  prepare_release:
+    name: Create or verify release tag
+    if: ${{ inputs.ref != '' }}
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.release.outputs.release_tag }}
+    steps:
+      - name: Checkout workflow source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          path: workflow-source
+
+      - name: Checkout release source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+          path: release-source
+          fetch-depth: 0
+
+      - name: Create or verify immutable version tag
+        id: release
+        uses: ./workflow-source/.github/actions/prepare-versioned-release
+        with:
+          source-directory: release-source
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  submit_ios:
+    name: Build and submit iOS
+    needs: prepare_release
+    if: ${{ always() && (inputs.ref == '' || needs.prepare_release.result == 'success') }}
+    uses: ./.github/workflows/ios_build_and_deploy.yaml
+    with:
+      release_tag: ${{ inputs.ref != '' && needs.prepare_release.outputs.release_tag || inputs.release_tag }}
+      release_mode: ${{ inputs.release_mode }}
+    secrets: inherit
+
+  submit_macos:
+    name: Build and submit macOS
+    needs: prepare_release
+    if: ${{ always() && (inputs.ref == '' || needs.prepare_release.result == 'success') }}
+    uses: ./.github/workflows/macos_build_and_deploy.yaml
+    with:
+      release_tag: ${{ inputs.ref != '' && needs.prepare_release.outputs.release_tag || inputs.release_tag }}
+      release_mode: ${{ inputs.release_mode }}
+    secrets: inherit
+
+  publish_github_release:
+    name: Publish GitHub Release
+    needs:
+      - prepare_release
+      - submit_ios
+      - submit_macos
+    if: >-
+      ${{ always() && needs.submit_ios.result == 'success' && needs.submit_macos.result == 'success' &&
+          (inputs.ref == '' || needs.prepare_release.result == 'success') }}
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ inputs.ref != '' && needs.prepare_release.outputs.release_tag || inputs.release_tag }}
+    steps:
+      - name: Checkout workflow source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          path: workflow-source
+
+      - name: Checkout release tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+          path: release-source
+          fetch-depth: 0
+
+      - name: Create or update GitHub Release
+        uses: ./workflow-source/.github/actions/publish-versioned-release
+        with:
+          source-directory: release-source
+          release-tag: ${{ env.RELEASE_TAG }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Download signed Android APK
+        if: ${{ inputs.android_artifact_name != '' }}
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.android_artifact_name }}
+          path: release-apk
+
+      - name: Upload signed Android APK to GitHub Release
+        if: ${{ inputs.android_artifact_name != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ env.RELEASE_TAG }}
+        run: |
+          gh release upload "$RELEASE_TAG" \
+            "release-apk/app-release.apk#OpenWearable-${RELEASE_TAG#v}.apk" \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber
