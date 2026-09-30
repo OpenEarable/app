@@ -11,21 +11,17 @@ client = AppStoreConnectClient.new(
   issuer_id: ENV.fetch("APP_STORE_CONNECT_ISSUER_ID"),
   private_key: ENV.fetch("APP_STORE_CONNECT_PRIVATE_KEY")
 )
-uploads = client.get("/v1/apps/6746388345/buildUploads", limit: 25)
-puts "::group::Recent Apple build uploads"
-puts "Returned uploads: #{uploads.fetch('data').length}"
-uploads.fetch("data").each do |upload|
-  puts JSON.generate(id: upload.fetch("id"), attributes: upload.fetch("attributes"))
-end
-puts "::endgroup::"
 {
   "iOS" => "29e12b76-738a-48bf-ba13-113295d857df",
   "macOS" => "908c7876-2dbe-46c8-9f9d-ef5023ae7f3a"
-}.each do |platform, run|
-  puts "::group::#{platform} run and uploaded builds"
-  details = client.get("/v1/ciBuildRuns/#{run}").fetch("data")
-  puts JSON.pretty_generate(details)
-  builds = client.get("/v1/ciBuildRuns/#{run}/builds").fetch("data")
-  builds.each { |build| puts JSON.generate(id: build.fetch("id"), attributes: build.fetch("attributes")) }
+}.each do |platform, run_id|
+  puts "::group::#{platform} archive workflow"
+  run = client.get("/v1/ciBuildRuns/#{run_id}", "include" => "workflow")
+  workflow = run.fetch("included").find { |resource| resource["type"] == "ciWorkflows" }
+  raise "Missing workflow" unless workflow
+  puts JSON.generate(id: workflow.fetch("id"), attributes: workflow.fetch("attributes"))
+  repository = client.get("/v1/ciWorkflows/#{workflow.fetch('id')}/repository").fetch("data")
+  refs = client.get("/v1/scmRepositories/#{repository.fetch('id')}/gitReferences", "limit" => 200).fetch("data")
+  refs.select { |ref| ref.dig("attributes", "canonicalName") == "refs/heads/automation/bump-version-1.5.3-35604992876" }.each { |ref| puts JSON.generate(ref) }
   puts "::endgroup::"
 end
