@@ -1,0 +1,96 @@
+name: Release All Platforms
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch or tag to release"
+        required: true
+        default: "main"
+        type: string
+      platforms:
+        description: "Platforms to release"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - android
+          - app_store
+      release_mode:
+        description: "When to publish Apple releases after App Review"
+        required: true
+        default: "after_approval"
+        type: choice
+        options:
+          - after_approval
+          - manual
+      create_version_bump_pr:
+        description: "Open the post-release version bump PR"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  prepare_release:
+    name: Create or verify release tag
+    if: ${{ inputs.platforms == 'all' || inputs.platforms == 'app_store' }}
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.release.outputs.release_tag }}
+    steps:
+      - name: Checkout workflow source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          path: workflow-source
+
+      - name: Checkout release source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+          path: release-source
+          fetch-depth: 0
+
+      - name: Create or verify immutable version tag
+        id: release
+        uses: ./workflow-source/.github/actions/prepare-versioned-release
+        with:
+          source-directory: release-source
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  release_android:
+    name: Release Android
+    needs: prepare_release
+    if: >-
+      ${{ always() && (inputs.platforms == 'all' || inputs.platforms == 'android') &&
+          (inputs.platforms == 'android' || needs.prepare_release.result == 'success') }}
+    uses: ./.github/workflows/android_build_and_deploy.yaml
+    with:
+      ref: ${{ inputs.platforms == 'all' && needs.prepare_release.outputs.release_tag || inputs.ref }}
+      release_type: production
+      publish_github_release: ${{ inputs.platforms == 'android' }}
+      create_version_bump_pr: ${{ inputs.create_version_bump_pr }}
+      version_bump_base_ref: ${{ inputs.ref }}
+    secrets: inherit
+
+  release_apple:
+    name: Release iOS and macOS
+    if: >-
+      ${{ always() && (inputs.platforms == 'all' || inputs.platforms == 'app_store') &&
+          (inputs.platforms == 'app_store' || needs.release_android.result == 'success') &&
+          needs.prepare_release.result == 'success' }}
+    needs:
+      - prepare_release
+      - release_android
+    uses: ./.github/workflows/app_store_build_and_deploy.yaml
+    with:
+      release_tag: ${{ needs.prepare_release.outputs.release_tag }}
+      release_mode: ${{ inputs.release_mode }}
+      android_artifact_name: ${{ inputs.platforms == 'all' && format('android-release-{0}', needs.release_android.outputs.public_version) || '' }}
+    secrets: inherit
