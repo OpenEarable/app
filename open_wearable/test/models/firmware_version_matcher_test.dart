@@ -32,6 +32,14 @@ void main() {
       expect(firmwareVersionsMatch('PR #123', '2.2.7'), isFalse);
     });
 
+    test('release tag prefixes match device labels without partial numbers',
+        () {
+      expect(
+          firmwareVersionsMatch('v2.2.9', '2.2.9-dev.104+ge22638ad'), isTrue,);
+      expect(firmwareVersionsMatch('v2.2.9', '2.2.90'), isFalse);
+      expect(firmwareVersionsMatch('2.2.9.1', '2.2.9'), isFalse);
+    });
+
     test('keeps existing stable version containment behavior', () {
       expect(firmwareVersionsMatch('2.2.7', '2.2.7+1'), isTrue);
       expect(firmwareVersionsMatch('2.2.7+1', '2.2.7'), isTrue);

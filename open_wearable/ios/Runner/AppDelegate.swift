@@ -2,7 +2,7 @@ import Flutter
 import UIKit
 
 @main
-@objc class AppDelegate: FlutterAppDelegate {
+@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   private var sensorShutdownBackgroundTask: UIBackgroundTaskIdentifier = .invalid
   private var lifecycleChannel: FlutterMethodChannel?
 
@@ -27,15 +27,14 @@ import UIKit
     sensorShutdownBackgroundTask = .invalid
   }
 
-  override func application(
-    _ application: UIApplication,
-    didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
-  ) -> Bool {    
-    let controller: FlutterViewController = window?.rootViewController as! FlutterViewController
-    let openFolderChannel = FlutterMethodChannel(name: "edu.teco.open_folder", binaryMessenger: controller.binaryMessenger)
-    let systemSettingsChannel = FlutterMethodChannel(name: "edu.kit.teco.openWearable/system_settings", binaryMessenger: controller.binaryMessenger)
-    lifecycleChannel = FlutterMethodChannel(name: "edu.kit.teco.openWearable/lifecycle", binaryMessenger: controller.binaryMessenger)
-    
+  func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
+    GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+
+    let messenger = engineBridge.applicationRegistrar.messenger()
+    let openFolderChannel = FlutterMethodChannel(name: "edu.teco.open_folder", binaryMessenger: messenger)
+    let systemSettingsChannel = FlutterMethodChannel(name: "edu.kit.teco.openWearable/system_settings", binaryMessenger: messenger)
+    lifecycleChannel = FlutterMethodChannel(name: "edu.kit.teco.openWearable/lifecycle", binaryMessenger: messenger)
+
     openFolderChannel.setMethodCallHandler { (call: FlutterMethodCall, result: @escaping FlutterResult) in
       if call.method == "openFolder", let args = call.arguments as? [String: Any], let path = args["path"] as? String {
         guard let url = URL(string: path) else {
@@ -88,8 +87,5 @@ import UIKit
         result(FlutterMethodNotImplemented)
       }
     }
-
-    GeneratedPluginRegistrant.register(with: self)
-    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 }

@@ -25,12 +25,29 @@ bool firmwareVersionsMatch(String? expected, String? actual) {
     return expectedPrNumber == actualPrNumber;
   }
 
-  return actualComparison.contains(expectedComparison) ||
-      expectedComparison.contains(actualComparison);
+  final corePattern = RegExp(r'^\d+\.\d+\.\d+(?:\.\d+)?');
+  final expectedCore = corePattern.firstMatch(expectedComparison)?.group(0);
+  final actualCore = corePattern.firstMatch(actualComparison)?.group(0);
+  if (expectedCore != null &&
+      actualCore != null &&
+      expectedCore != actualCore) {
+    return false;
+  }
+
+  // A release may match its development/build suffix, never a partial number
+  // such as 2.2.9 inside 2.2.90 or 12.2.9.
+  bool containsVersion(String value, String version) => RegExp(
+        '(^|[^0-9A-Za-z])${RegExp.escape(version)}(?=\$|[^0-9A-Za-z])',
+      ).hasMatch(value);
+  return containsVersion(actualComparison, expectedComparison) ||
+      containsVersion(expectedComparison, actualComparison);
 }
 
 String _comparisonValue(String value) {
-  return value.toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+  return value
+      .toLowerCase()
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .replaceFirst(RegExp(r'^v(?=\d+\.)'), '');
 }
 
 String? _extractPullRequestNumber(String value) {
