@@ -9,12 +9,19 @@ permissions:
 jobs:
   inspect:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v6
-      - name: Read Xcode Cloud archive issues and artifact metadata
+      - name: Verify corrected TestFlight archives
         env:
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
         run: ruby .github/scripts/diagnose_apple_archives.rb
+      - name: Save archive verification results
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: apple-archive-verification
+          path: apple-archive-verification.json
+          retention-days: 3
