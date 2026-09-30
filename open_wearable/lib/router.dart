@@ -4,6 +4,7 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/models/app_upgrade_registry.dart';
 import 'package:open_wearable/widgets/devices/connect_devices_page.dart';
 import 'package:open_wearable/widgets/devices/device_detail/device_detail_page.dart';
+import 'package:open_wearable/widgets/devices/device_detail/wireless_audio_configuration_page.dart';
 import 'package:open_wearable/widgets/fota/firmware_update.dart';
 import 'package:open_wearable/widgets/fota/fota_slots_page.dart';
 import 'package:open_wearable/widgets/fota/fota_warning_page.dart';
@@ -128,6 +129,17 @@ final GoRouter router = GoRouter(
         }
         final device = state.extra as Wearable;
         return DeviceDetailPage(device: device);
+      },
+    ),
+    GoRoute(
+      path: '/device-detail/wireless-audio',
+      name: 'device-detail/wireless-audio',
+      builder: (context, state) {
+        if (state.extra case final Wearable device
+            when device.hasCapability<WirelessAudioConfigurationManager>()) {
+          return WirelessAudioConfigurationPage(device: device);
+        }
+        return const HomePage(initialSectionIndex: 1);
       },
     ),
     GoRoute(

@@ -262,6 +262,25 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
             child: MicrophoneGainControls(device: widget.device),
           ),
         ),
+      if (widget.device.hasCapability<WirelessAudioConfigurationManager>())
+        AppSectionCard(
+          title: 'Wireless audio',
+          subtitle:
+              'Configure device-owned Bluetooth audio policies and inspect negotiated runtime values.',
+          child: ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.settings_input_antenna_rounded),
+            title: const Text('Audio configuration'),
+            subtitle: const Text(
+              'ACL connection, radio, and Unicast Server QoS',
+            ),
+            trailing: const Icon(Icons.chevron_right_rounded),
+            onTap: () => context.push(
+              '/device-detail/wireless-audio',
+              extra: widget.device,
+            ),
+          ),
+        ),
       if (widget.device.hasCapability<PowerSavingModeManager>())
         Card(
           margin: EdgeInsets.zero,
