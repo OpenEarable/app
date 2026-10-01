@@ -19,6 +19,7 @@ class AppShutdownSettings {
       'app_disable_live_data_graphs';
   static const String _hideLiveDataGraphsWithoutDataKey =
       'app_hide_live_data_graphs_without_data';
+  static const String _showSamplingRatesKey = 'app_show_sampling_rates';
   static const String _keepAppInForegroundKey = 'app_keep_in_foreground';
 
   static final ValueNotifier<bool> _shutOffAllSensorsOnAppCloseNotifier =
@@ -26,6 +27,8 @@ class AppShutdownSettings {
   static final ValueNotifier<bool> _disableLiveDataGraphsNotifier =
       ValueNotifier<bool>(false);
   static final ValueNotifier<bool> _hideLiveDataGraphsWithoutDataNotifier =
+      ValueNotifier<bool>(false);
+  static final ValueNotifier<bool> _showSamplingRatesNotifier =
       ValueNotifier<bool>(false);
   static final ValueNotifier<bool> _keepAppInForegroundNotifier =
       ValueNotifier<bool>(false);
@@ -36,6 +39,8 @@ class AppShutdownSettings {
       _disableLiveDataGraphsNotifier;
   static ValueListenable<bool> get hideLiveDataGraphsWithoutDataListenable =>
       _hideLiveDataGraphsWithoutDataNotifier;
+  static ValueListenable<bool> get showSamplingRatesListenable =>
+      _showSamplingRatesNotifier;
   static ValueListenable<bool> get keepAppInForegroundListenable =>
       _keepAppInForegroundNotifier;
 
@@ -44,6 +49,7 @@ class AppShutdownSettings {
   static bool get disableLiveDataGraphs => _disableLiveDataGraphsNotifier.value;
   static bool get hideLiveDataGraphsWithoutData =>
       _hideLiveDataGraphsWithoutDataNotifier.value;
+  static bool get showSamplingRates => _showSamplingRatesNotifier.value;
   static bool get keepAppInForeground => _keepAppInForegroundNotifier.value;
 
   static Future<void> initialize() async {
@@ -51,6 +57,7 @@ class AppShutdownSettings {
       loadShutOffAllSensorsOnAppClose(),
       loadDisableLiveDataGraphs(),
       loadHideLiveDataGraphsWithoutData(),
+      loadShowSamplingRates(),
       loadKeepAppInForeground(),
     ]);
   }
@@ -94,6 +101,22 @@ class AppShutdownSettings {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_hideLiveDataGraphsWithoutDataKey, enabled);
     _setHideLiveDataGraphsWithoutData(enabled);
+    return enabled;
+  }
+
+  /// Loads whether live graphs show their expected and actual sampling rates.
+  static Future<bool> loadShowSamplingRates() async {
+    final prefs = await SharedPreferences.getInstance();
+    final enabled = prefs.getBool(_showSamplingRatesKey) ?? false;
+    _showSamplingRatesNotifier.value = enabled;
+    return enabled;
+  }
+
+  /// Persists label visibility and updates all live graphs immediately.
+  static Future<bool> saveShowSamplingRates(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_showSamplingRatesKey, enabled);
+    _showSamplingRatesNotifier.value = enabled;
     return enabled;
   }
 

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
+import 'package:open_wearable/models/app_shutdown_settings.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 import 'package:open_wearable/view_models/sensor_data_provider.dart';
 import 'package:open_wearable/view_models/wearables_provider.dart';
@@ -301,9 +302,40 @@ class _SensorChartState extends State<SensorChart> {
             child: LiveDataGraphSurface(
               settings: widget.settings,
               onDisabledTap: widget.onDisabledTap,
-              child: LineChart(
-                chartData,
-                duration: const Duration(milliseconds: 0),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  LineChart(
+                    chartData,
+                    duration: const Duration(milliseconds: 0),
+                  ),
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: ValueListenableBuilder<bool>(
+                      valueListenable:
+                          AppShutdownSettings.showSamplingRatesListenable,
+                      builder: (context, showSamplingRates, _) {
+                        if (!showSamplingRates) return const SizedBox.shrink();
+                        return IgnorePointer(
+                          child: Text(
+                            _samplingRateLabel(
+                              sensor,
+                              sensorValues,
+                              referenceTimestamp,
+                              sensorConfigurationProvider,
+                            ),
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 10,
+                              fontFamily: 'RobotoMono',
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -585,6 +617,42 @@ class _SensorChartState extends State<SensorChart> {
     } catch (_) {
       return null;
     }
+  }
+
+  String _samplingRateLabel(
+    Sensor sensor,
+    Queue<SensorValue> values,
+    int referenceTimestamp,
+    SensorConfigurationProvider? configurationProvider,
+  ) {
+    double? expectedHz;
+    for (final configuration in sensor.relatedConfigurations) {
+      final activeValue = _activeFrequencyValueForConfiguration(
+        configuration,
+        configurationProvider,
+      );
+      if (activeValue == null) continue;
+      final rate = _isStreamingFrequencyValue(configuration, activeValue)
+          ? activeValue.frequencyHz
+          : 0.0;
+      expectedHz = max(expectedHz ?? 0, rate);
+    }
+
+    // Use the existing rolling buffer, including silence since the last sample.
+    final elapsed = values.isEmpty
+        ? 0.0
+        : (referenceTimestamp - values.first.timestamp) *
+            pow(10, sensor.timestampExponent);
+    final actualHz =
+        values.length < 2 || elapsed <= 0 ? 0.0 : (values.length - 1) / elapsed;
+    // Round up below the target, but only show an excess of at least 1 Hz.
+    final actual = expectedHz != null && actualHz < expectedHz + 1
+        ? min(actualHz.ceil(), expectedHz.round())
+        : actualHz.round();
+    final expected = expectedHz?.round().toString() ?? '—';
+    // Reserve only as many digits as the expected rate needs.
+    return 'Expected $expected Hz · '
+        'Actual ${actual.toString().padLeft(expected.length)} Hz';
   }
 
   _FilterFrequencyBounds _frequencyBoundsForSensor(

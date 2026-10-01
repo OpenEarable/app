@@ -74,6 +74,26 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
     }
   }
 
+  Future<void> _setShowSamplingRates(bool enabled) async {
+    if (_isSaving) {
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      await AppShutdownSettings.saveShowSamplingRates(enabled);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
   Future<void> _setAutoConnectEnabled(bool enabled) async {
     if (_isSaving) {
       return;
@@ -261,6 +281,25 @@ class _GeneralSettingsPageState extends State<GeneralSettingsPage> {
                                     ),
                                     subtitle: const Text(
                                       'Hides live data graphs in Sensors › Live Data until samples arrive',
+                                    ),
+                                  ),
+                                  ValueListenableBuilder<bool>(
+                                    valueListenable: AppShutdownSettings
+                                        .showSamplingRatesListenable,
+                                    builder: (context, showSamplingRates, _) =>
+                                        SwitchListTile.adaptive(
+                                      value: showSamplingRates,
+                                      onChanged: _isSaving
+                                          ? null
+                                          : _setShowSamplingRates,
+                                      secondary: const Icon(
+                                        Icons.speed_rounded,
+                                        size: 18,
+                                      ),
+                                      title: const Text('Show sampling rates'),
+                                      subtitle: const Text(
+                                        'Show expected and actual sampling rates on live graphs',
+                                      ),
                                     ),
                                   ),
                                 ],
