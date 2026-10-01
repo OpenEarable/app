@@ -43,7 +43,7 @@
 - Does:
   - Builds sensor cards for all active sensors across wearables.
   - Supports no-graph mode and hide-empty-graphs mode.
-  - Shows expected and actual sampling rates on sensor charts by default; the preference is saved under Settings → General settings → Live data → Show sampling rates.
+  - Can show expected and actual sampling rates on sensor charts. Labels are off by default; the preference is saved under Settings → General settings → Live data → Show sampling rates.
   - Uses merged provider listenables for efficient live refresh.
 - Provides:
   - Live chart/value surface for all connected sensors.

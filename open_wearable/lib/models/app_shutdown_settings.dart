@@ -29,7 +29,7 @@ class AppShutdownSettings {
   static final ValueNotifier<bool> _hideLiveDataGraphsWithoutDataNotifier =
       ValueNotifier<bool>(false);
   static final ValueNotifier<bool> _showSamplingRatesNotifier =
-      ValueNotifier<bool>(true);
+      ValueNotifier<bool>(false);
   static final ValueNotifier<bool> _keepAppInForegroundNotifier =
       ValueNotifier<bool>(false);
 
@@ -107,7 +107,7 @@ class AppShutdownSettings {
   /// Loads whether live graphs show their expected and actual sampling rates.
   static Future<bool> loadShowSamplingRates() async {
     final prefs = await SharedPreferences.getInstance();
-    final enabled = prefs.getBool(_showSamplingRatesKey) ?? true;
+    final enabled = prefs.getBool(_showSamplingRatesKey) ?? false;
     _showSamplingRatesNotifier.value = enabled;
     return enabled;
   }
