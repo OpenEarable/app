@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logger/logger.dart';
@@ -35,18 +34,18 @@ class _Manager implements WearableManager {
   Future<void> startScan({bool checkAndRequestPermissions = true}) async { scanStarts++; }
   @override
   Future<List<DiscoveredDevice>> getSystemDevices(
-          {bool checkAndRequestPermissions = true}) async =>
+          {bool checkAndRequestPermissions = true,}) async =>
       ['left', 'right', 'unrelated']
           .map((id) => DiscoveredDevice(
               id: id,
               name: id == 'unrelated' ? 'Unknown' : 'OpenEarable',
               manufacturerData: Uint8List(0),
               rssi: -50,
-              serviceUuids: []))
+              serviceUuids: [],),)
           .toList();
   @override
   Future<Wearable> connectToDevice(DiscoveredDevice device,
-      {Set<ConnectionOption> options = const {}}) async {
+      {Set<ConnectionOption> options = const {},}) async {
     attempts.add(device.id);
     connectionOptions.add(options);
     if (device.id == 'right' && failRight) throw Exception('already connected');
@@ -72,14 +71,14 @@ void main() {
     tester.binding.defaultBinaryMessenger.setMockDecodedMessageHandler<Object?>(
       const BasicMessageChannel<Object?>(
           'dev.flutter.pigeon.universal_ble.UniversalBlePlatformChannel.hasPermissions',
-          StandardMessageCodec()),
+          StandardMessageCodec(),),
       (_) async => <Object?>[true],
     );
     SharedPreferences.setMockInitialValues({
       AutoConnectPreferences.connectedDeviceNamesKey: [
         'OpenEarable',
-        'OpenEarable'
-      ]
+        'OpenEarable',
+      ],
     });
     final prefs = await SharedPreferences.getInstance();
     final manager = _Manager();
@@ -89,7 +88,7 @@ void main() {
         wearableManager: manager,
         prefsFuture: Future.value(prefs),
         connectedWearables: () => manager.connected.values,
-        onWearableConnected: (wearable) => delivered.add(wearable.deviceId));
+        onWearableConnected: (wearable) => delivered.add(wearable.deviceId),);
     connector.start();
     await tester.pump();
     await tester.pump(const Duration(seconds: 3));
