@@ -8,8 +8,12 @@ bool isNewerFirmwareVersion(String latest, String current) {
         .trim()
         .replaceFirst(RegExp(r'^v(?=\d)'), '');
     final version = Version.parse(normalized);
-    return Version(version.major, version.minor, version.patch,
-        pre: version.preRelease.join('.'));
+    return Version(
+      version.major,
+      version.minor,
+      version.patch,
+      pre: version.preRelease.join('.'),
+    );
   }
 
   return parse(latest) > parse(current);
