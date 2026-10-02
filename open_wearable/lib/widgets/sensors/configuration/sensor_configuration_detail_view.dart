@@ -33,6 +33,17 @@ class SensorConfigurationDetailView extends StatelessWidget {
         .getSensorConfigurationValues(sensorConfiguration, distinct: true)
         .where((value) => _isVisibleValue(value, selectedValue))
         .toList(growable: false);
+    // Sort the displayed copy, keeping each rate's original configuration value.
+    if (selectableValues.every(
+      (value) => value is SensorFrequencyConfigurationValue,
+    )) {
+      selectableValues.sort(
+        (a, b) =>
+            (a as SensorFrequencyConfigurationValue).frequencyHz.compareTo(
+                  (b as SensorFrequencyConfigurationValue).frequencyHz,
+                ),
+      );
+    }
     final dropdownSelection = _resolveSelection(
       selectableValues,
       selectedValue,
