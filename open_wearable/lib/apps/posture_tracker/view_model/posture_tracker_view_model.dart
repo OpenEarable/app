@@ -54,6 +54,9 @@ class PostureTrackerViewModel with ChangeNotifier {
 
   void setBadPostureSettings(BadPostureSettings settings) {
     _badPostureReminder.setSettings(settings);
+    if (!_isDisposed) {
+      notifyListeners();
+    }
   }
 
   @override
