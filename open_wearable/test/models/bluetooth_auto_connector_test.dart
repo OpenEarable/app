@@ -87,6 +87,7 @@ void main() {
         navStateGetter: () => null,
         wearableManager: manager,
         prefsFuture: Future.value(prefs),
+        connectedWearables: () => manager.connected.values,
         onWearableConnected: (wearable) => delivered.add(wearable.deviceId));
     connector.start();
     await tester.pump();
@@ -98,6 +99,17 @@ void main() {
     expect(manager.attempts.where((id) => id == 'left'), hasLength(1));
     expect(manager.attempts, isNot(contains('unrelated')));
     expect(manager.connectionOptions.every((options) => options.single is ConnectedViaSystem), isTrue);
+    final attemptsBeforeRestart = manager.attempts.length;
+    connector.start(); // duplicate powered-on notification
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 3));
+    expect(manager.attempts, hasLength(attemptsBeforeRestart));
+    connector.stop();
+    connector.start(); // resume while both ears remain connected in the app
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 3));
+    expect(manager.attempts, hasLength(attemptsBeforeRestart));
+    manager.connected.remove('left');
     manager.notifiers['left']!.notifyListeners();
     await tester.pump();
     await tester.pump(const Duration(seconds: 3));

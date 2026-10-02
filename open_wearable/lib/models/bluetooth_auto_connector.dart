@@ -33,6 +33,7 @@ class BluetoothAutoConnector {
   WearableManager? _wearableManager;
   final Future<SharedPreferences> prefsFuture;
   final void Function(Wearable wearable) onWearableConnected;
+  final Iterable<Wearable> Function()? connectedWearables;
 
   StreamSubscription<Wearable>? _connectSubscription;
   StreamSubscription<DiscoveredDevice>? _scanSubscription;
@@ -60,6 +61,7 @@ class BluetoothAutoConnector {
     WearableManager? wearableManager,
     required this.prefsFuture,
     required this.onWearableConnected,
+    this.connectedWearables,
   }) : _wearableManager = wearableManager;
 
   WearableManager get wearableManager => _wearableManager ??= WearableManager();
@@ -73,6 +75,8 @@ class BluetoothAutoConnector {
       return;
     }
 
+    // Repeated availability/resume events must not discard active connections.
+    if (_connectSubscription != null) return;
     final token = ++_sessionToken;
     _stopInternal();
     _connectedDeviceIds.clear();
@@ -92,6 +96,9 @@ class BluetoothAutoConnector {
     _preferencesSubscription = AutoConnectPreferences.changes.listen((_) {
       unawaited(_syncTargetsWithPreferences(token: token, restartScan: true));
     });
+    for (final wearable in connectedWearables?.call() ?? <Wearable>[]) {
+      _onDeviceConnected(wearable);
+    }
     _ensureScanRetryLoop(token: token);
 
     // Initiate the connection sequence
