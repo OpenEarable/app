@@ -234,7 +234,6 @@ class BluetoothAutoConnector {
   Future<void> _reconcileSystemDevices(int token) async {
     if (_isConnecting || token != _sessionToken) return;
     _isConnecting = true;
-    _stopScanning();
     try {
       final devices = await wearableManager.getSystemDevices(
         checkAndRequestPermissions: false,

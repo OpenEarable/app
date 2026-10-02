@@ -26,12 +26,13 @@ class _Manager implements WearableManager {
   final attempts = <String>[];
   final connectionOptions = <Set<ConnectionOption>>[];
   bool failRight = true;
+  int scanStarts = 0;
   @override
   Stream<Wearable> get connectStream => connections.stream;
   @override
   Stream<DiscoveredDevice> get scanStream => scans.stream;
   @override
-  Future<void> startScan({bool checkAndRequestPermissions = true}) async {}
+  Future<void> startScan({bool checkAndRequestPermissions = true}) async { scanStarts++; }
   @override
   Future<List<DiscoveredDevice>> getSystemDevices(
           {bool checkAndRequestPermissions = true}) async =>
@@ -93,6 +94,9 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 3));
     expect(delivered, ['left']);
+    final scanStarts = manager.scanStarts;
+    await tester.pump(const Duration(seconds: 3));
+    expect(manager.scanStarts, scanStarts); // system retry must not restart an active scan
     manager.failRight = false;
     await tester.pump(const Duration(seconds: 3));
     expect(delivered, ['left', 'right']);
