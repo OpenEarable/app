@@ -104,14 +104,14 @@ class _SealCheckMeasurementViewState extends State<SealCheckMeasurementView> {
     final fileName = 'seal_check_${_timestampForFilename(now)}.json';
 
     if (Platform.isAndroid) {
-      final dirPath = await FilePicker.getDirectoryPath();
-      if (dirPath == null || dirPath.isEmpty) return null;
-      final String path = p.join(dirPath, fileName);
-      await File(path).writeAsString(
-        const JsonEncoder.withIndent('  ').convert(result),
-        flush: true,
+      final uri = await FilePicker.saveFile(
+        fileName: fileName,
+        mimeType: 'application/json',
+        bytes: Uint8List.fromList(
+          utf8.encode(const JsonEncoder.withIndent('  ').convert(result)),
+        ),
       );
-      return path;
+      return uri?.toString();
     }
 
     Directory? downloads;
@@ -201,11 +201,13 @@ class _SealCheckMeasurementViewState extends State<SealCheckMeasurementView> {
                               if (_rightResult != null)
                                 'right': _rightResult!.toJson(),
                             };
-                            final path =
-                                await _saveResultToDownloadsAsJson(combined);
-                            final msg = path == null
-                                ? 'Not saved — either not supported or you canceled.'
-                                : 'Saved to: $path';
+                            String msg;
+                            try {
+                              final path = await _saveResultToDownloadsAsJson(combined);
+                              msg = path == null ? 'Save canceled.' : 'Saved to: $path';
+                            } catch (error) {
+                              msg = 'Could not save JSON: $error';
+                            }
                             if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text(msg)),
