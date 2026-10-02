@@ -5,11 +5,11 @@ void main() {
   test('compares released firmware against the installed development build',
       () {
     expect(
-        isNewerFirmwareVersion('2.2.9', '2.2.10-dev.60+ga99d057fa'), isFalse);
+        isNewerFirmwareVersion('2.2.9', '2.2.10-dev.60+ga99d057fa'), isFalse,);
     expect(
-        isNewerFirmwareVersion('2.2.10', '2.2.10-dev.60+ga99d057fa'), isTrue);
+        isNewerFirmwareVersion('2.2.10', '2.2.10-dev.60+ga99d057fa'), isTrue,);
     expect(
-        isNewerFirmwareVersion('2.2.11', '2.2.10-dev.60+ga99d057fa'), isTrue);
+        isNewerFirmwareVersion('2.2.11', '2.2.10-dev.60+ga99d057fa'), isTrue,);
   });
   test('prerelease numbers are numeric and build metadata has no precedence',
       () {
@@ -21,6 +21,6 @@ void main() {
   test('unrecognized labels fail explicitly instead of suggesting a downgrade',
       () {
     expect(() => isNewerFirmwareVersion('2.2.9', 'PR #123'),
-        throwsFormatException);
+        throwsFormatException,);
   });
 }
