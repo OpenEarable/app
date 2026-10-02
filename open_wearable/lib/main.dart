@@ -594,7 +594,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   }
 
   void _handleWearableConnected(Wearable wearable) {
+    final alreadyConnected = _wearablesProvider.wearables.any(
+      (connected) => connected.deviceId == wearable.deviceId,
+    );
     _wearablesProvider.addWearable(wearable);
+    // ProxyProvider updates wait for a frame, which a locked phone does not draw.
+    if (!alreadyConnected) {
+      unawaited(_sensorRecorderProvider.addWearable(wearable));
+    }
     _maybeFinalizePostUpdateVerification(wearable);
   }
 
@@ -765,7 +772,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         _scheduleCloseShutdownIfNeeded();
       }
     } else if (state == AppLifecycleState.paused) {
-      _autoConnector.stop();
       _backgroundEnteredAt ??= DateTime.now();
       if (_sensorRecorderProvider.isRecording) {
         _pendingCloseShutdownTimer?.cancel();
@@ -773,6 +779,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         _setBackgroundExecutionForShutdown(false);
         _setBackgroundExecutionForRecording(true);
       } else {
+        _autoConnector.stop();
         _setBackgroundExecutionForRecording(false);
         _scheduleCloseShutdownIfNeeded();
       }
