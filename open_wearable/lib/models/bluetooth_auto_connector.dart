@@ -33,6 +33,7 @@ class BluetoothAutoConnector {
   WearableManager? _wearableManager;
   final Future<SharedPreferences> prefsFuture;
   final void Function(Wearable wearable) onWearableConnected;
+  final Iterable<Wearable> Function()? connectedWearables;
 
   StreamSubscription<Wearable>? _connectSubscription;
   StreamSubscription<DiscoveredDevice>? _scanSubscription;
@@ -60,6 +61,7 @@ class BluetoothAutoConnector {
     WearableManager? wearableManager,
     required this.prefsFuture,
     required this.onWearableConnected,
+    this.connectedWearables,
   }) : _wearableManager = wearableManager;
 
   WearableManager get wearableManager => _wearableManager ??= WearableManager();
@@ -73,6 +75,8 @@ class BluetoothAutoConnector {
       return;
     }
 
+    // Repeated availability/resume events must not discard active connections.
+    if (_connectSubscription != null) return;
     final token = ++_sessionToken;
     _stopInternal();
     _connectedDeviceIds.clear();
@@ -92,6 +96,9 @@ class BluetoothAutoConnector {
     _preferencesSubscription = AutoConnectPreferences.changes.listen((_) {
       unawaited(_syncTargetsWithPreferences(token: token, restartScan: true));
     });
+    for (final wearable in connectedWearables?.call() ?? <Wearable>[]) {
+      _onDeviceConnected(wearable);
+    }
     _ensureScanRetryLoop(token: token);
 
     // Initiate the connection sequence
@@ -184,9 +191,6 @@ class BluetoothAutoConnector {
     }
   }
 
-  bool _isAlreadyConnectedMessage(String message) =>
-      message.toLowerCase().contains('already connected');
-
   Future<void> _reloadTargetNames({
     required int token,
     bool reloadPrefs = true,
@@ -219,8 +223,47 @@ class BluetoothAutoConnector {
       return;
     }
 
+    await _reconcileSystemDevices(token);
+    if (token != _sessionToken) return;
     if (restartScan) {
       await _restartScanIfNeeded();
+    }
+  }
+
+  // An ear reconnected by Android may no longer advertise to the scan listener.
+  Future<void> _reconcileSystemDevices(int token) async {
+    if (_isConnecting || token != _sessionToken) return;
+    _isConnecting = true;
+    try {
+      final devices = await wearableManager.getSystemDevices(
+        checkAndRequestPermissions: false,
+      );
+      for (final device in devices) {
+        if (token != _sessionToken) return;
+        final id = _normalizeDeviceId(device.id);
+        if (_connectedDeviceIds.contains(id) ||
+            _pendingDeviceIds.contains(id) ||
+            (_connectedNameCounts[device.name] ?? 0) >=
+                _requiredConnectionsForName(device.name)) {
+          continue;
+        }
+        try {
+          final wearable = await wearableManager.connectToDevice(
+            device,
+            options: {const ConnectedViaSystem()},
+          );
+          if (token != _sessionToken) return;
+          _markConnected(deviceId: wearable.deviceId, deviceName: wearable.name);
+          onWearableConnected(wearable);
+        } catch (error, stack) {
+          // An error (including "already connected") is not an initialized ear.
+          logger.w('System reconnect failed for ${device.id}: $error\n$stack');
+        }
+      }
+    } catch (error, stack) {
+      logger.w('System device discovery failed: $error\n$stack');
+    } finally {
+      if (token == _sessionToken) _isConnecting = false;
     }
   }
 
@@ -389,13 +432,6 @@ class BluetoothAutoConnector {
         onWearableConnected(wearable);
       }).catchError((error, stackTrace) {
         final message = _deviceErrorMessageSafe(error, device);
-        if (_isAlreadyConnectedMessage(message)) {
-          _markConnected(deviceId: device.id, deviceName: device.name);
-          logger.i(
-            'Skipping auto-connect for ${device.id}: $message',
-          );
-          return;
-        }
         logger.w(
           'Failed to connect to ${device.id}: $message\n$stackTrace',
         );
