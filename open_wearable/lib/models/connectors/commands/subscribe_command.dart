@@ -1,5 +1,6 @@
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 
+import '../../shared_sensor_configuration.dart';
 import 'command.dart';
 import 'ipc_internal_param_names.dart';
 import 'param_readers.dart';
@@ -59,10 +60,12 @@ class SubscribeCommand extends RuntimeCommand {
           args: args,
         ).sensorStream;
       case 'sensor_configuration':
-        return _requireCapability<SensorConfigurationManager>(
-          wearable: wearable,
-          streamName: streamName,
-        ).sensorConfigurationStream;
+        return sharedSensorConfiguration(
+          _requireCapability<SensorConfigurationManager>(
+            wearable: wearable,
+            streamName: streamName,
+          ),
+        );
       case 'button_events':
         return _requireCapability<ButtonManager>(
           wearable: wearable,
