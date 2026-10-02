@@ -293,6 +293,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       navStateGetter: () => rootNavigatorKey.currentState,
       prefsFuture: _prefsFuture,
       onWearableConnected: _handleWearableConnected,
+      connectedWearables: () => _wearablesProvider.wearables,
     );
     AutoConnectPreferences.autoConnectEnabledListenable.addListener(
       _syncAutoConnectorWithSetting,
