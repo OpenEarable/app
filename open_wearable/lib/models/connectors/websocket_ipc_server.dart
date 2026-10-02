@@ -54,6 +54,16 @@ class WebSocketIpcServer implements CommandRuntime {
         _wearableConnector = wearableConnector,
         _audioPlaybackService =
             audioPlaybackService ?? WebsocketAudioPlaybackService() {
+    // Keep the inventory current even while the network endpoint is disabled.
+    _connectSubscription = this.wearableManager.connectStream.listen((wearable) {
+      _registerConnectedWearable(wearable);
+      _broadcastEvent(
+        <String, dynamic>{
+          'event': 'connected',
+          'wearable': _serializeWearableSummary(wearable),
+        },
+      );
+    });
     for (final command in createDefaultIpcCommands(this)) {
       addCommand(command);
     }
@@ -176,15 +186,21 @@ class WebSocketIpcServer implements CommandRuntime {
 
     await _scanSubscription?.cancel();
     await _connectingSubscription?.cancel();
-    await _connectSubscription?.cancel();
     _scanSubscription = null;
     _connectingSubscription = null;
-    _connectSubscription = null;
 
     _discoveredDevicesById.clear();
-    _connectedWearablesById.clear();
     _advertisedHost = null;
     logger.i('[connector.websocket] stopped');
+  }
+
+  /// Release app-lifetime device tracking when this server is discarded.
+  Future<void> dispose() async {
+    await stop();
+    await _connectSubscription?.cancel();
+    _connectSubscription = null;
+    _connectedWearablesById.clear();
+    await _scanEventsController.close();
   }
 
   /// Removes a disconnected client session from the active set.
@@ -464,22 +480,17 @@ class WebSocketIpcServer implements CommandRuntime {
       );
     });
 
-    _connectSubscription ??= wearableManager.connectStream.listen((wearable) {
-      _registerConnectedWearable(wearable);
-      _broadcastEvent(
-        <String, dynamic>{
-          'event': 'connected',
-          'wearable': _serializeWearableSummary(wearable),
-        },
-      );
-    });
+
   }
 
   /// Tracks a connected wearable and removes it when it disconnects.
   void _registerConnectedWearable(Wearable wearable) {
+    if (identical(_connectedWearablesById[wearable.deviceId], wearable)) return;
     _connectedWearablesById[wearable.deviceId] = wearable;
     wearable.addDisconnectListener(() {
-      _connectedWearablesById.remove(wearable.deviceId);
+      if (identical(_connectedWearablesById[wearable.deviceId], wearable)) {
+        _connectedWearablesById.remove(wearable.deviceId);
+      }
     });
   }
 
