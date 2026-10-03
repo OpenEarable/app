@@ -89,17 +89,54 @@ class _RecorderPrefixRowState extends State<EdgeRecorderPrefixRow> {
 
     if (result == true) {
       final prefix = _editPrefixController.text.trim();
+      if (prefix.isEmpty || prefix.length > 63) {
+        await _showError('Enter a prefix between 1 and 63 characters.');
+        return;
+      }
+      // The device API writes character codes directly, not UTF-8.
+      if (RegExp(r'[^\x20-\x7e]|[<>:"/\\|?*]').hasMatch(prefix)) {
+        await _showError('Use ASCII characters without <>:"/\\|?*.');
+        return;
+      }
+      final failures = <String>[];
+      Future<void> write(EdgeRecorderManager manager, String label) async {
+        try {
+          await manager.setFilePrefix(prefix);
+        } catch (_) {
+          failures.add(label);
+        }
+      }
+
       await Future.wait([
-        widget.manager.setFilePrefix(prefix),
+        write(widget.manager,
+            widget.pairedManager == null ? 'device' : 'first device',),
         if (widget.pairedManager != null)
-          widget.pairedManager!.setFilePrefix(prefix),
+          write(widget.pairedManager!, 'paired device'),
       ]);
       if (!mounted) {
         return;
       }
       setState(_loadPrefix);
+      if (failures.isNotEmpty) {
+        await _showError(
+            'Could not update ${failures.join(' and ')}. Check the connection and try again.',);
+      }
     }
   }
+
+  Future<void> _showError(String message) => showPlatformDialog<void>(
+        context: context,
+        builder: (context) => PlatformAlertDialog(
+          title: PlatformText('Prefix not saved'),
+          content: Text(message),
+          actions: [
+            PlatformDialogAction(
+              child: PlatformText('OK'),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ],
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
