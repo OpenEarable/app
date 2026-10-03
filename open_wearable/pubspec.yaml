@@ -38,7 +38,7 @@ dependencies:
   open_earable_flutter:
     git:
       url: https://github.com/OpenEarable/open_earable_flutter.git
-      ref: 0c1ccd2f7bd367ab592b116e8d0552cc93166ee0
+      ref: 6d60c5cd9f7a3485454f849ecd77c80a6a941454
   universal_ble: ^2.0.4
   permission_handler: ^12.0.1
   flutter_platform_widgets: ^10.0.1
