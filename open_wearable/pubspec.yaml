@@ -38,7 +38,7 @@ dependencies:
   open_earable_flutter:
     git:
       url: https://github.com/OpenEarable/open_earable_flutter.git
-      ref: 4dfcd42cec6020842f02f1f79205b19a414d5ab1
+      ref: e37226729a887e9507175cbd97b990cd28bec289
   universal_ble: ^2.0.4
   permission_handler: ^12.0.1
   flutter_platform_widgets: ^10.0.1
@@ -84,7 +84,7 @@ dependency_overrides:
   open_earable_protocols:
     git:
       url: https://github.com/OpenEarable/protocol.git
-      ref: 7dc1765e5490bc7b6843ac7236a503df11b6e8a7
+      ref: bf61cbe72922045ff850dbdbabfaece8c7a38177
       path: generated/dart
   file_picker: 13.1.0
   mcumgr_flutter: 0.9.1
