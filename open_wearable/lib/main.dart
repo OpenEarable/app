@@ -128,6 +128,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   late final StreamSubscription _unsupportedFirmwareSub;
   late final StreamSubscription _wearableEventSub;
+  late final StreamSubscription _fotaVerificationSub;
   StreamSubscription<AvailabilityState>? _bleAvailabilitySub;
   late final BluetoothAutoConnector _autoConnector;
   late final WearableConnector _wearableConnector;
@@ -305,6 +306,16 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     _wearableEventSub = _wearableConnector.events.listen((event) {
       if (event is WearableConnectEvent) {
         _handleWearableConnected(event.wearable);
+      }
+    });
+
+    // FOTA can reconnect before its success callback arms verification.
+    _fotaVerificationSub = FotaPostUpdateVerificationCoordinator
+        .instance.pendingVerificationIds
+        .listen((pendingIds) {
+      if (pendingIds.isEmpty) return;
+      for (final wearable in _wearablesProvider.wearables.toList()) {
+        unawaited(_maybeFinalizePostUpdateVerification(wearable));
       }
     });
 
@@ -975,6 +986,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     unawaited(ConnectorSettings.dispose());
     _unsupportedFirmwareSub.cancel();
     _wearableEventSub.cancel();
+    _fotaVerificationSub.cancel();
     _bleAvailabilitySub?.cancel();
     _wearableProvEventSub.cancel();
     AutoConnectPreferences.autoConnectEnabledListenable.removeListener(

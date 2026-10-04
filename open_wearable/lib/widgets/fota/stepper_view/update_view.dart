@@ -37,6 +37,7 @@ class _UpdateStepViewState extends State<UpdateStepView> {
   bool _startRequested = false;
   bool _verificationBannerShown = false;
   bool _isVerificationPending = false;
+  FotaPostUpdateVerificationResult? _verificationResult;
   bool _loopWarningHandled = false;
   String? _lastResetValidateStage;
   StreamSubscription<Set<String>>? _verificationPendingSubscription;
@@ -118,12 +119,14 @@ class _UpdateStepViewState extends State<UpdateStepView> {
             return;
           }
           _bindVerificationLifecycle(armedVerification.verificationId);
-          showFotaVerificationBanner(
-            this.context,
-            verificationId: armedVerification.verificationId,
-            wearableName: armedVerification.wearableName,
-            sideLabel: armedVerification.sideLabel,
-          );
+          if (_isVerificationPending) {
+            showFotaVerificationBanner(
+              this.context,
+              verificationId: armedVerification.verificationId,
+              wearableName: armedVerification.wearableName,
+              sideLabel: armedVerification.sideLabel,
+            );
+          }
         }
       },
       builder: (context, state) {
@@ -150,19 +153,19 @@ class _UpdateStepViewState extends State<UpdateStepView> {
   /// for this update so it disappears immediately after reconnect validation.
   void _bindVerificationLifecycle(String verificationId) {
     _verificationPendingSubscription?.cancel();
-    _isVerificationPending = FotaPostUpdateVerificationCoordinator.instance
-        .isVerificationPending(verificationId);
-    _verificationPendingSubscription = FotaPostUpdateVerificationCoordinator
-        .instance.pendingVerificationIds
-        .listen((pendingIds) {
-      final isPending = pendingIds.contains(verificationId);
-      if (!mounted || _isVerificationPending == isPending) {
-        return;
-      }
+    final coordinator = FotaPostUpdateVerificationCoordinator.instance;
+    void refresh() {
+      if (!mounted) return;
       setState(() {
-        _isVerificationPending = isPending;
+        _isVerificationPending =
+            coordinator.isVerificationPending(verificationId);
+        _verificationResult = coordinator.resultFor(verificationId);
       });
-    });
+    }
+
+    _verificationPendingSubscription =
+        coordinator.pendingVerificationIds.listen((_) => refresh());
+    refresh();
   }
 
   /// Shows a one-time warning when the update appears to restart image uploads
@@ -444,6 +447,21 @@ class _UpdateStepViewState extends State<UpdateStepView> {
           _successPanel(context),
           const SizedBox(height: 10),
         ],
+        if (showSuccessMessage && _verificationResult != null) ...[
+          AppBanner(
+            backgroundColor: _verificationResult!.success
+                ? const Color(0xFFE8F5E9)
+                : const Color(0xFFFFECEC),
+            foregroundColor: _verificationResult!.success
+                ? _successGreen
+                : const Color(0xFF8A1C1C),
+            leadingIcon: _verificationResult!.success
+                ? Icons.verified_rounded
+                : Icons.error_outline_rounded,
+            content: Text(_verificationResult!.message),
+          ),
+          const SizedBox(height: 10),
+        ],
         if (state.isComplete && state.updateManager?.logger != null) ...[
           OutlinedButton.icon(
             onPressed: () {
@@ -645,69 +663,18 @@ class _UpdateStepViewState extends State<UpdateStepView> {
   }
 }
 
-class _VerificationWarningPanel extends StatefulWidget {
+class _VerificationWarningPanel extends StatelessWidget {
   const _VerificationWarningPanel();
 
   @override
-  State<_VerificationWarningPanel> createState() =>
-      _VerificationWarningPanelState();
-}
-
-class _VerificationWarningPanelState extends State<_VerificationWarningPanel> {
-  static const Duration _total = Duration(minutes: 3);
-  late Duration _remaining;
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    _remaining = _total;
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
-      if (_remaining.inSeconds <= 1) {
-        setState(() {
-          _remaining = Duration.zero;
-        });
-        timer.cancel();
-      } else {
-        setState(() {
-          _remaining -= const Duration(seconds: 1);
-        });
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  String _format(Duration duration) {
-    final m = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final s = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$m:$s';
-  }
-
-  @override
   Widget build(BuildContext context) {
-    const warningBackground = Color(0xFFFFECEC);
-    const warningForeground = Color(0xFF8A1C1C);
-
-    return AppBanner(
-      backgroundColor: warningBackground,
-      foregroundColor: warningForeground,
+    return const AppBanner(
+      backgroundColor: Color(0xFFFFECEC),
+      foregroundColor: Color(0xFF8A1C1C),
       leadingIcon: Icons.warning_amber_rounded,
-      content: Text(
-        'Verification in progress, do not reset or power off the device: ${_format(_remaining)}.',
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: warningForeground,
-              fontWeight: FontWeight.w700,
-            ),
-      ),
+      content:
+          Text('Waiting for the earphone to reconnect and verify its firmware. '
+              'Do not reset or power off the device.'),
     );
   }
 }
