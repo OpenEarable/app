@@ -580,8 +580,8 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: "4dfcd42cec6020842f02f1f79205b19a414d5ab1"
-      resolved-ref: "4dfcd42cec6020842f02f1f79205b19a414d5ab1"
+      ref: e37226729a887e9507175cbd97b990cd28bec289
+      resolved-ref: e37226729a887e9507175cbd97b990cd28bec289
       url: "https://github.com/OpenEarable/open_earable_flutter.git"
     source: git
     version: "2.5.0"
@@ -589,8 +589,8 @@ packages:
     dependency: "direct overridden"
     description:
       path: "generated/dart"
-      ref: "7dc1765e5490bc7b6843ac7236a503df11b6e8a7"
-      resolved-ref: "7dc1765e5490bc7b6843ac7236a503df11b6e8a7"
+      ref: bf61cbe72922045ff850dbdbabfaece8c7a38177
+      resolved-ref: bf61cbe72922045ff850dbdbabfaece8c7a38177
       url: "https://github.com/OpenEarable/protocol.git"
     source: git
     version: "0.0.4"
