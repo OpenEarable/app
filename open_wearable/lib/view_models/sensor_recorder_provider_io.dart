@@ -486,6 +486,10 @@ class _IoAudioInputPlatform implements AudioInputPlatform {
           bitRate: 768000,
           numChannels: 1,
           device: selectedDevice,
+          // Android capture must coexist with music without competing for focus.
+          audioInterruption: Platform.isAndroid
+              ? AudioInterruptionMode.none
+              : AudioInterruptionMode.pause,
         ),
         path: _streamingPath!,
       );
@@ -550,6 +554,9 @@ class _IoAudioInputPlatform implements AudioInputPlatform {
           bitRate: 768000,
           numChannels: 1,
           device: selectedDevice,
+          audioInterruption: Platform.isAndroid
+              ? AudioInterruptionMode.none
+              : AudioInterruptionMode.pause,
         ),
         path: audioPath,
       );
