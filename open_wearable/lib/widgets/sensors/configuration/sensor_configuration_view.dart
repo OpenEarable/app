@@ -347,7 +347,7 @@ class SensorConfigurationView extends StatelessWidget {
         }
         // Always push the selected canonical value to the primary device on
         // apply. This also heals primary-side drift/unknown states.
-        config.setConfiguration(value);
+        target.provider.applyConfiguration(config, value);
       }
 
       for (final entry in mirroredEntriesToApply) {
@@ -356,7 +356,7 @@ class SensorConfigurationView extends StatelessWidget {
         if (config.name.toLowerCase().contains('microphone')) {
           didApplyMicrophoneConfiguration = true;
         }
-        config.setConfiguration(value);
+        target.mirroredProvider!.applyConfiguration(config, value);
       }
 
       logger.d(
@@ -402,7 +402,7 @@ class SensorConfigurationView extends StatelessWidget {
     if (appliedSensorSettings == 0 && appliedAudioInput) {
       return 'Microphone setting applied.';
     }
-    return 'Sensor settings applied.';
+    return 'Sensor settings sent.';
   }
 
   Widget _buildThroughputWarningBanner(BuildContext context) {
