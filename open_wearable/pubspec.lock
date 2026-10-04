@@ -580,8 +580,8 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: e37226729a887e9507175cbd97b990cd28bec289
-      resolved-ref: e37226729a887e9507175cbd97b990cd28bec289
+      ref: "07456abb5ebf5e54255d84342cd3f4c643875dd7"
+      resolved-ref: "07456abb5ebf5e54255d84342cd3f4c643875dd7"
       url: "https://github.com/OpenEarable/open_earable_flutter.git"
     source: git
     version: "2.5.0"
