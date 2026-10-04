@@ -493,7 +493,9 @@ class _UpdateStepViewState extends State<UpdateStepView> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              state.stage,
+              state is UpdateCompleteFailure
+                  ? '${state.stage}: ${state.error}'
+                  : state.stage,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.w600,
