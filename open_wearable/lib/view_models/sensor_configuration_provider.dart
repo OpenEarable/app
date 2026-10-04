@@ -140,6 +140,16 @@ class SensorConfigurationProvider with ChangeNotifier {
     return _sensorConfigurations[sensorConfiguration];
   }
 
+  void applyConfiguration(
+    SensorConfiguration configuration,
+    SensorConfigurationValue value,
+  ) {
+    // Once submitted, accept the device's actual state, including rejection.
+    // Edits that have not been submitted remain protected from old reports.
+    clearPendingChanges(onlyFor: [configuration]);
+    configuration.setConfiguration(value);
+  }
+
   List<(SensorConfiguration, SensorConfigurationValue)>
       getSelectedConfigurations({
     bool pendingOnly = false,
