@@ -90,12 +90,19 @@ class WearableStatusCache {
     }
 
     final stereoDevice = wearable.requireCapability<StereoDevice>();
-    final future = stereoDevice.position.then((position) {
-      _stereoPositionByDeviceId[deviceId] = position;
+    late final Future<DevicePosition?> future;
+    future = stereoDevice.position.then((position) {
+      // A disconnected read must not populate a newer connection's cache.
+      if (identical(_stereoPositionFutureByDeviceId[deviceId], future) &&
+          position != null) {
+        _stereoPositionByDeviceId[deviceId] = position;
+      }
       return position;
-    }).catchError((Object error, StackTrace stackTrace) {
-      _stereoPositionFutureByDeviceId.remove(deviceId);
-      throw error;
+    }).whenComplete(() {
+      // Unknown positions and failures remain retryable on the next lookup.
+      if (identical(_stereoPositionFutureByDeviceId[deviceId], future)) {
+        _stereoPositionFutureByDeviceId.remove(deviceId);
+      }
     });
 
     _stereoPositionFutureByDeviceId[deviceId] = future;
