@@ -11,6 +11,8 @@ class EarableAttitudeTracker extends AttitudeTracker {
   final SensorManager _sensorManager;
   final SensorConfigurationProvider _sensorConfigurationProvider;
   StreamSubscription<SensorValue>? _subscription;
+  final Set<SensorConfiguration> _activeConfigurations = {};
+  bool _startedBefore = false;
 
   @override
   bool get isAvailable => true;
@@ -32,10 +34,7 @@ class EarableAttitudeTracker extends AttitudeTracker {
 
   @override
   void start() {
-    if (_subscription?.isPaused ?? false) {
-      _subscription?.resume();
-      return;
-    }
+    if (_subscription != null) return;
 
     final Sensor accelSensor = _sensorManager.sensors.firstWhere(
       (s) => s.sensorName.toLowerCase() == "accelerometer".toLowerCase(),
@@ -45,6 +44,7 @@ class EarableAttitudeTracker extends AttitudeTracker {
     configurations.addAll(accelSensor.relatedConfigurations);
 
     for (final SensorConfiguration configuration in configurations) {
+      _activeConfigurations.add(configuration);
       if (configuration is ConfigurableSensorConfiguration &&
           configuration.availableOptions.contains(StreamSensorConfigOption())) {
         _sensorConfigurationProvider.addSensorConfigurationOption(
@@ -66,13 +66,16 @@ class EarableAttitudeTracker extends AttitudeTracker {
       );
     }
 
-    calibrate(
-      Attitude(
-        roll: pi / 2 * (_isLeft ? -1 : 1),
-        pitch: 0.0,
-        yaw: 0.0,
-      ),
-    );
+    if (!_startedBefore) {
+      calibrate(
+        Attitude(
+          roll: pi / 2 * (_isLeft ? -1 : 1),
+          pitch: 0.0,
+          yaw: 0.0,
+        ),
+      );
+      _startedBefore = true;
+    }
 
     _subscription = accelSensor.sensorStream.listen((data) {
       if (data is SensorDoubleValue) {
@@ -110,13 +113,20 @@ class EarableAttitudeTracker extends AttitudeTracker {
 
   @override
   void stop() {
-    _subscription?.pause();
+    unawaited(_subscription?.cancel());
+    _subscription = null;
+    for (final configuration in _activeConfigurations) {
+      final off = configuration.offValue;
+      if (off != null) {
+        _sensorConfigurationProvider.applyConfiguration(configuration, off);
+      }
+    }
+    _activeConfigurations.clear();
   }
 
   @override
   void cancel() {
     stop();
-    _subscription?.cancel();
     super.cancel();
   }
 }
