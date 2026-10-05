@@ -283,6 +283,9 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
           child: StatusLEDControlWidget(
             statusLED: widget.device.requireCapability<StatusLed>(),
             rgbLed: widget.device.requireCapability<RgbLed>(),
+            stateReader: widget.device.hasCapability<LedStateReader>()
+                ? widget.device.requireCapability<LedStateReader>()
+                : null,
           ),
         )
       else if (widget.device.hasCapability<RgbLed>())
