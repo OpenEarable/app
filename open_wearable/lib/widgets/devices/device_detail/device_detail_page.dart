@@ -281,6 +281,7 @@ class _DeviceDetailPageState extends State<DeviceDetailPage> {
           title: 'Status LED',
           subtitle: 'Customize the status indicator behavior.',
           child: StatusLEDControlWidget(
+            key: ObjectKey(widget.device),
             statusLED: widget.device.requireCapability<StatusLed>(),
             rgbLed: widget.device.requireCapability<RgbLed>(),
             stateReader: widget.device.hasCapability<LedStateReader>()
