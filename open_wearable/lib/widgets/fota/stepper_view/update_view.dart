@@ -431,7 +431,12 @@ class _UpdateStepViewState extends State<UpdateStepView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final entry in history) ...[
+        // The handler announces upload before the native updater starts it.
+        // Only the native upload progress belongs in the completed steps.
+        for (final entry in history.where(
+          (entry) =>
+              entry.stage != 'Upload firmware' || entry is UpdateProgressFirmware,
+        )) ...[
           _historyEntry(context, entry),
           const SizedBox(height: 8),
         ],
@@ -448,17 +453,10 @@ class _UpdateStepViewState extends State<UpdateStepView> {
           const SizedBox(height: 10),
         ],
         if (showSuccessMessage && _verificationResult != null) ...[
-          AppBanner(
-            backgroundColor: _verificationResult!.success
-                ? const Color(0xFFE8F5E9)
-                : const Color(0xFFFFECEC),
-            foregroundColor: _verificationResult!.success
-                ? _successGreen
-                : const Color(0xFF8A1C1C),
-            leadingIcon: _verificationResult!.success
-                ? Icons.verified_rounded
-                : Icons.error_outline_rounded,
-            content: Text(_verificationResult!.message),
+          _completedStep(
+            context,
+            _verificationResult!.message,
+            failed: !_verificationResult!.success,
           ),
           const SizedBox(height: 10),
         ],
@@ -482,8 +480,23 @@ class _UpdateStepViewState extends State<UpdateStepView> {
   }
 
   Widget _historyEntry(BuildContext context, UpdateFirmware state) {
+    return _completedStep(
+      context,
+      state is UpdateCompleteFailure
+          ? '${state.stage}: ${state.error}'
+          : state.stage == 'Upload'
+              ? 'Upload firmware'
+              : state.stage,
+      failed: state is UpdateCompleteFailure,
+    );
+  }
+
+  Widget _completedStep(
+    BuildContext context,
+    String message, {
+    bool failed = false,
+  }) {
     final colorScheme = Theme.of(context).colorScheme;
-    final failed = state is UpdateCompleteFailure;
     final foregroundColor = failed ? colorScheme.error : _successGreen;
     final backgroundColor = failed
         ? colorScheme.errorContainer.withValues(alpha: 0.35)
@@ -511,9 +524,7 @@ class _UpdateStepViewState extends State<UpdateStepView> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              state is UpdateCompleteFailure
-                  ? '${state.stage}: ${state.error}'
-                  : state.stage,
+              message,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.w600,

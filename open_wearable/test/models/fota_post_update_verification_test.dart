@@ -49,6 +49,7 @@ FirmwareUpdateRequest request(String id) => FirmwareUpdateRequest(
 class _CompletedBloc extends UpdateBloc {
   _CompletedBloc(FirmwareUpdateRequest request)
       : super(firmwareUpdateRequest: request);
+  void show(UpdateFirmwareStateHistory state) => emit(state);
   void finish() => emit(
         UpdateFirmwareStateHistory(
           null,
@@ -223,5 +224,59 @@ void main() {
       await tester.pumpWidget(const SizedBox());
       provider.dispose();
     }
+  });
+
+  testWidgets('upload is only marked complete once native upload finishes',
+      (tester) async {
+    final provider = FirmwareUpdateRequestProvider();
+    final bloc = _CompletedBloc(request('upload'));
+    addTearDown(bloc.close);
+    addTearDown(provider.dispose);
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: provider),
+          BlocProvider<UpdateBloc>.value(value: bloc),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: UpdateStepView(autoStart: false)),
+        ),
+      ),
+    );
+    final unpack = UpdateFirmware('Unpack firmware');
+    final uploadStarted = UpdateFirmware('Upload firmware');
+    bloc.show(UpdateFirmwareStateHistory(uploadStarted, [unpack]));
+    await tester.pump();
+    expect(find.text('Upload firmware'), findsOneWidget);
+    expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
+
+    for (final image in [0, 1]) {
+      bloc.show(
+        UpdateFirmwareStateHistory(
+          UpdateProgressFirmware('Upload', 50 + image, image),
+          [unpack, uploadStarted],
+        ),
+      );
+      await tester.pump();
+      expect(find.text('Upload firmware'), findsNothing);
+      expect(
+        find.text(
+          'Uploading ${image == 0 ? 'application' : 'network'} core ${50 + image}%',
+        ),
+        findsOneWidget,
+      );
+      expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
+    }
+
+    bloc.show(
+      UpdateFirmwareStateHistory(
+        UpdateFirmware('Test'),
+        [unpack, uploadStarted, UpdateProgressFirmware('Upload', 100, 1)],
+      ),
+    );
+    await tester.pump();
+    expect(find.text('Upload firmware'), findsOneWidget);
+    expect(find.text('Upload'), findsNothing);
+    expect(find.byIcon(Icons.check_circle_rounded), findsNWidgets(2));
   });
 }
