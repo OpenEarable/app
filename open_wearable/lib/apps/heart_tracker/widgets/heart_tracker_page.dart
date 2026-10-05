@@ -7,6 +7,7 @@ import 'package:open_wearable/apps/heart_tracker/model/ppg_filter.dart';
 import 'package:open_wearable/apps/heart_tracker/widgets/rowling_chart.dart';
 import 'package:open_wearable/models/wearable_display_group.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
+import 'package:open_wearable/view_models/wearables_provider.dart';
 import 'package:open_wearable/widgets/devices/devices_page.dart';
 import 'package:provider/provider.dart';
 
@@ -29,6 +30,9 @@ class HeartTrackerPage extends StatefulWidget {
 }
 
 class _HeartTrackerPageState extends State<HeartTrackerPage> {
+  late final WearablesProvider _wearablesProvider;
+  Wearable? _wearable;
+  int _ppgTimestampExponent = -3;
   PpgFilter? _ppgFilter;
   Stream<(int, double)>? _displayPpgSignalStream;
   Stream<double?>? _heartRateStream;
@@ -38,22 +42,61 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
   @override
   void initState() {
     super.initState();
+    _wearablesProvider = context.read<WearablesProvider>();
+    _wearablesProvider.addListener(_updateConnection);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         return;
       }
-      _initializePipeline();
+      _updateConnection();
     });
   }
 
-  void _initializePipeline() {
-    final configProvider =
-        Provider.of<SensorConfigurationProvider>(context, listen: false);
-    _sensorConfigProvider = configProvider;
-    final ppgSensor = widget.ppgSensor;
-    final accelerometerSensor = widget.accelerometerSensor;
-    final opticalTemperatureSensor = widget.opticalTemperatureSensor;
+  void _updateConnection() {
+    final wearable = _wearablesProvider.wearables
+        .where((device) => device.deviceId == widget.wearable.deviceId)
+        .firstOrNull;
+    if (identical(wearable, _wearable)) {
+      return;
+    }
+    setState(() {
+      _ppgFilter?.dispose();
+      _ppgFilter = null;
+      _displayPpgSignalStream = null;
+      _heartRateStream = null;
+      _signalQualityStream = null;
+      _sensorConfigProvider = null;
+      _wearable = wearable;
+      if (wearable == null) {
+        return;
+      }
+      final sensors = wearable.requireCapability<SensorManager>().sensors;
+      Sensor? currentSensor(Sensor? previous) => sensors
+          .where((sensor) => sensor.sensorName == previous?.sensorName)
+          .firstOrNull;
+      final ppgSensor = currentSensor(widget.ppgSensor);
+      if (ppgSensor == null) {
+        return;
+      }
+      final configProvider =
+          _wearablesProvider.getSensorConfigurationProvider(wearable);
+      _sensorConfigProvider = configProvider;
+      _ppgTimestampExponent = ppgSensor.timestampExponent;
+      _initializePipeline(
+        configProvider,
+        ppgSensor,
+        currentSensor(widget.accelerometerSensor),
+        currentSensor(widget.opticalTemperatureSensor),
+      );
+    });
+  }
 
+  void _initializePipeline(
+    SensorConfigurationProvider configProvider,
+    Sensor ppgSensor,
+    Sensor? accelerometerSensor,
+    Sensor? opticalTemperatureSensor,
+  ) {
     final sampleFreq = _configureSensorForStreaming(
       ppgSensor,
       configProvider,
@@ -135,20 +178,15 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
       timestampExponent: ppgSensor.timestampExponent,
     );
     ppgFilter.initialize();
-    if (!mounted) {
-      ppgFilter.dispose();
-      return;
-    }
-    setState(() {
-      _displayPpgSignalStream = ppgFilter.displaySignalStream;
-      _heartRateStream = ppgFilter.heartRateStream;
-      _signalQualityStream = ppgFilter.signalQualityStream;
-      _ppgFilter = ppgFilter;
-    });
+    _displayPpgSignalStream = ppgFilter.displaySignalStream;
+    _heartRateStream = ppgFilter.heartRateStream;
+    _signalQualityStream = ppgFilter.signalQualityStream;
+    _ppgFilter = ppgFilter;
   }
 
   @override
   void dispose() {
+    _wearablesProvider.removeListener(_updateConnection);
     final configProvider = _sensorConfigProvider;
     if (configProvider != null) {
       unawaited(configProvider.turnOffAllSensors());
@@ -372,16 +410,18 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
       appBar: PlatformAppBar(
         title: PlatformText('Heart Tracker'),
       ),
-      body: displayPpgSignalStream == null ||
-              heartRateStream == null ||
-              signalQualityStream == null
-          ? const Center(child: PlatformCircularProgressIndicator())
-          : _buildContent(
-              context,
-              displayPpgSignalStream,
-              heartRateStream,
-              signalQualityStream,
-            ),
+      body: _wearable == null
+          ? const Center(child: Text('The selected wearable is disconnected.'))
+          : displayPpgSignalStream == null ||
+                  heartRateStream == null ||
+                  signalQualityStream == null
+              ? const Center(child: PlatformCircularProgressIndicator())
+              : _buildContent(
+                  context,
+                  displayPpgSignalStream,
+                  heartRateStream,
+                  signalQualityStream,
+                ),
     );
   }
 
@@ -392,10 +432,11 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
     Stream<PpgSignalQuality> signalQualityStream,
   ) {
     return ListView(
+      key: ObjectKey(_wearable),
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
       children: [
         DeviceRow(
-          group: WearableDisplayGroup.single(wearable: widget.wearable),
+          group: WearableDisplayGroup.single(wearable: _wearable!),
         ),
         const SizedBox(height: 12),
         StreamBuilder<PpgSignalQuality>(
@@ -427,7 +468,7 @@ class _HeartTrackerPageState extends State<HeartTrackerPage> {
               '(0.5-3.2 Hz).',
           icon: Icons.show_chart_rounded,
           chartStream: displayPpgSignalStream,
-          timestampExponent: widget.ppgSensor.timestampExponent,
+          timestampExponent: _ppgTimestampExponent,
           fixedMeasureMin: null,
           fixedMeasureMax: null,
         ),
