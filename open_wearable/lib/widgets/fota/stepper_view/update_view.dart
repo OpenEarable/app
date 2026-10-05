@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mcumgr_flutter/mcumgr_flutter.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/models/fota_post_update_verification.dart';
 import 'package:open_wearable/widgets/app_banner.dart';
@@ -38,6 +39,7 @@ class _UpdateStepViewState extends State<UpdateStepView> {
   bool _verificationBannerShown = false;
   bool _isVerificationPending = false;
   FotaPostUpdateVerificationResult? _verificationResult;
+  Future<List<McuLogMessage>>? _recoveryLogSnapshot;
   bool _loopWarningHandled = false;
   String? _lastResetValidateStage;
   StreamSubscription<Set<String>>? _verificationPendingSubscription;
@@ -285,7 +287,28 @@ class _UpdateStepViewState extends State<UpdateStepView> {
       return;
     }
 
-    context.read<UpdateBloc>().add(AbortUpdate());
+    final bloc = context.read<UpdateBloc>();
+    var state = bloc.state;
+    if (state is! UpdateFirmwareStateHistory || !state.isComplete) {
+      final aborted = bloc.stream.firstWhere(
+        (state) => state is UpdateFirmwareStateHistory && state.isComplete,
+      );
+      bloc.add(AbortUpdate());
+      state = await aborted;
+    }
+    if (!mounted) return;
+
+    // Slot inspection disposes the native updater for this device. Preserve
+    // its log after cancellation and before opening the recovery page.
+    if (state is UpdateFirmwareStateHistory) {
+      _recoveryLogSnapshot = state.updateManager?.logger.readLogs();
+      try {
+        await _recoveryLogSnapshot;
+      } catch (_) {
+        // Keep the failed future so Show Log reports the original read error.
+      }
+    }
+    if (!mounted) return;
     context.push('/fota/slots', extra: wearable);
   }
 
@@ -467,6 +490,7 @@ class _UpdateStepViewState extends State<UpdateStepView> {
                 '/view',
                 extra: LoggerScreen(
                   logger: state.updateManager!.logger,
+                  logSnapshot: _recoveryLogSnapshot,
                 ),
               );
             },
