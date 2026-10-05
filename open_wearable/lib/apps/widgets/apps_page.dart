@@ -126,6 +126,7 @@ final List<AppInfo> _apps = [
                 await wearable.requireCapability<StereoDevice>().position ==
                     DevicePosition.left,
           ),
+          deviceId: wearable.deviceId,
         );
       },
     ),
