@@ -87,7 +87,11 @@ dependency_overrides:
       ref: bf61cbe72922045ff850dbdbabfaece8c7a38177
       path: generated/dart
   file_picker: 13.1.0
-  mcumgr_flutter: 0.9.1
+  # 0.9.1 backport of nordicsemi/Flutter-nRF-Connect-Device-Manager#188.
+  mcumgr_flutter:
+    git:
+      url: https://github.com/TobiasRoeddiger/Flutter-nRF-Connect-Device-Manager.git
+      ref: 93f17ded1fc2462a2cbcaa21ece781399253bf4a
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

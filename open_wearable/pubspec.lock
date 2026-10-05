@@ -539,10 +539,11 @@ packages:
   mcumgr_flutter:
     dependency: "direct main"
     description:
-      name: mcumgr_flutter
-      sha256: ad2647f188cb8ecbc5c5da1fc136e47103e1956706fdc343a5774ace797be160
-      url: "https://pub.dev"
-    source: hosted
+      path: "."
+      ref: "93f17ded1fc2462a2cbcaa21ece781399253bf4a"
+      resolved-ref: "93f17ded1fc2462a2cbcaa21ece781399253bf4a"
+      url: "https://github.com/TobiasRoeddiger/Flutter-nRF-Connect-Device-Manager.git"
+    source: git
     version: "0.9.1"
   meta:
     dependency: transitive

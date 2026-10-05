@@ -153,7 +153,7 @@ class _FotaSlotsPageState extends State<FotaSlotsPage> {
 
   /// Returns the raw mcumgr erase channel for the slot.
   int? _eraseChannelFor(FirmwareSlotInfo slot) {
-    return slot.image == 0 ? null : slot.image;
+    return slot.image * 2 + slot.slot;
   }
 
   /// Opens the external mcumgr web UI that can help erase image slots.
