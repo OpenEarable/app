@@ -16,12 +16,7 @@ class PostureTrackerViewModel with ChangeNotifier {
   final BadPostureReminder _badPostureReminder;
   bool _isDisposed = false;
   PostureTrackerViewModel(this._attitudeTracker, this._badPostureReminder) {
-    // _attitudeTracker.didChangeAvailability = (_) {
-    //   if (!_isDisposed) {
-    //     notifyListeners();
-    //   }
-    // };
-    //TODO: Implement the didChangeAvailability function
+    _attitudeTracker.addListener(_onTrackerChanged);
 
     _attitudeTracker.listen((attitude) {
       _attitude = Attitude(
@@ -30,6 +25,12 @@ class PostureTrackerViewModel with ChangeNotifier {
         notifyListeners();
       }
     });
+  }
+
+  void _onTrackerChanged() {
+    if (!_isDisposed) {
+      notifyListeners();
+    }
   }
 
   void startTracking() {
@@ -61,9 +62,10 @@ class PostureTrackerViewModel with ChangeNotifier {
 
   @override
   void dispose() {
+    _attitudeTracker.removeListener(_onTrackerChanged);
+    _isDisposed = true;
     stopTracking();
     _attitudeTracker.cancel();
-    _isDisposed = true;
     super.dispose();
   }
 }
