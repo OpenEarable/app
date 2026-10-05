@@ -3,8 +3,9 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mcumgr_flutter/mcumgr_flutter.dart';
 
 class LoggerScreen extends StatelessWidget {
-  const LoggerScreen({required this.logger, super.key});
+  const LoggerScreen({required this.logger, this.logSnapshot, super.key});
   final FirmwareUpdateLogger logger;
+  final Future<List<McuLogMessage>>? logSnapshot;
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +19,7 @@ class LoggerScreen extends StatelessWidget {
 
   Widget _logFutureBuilder() {
     return FutureBuilder<List<McuLogMessage>>(
-      future: logger.readLogs(),
+      future: logSnapshot ?? logger.readLogs(),
       builder: (context, snapshot) {
         if (snapshot.hasData) {
           final messages = (snapshot.data ?? const <McuLogMessage>[])
