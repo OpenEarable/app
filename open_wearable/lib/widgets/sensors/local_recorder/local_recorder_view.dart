@@ -280,7 +280,13 @@ class _LocalRecorderViewState extends State<LocalRecorderView> {
   }
 
   Future<void> _openRecordingFile(LocalRecorderRecordingFile file) async {
-    await localRecorderOpenRecordingFile(file);
+    try {
+      await localRecorderOpenRecordingFile(file);
+    } catch (_) {
+      await _showErrorDialog(
+        'Could not open this recording. Use Share file to open it with another app.',
+      );
+    }
   }
 
   Future<void> _openAllRecordingsPage({required bool isRecording}) async {

@@ -69,7 +69,13 @@ class _LocalRecorderAllRecordingsPageState
   }
 
   Future<void> _openFile(LocalRecorderRecordingFile file) async {
-    await localRecorderOpenRecordingFile(file);
+    try {
+      await localRecorderOpenRecordingFile(file);
+    } catch (_) {
+      await _showErrorDialog(
+        'Could not open this recording. Use Share file to open it with another app.',
+      );
+    }
   }
 
   Future<void> _shareSelectedFolders() async {
