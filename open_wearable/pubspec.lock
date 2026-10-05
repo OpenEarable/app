@@ -1099,10 +1099,11 @@ packages:
   universal_ble:
     dependency: "direct main"
     description:
-      name: universal_ble
-      sha256: bdebe7d4ff3a24f28b5e56c999104ea1584a9de55da4ee0b4c2346bcf8f8c528
-      url: "https://pub.dev"
-    source: hosted
+      path: "."
+      ref: "72313c03c281f1378d3ffb669a9e5525a7a93ad3"
+      resolved-ref: "72313c03c281f1378d3ffb669a9e5525a7a93ad3"
+      url: "https://github.com/TobiasRoeddiger/universal_ble.git"
+    source: git
     version: "2.3.0"
   url_launcher:
     dependency: "direct main"

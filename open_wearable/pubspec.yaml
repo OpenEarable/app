@@ -80,6 +80,11 @@ dev_dependencies:
   flutter_lints: ^6.0.0
 
 dependency_overrides:
+  # 2.3.0 backport of Navideck/universal_ble#307; remove after a fixed release.
+  universal_ble:
+    git:
+      url: https://github.com/TobiasRoeddiger/universal_ble.git
+      ref: 72313c03c281f1378d3ffb669a9e5525a7a93ad3
   # Remove after open_earable_protocols 0.0.4 is published.
   open_earable_protocols:
     git:
