@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io'
     show Directory, File; // still fine as long as we don't use it on web
 
@@ -37,6 +38,21 @@ class _CustomAppLogFilter extends LogFilter {
   }
 }
 
+// Both Logger instances initialize and close their output independently.
+// Share one lifecycle so file rotation and flushing are only scheduled once.
+class _SharedLogOutput extends MultiOutput {
+  _SharedLogOutput(super.outputs);
+
+  Future<void>? _initialization;
+  Future<void>? _destruction;
+
+  @override
+  Future<void> init() => _initialization ??= super.init();
+
+  @override
+  Future<void> destroy() => _destruction ??= super.destroy();
+}
+
 /// Central logging service for app/runtime logs and persisted log files.
 ///
 /// Needs:
@@ -54,8 +70,6 @@ class LogFileManager with ChangeNotifier {
   final Logger _logger;
   final Logger _libLogger;
 
-  // On web this will be null and never used.
-  final LogOutput? _fileOutput;
   final String logDirectoryPath;
 
   Logger get logger => _logger;
@@ -64,11 +78,9 @@ class LogFileManager with ChangeNotifier {
   LogFileManager._({
     required Logger logger,
     required Logger libLogger,
-    required LogOutput? fileOutput,
     required this.logDirectoryPath,
   })  : _logger = logger,
-        _libLogger = libLogger,
-        _fileOutput = fileOutput;
+        _libLogger = libLogger;
 
   /// Async factory – call this once at startup.
   static Future<LogFileManager> create() async {
@@ -88,7 +100,6 @@ class LogFileManager with ChangeNotifier {
 
     final appFilter = _CustomAppLogFilter(level);
     final libFilter = _CustomLibLogFilter(level);
-    LogOutput? fileOutput;
     String logDirPath = '';
 
     // ------------------------
@@ -112,12 +123,10 @@ class LogFileManager with ChangeNotifier {
         maxRotatedFilesCount: 5,
       );
 
-      fileOutput = advanced;
       outputs.add(advanced);
     }
 
-    final sharedOutput =
-        outputs.length == 1 ? outputs.first : MultiOutput(outputs);
+    final sharedOutput = _SharedLogOutput(outputs);
 
     // ------------------------
     // 3) Create loggers
@@ -152,10 +161,11 @@ class LogFileManager with ChangeNotifier {
       output: sharedOutput,
     );
 
+    await Future.wait([logger.init, libLogger.init]);
+
     return LogFileManager._(
       logger: logger,
       libLogger: libLogger,
-      fileOutput: fileOutput,
       logDirectoryPath: logDirPath,
     );
   }
@@ -207,11 +217,8 @@ class LogFileManager with ChangeNotifier {
 
   @override
   void dispose() {
-    // Only AdvancedFileOutput has destroy(); LogOutput in general doesn't.
-    final fo = _fileOutput;
-    if (fo is AdvancedFileOutput) {
-      fo.destroy();
-    }
+    unawaited(_logger.close());
+    unawaited(_libLogger.close());
     super.dispose();
   }
 }
