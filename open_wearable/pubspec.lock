@@ -580,8 +580,8 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: "6b9f4d441d0873333e82bdd9c92a2f89292cf9fd"
-      resolved-ref: "6b9f4d441d0873333e82bdd9c92a2f89292cf9fd"
+      ref: "6c76ca18db8c8774ed0a456e6623d24100587b9d"
+      resolved-ref: "6c76ca18db8c8774ed0a456e6623d24100587b9d"
       url: "https://github.com/OpenEarable/open_earable_flutter.git"
     source: git
     version: "2.5.0"
@@ -1099,10 +1099,10 @@ packages:
     dependency: "direct main"
     description:
       name: universal_ble
-      sha256: ff3c4ea34e1360ba593c68f68ff2d0cd598dcb054b0de1d89c0936dbb5dd9707
+      sha256: bdebe7d4ff3a24f28b5e56c999104ea1584a9de55da4ee0b4c2346bcf8f8c528
       url: "https://pub.dev"
     source: hosted
-    version: "2.0.2"
+    version: "2.3.0"
   url_launcher:
     dependency: "direct main"
     description:
