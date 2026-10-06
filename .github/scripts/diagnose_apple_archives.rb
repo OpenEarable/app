@@ -19,6 +19,8 @@ runs.each do |platform, id|
   run = response.fetch("data")
   actions = client.get("/v1/ciBuildRuns/#{id}/actions").fetch("data")
   workflow = response.fetch("included").find { |entry| entry.fetch("type") == "ciWorkflows" }
+  workflow_details = client.get("/v1/ciWorkflows/#{workflow.fetch('id')}", "include" => "xcodeVersion,macOsVersion")
+  history = client.get("/v1/ciWorkflows/#{workflow.fetch('id')}/buildRuns", "limit" => 20).fetch("data")
   result = {
     run: run,
     workflow: {
@@ -27,6 +29,8 @@ runs.each do |platform, id|
         %w[name description isEnabled isLocked clean pullRequestStartCondition branchStartCondition tagStartCondition scheduledStartCondition actions].include?(key)
       }
     },
+    environment: workflow_details.fetch("included", []),
+    recent_runs: history.map { |item| { id: item.fetch("id"), attributes: item.fetch("attributes") } },
     actions: actions.map do |action|
       issues = client.get("/v1/ciBuildActions/#{action.fetch('id')}/issues", "limit" => 200).fetch("data")
       { action: action, issues: issues }
