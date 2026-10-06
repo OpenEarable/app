@@ -222,7 +222,7 @@ class AppUpgradeRegistry {
       eyebrow: 'OpenWearables 1.6.0',
       title: 'Faster streams,\nsmoother device workflows',
       summary:
-          'Higher sensor throughput with firmware 2.3.0, clearer updates, and more reliable recording.',
+          'Higher sensor throughput with OpenEarable firmware 2.3.0, clearer updates, and more reliable recording.',
       heroDescription:
           'OpenWearables 1.6.0 supports faster Bluetooth sensor streaming with OpenEarable firmware 2.3.0. '
           'Your sensor units and recording formats stay the same, and older supported firmware, including 2.2.9, remains compatible.',
@@ -233,7 +233,7 @@ class AppUpgradeRegistry {
           icon: Icons.speed_rounded,
           title: 'Faster sensor streaming',
           description:
-              'Make the most of firmware 2.3.0 with more efficient Bluetooth sensor streaming, including while music is playing.',
+              'Make the most of OpenEarable firmware 2.3.0 with more efficient Bluetooth sensor streaming, including while music is playing.',
         ),
         AppUpgradeFeatureHighlight(
           icon: Icons.system_update_rounded,
@@ -247,21 +247,37 @@ class AppUpgradeRegistry {
           description:
               'Microphone recordings keep running in the background on Android. Recording errors are easier to understand and recover from.',
         ),
-        AppUpgradeFeatureHighlight(
-          icon: Icons.bluetooth_connected_rounded,
-          title: 'Smoother reconnects',
-          description:
-              'Heart Tracker and Posture Tracker resume after the selected wearable reconnects, with improved Bluetooth connection handling.',
-        ),
       ],
     ),
   ];
 
+  static AppUpgradeHighlight _atDate(
+    AppUpgradeHighlight highlight,
+    DateTime now,
+  ) {
+    if (highlight.version != '1.6.0' ||
+        !now.toLocal().isBefore(DateTime(2026, 10, 20))) {
+      return highlight;
+    }
+    return AppUpgradeHighlight(
+      version: highlight.version,
+      eyebrow: highlight.eyebrow,
+      title: highlight.title,
+      summary: highlight.summary,
+      heroDescription: '${highlight.heroDescription}\n\n'
+          'OpenEarable firmware 2.3.0 is currently available as a beta.',
+      features: highlight.features,
+      accentColor: highlight.accentColor,
+      useHeroGradient: highlight.useHeroGradient,
+    );
+  }
+
   /// Returns the configured highlight for [version], if any.
-  static AppUpgradeHighlight? forVersion(String version) {
+  /// Time-dependent copy uses the device's local date unless [now] is supplied.
+  static AppUpgradeHighlight? forVersion(String version, {DateTime? now}) {
     for (final AppUpgradeHighlight highlight in _highlights) {
       if (highlight.version == version) {
-        return highlight;
+        return _atDate(highlight, now ?? DateTime.now());
       }
     }
     return null;
@@ -272,13 +288,14 @@ class AppUpgradeRegistry {
     if (_highlights.isEmpty) {
       return null;
     }
-    return _highlights.last;
+    return _atDate(_highlights.last, DateTime.now());
   }
 
   /// Returns all registered highlights in newest-first order.
   static List<AppUpgradeHighlight> get all {
+    final now = DateTime.now();
     return List<AppUpgradeHighlight>.unmodifiable(
-      _highlights.reversed,
+      _highlights.reversed.map((highlight) => _atDate(highlight, now)),
     );
   }
 }
