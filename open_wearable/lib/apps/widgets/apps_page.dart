@@ -117,6 +117,7 @@ final List<AppInfo> _apps = [
       supportedDevicePrefixes: _postureSupportedDevices,
       requiredCapabilities: _postureRequiredCapabilities,
       startApp: (wearable, sensorConfigProvider) async {
+        await sensorConfigProvider.turnOffAllSensors();
         return PostureTrackerView(
           EarableAttitudeTracker(
             wearable.requireCapability<SensorManager>(),
@@ -125,6 +126,7 @@ final List<AppInfo> _apps = [
                 await wearable.requireCapability<StereoDevice>().position ==
                     DevicePosition.left,
           ),
+          deviceId: wearable.deviceId,
         );
       },
     ),
@@ -139,7 +141,7 @@ final List<AppInfo> _apps = [
     widget: SelectEarableView(
       supportedDevicePrefixes: _heartSupportedDevices,
       requiredCapabilities: _heartRequiredCapabilities,
-      startApp: (wearable, _) async {
+      startApp: (wearable, sensorConfigProvider) async {
         if (wearable.hasCapability<SensorManager>()) {
           final sensors = wearable.requireCapability<SensorManager>().sensors;
           Sensor? ppgSensor;
@@ -177,6 +179,7 @@ final List<AppInfo> _apps = [
           final opticalTemperatureSensor =
               _findOpticalTemperatureSensor(sensors);
 
+          await sensorConfigProvider.turnOffAllSensors();
           return HeartTrackerPage(
             wearable: wearable,
             ppgSensor: ppgSensor,

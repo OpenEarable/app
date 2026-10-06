@@ -83,6 +83,9 @@ When a future version should have its own page:
 
 The registry is intentionally simple: one entry per release. The coordinator looks up by exact version.
 
+The 1.6.0 page describes OpenEarable firmware 2.3.0 as a beta before October 20, 2026.
+The registry evaluates the device's local date each time content is requested, so the beta notice is omitted from October 20 onward without an app update.
+
 ## Change The Visual Design
 
 If the release needs a different layout or richer presentation, edit `lib/widgets/updates/app_upgrade_page.dart`.

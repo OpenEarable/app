@@ -5,15 +5,28 @@ import 'package:open_earable_flutter/open_earable_flutter.dart';
 
 class RgbControlView extends StatefulWidget {
   final RgbLed rgbLed;
+  final Color initialColor;
 
-  const RgbControlView({super.key, required this.rgbLed});
+  const RgbControlView({
+    super.key,
+    required this.rgbLed,
+    this.initialColor = Colors.black,
+  });
 
   @override
   State<RgbControlView> createState() => _RgbControlViewState();
 }
 
 class _RgbControlViewState extends State<RgbControlView> {
-  Color _currentColor = Colors.black;
+  late Color _currentColor = widget.initialColor;
+
+  @override
+  void didUpdateWidget(covariant RgbControlView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialColor != widget.initialColor) {
+      _currentColor = widget.initialColor;
+    }
+  }
 
   void _showColorPickerDialog() {
     showDialog(

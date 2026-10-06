@@ -359,7 +359,7 @@ class _FirmwareListState extends State<FirmwareList> {
                 size: 18,
               ),
               label: Text(
-                _expanded ? 'Hide Older Versions' : 'Show Older Versions',
+                _expanded ? 'Show fewer versions' : 'Show all versions',
               ),
             ),
           ),

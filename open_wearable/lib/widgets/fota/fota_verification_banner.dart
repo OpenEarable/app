@@ -76,93 +76,23 @@ class _FotaVerificationBannerState extends State<FotaVerificationBanner> {
 
   @override
   Widget build(BuildContext context) {
-    const successBackground = Color(0xFFE8F5E9);
-    const successForeground = Color(0xFF1E6A3A);
     const warningBackground = Color(0xFFFFECEC);
     const warningForeground = Color(0xFF8A1C1C);
-    final successTextStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: successForeground,
-          fontWeight: FontWeight.w700,
-        );
     final warningTextStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
           color: warningForeground,
           fontWeight: FontWeight.w700,
         );
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        AppBanner(
-          backgroundColor: successBackground,
-          foregroundColor: successForeground,
-          leadingIcon: Icons.verified_rounded,
-          content: Text.rich(
-            TextSpan(
-              style: successTextStyle,
-              children: [
-                const TextSpan(
-                  text: 'Firmware upload completed successfully for ',
-                ),
-                TextSpan(text: widget.wearableName),
-                if (widget.sideLabel != null) const TextSpan(text: ' '),
-                if (widget.sideLabel != null)
-                  WidgetSpan(
-                    alignment: PlaceholderAlignment.middle,
-                    child: _FotaSideBadge(
-                      sideLabel: widget.sideLabel!,
-                      accentColor: successForeground,
-                    ),
-                  ),
-                const TextSpan(text: '.'),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        AppBanner(
-          backgroundColor: warningBackground,
-          foregroundColor: warningForeground,
-          leadingIcon: Icons.warning_amber_rounded,
-          content: Text(
-            'Verification in progress, do not reset or power off the device: ${_format(remaining)}.',
-            softWrap: true,
-            style: warningTextStyle,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _FotaSideBadge extends StatelessWidget {
-  final String sideLabel;
-  final Color accentColor;
-
-  const _FotaSideBadge({
-    required this.sideLabel,
-    required this.accentColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final foreground = accentColor;
-    final background = foreground.withValues(alpha: 0.16);
-    final border = foreground.withValues(alpha: 0.34);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: border),
-      ),
-      child: Text(
-        sideLabel,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: foreground,
-              fontWeight: FontWeight.w700,
-            ),
+    return AppBanner(
+      backgroundColor: warningBackground,
+      foregroundColor: warningForeground,
+      leadingIcon: Icons.warning_amber_rounded,
+      content: Text(
+        'Verification in progress for ${widget.wearableName}'
+        '${widget.sideLabel == null ? '' : ' (${widget.sideLabel})'}, '
+        'do not reset or power off the device: ${_format(remaining)}.',
+        softWrap: true,
+        style: warningTextStyle,
       ),
     );
   }
@@ -186,6 +116,7 @@ void showFotaVerificationBanner(
   required String wearableName,
   String? sideLabel,
   Duration duration = const Duration(minutes: 3),
+  DateTime? deadline,
 }) {
   final controller = Provider.of<AppBannerController>(context, listen: false);
   _pruneMissingFotaVerificationBannerKeys(controller);
@@ -200,9 +131,9 @@ void showFotaVerificationBanner(
     }
   }
   _activeFotaVerificationBannerKeys.remove(verificationId);
-  final deadline = _fotaVerificationDeadlinesById.putIfAbsent(
+  final verificationDeadline = _fotaVerificationDeadlinesById.putIfAbsent(
     verificationId,
-    () => DateTime.now().add(duration),
+    () => deadline ?? DateTime.now().add(duration),
   );
 
   controller.showBanner(
@@ -214,7 +145,7 @@ void showFotaVerificationBanner(
         key: bannerKey,
         content: FotaVerificationBanner(
           key: ValueKey('fota_verification_$verificationId'),
-          deadline: deadline,
+          deadline: verificationDeadline,
           wearableName: wearableName,
           sideLabel: sideLabel,
           onDismiss: () => _dismissFotaVerificationBanner(

@@ -134,7 +134,9 @@ class _FirmwareUpdateWidgetState extends State<FirmwareUpdateWidget> {
             ),
             const SizedBox(height: 4),
             Text(
-              'Firmware update is running. Do not close the app until it finishes.',
+              _isUpdateRunning
+                  ? 'Firmware update is running. Do not close the app until it finishes.'
+                  : 'Firmware update finished. See the result below.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),

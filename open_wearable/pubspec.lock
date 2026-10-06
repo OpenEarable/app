@@ -539,10 +539,11 @@ packages:
   mcumgr_flutter:
     dependency: "direct main"
     description:
-      name: mcumgr_flutter
-      sha256: ad2647f188cb8ecbc5c5da1fc136e47103e1956706fdc343a5774ace797be160
-      url: "https://pub.dev"
-    source: hosted
+      path: "."
+      ref: "93f17ded1fc2462a2cbcaa21ece781399253bf4a"
+      resolved-ref: "93f17ded1fc2462a2cbcaa21ece781399253bf4a"
+      url: "https://github.com/TobiasRoeddiger/Flutter-nRF-Connect-Device-Manager.git"
+    source: git
     version: "0.9.1"
   meta:
     dependency: transitive
@@ -580,18 +581,18 @@ packages:
     dependency: "direct main"
     description:
       name: open_earable_flutter
-      sha256: "0134b1785a56c8076a28e5d56b618c465e28ecdf3cc3492fbda77e80776bdfbb"
+      sha256: fdd50765770c82b4471d4f4b90a443364c1447a34deb60db1771f6b416d26b24
       url: "https://pub.dev"
     source: hosted
-    version: "2.4.1"
+    version: "2.5.0"
   open_earable_protocols:
     dependency: transitive
     description:
       name: open_earable_protocols
-      sha256: c11cae4914827c1d7617d44647a5c49304f0c2a2c02c907c595682cfade6ddb2
+      sha256: ca63be893d54cf8982814ee3024f524740911481aa55e14fd3b5d93f10d9a8a0
       url: "https://pub.dev"
     source: hosted
-    version: "0.0.2"
+    version: "0.0.4"
   open_file:
     dependency: "direct main"
     description:
@@ -1096,11 +1097,12 @@ packages:
   universal_ble:
     dependency: "direct main"
     description:
-      name: universal_ble
-      sha256: ff3c4ea34e1360ba593c68f68ff2d0cd598dcb054b0de1d89c0936dbb5dd9707
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.0.2"
+      path: "."
+      ref: "72313c03c281f1378d3ffb669a9e5525a7a93ad3"
+      resolved-ref: "72313c03c281f1378d3ffb669a9e5525a7a93ad3"
+      url: "https://github.com/TobiasRoeddiger/universal_ble.git"
+    source: git
+    version: "2.3.0"
   url_launcher:
     dependency: "direct main"
     description:

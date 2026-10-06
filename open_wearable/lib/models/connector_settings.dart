@@ -150,7 +150,7 @@ class ConnectorSettings {
   /// Stops the running server and resets the runtime status.
   static Future<void> dispose() async {
     _stopNetworkStatusRefresh();
-    await _webSocketServer?.stop();
+    await _webSocketServer?.dispose();
     _webSocketServer = null;
     _setRuntimeStatus(const ConnectorRuntimeStatus.disabled());
   }

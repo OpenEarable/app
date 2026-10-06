@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
@@ -421,6 +422,9 @@ class SensorRecorderProvider with ChangeNotifier {
 }
 
 class _IoAudioInputPlatform implements AudioInputPlatform {
+  static const _recordingService =
+      MethodChannel('edu.kit.teco.openWearable/audio_recording');
+  bool _recordingServiceActive = false;
   final AudioRecorder _audioRecorder = AudioRecorder();
   StreamSubscription<Amplitude>? _amplitudeSub;
   List<InputDevice> _availableInputDevices = const [];
@@ -486,6 +490,10 @@ class _IoAudioInputPlatform implements AudioInputPlatform {
           bitRate: 768000,
           numChannels: 1,
           device: selectedDevice,
+          // Android capture must coexist with music without competing for focus.
+          audioInterruption: Platform.isAndroid
+              ? AudioInterruptionMode.none
+              : AudioInterruptionMode.pause,
         ),
         path: _streamingPath!,
       );
@@ -543,6 +551,10 @@ class _IoAudioInputPlatform implements AudioInputPlatform {
       }
       final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
       final audioPath = '$recordingFolderPath/audio_$timestamp.wav';
+      if (Platform.isAndroid) {
+        await _recordingService.invokeMethod<void>('start');
+        _recordingServiceActive = true;
+      }
       await _audioRecorder.start(
         RecordConfig(
           encoder: encoder,
@@ -550,6 +562,9 @@ class _IoAudioInputPlatform implements AudioInputPlatform {
           bitRate: 768000,
           numChannels: 1,
           device: selectedDevice,
+          audioInterruption: Platform.isAndroid
+              ? AudioInterruptionMode.none
+              : AudioInterruptionMode.pause,
         ),
         path: audioPath,
       );
@@ -561,6 +576,7 @@ class _IoAudioInputPlatform implements AudioInputPlatform {
     } catch (e) {
       logger.e("Failed to start audio recording: $e");
       _isRecordingActive = false;
+      await _stopRecordingService();
       return false;
     }
   }
@@ -579,8 +595,21 @@ class _IoAudioInputPlatform implements AudioInputPlatform {
       _currentAudioPath = null;
     } catch (e) {
       logger.e("Error stopping audio recording: $e");
+    } finally {
+      await _stopRecordingService();
     }
     return const [];
+  }
+
+  Future<void> _stopRecordingService() async {
+    if (!_recordingServiceActive) {
+      return;
+    }
+    try {
+      await _recordingService.invokeMethod<void>('stop');
+    } finally {
+      _recordingServiceActive = false;
+    }
   }
 
   Future<InputDevice?> _inputDeviceForSource(AudioInputSource source) async {
@@ -635,6 +664,7 @@ class _IoAudioInputPlatform implements AudioInputPlatform {
     } catch (e) {
       logger.e("Error stopping audio in dispose: $e");
     } finally {
+      await _stopRecordingService();
       await _audioRecorder.dispose();
     }
   }

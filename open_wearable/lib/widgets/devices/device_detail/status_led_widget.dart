@@ -6,10 +6,12 @@ import 'rgb_control.dart';
 class StatusLEDControlWidget extends StatefulWidget {
   final StatusLed statusLED;
   final RgbLed rgbLed;
+  final LedStateReader? stateReader;
   const StatusLEDControlWidget({
     super.key,
     required this.statusLED,
     required this.rgbLed,
+    this.stateReader,
   });
 
   @override
@@ -19,58 +21,70 @@ class StatusLEDControlWidget extends StatefulWidget {
 class _StatusLEDControlWidgetState extends State<StatusLEDControlWidget> {
   bool _overrideColor = false;
   bool _disableLed = false;
+  bool _busy = false;
+  Color _ledColor = Colors.black;
 
-  Future<void> _setLedBlack() async {
+  @override
+  void initState() {
+    super.initState();
+    if (widget.stateReader != null) {
+      _busy = true;
+      _loadInitialState();
+    }
+  }
+
+  Future<void> _loadInitialState() async {
     try {
-      await widget.statusLED.showStatus(false);
-      await widget.rgbLed.writeLedColor(r: 0, g: 0, b: 0);
+      await _readState();
     } catch (_) {
-      // LED control is best-effort and should not interrupt UI interactions.
+      // Keep the existing controls available if readback fails.
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
   }
 
-  Future<void> _resetLedOverride() async {
+  Future<void> _readState({bool keepColorEditor = false}) async {
+    final reader = widget.stateReader;
+    if (reader == null) return;
+    final state = await reader.readLedState();
+    if (!mounted) return;
+    setState(() {
+      _disableLed = !state.showStatus && state.isBlack && !keepColorEditor;
+      _overrideColor = !state.showStatus && !_disableLed;
+      _ledColor = Color.fromARGB(255, state.red, state.green, state.blue);
+    });
+  }
+
+  Future<void> _applyState(
+      {required bool disable, required bool override,}) async {
+    if (_busy) return;
+    setState(() => _busy = true);
     try {
-      await widget.statusLED.showStatus(true);
+      await widget.statusLED.showStatus(!disable && !override);
+      if (disable) await widget.rgbLed.writeLedColor(r: 0, g: 0, b: 0);
+      if (!mounted) return;
+      setState(() {
+        _disableLed = disable;
+        _overrideColor = override;
+      });
+      // A black override also means "disabled" on the device. Keep the color
+      // picker available while the user is choosing an override color.
+      await _readState(keepColorEditor: override);
     } catch (_) {
-      // LED control is best-effort and should not interrupt UI interactions.
-    }
-  }
-
-  Future<void> _onDisableLedChanged(bool value) async {
-    setState(() {
-      _disableLed = value;
-      if (value) {
-        _overrideColor = false;
-      }
-    });
-
-    if (value) {
-      await _setLedBlack();
-      return;
-    }
-    await _resetLedOverride();
-  }
-
-  Future<void> _onOverrideChanged(bool value) async {
-    setState(() {
-      _overrideColor = value;
-      if (value) {
-        _disableLed = false;
-      }
-    });
-
-    if (value) {
+      // A partial write may have changed the mode but not the color.
       try {
-        await widget.statusLED.showStatus(false);
-      } catch (_) {
-        // LED control is best-effort and should not interrupt UI interactions.
-      }
-      return;
+        await _readState(keepColorEditor: _overrideColor);
+      } catch (_) {}
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
-
-    await _resetLedOverride();
   }
+
+  Future<void> _onDisableLedChanged(bool value) =>
+      _applyState(disable: value, override: false);
+
+  Future<void> _onOverrideChanged(bool value) =>
+      _applyState(disable: false, override: value);
 
   @override
   Widget build(BuildContext context) {
@@ -106,7 +120,7 @@ class _StatusLEDControlWidgetState extends State<StatusLEDControlWidget> {
             const SizedBox(width: 10),
             Switch.adaptive(
               value: _disableLed,
-              onChanged: _onDisableLedChanged,
+              onChanged: _busy ? null : _onDisableLedChanged,
             ),
           ],
         ),
@@ -137,7 +151,7 @@ class _StatusLEDControlWidgetState extends State<StatusLEDControlWidget> {
             const SizedBox(width: 10),
             Switch.adaptive(
               value: _overrideColor,
-              onChanged: _onOverrideChanged,
+              onChanged: _busy ? null : _onOverrideChanged,
             ),
           ],
         ),
@@ -175,7 +189,10 @@ class _StatusLEDControlWidgetState extends State<StatusLEDControlWidget> {
                             ),
                           ),
                         ),
-                        RgbControlView(rgbLed: widget.rgbLed),
+                        RgbControlView(
+                          rgbLed: widget.rgbLed,
+                          initialColor: _ledColor,
+                        ),
                       ],
                     ),
                   ),

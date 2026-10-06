@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart' hide logger;
 
 import '../models/logger.dart';
+import '../models/shared_sensor_configuration.dart';
 
 /// Summary of a profile/configuration restore attempt.
 class SensorConfigurationRestoreResult {
@@ -54,7 +55,7 @@ class SensorConfigurationProvider with ChangeNotifier {
     required SensorConfigurationManager sensorConfigurationManager,
   }) : _sensorConfigurationManager = sensorConfigurationManager {
     _sensorConfigurationSubscription =
-        _sensorConfigurationManager.sensorConfigurationStream.listen((event) {
+        sharedSensorConfiguration(_sensorConfigurationManager).listen((event) {
       final hadReceivedConfigurationReport = _hasReceivedConfigurationReport;
       final previousReportedConfigurations =
           Map<String, SensorConfigurationValue>.of(
@@ -137,6 +138,16 @@ class SensorConfigurationProvider with ChangeNotifier {
     SensorConfiguration sensorConfiguration,
   ) {
     return _sensorConfigurations[sensorConfiguration];
+  }
+
+  void applyConfiguration(
+    SensorConfiguration configuration,
+    SensorConfigurationValue value,
+  ) {
+    // Once submitted, accept the device's actual state, including rejection.
+    // Edits that have not been submitted remain protected from old reports.
+    clearPendingChanges(onlyFor: [configuration]);
+    configuration.setConfiguration(value);
   }
 
   List<(SensorConfiguration, SensorConfigurationValue)>

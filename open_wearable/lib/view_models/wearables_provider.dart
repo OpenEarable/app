@@ -8,6 +8,7 @@ import 'package:open_wearable/models/wearable_status_cache.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 
 import '../models/logger.dart';
+import '../models/firmware_version_comparison.dart';
 
 /// Event emitted when a newer firmware version is available for a wearable.
 class NewFirmwareAvailableEvent extends WearableEvent {
@@ -452,7 +453,7 @@ class WearablesProvider with ChangeNotifier {
           .getLatestFirmwareVersion()
           .then((version) => version.toString());
 
-      if (firmwareImageRepository.isNewerVersion(
+      if (isNewerFirmwareVersion(
         latestVersion,
         currentVersion,
       )) {

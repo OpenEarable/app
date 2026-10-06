@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.5.3
+version: 1.6.0
 
 environment:
   sdk: ^3.6.0
@@ -35,8 +35,8 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.9
   open_file: ^3.5.11
-  open_earable_flutter: ^2.4.1
-  universal_ble: ^2.0.4
+  open_earable_flutter: ^2.5.0
+  universal_ble: ^2.3.0
   permission_handler: ^12.0.1
   flutter_platform_widgets: ^10.0.1
   provider: ^6.1.5+1
@@ -77,9 +77,17 @@ dev_dependencies:
   flutter_lints: ^6.0.0
 
 dependency_overrides:
+  # 2.3.0 backport of Navideck/universal_ble#307; remove after a fixed release.
+  universal_ble:
+    git:
+      url: https://github.com/TobiasRoeddiger/universal_ble.git
+      ref: 72313c03c281f1378d3ffb669a9e5525a7a93ad3
   file_picker: 13.1.0
-  mcumgr_flutter: 0.9.1
-  universal_ble: 2.0.2
+  # 0.9.1 backport of nordicsemi/Flutter-nRF-Connect-Device-Manager#188.
+  mcumgr_flutter:
+    git:
+      url: https://github.com/TobiasRoeddiger/Flutter-nRF-Connect-Device-Manager.git
+      ref: 93f17ded1fc2462a2cbcaa21ece781399253bf4a
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

@@ -8,12 +8,15 @@ import 'package:open_wearable/apps/posture_tracker/model/ewma.dart';
 import 'package:open_wearable/view_models/sensor_configuration_provider.dart';
 
 class EarableAttitudeTracker extends AttitudeTracker {
-  final SensorManager _sensorManager;
-  final SensorConfigurationProvider _sensorConfigurationProvider;
+  SensorManager? _sensorManager;
+  SensorConfigurationProvider? _sensorConfigurationProvider;
   StreamSubscription<SensorValue>? _subscription;
+  final Set<SensorConfiguration> _activeConfigurations = {};
+  bool _startedBefore = false;
+  bool _resumeWhenAvailable = false;
 
   @override
-  bool get isAvailable => true;
+  bool get isAvailable => _sensorManager != null;
 
   @override
   bool get isTracking => _subscription != null && !_subscription!.isPaused;
@@ -25,19 +28,44 @@ class EarableAttitudeTracker extends AttitudeTracker {
   final bool _isLeft;
 
   EarableAttitudeTracker(
-    this._sensorManager,
-    this._sensorConfigurationProvider,
+    SensorManager sensorManager,
+    SensorConfigurationProvider sensorConfigurationProvider,
     this._isLeft,
-  );
+  ) : _sensorManager = sensorManager,
+        _sensorConfigurationProvider = sensorConfigurationProvider;
+
+  void updateConnection(
+    SensorManager? sensorManager,
+    SensorConfigurationProvider? sensorConfigurationProvider,
+  ) {
+    assert((sensorManager == null) == (sensorConfigurationProvider == null));
+    if (identical(_sensorManager, sensorManager) &&
+        identical(_sensorConfigurationProvider, sensorConfigurationProvider)) {
+      return;
+    }
+    final resume = isTracking || _resumeWhenAvailable;
+    unawaited(_subscription?.cancel());
+    _subscription = null;
+    // The old connection is gone; do not write through its disposed provider.
+    _activeConfigurations.clear();
+    _sensorManager = sensorManager;
+    _sensorConfigurationProvider = sensorConfigurationProvider;
+    _resumeWhenAvailable = resume && !isAvailable;
+    if (resume && isAvailable) {
+      start();
+    }
+    notifyListeners();
+  }
 
   @override
   void start() {
-    if (_subscription?.isPaused ?? false) {
-      _subscription?.resume();
-      return;
-    }
+    if (_subscription != null) return;
+    final sensorManager = _sensorManager;
+    final sensorConfigurationProvider = _sensorConfigurationProvider;
+    if (sensorManager == null || sensorConfigurationProvider == null) return;
+    _resumeWhenAvailable = false;
 
-    final Sensor accelSensor = _sensorManager.sensors.firstWhere(
+    final Sensor accelSensor = sensorManager.sensors.firstWhere(
       (s) => s.sensorName.toLowerCase() == "accelerometer".toLowerCase(),
     );
 
@@ -45,34 +73,38 @@ class EarableAttitudeTracker extends AttitudeTracker {
     configurations.addAll(accelSensor.relatedConfigurations);
 
     for (final SensorConfiguration configuration in configurations) {
+      _activeConfigurations.add(configuration);
       if (configuration is ConfigurableSensorConfiguration &&
           configuration.availableOptions.contains(StreamSensorConfigOption())) {
-        _sensorConfigurationProvider.addSensorConfigurationOption(
+        sensorConfigurationProvider.addSensorConfigurationOption(
           configuration,
           StreamSensorConfigOption(),
           markPending: false,
         );
       }
-      List<SensorConfigurationValue> values = _sensorConfigurationProvider
+      List<SensorConfigurationValue> values = sensorConfigurationProvider
           .getSensorConfigurationValues(configuration, distinct: true);
-      _sensorConfigurationProvider.addSensorConfiguration(
+      sensorConfigurationProvider.addSensorConfiguration(
         configuration,
         values.first,
         markPending: false,
       );
       configuration.setConfiguration(
-        _sensorConfigurationProvider
+        sensorConfigurationProvider
             .getSelectedConfigurationValue(configuration)!,
       );
     }
 
-    calibrate(
-      Attitude(
-        roll: pi / 2 * (_isLeft ? -1 : 1),
-        pitch: 0.0,
-        yaw: 0.0,
-      ),
-    );
+    if (!_startedBefore) {
+      calibrate(
+        Attitude(
+          roll: pi / 2 * (_isLeft ? -1 : 1),
+          pitch: 0.0,
+          yaw: 0.0,
+        ),
+      );
+      _startedBefore = true;
+    }
 
     _subscription = accelSensor.sensorStream.listen((data) {
       if (data is SensorDoubleValue) {
@@ -110,13 +142,21 @@ class EarableAttitudeTracker extends AttitudeTracker {
 
   @override
   void stop() {
-    _subscription?.pause();
+    _resumeWhenAvailable = false;
+    unawaited(_subscription?.cancel());
+    _subscription = null;
+    for (final configuration in _activeConfigurations) {
+      final off = configuration.offValue;
+      if (off != null) {
+        _sensorConfigurationProvider?.applyConfiguration(configuration, off);
+      }
+    }
+    _activeConfigurations.clear();
   }
 
   @override
   void cancel() {
     stop();
-    _subscription?.cancel();
     super.cancel();
   }
 }
