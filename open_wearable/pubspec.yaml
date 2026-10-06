@@ -35,10 +35,7 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.9
   open_file: ^3.5.11
-  open_earable_flutter:
-    git:
-      url: https://github.com/OpenEarable/open_earable_flutter.git
-      ref: 6c76ca18db8c8774ed0a456e6623d24100587b9d
+  open_earable_flutter: ^2.5.0
   universal_ble: ^2.3.0
   permission_handler: ^12.0.1
   flutter_platform_widgets: ^10.0.1
@@ -85,12 +82,6 @@ dependency_overrides:
     git:
       url: https://github.com/TobiasRoeddiger/universal_ble.git
       ref: 72313c03c281f1378d3ffb669a9e5525a7a93ad3
-  # Remove after open_earable_protocols 0.0.4 is published.
-  open_earable_protocols:
-    git:
-      url: https://github.com/OpenEarable/protocol.git
-      ref: bf61cbe72922045ff850dbdbabfaece8c7a38177
-      path: generated/dart
   file_picker: 13.1.0
   # 0.9.1 backport of nordicsemi/Flutter-nRF-Connect-Device-Manager#188.
   mcumgr_flutter:
