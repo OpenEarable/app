@@ -688,7 +688,6 @@ class _UpdateStepViewState extends State<UpdateStepView> {
       deadline: verification.deadline,
       wearableName: verification.wearableName,
       sideLabel: verification.sideLabel,
-      showUploadCompleted: false,
       // The coordinator owns the timeout and replaces this with its result.
       onDismiss: () {},
     );
