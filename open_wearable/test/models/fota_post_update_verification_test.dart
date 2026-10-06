@@ -293,6 +293,15 @@ void main() {
       expect(armedIds, isNull,
           reason: 'Recovery resets before upload must not verify',);
       expect(find.textContaining('Verification in progress'), findsNothing);
+      expect(find.text('Abort Update'), findsOneWidget);
+      if (outcome == 'verified') {
+        bloc.show(UpdateFirmwareStateHistory(UpdateFirmware('Test'), [
+          UpdateProgressFirmware('Upload', 100, 1),
+        ]),);
+        await tester.pump();
+        await tester.tap(find.text('Abort Update'));
+        await tester.pump(const Duration(milliseconds: 300));
+      }
       bloc.show(
         UpdateFirmwareStateHistory(UpdateFirmware('Reset'), [
           UpdateProgressFirmware('Upload', 100, 1),
@@ -301,6 +310,11 @@ void main() {
       );
       await tester.pump();
       await tester.pump();
+      if (outcome == 'verified') {
+        // A confirmation opened before reboot must no longer abort it.
+        await tester.tap(find.text('Abort Update').last);
+        await tester.pump(const Duration(milliseconds: 300));
+      }
       expect(
         armedIds,
         isNotNull,
@@ -309,6 +323,7 @@ void main() {
       final id = armedIds!.single;
       expect(find.text('Reset and verify'), findsOneWidget);
       expect(find.textContaining('Verification in progress'), findsOneWidget);
+      expect(find.text('Abort Update'), findsNothing);
       expect(find.textContaining(RegExp(r'0[23]:[0-5][0-9]')), findsOneWidget);
       expect(banners.activeBanners, hasLength(1));
       expect(running.last, isTrue);
@@ -439,6 +454,7 @@ void main() {
       );
       await tester.pump();
       expect(find.text('Upload firmware'), findsNothing);
+      expect(find.text('Abort Update'), findsOneWidget);
       expect(
         find.text(
           'Uploading ${image == 0 ? 'application' : 'network'} core ${50 + image}%',
