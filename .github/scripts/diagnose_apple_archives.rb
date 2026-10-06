@@ -10,73 +10,67 @@ client = AppStoreConnectClient.new(
   private_key: ENV.fetch("APP_STORE_CONNECT_PRIVATE_KEY")
 )
 
-runs = {
-  "iOS" => "30b722c3-a76d-4dac-b870-886c859ade8f",
-  "macOS" => "29e409bc-15c3-470a-b544-89b45f746336"
-}
-results = {}
-runs.each do |platform, id|
-  response = client.get("/v1/ciBuildRuns/#{id}", "include" => "workflow")
-  run = response.fetch("data")
-  actions = client.get("/v1/ciBuildRuns/#{id}/actions").fetch("data")
-  workflow = response.fetch("included").find { |entry| entry.fetch("type") == "ciWorkflows" }
-  workflow_details = client.get("/v1/ciWorkflows/#{workflow.fetch('id')}", "include" => "xcodeVersion,macOsVersion")
-  history = client.get("/v1/ciWorkflows/#{workflow.fetch('id')}/buildRuns", "limit" => 200).fetch("data")
-  result = {
-    run: run,
-    workflow: {
-      id: workflow.fetch("id"),
-      attributes: workflow.fetch("attributes").select { |key, _|
-        %w[name description isEnabled isLocked clean pullRequestStartCondition branchStartCondition tagStartCondition scheduledStartCondition actions].include?(key)
-      }
-    },
-    environment: workflow_details.fetch("included", []).map { |item|
-      { type: item.fetch("type"), id: item.fetch("id"), attributes: item.fetch("attributes").select { |key, _| %w[name version].include?(key) } }
-    },
-    recent_runs: history.map { |item| { id: item.fetch("id"), attributes: item.fetch("attributes") } },
-    actions: actions.map do |action|
-      issues = client.get("/v1/ciBuildActions/#{action.fetch('id')}/issues", "limit" => 200).fetch("data")
-      { action: action, issues: issues }
-    end
-  }
-  results[platform] = result
-  puts JSON.pretty_generate(platform => result)
-end
-File.write("apple-pr-diagnosis.json", JSON.pretty_generate(results))
-
-if ENV["RETRY_CANCELLED_BUILD"] == "true"
-  ios = results.fetch("iOS")
-  raise "Not the expected PR validation workflow" unless ios.dig(:workflow, :attributes, "name") == "iOS PR Validation"
-  raise "Unexpected release action" if ios.dig(:workflow, :attributes, "actions").any? { |action| action["actionType"] == "ARCHIVE" }
-  begin
-    repository = client.get("/v1/ciWorkflows/#{ios.dig(:workflow, :id)}/repository").fetch("data")
-    reference = nil
-    ref_path = "/v1/scmRepositories/#{repository.fetch('id')}/gitReferences"
-    query = { "limit" => 200 }
-    loop do
-      refs = client.get(ref_path, query)
-      reference = refs.fetch("data").find { |ref|
-        ref.dig("attributes", "canonicalName") == "refs/heads/automation/bump-version-1.5.4-36858743484" && !ref.dig("attributes", "isDeleted")
-      }
-      break if reference || !refs.dig("links", "next")
-      page = URI(refs.fetch("links").fetch("next"))
-      raise "Unexpected pagination host" unless page.host == "api.appstoreconnect.apple.com"
-      ref_path = page.path
-      query = URI.decode_www_form(page.query.to_s).to_h
-    end
-    raise "App 1.6.0 source branch not indexed by Apple" unless reference
-    retry_response = client.post("/v1/ciBuildRuns", data: {
-      type: "ciBuildRuns",
-      attributes: {},
-      relationships: {
-        workflow: { data: { type: "ciWorkflows", id: ios.dig(:workflow, :id) } },
-        sourceBranchOrTag: { data: { type: "scmGitReferences", id: reference.fetch("id") } }
-      }
-    })
-    results["retry"] = retry_response
-  rescue AppStoreConnectError => error
-    results["retry"] = { error: error.message }
+# Preserve diagnostic response metadata, never request credentials.
+class AppStoreConnectClient
+  private
+  def api_error(response)
+    safe_headers = response.each_header.to_h.select { |key, _| key.match?(/request.id|correlation|trace|x-apple|date|retry-after/) }
+    "HTTP #{response.code}: #{response.body}; response metadata: #{safe_headers.to_json}"
   end
-  puts JSON.pretty_generate("retry" => results.fetch("retry"))
+end
+results = {}
+def collect(client, path, query = {})
+  items = []
+  loop do
+    response = client.get(path, query)
+    items.concat(response.fetch("data"))
+    break unless response.dig("links", "next")
+    page = URI(response.fetch("links").fetch("next"))
+    raise "Unexpected pagination host" unless page.host == "api.appstoreconnect.apple.com"
+    path = page.path
+    query = URI.decode_www_form(page.query.to_s).to_h
+  end
+  items
+end
+def record(results, key)
+  results[key] = yield
+  puts "Read #{key}"
+rescue AppStoreConnectError => error
+  results[key] = {error: error.message}
+  puts "#{key}: #{error.message}"
+ensure
   File.write("apple-pr-diagnosis.json", JSON.pretty_generate(results))
+end
+record(results, "products") { collect(client, "/v1/ciProducts", "limit" => 200) }
+Array(results["products"]).each do |product|
+  id = product.fetch("id")
+  record(results, "product_#{id}_workflows") do
+    client.get("/v1/ciProducts/#{id}/workflows", "limit" => 200,
+      "include" => "repository,xcodeVersion,macOsVersion",
+      "fields[ciXcodeVersions]" => "name,version,macOsVersions")
+  end
+  record(results, "product_#{id}_builds") do
+    collect(client, "/v1/ciProducts/#{id}/buildRuns", "limit" => 200, "sort" => "-number")
+  end
+end
+workflow_ids = %w[4c5830ae-2f0f-44da-9657-f7724c597436 34118c35-53e1-48f4-a4bb-7b25d98b6a44]
+workflow_ids.each do |id|
+  record(results, "workflow_#{id}") do
+    client.get("/v1/ciWorkflows/#{id}", "include" => "product,repository,xcodeVersion,macOsVersion", "fields[ciXcodeVersions]" => "name,version,macOsVersions")
+  end
+  workflow = results.fetch("workflow_#{id}").fetch("data")
+  xcode_id = workflow.dig("relationships", "xcodeVersion", "data", "id")
+  record(results, "xcode_#{xcode_id}_supported_macos") do
+    client.get("/v1/ciXcodeVersions/#{xcode_id}/macOsVersions", "limit" => 200)
+  end
+  repository_id = workflow.dig("relationships", "repository", "data", "id")
+  record(results, "repository_#{repository_id}") do
+    client.get("/v1/scmRepositories/#{repository_id}", "include" => "scmProvider,defaultBranch")
+  end
+end
+# Action durations establish whether there was a common usage cutoff.
+builds = results.select { |key, _| key.end_with?("_builds") }.values.flatten
+builds.select { |run| run.dig("attributes", "startedDate").to_s >= "2026-10-01" }.each do |run|
+  id = run.fetch("id")
+  record(results, "actions_#{id}") { collect(client, "/v1/ciBuildRuns/#{id}/actions", "limit" => 200) }
 end
