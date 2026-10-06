@@ -15,9 +15,10 @@ runs = {
 }
 results = {}
 runs.each do |platform, id|
-  run = client.get("/v1/ciBuildRuns/#{id}").fetch("data")
+  response = client.get("/v1/ciBuildRuns/#{id}", "include" => "workflow")
+  run = response.fetch("data")
   actions = client.get("/v1/ciBuildRuns/#{id}/actions").fetch("data")
-  workflow = client.get("/v1/ciBuildRuns/#{id}/workflow").fetch("data")
+  workflow = response.fetch("included").find { |entry| entry.fetch("type") == "ciWorkflows" }
   result = {
     run: run,
     workflow: {
