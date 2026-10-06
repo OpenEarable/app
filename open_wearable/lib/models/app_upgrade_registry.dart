@@ -225,7 +225,7 @@ class AppUpgradeRegistry {
           'Higher sensor throughput with OpenEarable firmware 2.3.0, clearer updates, and more reliable recording.',
       heroDescription:
           'OpenWearables 1.6.0 supports faster Bluetooth sensor streaming with OpenEarable firmware 2.3.0. '
-          'Your sensor units and recording formats stay the same, and older supported firmware, including 2.2.9, remains compatible.',
+          'Your sensor units and recording formats stay the same.',
       accentColor: Color(0xFF8F6A67),
       useHeroGradient: false,
       features: <AppUpgradeFeatureHighlight>[
