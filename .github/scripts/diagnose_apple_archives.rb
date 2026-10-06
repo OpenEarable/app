@@ -49,9 +49,29 @@ if ENV["RETRY_CANCELLED_BUILD"] == "true"
   raise "Not the expected PR validation workflow" unless ios.dig(:workflow, :attributes, "name") == "iOS PR Validation"
   raise "Unexpected release action" if ios.dig(:workflow, :attributes, "actions").any? { |action| action["actionType"] == "ARCHIVE" }
   begin
+    repository = client.get("/v1/ciWorkflows/#{ios.dig(:workflow, :id)}/repository").fetch("data")
+    reference = nil
+    ref_path = "/v1/scmRepositories/#{repository.fetch('id')}/gitReferences"
+    query = { "limit" => 200 }
+    loop do
+      refs = client.get(ref_path, query)
+      reference = refs.fetch("data").find { |ref|
+        ref.dig("attributes", "canonicalName") == "refs/heads/automation/bump-version-1.5.4-36858743484" && !ref.dig("attributes", "isDeleted")
+      }
+      break if reference || !refs.dig("links", "next")
+      page = URI(refs.fetch("links").fetch("next"))
+      raise "Unexpected pagination host" unless page.host == "api.appstoreconnect.apple.com"
+      ref_path = page.path
+      query = URI.decode_www_form(page.query.to_s).to_h
+    end
+    raise "App 1.6.0 source branch not indexed by Apple" unless reference
     retry_response = client.post("/v1/ciBuildRuns", data: {
       type: "ciBuildRuns",
-      relationships: { buildRun: { data: { type: "ciBuildRuns", id: runs.fetch("iOS") } } }
+      attributes: {},
+      relationships: {
+        workflow: { data: { type: "ciWorkflows", id: ios.dig(:workflow, :id) } },
+        sourceBranchOrTag: { data: { type: "scmGitReferences", id: reference.fetch("id") } }
+      }
     })
     results["retry"] = retry_response
   rescue AppStoreConnectError => error
