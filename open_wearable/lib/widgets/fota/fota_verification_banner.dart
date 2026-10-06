@@ -14,6 +14,7 @@ class FotaVerificationBanner extends StatefulWidget {
   final String wearableName;
   final String? sideLabel;
   final VoidCallback onDismiss;
+  final bool showUploadCompleted;
 
   const FotaVerificationBanner({
     super.key,
@@ -21,6 +22,7 @@ class FotaVerificationBanner extends StatefulWidget {
     required this.wearableName,
     this.sideLabel,
     required this.onDismiss,
+    this.showUploadCompleted = true,
   });
 
   @override
@@ -93,33 +95,34 @@ class _FotaVerificationBannerState extends State<FotaVerificationBanner> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        AppBanner(
-          backgroundColor: successBackground,
-          foregroundColor: successForeground,
-          leadingIcon: Icons.verified_rounded,
-          content: Text.rich(
-            TextSpan(
-              style: successTextStyle,
-              children: [
-                const TextSpan(
-                  text: 'Firmware upload completed successfully for ',
-                ),
-                TextSpan(text: widget.wearableName),
-                if (widget.sideLabel != null) const TextSpan(text: ' '),
-                if (widget.sideLabel != null)
-                  WidgetSpan(
-                    alignment: PlaceholderAlignment.middle,
-                    child: _FotaSideBadge(
-                      sideLabel: widget.sideLabel!,
-                      accentColor: successForeground,
-                    ),
+        if (widget.showUploadCompleted)
+          AppBanner(
+            backgroundColor: successBackground,
+            foregroundColor: successForeground,
+            leadingIcon: Icons.verified_rounded,
+            content: Text.rich(
+              TextSpan(
+                style: successTextStyle,
+                children: [
+                  const TextSpan(
+                    text: 'Firmware upload completed successfully for ',
                   ),
-                const TextSpan(text: '.'),
-              ],
+                  TextSpan(text: widget.wearableName),
+                  if (widget.sideLabel != null) const TextSpan(text: ' '),
+                  if (widget.sideLabel != null)
+                    WidgetSpan(
+                      alignment: PlaceholderAlignment.middle,
+                      child: _FotaSideBadge(
+                        sideLabel: widget.sideLabel!,
+                        accentColor: successForeground,
+                      ),
+                    ),
+                  const TextSpan(text: '.'),
+                ],
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 8),
+        if (widget.showUploadCompleted) const SizedBox(height: 8),
         AppBanner(
           backgroundColor: warningBackground,
           foregroundColor: warningForeground,
@@ -186,6 +189,7 @@ void showFotaVerificationBanner(
   required String wearableName,
   String? sideLabel,
   Duration duration = const Duration(minutes: 3),
+  DateTime? deadline,
 }) {
   final controller = Provider.of<AppBannerController>(context, listen: false);
   _pruneMissingFotaVerificationBannerKeys(controller);
@@ -200,9 +204,9 @@ void showFotaVerificationBanner(
     }
   }
   _activeFotaVerificationBannerKeys.remove(verificationId);
-  final deadline = _fotaVerificationDeadlinesById.putIfAbsent(
+  final verificationDeadline = _fotaVerificationDeadlinesById.putIfAbsent(
     verificationId,
-    () => DateTime.now().add(duration),
+    () => deadline ?? DateTime.now().add(duration),
   );
 
   controller.showBanner(
@@ -214,7 +218,7 @@ void showFotaVerificationBanner(
         key: bannerKey,
         content: FotaVerificationBanner(
           key: ValueKey('fota_verification_$verificationId'),
-          deadline: deadline,
+          deadline: verificationDeadline,
           wearableName: wearableName,
           sideLabel: sideLabel,
           onDismiss: () => _dismissFotaVerificationBanner(

@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import 'package:mcumgr_flutter/mcumgr_flutter.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/models/fota_post_update_verification.dart';
-import 'package:open_wearable/widgets/app_banner.dart';
 import 'package:open_wearable/widgets/fota/fota_verification_banner.dart';
 
 import '../logger_screen/logger_screen.dart';
@@ -36,7 +35,9 @@ class _UpdateStepViewState extends State<UpdateStepView> {
 
   bool _lastReportedRunning = false;
   bool _startRequested = false;
-  bool _verificationBannerShown = false;
+  bool _verificationStarted = false;
+  bool _verificationCancelled = false;
+  ArmedFotaPostUpdateVerification? _verification;
   bool _isVerificationPending = false;
   FotaPostUpdateVerificationResult? _verificationResult;
   Future<List<McuLogMessage>>? _recoveryLogSnapshot;
@@ -97,39 +98,11 @@ class _UpdateStepViewState extends State<UpdateStepView> {
       listener: (context, state) async {
         _reportRunningState(_isUpdateInProgress(state));
         final updateProvider = context.read<FirmwareUpdateRequestProvider>();
+        unawaited(_updateVerification(state, updateProvider));
         await _maybeShowLoopWarning(
           state: state,
           updateProvider: updateProvider,
         );
-        if (state is UpdateFirmwareStateHistory &&
-            state.isComplete &&
-            state.history.isNotEmpty &&
-            state.history.last is UpdateCompleteSuccess) {
-          if (_verificationBannerShown) {
-            return;
-          }
-          _verificationBannerShown = true;
-          final armedVerification = await FotaPostUpdateVerificationCoordinator
-              .instance
-              .armFromUpdateRequest(
-            request: updateProvider.updateParameters,
-            selectedWearable: updateProvider.selectedWearable,
-            preResolvedWearableName: widget.preResolvedWearableName,
-            preResolvedSideLabel: widget.preResolvedSideLabel,
-          );
-          if (!mounted || armedVerification == null) {
-            return;
-          }
-          _bindVerificationLifecycle(armedVerification.verificationId);
-          if (_isVerificationPending) {
-            showFotaVerificationBanner(
-              this.context,
-              verificationId: armedVerification.verificationId,
-              wearableName: armedVerification.wearableName,
-              sideLabel: armedVerification.sideLabel,
-            );
-          }
-        }
       },
       builder: (context, state) {
         return switch (state) {
@@ -141,18 +114,83 @@ class _UpdateStepViewState extends State<UpdateStepView> {
     );
   }
 
+  // The updater can also reset before uploading to clear an old pending image.
+  // Only the reset after Test/Confirm starts post-update verification.
+  bool _isVerificationReset(UpdateState state) =>
+      state is UpdateFirmwareStateHistory &&
+      state.currentState?.stage == 'Reset' &&
+      state.history
+          .any((entry) => entry.stage == 'Test' || entry.stage == 'Confirm');
+
+  bool _isNativeSuccess(UpdateState state) =>
+      state is UpdateFirmwareStateHistory &&
+      state.isComplete &&
+      state.history.isNotEmpty &&
+      state.history.last is UpdateCompleteSuccess;
+
+  // TEST_ONLY can remain in Reset for the configured 90-second swap estimate.
+  // A new connection reporting the expected firmware is already verified.
+  bool _hasVerificationResult(UpdateState state) =>
+      _verificationResult != null &&
+      (_isVerificationReset(state) || _isNativeSuccess(state));
+
   bool _isUpdateInProgress(UpdateState state) {
-    if (state is UpdateInitial) {
-      return false;
-    }
+    if (state is UpdateInitial || _hasVerificationResult(state)) return false;
     if (state is UpdateFirmwareStateHistory) {
-      return !state.isComplete;
+      return !state.isComplete || _isVerificationPending;
     }
     return true;
   }
 
-  /// Subscribes the page-level success panel to the coordinator entry created
-  /// for this update so it disappears immediately after reconnect validation.
+  Future<void> _updateVerification(
+    UpdateState state,
+    FirmwareUpdateRequestProvider provider,
+  ) async {
+    final coordinator = FotaPostUpdateVerificationCoordinator.instance;
+    if (state is UpdateFirmwareStateHistory &&
+        state.isComplete &&
+        !_isNativeSuccess(state)) {
+      _verificationCancelled = true;
+      final verification = _verification;
+      if (verification != null) {
+        coordinator.cancel(verification.verificationId);
+        dismissFotaVerificationBannerById(context, verification.verificationId);
+      }
+      return;
+    }
+    if (_verificationStarted ||
+        (!_isVerificationReset(state) && !_isNativeSuccess(state))) {
+      return;
+    }
+    _verificationStarted = true;
+    final verification = await coordinator.armFromUpdateRequest(
+      request: provider.updateParameters,
+      selectedWearable: provider.selectedWearable,
+      preResolvedWearableName: widget.preResolvedWearableName,
+      preResolvedSideLabel: widget.preResolvedSideLabel,
+      connectionBeforeReset:
+          _isVerificationReset(state) ? provider.selectedWearable : null,
+    );
+    if (verification == null) return;
+    if (_verificationCancelled) {
+      coordinator.cancel(verification.verificationId);
+      return;
+    }
+    if (!mounted) return;
+    _verification = verification;
+    _bindVerificationLifecycle(verification.verificationId);
+    if (_isVerificationPending) {
+      showFotaVerificationBanner(
+        context,
+        verificationId: verification.verificationId,
+        wearableName: verification.wearableName,
+        sideLabel: verification.sideLabel,
+        deadline: verification.deadline,
+      );
+    }
+  }
+
+  /// Keeps the countdown and page completion tied to actual reconnect validation.
   void _bindVerificationLifecycle(String verificationId) {
     _verificationPendingSubscription?.cancel();
     final coordinator = FotaPostUpdateVerificationCoordinator.instance;
@@ -163,6 +201,12 @@ class _UpdateStepViewState extends State<UpdateStepView> {
             coordinator.isVerificationPending(verificationId);
         _verificationResult = coordinator.resultFor(verificationId);
       });
+      if (!_isVerificationPending) {
+        dismissFotaVerificationBannerById(context, verificationId);
+      }
+      _reportRunningState(
+        _isUpdateInProgress(context.read<UpdateBloc>().state),
+      );
     }
 
     _verificationPendingSubscription =
@@ -447,9 +491,7 @@ class _UpdateStepViewState extends State<UpdateStepView> {
   ) {
     final history = state.history;
     final currentState = state.currentState;
-    final showSuccessMessage = state.isComplete &&
-        history.isNotEmpty &&
-        history.last is UpdateCompleteSuccess;
+    final verificationFinished = _hasVerificationResult(state);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -458,24 +500,25 @@ class _UpdateStepViewState extends State<UpdateStepView> {
         // Only the native upload progress belongs in the completed steps.
         for (final entry in history.where(
           (entry) =>
-              entry.stage != 'Upload firmware' || entry is UpdateProgressFirmware,
+              entry.stage != 'Upload firmware' ||
+              entry is UpdateProgressFirmware,
         )) ...[
           _historyEntry(context, entry),
           const SizedBox(height: 8),
         ],
-        if (currentState != null) ...[
+        if (currentState != null && !verificationFinished) ...[
           _currentStatePanel(context, state),
           const SizedBox(height: 10),
         ],
-        if (!state.isComplete) ...[
+        if (!state.isComplete && !verificationFinished) ...[
           _abortButton(context),
           const SizedBox(height: 10),
         ],
-        if (showSuccessMessage && _isVerificationPending) ...[
+        if (_isVerificationPending) ...[
           _successPanel(context),
           const SizedBox(height: 10),
         ],
-        if (showSuccessMessage && _verificationResult != null) ...[
+        if (verificationFinished) ...[
           _completedStep(
             context,
             _verificationResult!.message,
@@ -627,11 +670,21 @@ class _UpdateStepViewState extends State<UpdateStepView> {
       final core = currentState.imageNumber == 0 ? 'application' : 'network';
       return 'Uploading $core core ${currentState.progress}%';
     }
-    return currentState.stage;
+    return _isVerificationReset(state)
+        ? 'Reset and verify'
+        : currentState.stage;
   }
 
   Widget _successPanel(BuildContext context) {
-    return const _VerificationWarningPanel();
+    final verification = _verification!;
+    return FotaVerificationBanner(
+      deadline: verification.deadline,
+      wearableName: verification.wearableName,
+      sideLabel: verification.sideLabel,
+      showUploadCompleted: false,
+      // The coordinator owns the timeout and replaces this with its result.
+      onDismiss: () {},
+    );
   }
 
   Widget _firmwareInfoCard(BuildContext context, SelectedFirmware firmware) {
@@ -695,22 +748,6 @@ class _UpdateStepViewState extends State<UpdateStepView> {
       return 'Local firmware • $typeLabel';
     }
     return 'Firmware';
-  }
-}
-
-class _VerificationWarningPanel extends StatelessWidget {
-  const _VerificationWarningPanel();
-
-  @override
-  Widget build(BuildContext context) {
-    return const AppBanner(
-      backgroundColor: Color(0xFFFFECEC),
-      foregroundColor: Color(0xFF8A1C1C),
-      leadingIcon: Icons.warning_amber_rounded,
-      content:
-          Text('Waiting for the earphone to reconnect and verify its firmware. '
-              'Do not reset or power off the device.'),
-    );
   }
 }
 
