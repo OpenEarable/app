@@ -134,6 +134,12 @@ class _UpdateStepViewState extends State<UpdateStepView> {
       _verificationResult != null &&
       (_isVerificationReset(state) || _isNativeSuccess(state));
 
+  bool _canAbortUpdate(UpdateState state) =>
+      state is UpdateFirmwareStateHistory &&
+      !state.isComplete &&
+      !_isVerificationReset(state) &&
+      !_isVerificationPending;
+
   bool _isUpdateInProgress(UpdateState state) {
     if (state is UpdateInitial || _hasVerificationResult(state)) return false;
     if (state is UpdateFirmwareStateHistory) {
@@ -397,7 +403,8 @@ class _UpdateStepViewState extends State<UpdateStepView> {
       ),
     );
 
-    if (!mounted || shouldAbort != true) {
+    // The earphone may have started rebooting while confirmation was open.
+    if (!mounted || shouldAbort != true || !_canAbortUpdate(updateBloc.state)) {
       return;
     }
 
@@ -510,12 +517,12 @@ class _UpdateStepViewState extends State<UpdateStepView> {
           _currentStatePanel(context, state),
           const SizedBox(height: 10),
         ],
-        if (!state.isComplete && !verificationFinished) ...[
-          _abortButton(context),
-          const SizedBox(height: 10),
-        ],
         if (_isVerificationPending) ...[
           _successPanel(context),
+          const SizedBox(height: 10),
+        ],
+        if (_canAbortUpdate(state)) ...[
+          _abortButton(context),
           const SizedBox(height: 10),
         ],
         if (verificationFinished) ...[
