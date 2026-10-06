@@ -2,6 +2,11 @@ name: Diagnose Apple PR cancellations
 
 on:
   workflow_dispatch:
+    inputs:
+      retry_cancelled_build:
+        description: Retry the existing iOS PR validation build once
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -17,6 +22,7 @@ jobs:
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+          RETRY_CANCELLED_BUILD: ${{ inputs.retry_cancelled_build }}
         run: ruby .github/scripts/diagnose_apple_archives.rb
       - name: Save build diagnostics
         if: always()
