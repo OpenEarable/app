@@ -70,7 +70,47 @@ workflow_ids.each do |id|
 end
 # Action durations establish whether there was a common usage cutoff.
 builds = results.select { |key, _| key.end_with?("_builds") }.values.flatten
-builds.select { |run| run.dig("attributes", "startedDate").to_s >= "2026-10-01" }.each do |run|
+builds.select { |run| run.dig("attributes", "startedDate").to_s >= "2026-09-06" }.each do |run|
   id = run.fetch("id")
   record(results, "actions_#{id}") { collect(client, "/v1/ciBuildRuns/#{id}/actions", "limit" => 200) }
+end
+
+if ENV["RETRY_CANCELLED_BUILD"] == "true"
+  product_id = "5D6E7D70-9D8F-425C-9727-AD60401DE764"
+  repository_id = "32a6c433-a95d-4633-b3a2-ae706e5c3732"
+  diagnostic_name = "Manual iOS start diagnosis 2026-10-06"
+  workflows = results.fetch("product_#{product_id}_workflows").fetch("data")
+  existing = workflows.find { |workflow| workflow.dig("attributes", "name") == diagnostic_name }
+  record(results, "diagnostic_workflow") do
+    existing ? {"data" => existing} : client.post("/v1/ciWorkflows", data: {
+      type: "ciWorkflows",
+      attributes: {
+        name: diagnostic_name,
+        description: "Temporary manual build-only diagnostic. No archive, upload, distribution, or automatic triggers.",
+        isEnabled: false,
+        isLockedForEditing: true,
+        clean: true,
+        containerFilePath: "open_wearable/ios/Runner.xcworkspace",
+        manualBranchStartCondition: {source: {isAllMatch: false, patterns: [{pattern: "automation/bump-version-1.5.4-36858743484", isPrefix: false}]}},
+        actions: [{name: "Build iOS diagnostic", actionType: "BUILD", destination: "ANY_IOS_DEVICE", scheme: "Runner", platform: "IOS", isRequiredToPass: true}]
+      },
+      relationships: {
+        product: {data: {type: "ciProducts", id: product_id}},
+        repository: {data: {type: "scmRepositories", id: repository_id}},
+        xcodeVersion: {data: {type: "ciXcodeVersions", id: "42533094-17d3-46b2-ada5-1f94ceb94b61"}},
+        macOsVersion: {data: {type: "ciMacOsVersions", id: "c538a952-ac84-4277-bea4-b9dab48bb96c"}}
+      }
+    })
+  end
+  if results.dig("diagnostic_workflow", "data", "id")
+    record(results, "diagnostic_build") do
+      refs = collect(client, "/v1/scmRepositories/#{repository_id}/gitReferences", "limit" => 200)
+      reference = refs.find { |ref| ref.dig("attributes", "canonicalName") == "refs/heads/automation/bump-version-1.5.4-36858743484" && !ref.dig("attributes", "isDeleted") }
+      raise "Missing expected release branch" unless reference
+      client.post("/v1/ciBuildRuns", data: {type: "ciBuildRuns", relationships: {
+        workflow: {data: {type: "ciWorkflows", id: results.dig("diagnostic_workflow", "data", "id")}},
+        sourceBranchOrTag: {data: {type: "scmGitReferences", id: reference.fetch("id")}}
+      }})
+    end
+  end
 end
