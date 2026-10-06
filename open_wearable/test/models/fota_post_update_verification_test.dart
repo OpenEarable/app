@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'package:open_wearable/view_models/app_banner_controller.dart';
 import 'package:open_wearable/widgets/fota/stepper_view/update_view.dart';
+import 'package:open_wearable/widgets/fota/fota_verification_banner.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
 import 'package:open_wearable/models/fota_post_update_verification.dart';
 
@@ -203,10 +204,13 @@ void main() {
       addTearDown(subscription.cancel);
       bloc.finish();
       await tester.pumpAndSettle();
-      expect(armedIds, isNotNull,
-          reason: 'Verification must be armed on upload success',);
+      expect(
+        armedIds,
+        isNotNull,
+        reason: 'Verification must be armed on upload success',
+      );
       final id = armedIds!.single;
-      expect(find.textContaining('Waiting for the earphone'), findsOneWidget);
+      expect(find.textContaining('Verification in progress'), findsOneWidget);
       if (timeout) {
         await tester.pump(const Duration(minutes: 3));
         await tester.pumpAndSettle();
@@ -219,12 +223,188 @@ void main() {
         expect(find.textContaining('Update verified'), findsOneWidget);
       }
       expect(coordinator.isVerificationPending(id), isFalse);
-      expect(find.textContaining('Waiting for the earphone'), findsNothing);
+      expect(find.textContaining('Verification in progress'), findsNothing);
       expect(find.textContaining('00:00'), findsNothing);
       await tester.pumpWidget(const SizedBox());
       provider.dispose();
     }
   });
+
+  for (final outcome in [
+    'verified',
+    'mismatch',
+    'timeout',
+    'abort',
+    'failure',
+  ]) {
+    testWidgets('reset shows a countdown and resolves on $outcome',
+        (tester) async {
+      coordinator = FotaPostUpdateVerificationCoordinator.instance;
+      final original =
+          _Ear('reset-$outcome', DevicePosition.right, () async => '2.3.0');
+      final provider = FirmwareUpdateRequestProvider()
+        ..setSelectedPeripheral(original)
+        ..setFirmware(
+          RemoteFirmware(
+            name: '2.2.9',
+            version: '2.2.9',
+            url: 'https://example.test/fw.zip',
+            type: FirmwareType.multiImage,
+          ),
+        );
+      final bloc = _CompletedBloc(provider.updateParameters);
+      final banners = AppBannerController();
+      final running = <bool>[];
+      addTearDown(bloc.close);
+      addTearDown(provider.dispose);
+      addTearDown(banners.dispose);
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: provider),
+            ChangeNotifierProvider.value(value: banners),
+            BlocProvider<UpdateBloc>.value(value: bloc),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: UpdateStepView(
+                  autoStart: false,
+                  preResolvedSideLabel: 'R',
+                  onUpdateRunningChanged: running.add,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      Set<String>? armedIds;
+      final sub = coordinator.pendingVerificationIds.listen((ids) {
+        if (ids.isNotEmpty) armedIds = ids;
+      });
+      addTearDown(sub.cancel);
+      bloc.show(UpdateFirmwareStateHistory(UpdateFirmware('Validate'), []));
+      await tester.pump();
+      expect(armedIds, isNull, reason: 'Initial validation is before reboot');
+      bloc.show(UpdateFirmwareStateHistory(UpdateFirmware('Reset'), [
+        UpdateFirmware('Validate'),
+      ]),);
+      await tester.pump();
+      expect(armedIds, isNull,
+          reason: 'Recovery resets before upload must not verify',);
+      expect(find.textContaining('Verification in progress'), findsNothing);
+      bloc.show(
+        UpdateFirmwareStateHistory(UpdateFirmware('Reset'), [
+          UpdateProgressFirmware('Upload', 100, 1),
+          UpdateFirmware('Test'),
+        ]),
+      );
+      await tester.pump();
+      await tester.pump();
+      expect(
+        armedIds,
+        isNotNull,
+        reason: 'Verification must start at Reset, before native success',
+      );
+      final id = armedIds!.single;
+      expect(find.text('Reset and verify'), findsOneWidget);
+      expect(find.textContaining('Verification in progress'), findsOneWidget);
+      expect(find.textContaining(RegExp(r'0[23]:[0-5][0-9]')), findsOneWidget);
+      expect(banners.activeBanners, hasLength(1));
+      expect(running.last, isTrue);
+      // main.dart rechecks already-connected wearables when verification arms.
+      expect(await coordinator.verifyOnWearableConnected(original), isNull);
+      expect(coordinator.isVerificationPending(id), isTrue);
+      final deadline = tester
+          .widget<FotaVerificationBanner>(find.byType(FotaVerificationBanner))
+          .deadline;
+      bloc.show(
+        UpdateFirmwareStateHistory(UpdateFirmware('Reset'), [
+          UpdateProgressFirmware('Upload', 100, 1),
+          UpdateFirmware('Test'),
+          UpdateFirmware('Reset'),
+        ]),
+      );
+      await tester.pump(const Duration(seconds: 30));
+      expect(armedIds, {id});
+      expect(
+        tester
+            .widget<FotaVerificationBanner>(
+              find.byType(FotaVerificationBanner),
+            )
+            .deadline,
+        deadline,
+      );
+      if (outcome == 'timeout') {
+        await tester.pump(const Duration(seconds: 150));
+      } else if (outcome == 'abort' || outcome == 'failure') {
+        bloc.show(
+          UpdateFirmwareStateHistory(
+            null,
+            [
+              outcome == 'abort'
+                  ? UpdateCompleteAborted()
+                  : UpdateCompleteFailure('Transport failed'),
+            ],
+            isComplete: true,
+          ),
+        );
+      } else {
+        await coordinator.verifyOnWearableConnected(
+          _Ear(
+            original.deviceId,
+            DevicePosition.right,
+            () async => outcome == 'verified' ? '2.2.9' : '2.3.0',
+          ),
+        );
+      }
+      await tester.pumpAndSettle();
+      expect(coordinator.isVerificationPending(id), isFalse);
+      expect(find.textContaining('Verification in progress'), findsNothing);
+      expect(find.text('Reset and verify'), findsNothing);
+      expect(find.text('Abort Update'), findsNothing);
+      expect(banners.activeBanners, isEmpty);
+      expect(
+        running.last,
+        isFalse,
+        reason:
+            'A verified reconnect must release navigation before native success',
+      );
+      if (outcome == 'verified') {
+        expect(
+          find.textContaining('Update verified (version 2.2.9)'),
+          findsOneWidget,
+        );
+        bloc.finish();
+        await tester.pumpAndSettle();
+        expect(armedIds, {id}, reason: 'Late native success must not rearm');
+        expect(find.textContaining('Update verified'), findsOneWidget);
+      } else if (outcome == 'mismatch') {
+        expect(
+          find.textContaining('Expected 2.2.9 but detected 2.3.0'),
+          findsOneWidget,
+        );
+        expect(find.textContaining('Update verified'), findsNothing);
+      } else if (outcome == 'timeout') {
+        expect(find.textContaining('Verification timed out'), findsOneWidget);
+        expect(find.textContaining('00:00'), findsNothing);
+      } else {
+        expect(coordinator.resultFor(id), isNull);
+        expect(
+          await coordinator.verifyOnWearableConnected(
+            _Ear(
+              original.deviceId,
+              DevicePosition.right,
+              () async => '2.2.9',
+            ),
+          ),
+          isNull,
+          reason: 'Cancelled checks must not verify on a later reconnect',
+        );
+      }
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
 
   testWidgets('upload is only marked complete once native upload finishes',
       (tester) async {

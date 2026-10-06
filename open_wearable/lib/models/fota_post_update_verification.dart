@@ -10,11 +10,13 @@ class ArmedFotaPostUpdateVerification {
   final String verificationId;
   final String wearableName;
   final String? sideLabel;
+  final DateTime deadline;
 
   const ArmedFotaPostUpdateVerification({
     required this.verificationId,
     required this.wearableName,
     this.sideLabel,
+    required this.deadline,
   });
 }
 
@@ -81,11 +83,17 @@ class FotaPostUpdateVerificationCoordinator {
   bool isVerificationPending(String verificationId) =>
       _pendingById.containsKey(verificationId);
 
+  void cancel(String verificationId) {
+    _verificationTimers.remove(verificationId)?.cancel();
+    if (_pendingById.remove(verificationId) != null) _publishPendingIds();
+  }
+
   Future<ArmedFotaPostUpdateVerification?> armFromUpdateRequest({
     required FirmwareUpdateRequest request,
     Wearable? selectedWearable,
     String? preResolvedWearableName,
     String? preResolvedSideLabel,
+    Wearable? connectionBeforeReset,
   }) async {
     _cleanupExpired();
 
@@ -128,6 +136,7 @@ class FotaPostUpdateVerificationCoordinator {
       expectedSideLabel: expectedSideLabel,
       expectedFirmwareVersion: expectedFirmwareVersion,
       armedAt: DateTime.now(),
+      connectionBeforeReset: connectionBeforeReset,
     );
     _pendingById[verificationId] = pending;
     _verificationTimers[verificationId] = Timer(_maxPendingAge, () {
@@ -139,6 +148,7 @@ class FotaPostUpdateVerificationCoordinator {
       verificationId: verificationId,
       wearableName: displayName ?? 'OpenEarable',
       sideLabel: expectedSideLabel,
+      deadline: pending.armedAt.add(_maxPendingAge),
     );
   }
 
@@ -163,7 +173,12 @@ class FotaPostUpdateVerificationCoordinator {
       connectedSideLabel: connectedSideLabel,
     );
 
-    if (pending == null || !_verifyingIds.add(pending.verificationId)) {
+    // The app also checks its existing connections when verification is armed.
+    // A Wearable belongs to one connection; only a new connection can verify
+    // the reboot, including when reinstalling the same firmware version.
+    if (pending == null ||
+        identical(pending.connectionBeforeReset, wearable) ||
+        !_verifyingIds.add(pending.verificationId)) {
       return null;
     }
     try {
@@ -186,7 +201,9 @@ class FotaPostUpdateVerificationCoordinator {
         expectedFirmwareVersion != null &&
         detectedFirmwareVersion != null &&
         _firmwareVersionsMatch(
-            expectedFirmwareVersion, detectedFirmwareVersion,);
+          expectedFirmwareVersion,
+          detectedFirmwareVersion,
+        );
     final displayName = pending.displayWearableName ?? 'OpenEarable';
     final result = FotaPostUpdateVerificationResult(
       verificationId: pending.verificationId,
@@ -582,6 +599,7 @@ class _PendingPostUpdateVerification {
   final String? expectedSideLabel;
   final String? expectedFirmwareVersion;
   final DateTime armedAt;
+  final Wearable? connectionBeforeReset;
 
   const _PendingPostUpdateVerification({
     required this.verificationId,
@@ -591,5 +609,6 @@ class _PendingPostUpdateVerification {
     required this.expectedSideLabel,
     required this.expectedFirmwareVersion,
     required this.armedAt,
+    this.connectionBeforeReset,
   });
 }
