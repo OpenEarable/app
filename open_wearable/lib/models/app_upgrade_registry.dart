@@ -217,6 +217,44 @@ class AppUpgradeRegistry {
         ),
       ],
     ),
+    AppUpgradeHighlight(
+      version: '1.6.0',
+      eyebrow: 'OpenWearables 1.6.0',
+      title: 'Faster streams,\nsmoother device workflows',
+      summary:
+          'Higher sensor throughput with firmware 2.3.0, clearer updates, and more reliable recording.',
+      heroDescription:
+          'OpenWearables 1.6.0 supports faster Bluetooth sensor streaming with OpenEarable firmware 2.3.0. '
+          'Your sensor units and recording formats stay the same, and older supported firmware, including 2.2.9, remains compatible.',
+      accentColor: Color(0xFF8F6A67),
+      useHeroGradient: false,
+      features: <AppUpgradeFeatureHighlight>[
+        AppUpgradeFeatureHighlight(
+          icon: Icons.speed_rounded,
+          title: 'Faster sensor streaming',
+          description:
+              'Make the most of firmware 2.3.0 with more efficient Bluetooth sensor streaming, including while music is playing.',
+        ),
+        AppUpgradeFeatureHighlight(
+          icon: Icons.system_update_rounded,
+          title: 'Clearer firmware updates',
+          description:
+              'Follow upload, reset, and verification with clearer progress, a verification countdown, and improved recovery when an update fails.',
+        ),
+        AppUpgradeFeatureHighlight(
+          icon: Icons.mic_rounded,
+          title: 'More reliable recording',
+          description:
+              'Microphone recordings keep running in the background on Android. Recording errors are easier to understand and recover from.',
+        ),
+        AppUpgradeFeatureHighlight(
+          icon: Icons.bluetooth_connected_rounded,
+          title: 'Smoother reconnects',
+          description:
+              'Heart Tracker and Posture Tracker resume after the selected wearable reconnects, with improved Bluetooth connection handling.',
+        ),
+      ],
+    ),
   ];
 
   /// Returns the configured highlight for [version], if any.

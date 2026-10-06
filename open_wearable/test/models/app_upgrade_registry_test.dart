@@ -3,7 +3,7 @@ import 'package:open_wearable/models/app_upgrade_registry.dart';
 
 void main() {
   group('AppUpgradeRegistry', () {
-    test('registers version 1.5.0 as the latest upgrade highlight', () {
+    test('keeps older highlights and lists version 1.6.0 first', () {
       final highlight = AppUpgradeRegistry.forVersion('1.5.0');
 
       expect(highlight, isNotNull);
@@ -21,8 +21,9 @@ void main() {
           'Smarter device selection',
         ],
       );
-      expect(AppUpgradeRegistry.latest?.version, '1.5.0');
-      expect(AppUpgradeRegistry.all.first.version, '1.5.0');
+      expect(AppUpgradeRegistry.forVersion('1.6.0'), isNotNull);
+      expect(AppUpgradeRegistry.latest?.version, '1.6.0');
+      expect(AppUpgradeRegistry.all.first.version, '1.6.0');
     });
   });
 }
