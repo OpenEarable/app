@@ -10,6 +10,18 @@ Windows, and web continue using their existing GitHub runners.
 These artifacts validate compilation; the unsigned iOS app cannot be installed
 on a physical iPhone. Fork PRs do not receive Apple secrets.
 
+## TestFlight
+
+**Apple TestFlight** archives both platforms on each push to `main`, then submits
+for Beta App Review when required and assigns the builds to the existing
+**Internal Testing** and **External Testing** groups. This preserves the old
+Xcode Cloud main-branch distribution settings, including automatic notification
+when Apple makes an external build available. It does not submit a public App
+Store release.
+
+The workflow can also be run manually against a chosen ref. Manual runs default
+to upload-only validation; enable `distribute` to send the build to those groups.
+
 ## App Store releases
 
 Use **Release All Platforms**, **Apple App Store Build and Submit**, or either

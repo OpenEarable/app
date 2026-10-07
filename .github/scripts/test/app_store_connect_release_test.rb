@@ -90,4 +90,64 @@ class AppStoreConnectReleaseTest < Minitest::Test
     capture_io { release(client, validate_only: true).run }
     assert_empty client.requests
   end
+  class BetaClient < Client
+    attr_reader :mutations
+    def initialize(builds, groups:, state: 'READY_FOR_BETA_SUBMISSION')
+      super(builds)
+      @groups = groups
+      @state = state
+      @mutations = []
+    end
+    def get(path, query = {})
+      case path
+      when '/v1/builds' then super
+      when '/v1/apps/app-id/betaGroups' then { 'data' => @groups }
+      when '/v1/builds/uploaded-build/betaBuildLocalizations' then { 'data' => [] }
+      when '/v1/builds/uploaded-build/buildBetaDetail'
+        { 'data' => { 'id' => 'beta-detail', 'attributes' => { 'externalBuildState' => @state } } }
+      else raise "Unexpected API request: #{path}"
+      end
+    end
+    def post(path, body)
+      @mutations << [:post, path, body]
+      {}
+    end
+    def patch(path, body)
+      @mutations << [:patch, path, body]
+      {}
+    end
+  end
+
+  def beta_groups
+    [
+      { 'id' => 'internal', 'attributes' => { 'name' => 'Internal Testing', 'isInternalGroup' => true } },
+      { 'id' => 'external', 'attributes' => { 'name' => 'External Testing', 'isInternalGroup' => false } }
+    ]
+  end
+
+  def test_testflight_uses_only_existing_groups_and_beta_review
+    client = BetaClient.new([build], groups: beta_groups)
+    capture_io do
+      release(client, process_only: false, testflight_groups: ['Internal Testing', 'External Testing']).run
+    end
+    assert client.mutations.any? { |_, path, _| path == '/v1/betaAppReviewSubmissions' }
+    assert_equal '/v1/builds/uploaded-build/relationships/betaGroups', client.mutations.last[1]
+    assert_equal %w[internal external], client.mutations.last[2][:data].map { |group| group[:id] }
+    refute client.mutations.any? { |_, path, _| path.include?('appStoreVersions') || path.include?('reviewSubmissions') }
+  end
+
+  def test_missing_testflight_group_fails_without_changing_apple
+    client = BetaClient.new([build], groups: beta_groups)
+    assert_raises(AppStoreConnectError) do
+      capture_io { release(client, process_only: false, testflight_groups: ['Wrong group']).run }
+    end
+    assert_empty client.mutations
+  end
+
+  def test_approved_beta_is_not_resubmitted
+    client = BetaClient.new([build], groups: beta_groups, state: 'IN_BETA_TESTING')
+    capture_io { release(client, process_only: false, testflight_groups: ['External Testing']).run }
+    refute client.mutations.any? { |_, path, _| path == '/v1/betaAppReviewSubmissions' }
+  end
+
 end

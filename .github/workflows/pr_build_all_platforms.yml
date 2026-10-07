@@ -121,6 +121,13 @@ jobs:
         with:
           app-dir: ${{ env.APP_DIR }}
 
+      - name: Analyze and test Flutter
+        if: ${{ matrix.target == 'ios' }}
+        working-directory: open_wearable
+        run: |
+          flutter analyze
+          flutter test
+
       - name: Install macOS pods
         if: ${{ matrix.target == 'macos' }}
         working-directory: open_wearable

@@ -155,6 +155,8 @@ class AppStoreRelease
 
     build = wait_for_processed_build
     return puts("Uploaded build is ready; App Review submission was not requested") if @options[:process_only]
+    return distribute_testflight(build) unless Array(@options[:testflight_groups]).empty?
+
     version = find_or_create_version
 
     if submitted?(version)
@@ -224,6 +226,53 @@ class AppStoreRelease
       puts builds.empty? ? "The uploaded build is not visible yet" : "The build is still processing"
       wait_or_timeout!
     end
+  end
+
+  # Keep the same explicit tester groups as the retired main-branch workflows.
+  # Beta App Review is separate from public App Store review.
+  def distribute_testflight(build)
+    groups = @client.get("/v1/apps/#{@options[:app_id]}/betaGroups", "limit" => 200).fetch("data")
+    selected = @options[:testflight_groups].map do |name|
+      matches = groups.select { |group| group.dig("attributes", "name") == name }
+      raise AppStoreConnectError, "Expected exactly one TestFlight group named #{name}" unless matches.length == 1
+
+      matches.first
+    end
+    build_id = build.fetch("id")
+    notes = File.read(File.join(@options[:release_notes_dir], "default.txt"), encoding: "UTF-8").strip
+    localizations = @client.get("/v1/builds/#{build_id}/betaBuildLocalizations").fetch("data")
+    if localizations.empty?
+      @client.post("/v1/betaBuildLocalizations", data: {
+        type: "betaBuildLocalizations", attributes: { locale: "en-US", whatsNew: notes },
+        relationships: { build: { data: { type: "builds", id: build_id } } }
+      })
+    else
+      localizations.each do |localization|
+        @client.patch("/v1/betaBuildLocalizations/#{localization.fetch('id')}", data: {
+          type: "betaBuildLocalizations", id: localization.fetch("id"), attributes: { whatsNew: notes }
+        })
+      end
+    end
+
+    if selected.any? { |group| !group.dig("attributes", "isInternalGroup") }
+      detail = @client.get("/v1/builds/#{build_id}/buildBetaDetail").fetch("data")
+      @client.patch("/v1/buildBetaDetails/#{detail.fetch('id')}", data: {
+        type: "buildBetaDetails", id: detail.fetch("id"), attributes: { autoNotifyEnabled: true }
+      })
+      state = detail.dig("attributes", "externalBuildState")
+      if state == "READY_FOR_BETA_SUBMISSION"
+        @client.post("/v1/betaAppReviewSubmissions", data: {
+          type: "betaAppReviewSubmissions",
+          relationships: { build: { data: { type: "builds", id: build_id } } }
+        })
+      elsif !%w[WAITING_FOR_BETA_REVIEW IN_BETA_REVIEW BETA_APPROVED READY_FOR_BETA_TESTING IN_BETA_TESTING].include?(state)
+        raise AppStoreConnectError, "TestFlight build cannot be distributed: #{state}"
+      end
+    end
+    @client.post("/v1/builds/#{build_id}/relationships/betaGroups", data: selected.map do |group|
+      { type: "betaGroups", id: group.fetch("id") }
+    end)
+    puts "Assigned #{@options[:platform]} build #{@options[:build_number]} to #{@options[:testflight_groups].join(', ')}"
   end
 
   def find_or_create_version
@@ -437,7 +486,8 @@ def run_release_cli
   options = {
     timeout: 2700,
     release_type: "AFTER_APPROVAL",
-    validate_only: false
+    validate_only: false,
+    testflight_groups: []
   }
 
   OptionParser.new do |parser|
@@ -451,6 +501,7 @@ def run_release_cli
     parser.on("--timeout SECONDS", Integer) { |value| options[:timeout] = value }
     parser.on("--validate-only") { options[:validate_only] = true }
     parser.on("--process-only") { options[:process_only] = true }
+    parser.on("--testflight-group NAME") { |value| options[:testflight_groups] << value }
   end.parse!
 
   required = %i[platform version release_notes_dir]

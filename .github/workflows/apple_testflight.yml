@@ -1,0 +1,99 @@
+name: Apple TestFlight
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag or commit to upload
+        type: string
+        required: true
+        default: main
+      distribute:
+        description: Distribute to the existing Internal Testing and External Testing groups
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apple-testflight-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  testflight:
+    name: TestFlight ${{ matrix.platform }}
+    runs-on: macos-15
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ios
+            api_platform: IOS
+          - platform: macos
+            api_platform: MAC_OS
+    steps:
+      - name: Checkout workflow source
+        uses: actions/checkout@v6
+        with:
+          path: workflow-source
+
+      - name: Checkout app source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          path: release-source
+
+      - name: Read app version and release notes
+        id: release
+        working-directory: release-source
+        run: |
+          set -euo pipefail
+          version=$(awk '$1 == "version:" { print $2; exit }' open_wearable/pubspec.yaml)
+          version=${version//\"/}
+          version=${version//\'/}
+          version=${version%%+*}
+          notes="open_wearable/release_notes/$version"
+          if [ ! -s "$notes/default.txt" ]; then notes=open_wearable/release_notes; fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "notes_dir=release-source/$notes" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.2.3
+
+      - name: Build and upload
+        id: upload
+        uses: ./workflow-source/.github/actions/apple-build-upload
+        with:
+          platform: ${{ matrix.platform }}
+          app-dir: release-source/open_wearable
+        env:
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+
+      - name: Process and distribute TestFlight build
+        env:
+          APP_STORE_CONNECT_APP_ID: ${{ secrets.APP_STORE_CONNECT_APP_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+          DISTRIBUTE: ${{ github.event_name == 'push' || inputs.distribute }}
+          PLATFORM: ${{ matrix.api_platform }}
+          PUBLIC_VERSION: ${{ steps.release.outputs.version }}
+          BUILD_NUMBER: ${{ steps.upload.outputs.build_number }}
+          NOTES_DIR: ${{ steps.release.outputs.notes_dir }}
+        run: |
+          args=(--process-only)
+          if [ "$DISTRIBUTE" = true ]; then
+            args=(--testflight-group 'Internal Testing' --testflight-group 'External Testing')
+          fi
+          ruby workflow-source/.github/scripts/app_store_connect_release.rb \
+            --app-id "$APP_STORE_CONNECT_APP_ID" --platform "$PLATFORM" \
+            --version "$PUBLIC_VERSION" --build-number "$BUILD_NUMBER" \
+            --release-notes-dir "$NOTES_DIR" "${args[@]}"
