@@ -120,7 +120,7 @@ class AppStoreConnectReleaseTest < Minitest::Test
 
   def beta_groups
     [
-      { 'id' => 'internal', 'attributes' => { 'name' => 'Internal Testing', 'isInternalGroup' => true } },
+      { 'id' => 'internal', 'attributes' => { 'name' => 'Internal Testing', 'isInternalGroup' => true, 'hasAccessToAllBuilds' => true } },
       { 'id' => 'external', 'attributes' => { 'name' => 'External Testing', 'isInternalGroup' => false } }
     ]
   end
@@ -131,9 +131,32 @@ class AppStoreConnectReleaseTest < Minitest::Test
       release(client, process_only: false, testflight_groups: ['Internal Testing', 'External Testing']).run
     end
     assert client.mutations.any? { |_, path, _| path == '/v1/betaAppReviewSubmissions' }
-    assert_equal '/v1/builds/uploaded-build/relationships/betaGroups', client.mutations.last[1]
-    assert_equal %w[internal external], client.mutations.last[2][:data].map { |group| group[:id] }
+    assignments = client.mutations.select { |_, path, _| path.start_with?('/v1/betaGroups/') }
+    assert_equal [[:post, '/v1/betaGroups/external/relationships/builds',
+                   { data: [{ type: 'builds', id: 'uploaded-build' }] }]], assignments
+    refute client.mutations.any? { |_, path, _| path.end_with?('/relationships/betaGroups') }
     refute client.mutations.any? { |_, path, _| path.include?('appStoreVersions') || path.include?('reviewSubmissions') }
+  end
+
+  def test_automatic_internal_group_needs_no_assignment_or_beta_review
+    client = BetaClient.new([build], groups: beta_groups)
+    output, = capture_io do
+      release(client, process_only: false, testflight_groups: ['Internal Testing']).run
+    end
+    assert_match(/already has automatic access/, output)
+    refute client.mutations.any? { |_, path, _| path.include?('/relationships/') || path == '/v1/betaAppReviewSubmissions' }
+  end
+
+  def test_manual_internal_group_uses_group_build_relationship_without_beta_review
+    groups = beta_groups
+    groups.first['attributes']['hasAccessToAllBuilds'] = false
+    client = BetaClient.new([build], groups: groups)
+    capture_io do
+      release(client, process_only: false, testflight_groups: ['Internal Testing']).run
+    end
+    assert_equal [:post, '/v1/betaGroups/internal/relationships/builds',
+                  { data: [{ type: 'builds', id: 'uploaded-build' }] }], client.mutations.last
+    refute client.mutations.any? { |_, path, _| path == '/v1/betaAppReviewSubmissions' }
   end
 
   def test_missing_testflight_group_fails_without_changing_apple
