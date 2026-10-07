@@ -42,7 +42,7 @@ xcodebuild archive -hideShellScriptEnvironment \
 
 if [[ "$platform" == macos ]]; then
   app_path=$(/usr/libexec/PlistBuddy -c 'Print :ApplicationProperties:ApplicationPath' "$output_dir/Runner.xcarchive/Info.plist")
-  codesign -d --entitlements - "$output_dir/Runner.xcarchive/Products/$app_path" \
+  codesign -d --entitlements - --xml "$output_dir/Runner.xcarchive/Products/$app_path" \
     > "$output_dir/archive-entitlements.plist"
   python3 - "$platform/Runner/Release.entitlements" "$output_dir/archive-entitlements.plist" <<'PY'
 import plistlib
