@@ -1,16 +1,14 @@
-name: Deploy Flutter web
+name: Deploy Web
 
 on:
   push:
     branches:
       - main
-    paths:
-      - ".github/workflows/deploy_web.yml"
-      - "open_wearable/**"
   workflow_dispatch:
 
 permissions:
   contents: read
+  checks: write
 
 concurrency:
   group: app-web-deployment
@@ -38,6 +36,16 @@ jobs:
           app-dir: ${{ env.FLUTTER_PROJECT }}
           base-href: ${{ env.BASE_HREF }}
           pwa-strategy: none
+          build-metadata: "true"
+
+      - name: Publish the same bundle to Firebase
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ github.token }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_OPEN_EARABLE_WEB }}
+          channelId: live
+          projectId: open-earable-web
+          entryPoint: open_wearable/
 
       - name: Prepare GitHub Pages files
         working-directory: ${{ env.FLUTTER_PROJECT }}
