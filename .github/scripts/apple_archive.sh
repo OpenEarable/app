@@ -25,13 +25,39 @@ if [[ "$platform" == ios ]]; then config_args+=(--no-codesign); fi
 flutter build "${config_args[@]}"
 (cd "$platform" && pod install)
 
+signing_args=(CODE_SIGNING_ALLOWED=NO)
+if [[ "$platform" == macos ]]; then
+  # Xcode's export preserves the archive's signed entitlements. An unsigned Mac
+  # archive loses App Sandbox at export, so embed the project entitlements in
+  # an ad-hoc signature first; export replaces it with Apple's distribution one.
+  signing_args=(CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual)
+fi
 xcodebuild archive -hideShellScriptEnvironment \
   -workspace "$platform/Runner.xcworkspace" -scheme Runner \
   -configuration Release -destination "$destination" \
   -archivePath "$output_dir/Runner.xcarchive" \
   -resultBundlePath "$output_dir/archive.xcresult" \
-  CODE_SIGNING_ALLOWED=NO \
+  "${signing_args[@]}" \
   2>&1 | tee "$output_dir/archive.log"
+
+if [[ "$platform" == macos ]]; then
+  app_path=$(/usr/libexec/PlistBuddy -c 'Print :ApplicationProperties:ApplicationPath' "$output_dir/Runner.xcarchive/Info.plist")
+  codesign -d --entitlements - "$output_dir/Runner.xcarchive/Products/$app_path" \
+    > "$output_dir/archive-entitlements.plist"
+  python3 - "$platform/Runner/Release.entitlements" "$output_dir/archive-entitlements.plist" <<'PY'
+import plistlib
+import sys
+
+with open(sys.argv[1], 'rb') as source, open(sys.argv[2], 'rb') as archive:
+    expected, actual = plistlib.load(source), plistlib.load(archive)
+if actual.get('com.apple.security.app-sandbox') is not True:
+    raise SystemExit('macOS archive is missing App Sandbox')
+for key, value in expected.items():
+    if actual.get(key) != value:
+        raise SystemExit(f'macOS archive entitlement was not preserved: {key}')
+print('macOS release entitlements verified before upload')
+PY
+fi
 
 # Only the ephemeral runner sees this file. It is never included in artifacts.
 key_dir=$(mktemp -d "$RUNNER_TEMP/apple-api.XXXXXX")
