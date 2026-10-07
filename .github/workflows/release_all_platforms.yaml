@@ -338,7 +338,8 @@ jobs:
     name: Publish GitHub Release
     needs: [prepare_release, release_android, release_apple]
     if: >-
-      ${{ !cancelled() && !inputs.validate_only && inputs.release_type == 'production' &&
+      ${{ !cancelled() && !inputs.validate_only &&
+          ((inputs.platforms != 'all' && inputs.platforms != 'android') || inputs.release_type == 'production') &&
           (inputs.platforms == 'android' || inputs.submit_for_review) &&
           needs.prepare_release.result == 'success' &&
           (needs.release_android.result == 'success' || needs.release_android.result == 'skipped') &&
