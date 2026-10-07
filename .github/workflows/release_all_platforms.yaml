@@ -1,47 +1,352 @@
-name: Release All Platforms
+name: Release App
 
 on:
   workflow_dispatch:
     inputs:
       ref:
-        description: "Branch or tag to release"
-        required: true
-        default: "main"
+        description: Branch or existing version tag to release
         type: string
+        required: true
+        default: main
       platforms:
-        description: "Platforms to release"
-        required: true
-        default: "all"
+        description: Platforms to release
         type: choice
-        options:
-          - all
-          - android
-          - app_store
+        default: all
+        options: [all, android, app_store, ios, macos]
+      release_type:
+        description: Google Play track (Android only)
+        type: choice
+        default: production
+        options: [production, internal]
       release_mode:
-        description: "When to publish Apple releases after App Review"
-        required: true
-        default: "after_approval"
+        description: When to publish Apple releases after App Review
         type: choice
-        options:
-          - after_approval
-          - manual
-      create_version_bump_pr:
-        description: "Open the post-release version bump PR"
-        required: true
-        default: true
+        default: after_approval
+        options: [after_approval, manual]
+      submit_for_review:
+        description: Submit Apple builds to App Review; disable for upload-only validation
         type: boolean
+        default: true
+      create_version_bump_pr:
+        description: Open the post-release version bump PR
+        type: boolean
+        default: true
+      version_bump_base_ref:
+        description: Branch to target with the version bump PR
+        type: string
+        default: main
+      validate_only:
+        description: Validate inputs only, without building, tagging or uploading
+        type: boolean
+        default: false
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
+
+concurrency:
+  group: release-app-${{ inputs.ref }}
+  cancel-in-progress: false
 
 jobs:
   prepare_release:
-    name: Create or verify release tag
-    if: ${{ inputs.platforms == 'all' || inputs.platforms == 'app_store' }}
+    name: Validate source and prepare release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     outputs:
-      release_tag: ${{ steps.release.outputs.release_tag }}
+      released_sha: ${{ steps.version.outputs.released_sha }}
+      released_version: ${{ steps.version.outputs.released_version }}
+      public_version: ${{ steps.version.outputs.public_version }}
+      release_tag: ${{ steps.version.outputs.release_tag }}
+      next_version: ${{ steps.version.outputs.next_version }}
+      release_notes_path: ${{ steps.version.outputs.release_notes_path }}
+      apple_matrix: ${{ steps.platforms.outputs.apple_matrix }}
+    env:
+      RELEASE_TYPE: ${{ inputs.platforms == 'android' && inputs.release_type || 'production' }}
+    steps:
+      - name: Checkout workflow source
+        uses: actions/checkout@v6
+      - name: Checkout release source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+          path: release-source
+          fetch-depth: 0
+      - name: Validate release version
+        id: version
+        working-directory: release-source
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version=$(awk '$1 == "version:" { print $2; exit }' open_wearable/pubspec.yaml)
+          version=${version//\"/}
+          version=${version//\'/}
+          version_pattern='^([0-9]+)\.([0-9]+)\.([0-9]+)(\+[0-9]+)?$'
+          if ! [[ "$version" =~ $version_pattern ]]; then
+            echo "::error::Version '$version' must use major.minor.patch with an optional numeric +build suffix."
+            exit 1
+          fi
+
+          major=${BASH_REMATCH[1]}
+          minor=${BASH_REMATCH[2]}
+          patch=${BASH_REMATCH[3]}
+          build_suffix=${BASH_REMATCH[4]}
+          public_version=${version%%+*}
+          next_version="${major}.${minor}.$((10#$patch + 1))${build_suffix}"
+
+          if [ "$RELEASE_TYPE" = "production" ]; then
+            version_notes_path="open_wearable/release_notes/${public_version}/default.txt"
+            fallback_notes_path="open_wearable/release_notes/default.txt"
+            notes_path="$version_notes_path"
+            if [ ! -s "$notes_path" ]; then
+              notes_path="$fallback_notes_path"
+              echo "Using generic release notes because $version_notes_path is missing."
+            fi
+            if [ ! -s "$notes_path" ]; then
+              echo "::error::Missing version-specific release notes at $version_notes_path and fallback release notes at $fallback_notes_path."
+              exit 1
+            fi
+          else
+            notes_path=""
+          fi
+
+          echo "released_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "released_version=$version" >> "$GITHUB_OUTPUT"
+          echo "public_version=$public_version" >> "$GITHUB_OUTPUT"
+          echo "release_tag=v${public_version}" >> "$GITHUB_OUTPUT"
+          echo "next_version=$next_version" >> "$GITHUB_OUTPUT"
+          echo "release_notes_path=$notes_path" >> "$GITHUB_OUTPUT"
+
+      - name: Select Apple platforms
+        id: platforms
+        env:
+          PLATFORMS: ${{ inputs.platforms }}
+        run: |
+          case "$PLATFORMS" in
+            all|app_store) matrix='{"include":[{"platform":"ios","api_platform":"IOS"},{"platform":"macos","api_platform":"MAC_OS"}]}' ;;
+            ios) matrix='{"include":[{"platform":"ios","api_platform":"IOS"}]}' ;;
+            macos) matrix='{"include":[{"platform":"macos","api_platform":"MAC_OS"}]}' ;;
+            android) matrix='{"include":[]}' ;;
+            *) echo "::error::Unsupported platform selection"; exit 1 ;;
+          esac
+          echo "apple_matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+      - name: Create or verify immutable version tag
+        if: ${{ !inputs.validate_only && (inputs.platforms != 'android' || inputs.release_type == 'production') }}
+        uses: ./.github/actions/prepare-versioned-release
+        with:
+          source-directory: release-source
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  release_android:
+    name: Build and upload Android
+    needs: prepare_release
+    if: ${{ !inputs.validate_only && (inputs.platforms == 'all' || inputs.platforms == 'android') }}
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TYPE: ${{ inputs.release_type }}
+    steps:
+      - name: Checkout workflow source
+        uses: actions/checkout@v6
+      - name: Checkout release source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.prepare_release.outputs.released_sha }}
+          path: release-source
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.2.3
+
+      - name: Set up Android build
+        uses: ./.github/actions/android-build-prepare
+        with:
+          app-dir: release-source/open_wearable
+          clean: "true"
+          analyze: "true"
+
+      - name: Decode Android signing key
+        env:
+          KEYSTORE: ${{ secrets.OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PATH__FILE }}
+        run: |
+          umask 077
+          printf '%s' "$KEYSTORE" | base64 --decode > "$RUNNER_TEMP/android.keystore"
+          echo "OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/android.keystore" >> "$GITHUB_ENV"
+
+      - name: Decode Google Play service account
+        env:
+          SERVICE_ACCOUNT: ${{ secrets.OPEN_WEARABLE_APP_ANDROID_DEPLOYMENT_KEY_PATH__FILE }}
+        run: |
+          umask 077
+          printf '%s' "$SERVICE_ACCOUNT" | base64 --decode > "$RUNNER_TEMP/android-deployment.json"
+          echo "OPEN_WEARABLE_APP_ANDROID_DEPLOYMENT_KEY_PATH=$RUNNER_TEMP/android-deployment.json" >> "$GITHUB_ENV"
+
+      - name: Prepare Google Play release notes
+        if: ${{ inputs.release_type == 'production' }}
+        run: |
+          changelog_dir="release-source/open_wearable/android/fastlane/metadata/android/en-US/changelogs"
+          mkdir -p "$changelog_dir"
+          cp "release-source/${{ needs.prepare_release.outputs.release_notes_path }}" "$changelog_dir/default.txt"
+
+      - name: Set up Fastlane
+        working-directory: release-source/open_wearable/android
+        run: bundle install
+
+      - name: Build and deploy Android internal release
+        if: ${{ inputs.release_type == 'internal' }}
+        working-directory: release-source/open_wearable/android
+        run: bundle exec fastlane internal_deploy
+        env:
+          OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PASSWORD }}
+
+      - name: Build and deploy Android production release
+        if: ${{ inputs.release_type == 'production' }}
+        working-directory: release-source/open_wearable/android
+        run: bundle exec fastlane production_deploy
+        env:
+          OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PASSWORD }}
+
+      - name: Upload signed release APK
+        if: ${{ inputs.release_type == 'production' }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: android-release-${{ needs.prepare_release.outputs.public_version }}
+          path: release-source/open_wearable/build/app/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+
+      - name: Summarize successful Play Store upload
+        run: |
+          printf 'Successfully uploaded Android **%s** to the **%s** track on Google Play.\n' \
+            "${{ needs.prepare_release.outputs.public_version }}" "$RELEASE_TYPE" >> "$GITHUB_STEP_SUMMARY"
+
+  release_apple:
+    name: Build and upload ${{ matrix.platform }}
+    needs: prepare_release
+    if: ${{ !inputs.validate_only && inputs.platforms != 'android' }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.prepare_release.outputs.apple_matrix) }}
+    runs-on: macos-15
+    timeout-minutes: 120
+    env:
+      RELEASE_TAG: ${{ needs.prepare_release.outputs.release_tag }}
+      RELEASE_MODE: ${{ inputs.release_mode || 'after_approval' }}
+    steps:
+      - name: Checkout workflow source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Checkout release tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+          path: release-source
+          fetch-depth: 0
+
+      - name: Validate release inputs
+        working-directory: release-source
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version=$(awk '$1 == "version:" { print $2; exit }' open_wearable/pubspec.yaml)
+          version=${version//\"/}
+          version=${version//\'/}
+          public_version=${version%%+*}
+          expected_tag="v${public_version}"
+
+          if [ "$RELEASE_TAG" != "$expected_tag" ]; then
+            echo "::error::Tag '$RELEASE_TAG' does not match pubspec version '$public_version'."
+            exit 1
+          fi
+
+          version_notes_dir="open_wearable/release_notes/${public_version}"
+          notes_dir="$version_notes_dir"
+          if [ ! -s "$notes_dir/default.txt" ]; then
+            notes_dir="open_wearable/release_notes"
+            echo "Using generic release notes because $version_notes_dir/default.txt is missing."
+          fi
+          if [ ! -s "$notes_dir/default.txt" ]; then
+            echo "::error::Missing version-specific release notes at $version_notes_dir/default.txt and fallback release notes at $notes_dir/default.txt."
+            exit 1
+          fi
+
+          case "$RELEASE_MODE" in
+            after_approval) release_type=AFTER_APPROVAL ;;
+            manual) release_type=MANUAL ;;
+            *)
+              echo "::error::Unsupported release mode '$RELEASE_MODE'."
+              exit 1
+              ;;
+          esac
+
+          echo "version=$public_version" >> "$GITHUB_OUTPUT"
+          echo "notes_dir=release-source/$notes_dir" >> "$GITHUB_OUTPUT"
+          echo "release_type=$release_type" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.2.3
+
+      - name: Build and upload ${{ matrix.platform }}
+        id: upload
+        uses: ./.github/actions/apple-build-upload
+        with:
+          platform: ${{ matrix.platform }}
+          app-dir: release-source/open_wearable
+        env:
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+
+      - name: Wait for processing and submit to App Review
+        env:
+          APP_STORE_CONNECT_APP_ID: ${{ secrets.APP_STORE_CONNECT_APP_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+          SUBMIT_FOR_REVIEW: ${{ inputs.submit_for_review }}
+          PLATFORM: ${{ matrix.api_platform }}
+          BUILD_NUMBER: ${{ steps.upload.outputs.build_number }}
+          PUBLIC_VERSION: ${{ steps.release.outputs.version }}
+          NOTES_DIR: ${{ steps.release.outputs.notes_dir }}
+          RELEASE_TYPE: ${{ steps.release.outputs.release_type }}
+        run: |
+          args=()
+          if [ "$SUBMIT_FOR_REVIEW" != true ]; then args+=(--process-only); fi
+          ruby .github/scripts/app_store_connect_release.rb \
+            --app-id "$APP_STORE_CONNECT_APP_ID" \
+            --platform "$PLATFORM" \
+            --version "$PUBLIC_VERSION" \
+            --build-number "$BUILD_NUMBER" \
+            --release-notes-dir "$NOTES_DIR" \
+            --release-type "$RELEASE_TYPE" "${args[@]}"
+
+      - name: Summarize submission
+        if: ${{ inputs.submit_for_review }}
+        run: |
+          printf 'Submitted **%s** version **%s** to App Review with release mode **%s**.\n' \
+            "${{ matrix.platform }}" "${{ steps.release.outputs.version }}" "$RELEASE_MODE" >> "$GITHUB_STEP_SUMMARY"
+
+  publish_github_release:
+    name: Publish GitHub Release
+    needs: [prepare_release, release_android, release_apple]
+    if: >-
+      ${{ !cancelled() && !inputs.validate_only &&
+          ((inputs.platforms != 'all' && inputs.platforms != 'android') || inputs.release_type == 'production') &&
+          (inputs.platforms == 'android' || inputs.submit_for_review) &&
+          needs.prepare_release.result == 'success' &&
+          (needs.release_android.result == 'success' || needs.release_android.result == 'skipped') &&
+          (needs.release_apple.result == 'success' || needs.release_apple.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout workflow source
         uses: actions/checkout@v6
@@ -49,48 +354,99 @@ jobs:
           ref: ${{ github.sha }}
           path: workflow-source
 
-      - name: Checkout release source
+      - name: Checkout released source
         uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ needs.prepare_release.outputs.released_sha }}
           path: release-source
           fetch-depth: 0
 
-      - name: Create or verify immutable version tag
-        id: release
-        uses: ./workflow-source/.github/actions/prepare-versioned-release
+      - name: Download signed APK
+        if: ${{ inputs.platforms == 'all' || inputs.platforms == 'android' }}
+        uses: actions/download-artifact@v7
+        with:
+          name: android-release-${{ needs.prepare_release.outputs.public_version }}
+          path: release-apk
+
+      - name: Create or update GitHub Release
+        uses: ./workflow-source/.github/actions/publish-versioned-release
         with:
           source-directory: release-source
+          release-tag: ${{ needs.prepare_release.outputs.release_tag }}
         env:
           GH_TOKEN: ${{ github.token }}
 
-  release_android:
-    name: Release Android
-    needs: prepare_release
-    if: >-
-      ${{ always() && (inputs.platforms == 'all' || inputs.platforms == 'android') &&
-          (inputs.platforms == 'android' || needs.prepare_release.result == 'success') }}
-    uses: ./.github/workflows/android_build_and_deploy.yaml
-    with:
-      ref: ${{ inputs.platforms == 'all' && needs.prepare_release.outputs.release_tag || inputs.ref }}
-      release_type: production
-      publish_github_release: ${{ inputs.platforms == 'android' }}
-      create_version_bump_pr: ${{ inputs.create_version_bump_pr }}
-      version_bump_base_ref: ${{ inputs.ref }}
-    secrets: inherit
+      - name: Upload signed APK to GitHub Release
+        if: ${{ inputs.platforms == 'all' || inputs.platforms == 'android' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.prepare_release.outputs.release_tag }}
+          PUBLIC_VERSION: ${{ needs.prepare_release.outputs.public_version }}
+        run: |
+          gh release upload "$RELEASE_TAG" \
+            "release-apk/app-release.apk#OpenWearable-${PUBLIC_VERSION}.apk" \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber
 
-  release_apple:
-    name: Release iOS and macOS
-    if: >-
-      ${{ always() && (inputs.platforms == 'all' || inputs.platforms == 'app_store') &&
-          (inputs.platforms == 'app_store' || needs.release_android.result == 'success') &&
-          needs.prepare_release.result == 'success' }}
-    needs:
-      - prepare_release
-      - release_android
-    uses: ./.github/workflows/app_store_build_and_deploy.yaml
-    with:
-      release_tag: ${{ needs.prepare_release.outputs.release_tag }}
-      release_mode: ${{ inputs.release_mode }}
-      android_artifact_name: ${{ inputs.platforms == 'all' && format('android-release-{0}', needs.release_android.outputs.public_version) || '' }}
-    secrets: inherit
+  create_version_bump_pr:
+    name: Create version bump PR for review
+    needs: [prepare_release, publish_github_release]
+    if: ${{ inputs.create_version_bump_pr }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout released commit
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.prepare_release.outputs.released_sha }}
+
+      - name: Open version bump PR
+        shell: bash
+        env:
+          VERSION_FILE: open_wearable/pubspec.yaml
+          BASE_BRANCH: ${{ inputs.version_bump_base_ref }}
+          RELEASED_VERSION: ${{ needs.prepare_release.outputs.released_version }}
+          NEXT_VERSION: ${{ needs.prepare_release.outputs.next_version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          bump_branch="automation/bump-version-${NEXT_VERSION}-${GITHUB_RUN_ID}"
+          commit_message="chore(version): bump version to ${NEXT_VERSION}"
+          pr_url=$(gh pr list \
+            --base "$BASE_BRANCH" \
+            --head "$bump_branch" \
+            --state all \
+            --json url \
+            --jq '.[0].url // empty')
+
+          if [ -z "$pr_url" ]; then
+            remote_branch=$(git ls-remote --heads origin "refs/heads/$bump_branch")
+            if [ -z "$remote_branch" ]; then
+              git switch -c "$bump_branch"
+              sed -i "s|^version:.*|version: $NEXT_VERSION|" "$VERSION_FILE"
+              git add "$VERSION_FILE"
+              git commit -m "$commit_message"
+              git push --set-upstream origin "$bump_branch"
+            fi
+
+            body_file=$(mktemp)
+            printf '%s\n' \
+              "The selected production releases of version $RELEASED_VERSION succeeded." \
+              "" \
+              "Bumps the app version to $NEXT_VERSION for the next release." \
+              "Please review and merge this PR using the repository's normal approval process." \
+              > "$body_file"
+            pr_url=$(gh pr create \
+              --base "$BASE_BRANCH" \
+              --head "$bump_branch" \
+              --title "$commit_message" \
+              --body-file "$body_file")
+          fi
+
+          printf 'Version bump PR: %s\n' "$pr_url" >> "$GITHUB_STEP_SUMMARY"
