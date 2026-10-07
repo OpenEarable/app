@@ -30,10 +30,6 @@ on:
         required: true
       APP_STORE_CONNECT_PRIVATE_KEY:
         required: true
-      XCODE_CLOUD_IOS_WORKFLOW_ID:
-        required: true
-      XCODE_CLOUD_MACOS_WORKFLOW_ID:
-        required: true
   workflow_dispatch:
     inputs:
       ref:

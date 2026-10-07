@@ -16,6 +16,11 @@ on:
         required: false
         default: "after_approval"
         type: string
+      submit_for_review:
+        description: "Submit after upload; disable to validate a build without publishing"
+        required: false
+        default: true
+        type: boolean
     secrets:
       APP_STORE_CONNECT_APP_ID:
         required: true
@@ -25,8 +30,6 @@ on:
         required: true
       APP_STORE_CONNECT_PRIVATE_KEY:
         required: true
-      XCODE_CLOUD_IOS_WORKFLOW_ID:
-        required: true
   workflow_dispatch:
     inputs:
       ref:
@@ -34,6 +37,11 @@ on:
         required: true
         default: "main"
         type: string
+      submit_for_review:
+        description: "Submit the uploaded build to App Review"
+        required: true
+        default: true
+        type: boolean
       release_mode:
         description: "When to publish after App Review"
         required: true
@@ -80,22 +88,30 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
   submit_ios:
-    name: Build in Xcode Cloud and submit iOS
+    name: Build on GitHub and submit iOS
     needs: prepare_release
     if: ${{ always() && (inputs.ref == '' || needs.prepare_release.result == 'success') }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 130
+    runs-on: macos-15
+    timeout-minutes: 120
     env:
       RELEASE_TAG: ${{ inputs.ref != '' && needs.prepare_release.outputs.release_tag || inputs.release_tag }}
       RELEASE_MODE: ${{ inputs.release_mode || 'after_approval' }}
     steps:
+      - name: Checkout workflow source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          path: workflow-source
+
       - name: Checkout release tag
         uses: actions/checkout@v6
         with:
           ref: ${{ env.RELEASE_TAG }}
+          path: release-source
           fetch-depth: 0
 
       - name: Validate release inputs
+        working-directory: release-source
         id: release
         shell: bash
         run: |
@@ -133,8 +149,7 @@ jobs:
           esac
 
           echo "version=$public_version" >> "$GITHUB_OUTPUT"
-          echo "git_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-          echo "notes_dir=$notes_dir" >> "$GITHUB_OUTPUT"
+          echo "notes_dir=release-source/$notes_dir" >> "$GITHUB_OUTPUT"
           echo "release_type=$release_type" >> "$GITHUB_OUTPUT"
 
       - name: Set up Ruby
@@ -142,33 +157,49 @@ jobs:
         with:
           ruby-version: 3.2.3
 
-      - name: Start Xcode Cloud and submit to App Review
+      - name: Build and upload iOS
+        id: upload
+        uses: ./workflow-source/.github/actions/apple-build-upload
+        with:
+          platform: ios
+          app-dir: release-source/open_wearable
+        env:
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+
+      - name: Wait for processing and submit to App Review
         env:
           APP_STORE_CONNECT_APP_ID: ${{ secrets.APP_STORE_CONNECT_APP_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
-          XCODE_CLOUD_WORKFLOW_ID: ${{ secrets.XCODE_CLOUD_IOS_WORKFLOW_ID }}
+          SUBMIT_FOR_REVIEW: ${{ inputs.submit_for_review }}
+          BUILD_NUMBER: ${{ steps.upload.outputs.build_number }}
+          PUBLIC_VERSION: ${{ steps.release.outputs.version }}
+          NOTES_DIR: ${{ steps.release.outputs.notes_dir }}
+          RELEASE_TYPE: ${{ steps.release.outputs.release_type }}
         run: |
-          ruby .github/scripts/app_store_connect_release.rb \
-            --workflow-id "$XCODE_CLOUD_WORKFLOW_ID" \
+          args=()
+          if [ "$SUBMIT_FOR_REVIEW" != true ]; then args+=(--process-only); fi
+          ruby workflow-source/.github/scripts/app_store_connect_release.rb \
             --app-id "$APP_STORE_CONNECT_APP_ID" \
             --platform IOS \
-            --version "${{ steps.release.outputs.version }}" \
-            --tag "$RELEASE_TAG" \
-            --git-sha "${{ steps.release.outputs.git_sha }}" \
-            --release-notes-dir "${{ steps.release.outputs.notes_dir }}" \
-            --release-type "${{ steps.release.outputs.release_type }}"
+            --version "$PUBLIC_VERSION" \
+            --build-number "$BUILD_NUMBER" \
+            --release-notes-dir "$NOTES_DIR" \
+            --release-type "$RELEASE_TYPE" "${args[@]}"
 
       - name: Summarize submission
+        if: ${{ inputs.submit_for_review }}
         run: |
           printf 'Submitted iOS **%s** to App Review with release mode **%s**.\n' \
             "${{ steps.release.outputs.version }}" "$RELEASE_MODE" >> "$GITHUB_STEP_SUMMARY"
 
   publish_github_release:
     name: Publish GitHub Release
-    needs: submit_ios
-    if: ${{ inputs.ref != '' && needs.submit_ios.result == 'success' }}
+    needs: [prepare_release, submit_ios]
+    if: ${{ inputs.ref != '' && inputs.submit_for_review && needs.submit_ios.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout workflow source

@@ -1,0 +1,60 @@
+name: Apple build and upload
+description: Archive on a GitHub macOS runner and upload to App Store Connect.
+inputs:
+  platform:
+    description: ios or macos
+    required: true
+  app-dir:
+    description: Release source Flutter application directory
+    required: true
+outputs:
+  build_number:
+    description: Exact CFBundleVersion uploaded to Apple
+    value: ${{ steps.archive.outputs.build_number }}
+runs:
+  using: composite
+  steps:
+    - name: Select Xcode
+      shell: bash
+      run: |
+        sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+        xcodebuild -version
+
+    - name: Read Flutter version
+      id: flutter
+      shell: bash
+      env:
+        APP_DIR: ${{ inputs.app-dir }}
+      run: echo "version=$(cat "$APP_DIR/.flutter_version")" >> "$GITHUB_OUTPUT"
+
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        channel: stable
+        flutter-version: ${{ steps.flutter.outputs.version }}
+        cache: true
+
+    - name: Install dependencies
+      shell: bash
+      working-directory: ${{ inputs.app-dir }}
+      run: flutter pub get
+
+    - name: Archive, sign and upload
+      id: archive
+      shell: bash
+      env:
+        APPLE_PLATFORM: ${{ inputs.platform }}
+        APP_DIR: ${{ inputs.app-dir }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: bash "$ACTION_PATH/../../scripts/apple_archive.sh" "$APPLE_PLATFORM" "$APP_DIR" "$RUNNER_TEMP/apple-build"
+
+    - name: Preserve build diagnostics
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@v6
+      with:
+        name: apple-${{ inputs.platform }}-diagnostics
+        path: |
+          ${{ runner.temp }}/apple-build/*.log
+          ${{ runner.temp }}/apple-build/*.xcresult
+        if-no-files-found: ignore
+        retention-days: 7

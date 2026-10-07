@@ -10,6 +10,8 @@ require "time"
 require "timeout"
 require "uri"
 
+$stdout.sync = true
+
 class AppStoreConnectError < StandardError; end
 
 class AppStoreConnectClient
@@ -151,9 +153,8 @@ class AppStoreRelease
     validate_release_notes!
     return puts("Release inputs are valid") if @options[:validate_only]
 
-    build_run = start_xcode_cloud_run
-    wait_for_xcode_cloud_run(build_run.fetch("id"))
-    build = wait_for_processed_build(build_run.fetch("id"))
+    build = wait_for_processed_build
+    return puts("Uploaded build is ready; App Review submission was not requested") if @options[:process_only]
     version = find_or_create_version
 
     if submitted?(version)
@@ -187,71 +188,12 @@ class AppStoreRelease
     raise AppStoreConnectError, "Release notes exceed Apple's 4000-character limit: #{path}"
   end
 
-  def start_xcode_cloud_run
-    source_reference = wait_for_source_reference
-    puts "Starting Xcode Cloud workflow #{@options[:workflow_id]} at #{@options[:tag]}"
-    @client.post(
-      "/v1/ciBuildRuns",
-      data: {
-        type: "ciBuildRuns",
-        attributes: {},
-        relationships: {
-          workflow: { data: { type: "ciWorkflows", id: @options[:workflow_id] } },
-          sourceBranchOrTag: { data: { type: "scmGitReferences", id: source_reference.fetch("id") } }
-        }
-      }
-    ).fetch("data")
-  end
-
-  def wait_for_source_reference
-    canonical_name = "refs/tags/#{@options[:tag]}"
-    loop do
-      repository = @client.get("/v1/ciWorkflows/#{@options[:workflow_id]}/repository").fetch("data")
-      response = @client.get(
-        "/v1/scmRepositories/#{repository.fetch('id')}/gitReferences",
-        "fields[scmGitReferences]" => "name,canonicalName,isDeleted,kind",
-        "limit" => 200
-      )
-      reference = Array(response["data"]).find do |candidate|
-        candidate.dig("attributes", "canonicalName") == canonical_name &&
-          !candidate.dig("attributes", "isDeleted")
-      end
-      return reference if reference
-
-      puts "Xcode Cloud has not indexed #{@options[:tag]} yet"
-      wait_or_timeout!
-    end
-  end
-
-  def wait_for_xcode_cloud_run(build_run_id)
-    puts "Waiting for Xcode Cloud build #{build_run_id}"
-    loop do
-      run = @client.get("/v1/ciBuildRuns/#{build_run_id}").fetch("data")
-      commit_sha = run.dig("attributes", "sourceCommit", "commitSha").to_s
-      if !commit_sha.empty? && commit_sha != @options[:git_sha]
-        raise AppStoreConnectError,
-              "Xcode Cloud build source commit #{commit_sha} does not match release commit #{@options[:git_sha]}"
-      end
-
-      progress = run.dig("attributes", "executionProgress")
-      if progress == "COMPLETE"
-        status = run.dig("attributes", "completionStatus")
-        raise AppStoreConnectError, "Xcode Cloud build finished with #{status}" unless status == "SUCCEEDED"
-
-        puts "Xcode Cloud build ##{run.dig('attributes', 'number')} succeeded"
-        return run
-      end
-
-      puts "Xcode Cloud build ##{run.dig('attributes', 'number')} is #{progress}"
-      wait_or_timeout!
-    end
-  end
-
-  def wait_for_processed_build(build_run_id)
-    puts "Waiting for App Store Connect to process the Xcode Cloud archive"
+  def wait_for_processed_build
+    puts "Waiting for App Store Connect to process #{@options[:platform]} #{@options[:version]} (#{@options[:build_number]})"
     loop do
       response = @client.get(
-        "/v1/ciBuildRuns/#{build_run_id}/builds",
+        "/v1/builds",
+        "filter[version]" => @options[:build_number],
         "filter[app]" => @options[:app_id],
         "filter[preReleaseVersion.version]" => @options[:version],
         "filter[preReleaseVersion.platform]" => @options[:platform],
@@ -271,7 +213,7 @@ class AppStoreRelease
         audience = build.dig("attributes", "buildAudienceType")
         unless audience == "APP_STORE_ELIGIBLE"
           raise AppStoreConnectError,
-                "Build #{build.dig('attributes', 'version')} is #{audience}; configure the Xcode Cloud " \
+                "Build #{build.dig('attributes', 'version')} is #{audience}; export the " \
                 "archive for TestFlight and App Store distribution"
         end
 
@@ -279,7 +221,7 @@ class AppStoreRelease
         return build
       end
 
-      puts builds.empty? ? "No uploaded build is associated with the run yet" : "The build is still processing"
+      puts builds.empty? ? "The uploaded build is not visible yet" : "The build is still processing"
       wait_or_timeout!
     end
   end
@@ -491,29 +433,28 @@ class AppStoreRelease
   end
 end
 
-begin
+def run_release_cli
   options = {
-    timeout: 7200,
+    timeout: 2700,
     release_type: "AFTER_APPROVAL",
     validate_only: false
   }
 
   OptionParser.new do |parser|
     parser.banner = "Usage: app_store_connect_release.rb [options]"
-    parser.on("--workflow-id ID") { |value| options[:workflow_id] = value }
+    parser.on("--build-number NUMBER") { |value| options[:build_number] = value }
     parser.on("--app-id ID") { |value| options[:app_id] = value }
     parser.on("--platform PLATFORM") { |value| options[:platform] = value }
     parser.on("--version VERSION") { |value| options[:version] = value }
-    parser.on("--tag TAG") { |value| options[:tag] = value }
-    parser.on("--git-sha SHA") { |value| options[:git_sha] = value }
     parser.on("--release-notes-dir PATH") { |value| options[:release_notes_dir] = value }
     parser.on("--release-type TYPE") { |value| options[:release_type] = value }
     parser.on("--timeout SECONDS", Integer) { |value| options[:timeout] = value }
     parser.on("--validate-only") { options[:validate_only] = true }
+    parser.on("--process-only") { options[:process_only] = true }
   end.parse!
 
   required = %i[platform version release_notes_dir]
-  required += %i[workflow_id app_id tag git_sha] unless options[:validate_only]
+  required += %i[app_id build_number] unless options[:validate_only]
   missing = required.select { |key| options[key].nil? || options[key].empty? }
   raise AppStoreConnectError, "Missing options: #{missing.join(', ')}" unless missing.empty?
   unless %w[IOS MAC_OS].include?(options[:platform])
@@ -538,3 +479,5 @@ rescue AppStoreConnectError, KeyError, OpenSSL::PKey::PKeyError => error
   warn "::error::#{error.message}"
   exit 1
 end
+
+run_release_cli if $PROGRAM_NAME == __FILE__

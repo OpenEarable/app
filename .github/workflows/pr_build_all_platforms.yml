@@ -21,9 +21,21 @@ env:
   APP_DIR: open_wearable
 
 jobs:
+  validate_release_scripts:
+    name: Validate Apple release scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.2.3
+      - run: ruby .github/scripts/test/app_store_connect_release_test.rb
+      - run: bash -n .github/scripts/apple_archive.sh
+
   build:
     name: Build ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -35,6 +47,24 @@ jobs:
             artifact_name: android-apk
             artifact_path: open_wearable/build/app/outputs/flutter-apk/app-release.apk
             android: true
+          - target: ios
+            name: iOS
+            os: macos-15
+            build_command: flutter build ios --release --no-codesign
+            artifact_name: ios-unsigned
+            artifact_path: open_wearable/build/ios/iphoneos
+            apple: true
+          - target: macos
+            name: macOS
+            os: macos-15
+            build_command: >-
+              flutter build macos --release --config-only &&
+              xcodebuild -workspace macos/Runner.xcworkspace -scheme Runner
+              -configuration Release -destination 'generic/platform=macOS'
+              -derivedDataPath build/macos-pr CODE_SIGNING_ALLOWED=NO build
+            artifact_name: macos-unsigned
+            artifact_path: open_wearable/build/macos-pr/Build/Products/Release/*.app
+            apple: true
           - target: linux
             name: Linux
             os: ubuntu-latest
@@ -58,6 +88,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+
+      - name: Select Xcode
+        if: ${{ matrix.apple == true }}
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+          xcodebuild -version
 
       - name: Install Linux build dependencies
         if: ${{ matrix.linux_dependencies == true }}
@@ -84,6 +120,13 @@ jobs:
         uses: ./.github/actions/flutter-prepare
         with:
           app-dir: ${{ env.APP_DIR }}
+
+      - name: Install macOS pods
+        if: ${{ matrix.target == 'macos' }}
+        working-directory: open_wearable
+        run: |
+          flutter build macos --release --config-only
+          cd macos && pod install
 
       - name: Build ${{ matrix.name }} artifact
         working-directory: ${{ env.APP_DIR }}
@@ -115,6 +158,8 @@ jobs:
             const repoUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}`;
             const artifactLabels = new Map([
               ['android-apk', 'Android APK'],
+              ['ios-unsigned', 'iOS unsigned build'],
+              ['macos-unsigned', 'macOS unsigned build'],
               ['linux-bundle', 'Linux Bundle'],
               ['windows-runner', 'Windows Runner'],
               ['web-bundle', 'Web Bundle'],
