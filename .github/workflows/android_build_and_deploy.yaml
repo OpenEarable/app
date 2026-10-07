@@ -188,6 +188,15 @@ jobs:
         env:
           OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.OPEN_WEARABLE_APP_ANDROID_KEYSTORE_PASSWORD }}
 
+      - name: Preserve release bundle for Play Console declarations
+        if: ${{ !cancelled() && inputs.release_type == 'production' }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: android-play-bundle-${{ steps.version.outputs.public_version }}
+          path: open_wearable/build/app/outputs/bundle/release/app-release.aab
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Upload signed release APK
         if: ${{ inputs.release_type == 'production' }}
         uses: actions/upload-artifact@v6
