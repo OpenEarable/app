@@ -269,10 +269,19 @@ class AppStoreRelease
         raise AppStoreConnectError, "TestFlight build cannot be distributed: #{state}"
       end
     end
-    @client.post("/v1/builds/#{build_id}/relationships/betaGroups", data: selected.map do |group|
-      { type: "betaGroups", id: group.fetch("id") }
-    end)
-    puts "Assigned #{@options[:platform]} build #{@options[:build_number]} to #{@options[:testflight_groups].join(', ')}"
+    selected.each do |group|
+      # Automatic internal groups already receive every build; Apple rejects
+      # manually assigning them. The group endpoint supports manual groups.
+      if group.dig("attributes", "isInternalGroup") && group.dig("attributes", "hasAccessToAllBuilds")
+        puts "#{group.dig('attributes', 'name')} already has automatic access to all builds"
+        next
+      end
+
+      @client.post("/v1/betaGroups/#{group.fetch('id')}/relationships/builds", data: [
+        { type: "builds", id: build_id }
+      ])
+    end
+    puts "Distributed #{@options[:platform]} build #{@options[:build_number]} to #{@options[:testflight_groups].join(', ')}"
   end
 
   def find_or_create_version

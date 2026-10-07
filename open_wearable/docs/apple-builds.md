@@ -33,6 +33,10 @@ Xcode Cloud main-branch distribution settings, including automatic notification
 when Apple makes an external build available. It does not submit a public App
 Store release.
 
+Internal groups with automatic access to all builds require no manual assignment.
+Other internal and external groups receive the build through their group build
+relationship; the build-to-groups endpoint rejects internal groups.
+
 The workflow can also be run manually against a chosen ref. Manual runs default
 to upload-only validation; enable `distribute` to send the build to those groups.
 
