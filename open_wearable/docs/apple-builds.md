@@ -35,7 +35,10 @@ Store Connect. Automatic signing uses the existing API key and Apple's managed
 distribution certificates. This signing service does not consume Xcode Cloud
 build hours. The key must have access to signing resources and app submission.
 
-The existing repository secrets are sufficient when that access is granted:
+Use an Admin App Store Connect team API key for managed signing. The previous
+App Manager release key can submit builds but Apple rejects its cloud-signing
+requests. Update the key ID and private key together in the existing secrets;
+the issuer and app ID remain unchanged:
 
 - `APP_STORE_CONNECT_APP_ID`
 - `APP_STORE_CONNECT_ISSUER_ID`
@@ -59,9 +62,9 @@ key files stay outside artifacts and are removed after upload.
 
 ## Migration from Xcode Cloud
 
-Disable the app's old PR and release workflows in App Store Connect once the
-replacement GitHub builds are verified. Otherwise Apple's separately configured
-PR triggers will continue creating duplicate builds. The old
+The six old PR, TestFlight, and release workflows were disabled in App Store
+Connect during migration. Their definitions and history remain available for
+reference; keep them disabled to avoid duplicate builds. The old
 `XCODE_CLOUD_IOS_WORKFLOW_ID` and `XCODE_CLOUD_MACOS_WORKFLOW_ID` secrets are no
 longer used. Apple processing and App Review remain required after upload;
 Xcode Cloud build capacity is no longer involved.

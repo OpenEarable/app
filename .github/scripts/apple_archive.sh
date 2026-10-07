@@ -31,7 +31,7 @@ xcodebuild archive -hideShellScriptEnvironment \
   -archivePath "$output_dir/Runner.xcarchive" \
   -resultBundlePath "$output_dir/archive.xcresult" \
   CODE_SIGNING_ALLOWED=NO \
-  | tee "$output_dir/archive.log"
+  2>&1 | tee "$output_dir/archive.log"
 
 # Only the ephemeral runner sees this file. It is never included in artifacts.
 key_dir=$(mktemp -d "$RUNNER_TEMP/apple-api.XXXXXX")
@@ -62,4 +62,4 @@ xcodebuild -exportArchive \
   -authenticationKeyPath "$APPLE_API_KEY_PATH" \
   -authenticationKeyID "$APP_STORE_CONNECT_KEY_ID" \
   -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID" \
-  | tee "$output_dir/upload.log"
+  2>&1 | tee "$output_dir/upload.log"
