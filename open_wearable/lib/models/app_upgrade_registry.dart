@@ -237,7 +237,7 @@ class AppUpgradeRegistry {
         ),
         AppUpgradeFeatureHighlight(
           icon: Icons.system_update_rounded,
-          title: 'Clearer firmware updates',
+          title: 'More reliable firmware updates',
           description:
               'Follow upload, reset, and verification with clearer progress, a verification countdown, and improved recovery when an update fails.',
         ),
