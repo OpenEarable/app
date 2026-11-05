@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- Android Keystore keys do not survive restore on another device. -->
+    <exclude domain="sharedpref" path="meditation_service_credentials.xml" />
+    <exclude domain="sharedpref" path="FlutterSecureKeyStorage:meditation_service_credentials.xml" />
+    <exclude domain="sharedpref" path="FlutterSecureStorageConfiguration:meditation_service_credentials.xml" />
+</full-backup-content>
