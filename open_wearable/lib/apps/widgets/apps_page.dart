@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:open_earable_flutter/open_earable_flutter.dart';
+import 'package:open_wearable/apps/meditation_app/model/earstream_platform_support.dart';
+import 'package:open_wearable/apps/meditation_app/views/meditation_view.dart';
 import 'package:open_wearable/apps/seal_check/audio_response_measurement_view.dart';
 import 'package:open_wearable/apps/heart_tracker/widgets/heart_tracker_page.dart';
 import 'package:open_wearable/apps/posture_tracker/model/earable_attitude_tracker.dart';
@@ -53,6 +55,9 @@ const List<String> _heartSupportedDevices = [
 const List<String> _sealCheckSupportedDevices = [
   "OpenEarable",
 ];
+const List<String> _meditationSupportedDevices = [
+  "OpenEarable",
+];
 final List<WearableCapabilityRequirement> _postureRequiredCapabilities = [
   WearableCapabilityRequirement.capability<SensorManager>(
     label: 'sensor streaming',
@@ -66,6 +71,11 @@ final List<WearableCapabilityRequirement> _heartRequiredCapabilities = [
 final List<WearableCapabilityRequirement> _sealCheckRequiredCapabilities = [
   WearableCapabilityRequirement.capability<AudioResponseManager>(
     label: 'audio response measurement',
+  ),
+];
+final List<WearableCapabilityRequirement> _meditationRequiredCapabilities = [
+  WearableCapabilityRequirement.capability<SensorManager>(
+    label: 'sensor streaming',
   ),
 ];
 
@@ -198,6 +208,83 @@ final List<AppInfo> _apps = [
       },
     ),
   ),
+  if (isEarstreamHostPlatformSupported())
+    AppInfo(
+      logoPath: "lib/apps/meditation_app/assets/earstream_logo.png",
+      title: "EarStreAM",
+      description: "Stress-adaptive meditation sessions",
+      supportedDevices: _meditationSupportedDevices,
+      requiredCapabilities: _meditationRequiredCapabilities,
+      accentColor: _appAccentColor,
+      widget: SelectEarableView(
+        supportedDevicePrefixes: _meditationSupportedDevices,
+        requiredCapabilities: _meditationRequiredCapabilities,
+        startApp: (wearable, sensorConfigProvider) async {
+          if (!wearable.hasCapability<SensorManager>()) {
+            return PlatformScaffold(
+              appBar: PlatformAppBar(title: PlatformText('EarStreAM')),
+              body: Center(
+                child: PlatformText(
+                  'This wearable does not expose the required sensor manager.',
+                ),
+              ),
+            );
+          }
+
+          final sensors = wearable.requireCapability<SensorManager>().sensors;
+          Sensor? ppgSensor;
+          Sensor? accelerometerSensor;
+          Sensor? gyroscopeSensor;
+          for (final sensor in sensors) {
+            final text =
+                '${sensor.sensorName} ${sensor.chartTitle}'.toLowerCase();
+            ppgSensor ??= text.contains('photoplethysmography') ||
+                    text.contains('ppg') ||
+                    text.contains('pulse')
+                ? sensor
+                : null;
+            accelerometerSensor ??=
+                text.contains('accelerometer') || text.contains('acc')
+                    ? sensor
+                    : null;
+            gyroscopeSensor ??=
+                text.contains('gyroscope') || text.contains('gyro')
+                    ? sensor
+                    : null;
+          }
+
+          final missingSensors = <String>[
+            if (ppgSensor == null) 'PPG/pulse',
+            if (accelerometerSensor == null) 'accelerometer',
+            if (gyroscopeSensor == null) 'gyroscope',
+          ];
+          if (missingSensors.isNotEmpty) {
+            return PlatformScaffold(
+              appBar: PlatformAppBar(title: PlatformText('EarStreAM')),
+              body: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: PlatformText(
+                    'EarStreAM cannot start because this wearable does not '
+                    'expose the required ${missingSensors.join(', ')} '
+                    'sensor${missingSensors.length == 1 ? '' : 's'}.',
+                  ),
+                ),
+              ),
+            );
+          }
+
+          await sensorConfigProvider.turnOffAllSensors();
+          return MeditationView(
+            ppgSensor: ppgSensor!,
+            accelerometerSensor: accelerometerSensor!,
+            gyroscopeSensor: gyroscopeSensor!,
+            sensorConfigProvider: sensorConfigProvider,
+            wearable: wearable,
+          );
+        },
+      ),
+    ),
   AppInfo(
     logoPath: "lib/apps/seal_check/assets/seal-check-icon.png",
     title: "Seal Check",

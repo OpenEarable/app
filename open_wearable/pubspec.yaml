@@ -52,10 +52,15 @@ dependencies:
   path_provider: ^2.1.5
   share_plus: ^13.3.0
   shared_preferences: ^2.5.5
+  intl: ^0.20.3
   url_launcher: ^6.3.2
+  http: ^1.6.0
+  crypto: ^3.0.7
   go_router: ^17.2.3
   audioplayers: ^6.7.0
   wakelock_plus: ^1.5.2
+  flutter_secure_storage: ^10.3.4
+  flutter_tts: ^4.2.5
   package_info_plus: ^10.2.1
   sensors_plus: ^7.0.0
   device_info_plus: ^13.2.0
@@ -110,6 +115,8 @@ flutter:
     - lib/apps/posture_tracker/assets/
     - lib/apps/heart_tracker/assets/
     - lib/apps/seal_check/assets/
+    - lib/apps/meditation_app/assets/
+    - lib/apps/meditation_app/assets/audio/
     - lib/assets/devices/phone-app.png
     - lib/assets/fonts/OFL.txt
     - android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
