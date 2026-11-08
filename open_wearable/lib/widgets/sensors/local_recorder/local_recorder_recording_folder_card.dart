@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'edge_ml_upload_dialog.dart';
 import 'package:open_wearable/widgets/recording_activity_indicator.dart';
 import 'package:open_wearable/widgets/sensors/local_recorder/local_recorder_models.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
@@ -125,9 +126,21 @@ class LocalRecorderRecordingFolderCard extends StatelessWidget {
             onTap: isCurrentRecording
                 ? null
                 : (selectionMode && onSelectionToggle != null
-                    ? onSelectionToggle
-                    : onToggleExpanded),
+                      ? onSelectionToggle
+                      : onToggleExpanded),
           ),
+          if (!isCurrentRecording && !selectionMode)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () => showEdgeMlUploadDialog(context, folder),
+                  icon: const Icon(Icons.cloud_upload_outlined),
+                  label: const Text('Upload to Edge ML'),
+                ),
+              ),
+            ),
           if (isExpanded) const Divider(height: 1),
           if (isExpanded && files.isEmpty)
             Padding(
