@@ -14,6 +14,7 @@ Hier sammeln wir alles, was wir für Zwischenpräsentation, Abschlusspräsentati
 | `figures/` | Abbildungen samt Quelle oder Skript | Präsentationen und Paper |
 
 Erster Algorithmusbericht: [Liegestütz-Zählung](algorithmen/liegestuetze.md).
+Kniebeugen mit lokalen Realaufnahmen: [Entwicklung und Messkriterien](algorithmen/kniebeugen.md).
 Weitere Pfade legen wir an, sobald es dafür Inhalt gibt.
 
 ## Journal-Eintrag

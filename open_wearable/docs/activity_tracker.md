@@ -66,7 +66,12 @@ window. The first three steps are credited together. One/two-step bouts can be
 missed. Isolated peaks and strong head rotations are suppressed. This is a
 heuristic starting point: head motions resembling gait can still cause errors.
 
-Squats use bounded integration of projected acceleration as a motion proxy.
+Squats use a separate `models/squat_detector.dart`: bounded integration of
+projected acceleration, a 0.12 m minimum motion proxy, a substantial return and
+an upper turning-point check. A standing orientation reference and angular-speed
+gate reject large posture changes. An undamped return reference protects held
+descents. Squat-mode calibration uses a stable 0.7 s magnitude window and permits
+small head rotations; other modes retain their 1.5 s calibration gate.
 Push-ups have a separate detector: a quiet 0.7 s starting window estimates a
 local acceleration offset after filter settling. Damped velocity and position
 proxies limit accumulating drift. An undamped reference checks the return;
@@ -90,9 +95,12 @@ clipped impacts produce an unavailable height. The ±2 g clipping heuristic is
 conservative for the OE2 compact format. Walking/running is not classified.
 
 Synthetic replay tests verify implementation behavior, **not real-world
-accuracy**. No earable hardware or participant dataset was available during
-implementation. User-independent performance and jump-height validity remain
-to be measured.
+accuracy**. Five local, mixed-activity recordings are available for squat
+development. Their folder names supply ordered activity/count labels, not
+timestamped event annotations. Matching totals can conceal false counts during
+walking, stairs, sitting or push-ups. User-independent performance and
+jump-height validity remain to be measured. See the German
+[squat report](../../docs/algorithmen/kniebeugen.md) and `tool/squats/README.md`.
 
 ## Evaluation workflow
 

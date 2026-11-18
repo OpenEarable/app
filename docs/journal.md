@@ -2,6 +2,34 @@
 
 Neueste Einträge oben. Format siehe [README](README.md#journal-eintrag).
 
+## 2026-11-17: Kniebeugen mit fünf lokalen Mischaufnahmen entwickelt
+
+**Was:** Liegestütz-Implementierung und gemeinsame IMU-Vorverarbeitung geprüft.
+Eigener `SquatDetector` ersetzt den alten generischen Wiederholungsdetektor;
+Übungsbildschirm, Sensorquelle, Controller und Export bleiben gemeinsam.
+Lokaler Entwicklungsbereich `open_wearable/tool/squats/` mit Manifest, Replay
+und anonymisierten Ergebnissen; Rohdaten unter `temp/` und `data/` ignoriert.
+
+**Warum:** Der bisherige Startfilter kalibrierte drei Aufnahmen nie. Im
+Squat-Modus wird nun ein stabiler 0,7-s-Betragsverlauf bei kleinen Kopfrotationen
+zugelassen; andere Modi unverändert. Größerer Mindest-Bewegungsproxy,
+Rückkehrprüfung und stehende Haltungsreferenz statt empfindlicher Push-up-
+Schwellen. Dämpfung darf nach einem Halt keine vollständige Rückkehr vortäuschen.
+
+**Referenz und Ergebnis:** Fünf Aufnahmen mit ungefähr 99,9 Hz während der
+Übertragung; lange Mischaufnahme mit zwei Zeitlücken. Die Ordnernamen geben
+geordnete Abfolgen von Kniebeugen, Gehen, Treppen, Hinsetzen und Liegestützen
+und insgesamt 55 Kniebeugen vor. Keine Zeitannotation, Personenzahl und
+Messdatum unbekannt. Gyro deg/s ist eine dokumentierte Exportannahme.
+Replay zählt 43 statt 11; Gesamtzählfehler pro Aufnahme im Mittel 2,4 statt 8,8.
+Keine Erkennungsgenauigkeit: Fremdbewegungszählungen können fehlende Kniebeugen
+kompensieren. Die lange Aufnahme kalibriert erst nach 43,70 s und zählt 8/15.
+102 gezielte Tests bestanden; keine neue Hardware-Messung.
+
+**Grenzen:** Erhebliche Fehler im Mischablauf; Fremdbewegungsabgrenzung und
+personenunabhängige Genauigkeit nicht belegt. Begründungen, verworfene Ansätze,
+Metriken und Reproduktion im [Kniebeugenbericht](algorithmen/kniebeugen.md).
+
 ## 2026-11-10: Push-up-Erkennung leicht empfindlicher eingestellt
 
 Absenkschwelle 0,020 → 0,019 m/s und Rückkehrbeginn 0,015 → 0,013 m/s.

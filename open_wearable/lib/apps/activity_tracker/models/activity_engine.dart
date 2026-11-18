@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'activity_models.dart';
 import 'push_up_detector.dart';
+import 'squat_detector.dart';
 
 /// Events from one sample. Counts are deltas, so UI throttling loses no events.
 class ActivityUpdate {
@@ -27,10 +28,12 @@ class ActivityEngine {
   MotionVector _calibrationSum = MotionVector.zero;
   double _calibrationSeconds = 0;
   int _calibrationSamples = 0;
+  double _calibrationMinMagnitude = double.infinity;
+  double _calibrationMaxMagnitude = double.negativeInfinity;
   double _gravityMagnitude = gravity;
   double _smooth = 0;
   final _steps = _StepDetector();
-  final _reps = _RepetitionDetector();
+  final _squats = SquatDetector();
   final _pushUps = PushUpDetector();
   final _jumps = _JumpDetector();
 
@@ -61,10 +64,12 @@ class ActivityEngine {
     _calibrationSum = MotionVector.zero;
     _calibrationSeconds = 0;
     _calibrationSamples = 0;
+    _calibrationMinMagnitude = double.infinity;
+    _calibrationMaxMagnitude = double.negativeInfinity;
     _smooth = 0;
     movement = 0;
     _steps.reset();
-    _reps.reset();
+    _squats.reset();
     _pushUps.reset();
     _jumps.reset();
     phase = 'Stand still briefly';
@@ -74,7 +79,7 @@ class ActivityEngine {
   void select(ActivityKind next) {
     kind = next;
     _steps.reset();
-    _reps.reset();
+    _squats.reset();
     _pushUps.reset();
     _jumps.reset();
     _smooth = 0;
@@ -111,18 +116,38 @@ class ActivityEngine {
     final clipped = [s.acceleration.x, s.acceleration.y, s.acceleration.z]
         .any((v) => v.abs() >= 19.4); // OE2 compact IMU format is ±2 g.
     if (!calibrated) {
-      final still = (magnitude - gravity).abs() < 0.55 && angularSpeed < 0.18;
+      // Squat mode tolerates small head rotations, but additionally requires
+      // a stable magnitude window. Other activities keep their original gate.
+      final squatMode = kind == ActivityKind.squats;
+      final requiredSeconds = squatMode ? 0.7 : 1.5;
+      final still = (magnitude - gravity).abs() < 0.55 &&
+          angularSpeed < (squatMode ? 0.35 : 0.18);
       if (!still || dt > 0.12) {
         _calibrationSum = MotionVector.zero;
         _calibrationSamples = 0;
         _calibrationSeconds = 0;
+        _calibrationMinMagnitude = double.infinity;
+        _calibrationMaxMagnitude = double.negativeInfinity;
       } else {
         _calibrationSeconds += dt;
         _calibrationSum = _calibrationSum + s.acceleration;
         _calibrationSamples++;
+        _calibrationMinMagnitude =
+            math.min(_calibrationMinMagnitude, magnitude);
+        _calibrationMaxMagnitude =
+            math.max(_calibrationMaxMagnitude, magnitude);
       }
-      calibrationProgress = (_calibrationSeconds / 1.5).clamp(0, 1);
-      if (_calibrationSeconds >= 1.5 && _calibrationSamples >= 50) {
+      if (squatMode &&
+          _calibrationMaxMagnitude - _calibrationMinMagnitude > 0.45) {
+        _calibrationSum = MotionVector.zero;
+        _calibrationSamples = 0;
+        _calibrationSeconds = 0;
+        _calibrationMinMagnitude = double.infinity;
+        _calibrationMaxMagnitude = double.negativeInfinity;
+      }
+      calibrationProgress = (_calibrationSeconds / requiredSeconds).clamp(0, 1);
+      if (_calibrationSeconds >= requiredSeconds &&
+          _calibrationSamples >= (squatMode ? 30 : 50)) {
         final mean = _calibrationSum * (1 / _calibrationSamples);
         _up = mean.unit;
         _gravityMagnitude = mean.length;
@@ -176,9 +201,13 @@ class ActivityEngine {
       phase = _pushUps.phase;
       return ActivityUpdate(repetitions: count);
     }
-    final count = clipped ? 0 : _reps.add(s.seconds, _smooth, dt, 0.065);
-    if (clipped) _reps.reset();
-    phase = _reps.phase;
+    if (clipped) {
+      _squats.discardMovement();
+      _smooth = movement = 0;
+    }
+    final count =
+        clipped ? 0 : _squats.add(s.seconds, _smooth, dt, angularSpeed, _up);
+    phase = _squats.phase;
     return ActivityUpdate(repetitions: count);
   }
 }
@@ -233,54 +262,6 @@ class _StepDetector {
     _slope = slope;
     _previous = value;
     return count;
-  }
-}
-
-class _RepetitionDetector {
-  double _velocity = 0, _position = 0, _minimum = 0, _began = 0, _settle = 0;
-  int _state = 0;
-  String phase = 'Hold the start position';
-  void reset() {
-    _velocity = _position = _minimum = _began = _settle = 0;
-    _state = 0;
-    phase = 'Hold the start position';
-  }
-
-  int add(double t, double a, double dt, double minDepth) {
-    // Bounded integration is a movement proxy, not a measurement of depth.
-    // Rebase each complete cycle to prevent unbounded displacement drift.
-    if (_settle < 0.7) {
-      _settle = a.abs() < 0.5 ? _settle + dt : 0;
-      return 0;
-    }
-    _velocity = _velocity * math.exp(-dt / 1.5) + a * dt;
-    _position = _position * math.exp(-dt / 4) + _velocity * dt;
-    _minimum = math.min(_minimum, _position);
-    if (_state == 0) {
-      phase = 'Ready · lower your body';
-      if (_position < -minDepth * 0.4 && _velocity < -0.035) {
-        _state = 1;
-        _began = t;
-        phase = 'Lowering';
-      } else if (a.abs() < 0.15 && _velocity.abs() < 0.025) {
-        _position = _minimum = 0;
-      }
-    } else if (t - _began > 8) {
-      reset();
-    } else if (_state == 1 && _minimum <= -minDepth && _velocity > 0.025) {
-      _state = 2;
-      phase = 'Returning to start';
-    } else if (_state == 2 &&
-        _velocity <= 0 &&
-        _position >= _minimum * 0.2 &&
-        _position - _minimum >= minDepth * 0.8 &&
-        t - _began >= 0.65) {
-      _state = 0;
-      _velocity = _position = _minimum = 0;
-      phase = 'Repetition complete';
-      return 1;
-    }
-    return 0;
   }
 }
 
