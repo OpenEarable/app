@@ -35,6 +35,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:open_wearable/widgets/onboarding/permissions_onboarding_page.dart';
 
 import 'models/bluetooth_auto_connector.dart';
+import 'apps/activity_tracker/services/activity_sensor_source.dart';
+import 'apps/activity_tracker/view_models/activity_tracker_controller.dart';
 import 'models/logger.dart';
 import 'view_models/app_banner_controller.dart';
 import 'view_models/label_provider.dart';
@@ -63,6 +65,12 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (context) => WearablesProvider()),
+        ChangeNotifierProvider(
+          create: (context) => ActivityTrackerController(
+            source:
+                OpenEarableActivitySource(context.read<WearablesProvider>()),
+          ),
+        ),
         ChangeNotifierProvider(
           create: (context) => FirmwareUpdateRequestProvider(),
         ),
@@ -136,6 +144,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   late final StreamSubscription _wearableProvEventSub;
   late final WearablesProvider _wearablesProvider;
   late final SensorRecorderProvider _sensorRecorderProvider;
+  late final ActivityTrackerController _activityTracker;
   final AppUpgradeCoordinator _appUpgradeCoordinator = AppUpgradeCoordinator();
   bool _closingSensorShutdownInProgress = false;
   bool _shouldCloseOpenScreensOnResume = false;
@@ -165,6 +174,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     // Read provider without listening, allowed in initState with Provider
     _wearablesProvider = context.read<WearablesProvider>();
     _sensorRecorderProvider = context.read<SensorRecorderProvider>();
+    _activityTracker = context.read<ActivityTrackerController>();
 
     _unsupportedFirmwareSub =
         _wearablesProvider.unsupportedFirmwareStream.listen((evt) {
@@ -648,7 +658,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     }
 
     if (!AppShutdownSettings.shutOffAllSensorsOnAppClose ||
-        _sensorRecorderProvider.isRecording) {
+        _sensorRecorderProvider.isRecording ||
+        _activityTracker.isTracking) {
       _setBackgroundExecutionForShutdown(false);
       return;
     }
@@ -721,6 +732,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     _pendingCloseShutdownTimer = null;
 
     if (_sensorRecorderProvider.isRecording ||
+        _activityTracker.isTracking ||
         !AppShutdownSettings.shutOffAllSensorsOnAppClose) {
       _setBackgroundExecutionForShutdown(false);
       return;
@@ -750,6 +762,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               !_shouldCloseOpenScreensOnResume &&
               !_closingSensorShutdownInProgress &&
               !_sensorRecorderProvider.isRecording &&
+              !_activityTracker.isTracking &&
               backgroundEnteredAt != null &&
               DateTime.now().difference(backgroundEnteredAt) >=
                   _closeShutdownGracePeriod;

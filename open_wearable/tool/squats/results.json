@@ -1,0 +1,180 @@
+[
+  {
+    "id": "squat-01",
+    "expected": 10,
+    "detected": 10,
+    "error": 0,
+    "durationSeconds": 22.812256,
+    "gyroInputUnit": "deg/s",
+    "samples": {
+      "accelerometer": 2280,
+      "gyroscope": 2276,
+      "matchedAccelerometer": 2277,
+      "unmatchedAccelerometer": 3,
+      "unmatchedGyroscope": 0,
+      "unmatchedGyroscopeInterruptionSpans": 1
+    },
+    "sampleRatesHz": {
+      "accelerometer": 99.9024384085467,
+      "gyroscope": 99.90243813327442
+    },
+    "calibration": {
+      "calibratedSampleFraction": 0.968421052631579,
+      "firstCalibrationSeconds": 0.720703,
+      "calibratedAtEnd": true
+    },
+    "detectedEventSeconds": [
+      3.87378,
+      5.845673,
+      8.057862,
+      10.28003,
+      12.332032,
+      14.333985,
+      16.345948,
+      18.297852,
+      20.239746,
+      22.171631
+    ]
+  },
+  {
+    "id": "squat-02",
+    "expected": 10,
+    "detected": 9,
+    "error": -1,
+    "durationSeconds": 31.470764,
+    "gyroInputUnit": "deg/s",
+    "samples": {
+      "accelerometer": 3145,
+      "gyroscope": 3140,
+      "matchedAccelerometer": 3141,
+      "unmatchedAccelerometer": 4,
+      "unmatchedGyroscope": 0,
+      "unmatchedGyroscopeInterruptionSpans": 1
+    },
+    "sampleRatesHz": {
+      "accelerometer": 99.90224577960674,
+      "gyroscope": 99.90224283876917
+    },
+    "calibration": {
+      "calibratedSampleFraction": 0.9767885532591415,
+      "firstCalibrationSeconds": 0.730712,
+      "calibratedAtEnd": true
+    },
+    "detectedEventSeconds": [
+      3.913818,
+      5.825714,
+      7.69754,
+      9.639434,
+      23.342803,
+      25.034484,
+      26.616027,
+      28.337707,
+      30.169494
+    ]
+  },
+  {
+    "id": "squat-03",
+    "expected": 10,
+    "detected": 9,
+    "error": -1,
+    "durationSeconds": 30.639923,
+    "gyroInputUnit": "deg/s",
+    "samples": {
+      "accelerometer": 3062,
+      "gyroscope": 3058,
+      "matchedAccelerometer": 3060,
+      "unmatchedAccelerometer": 2,
+      "unmatchedGyroscope": 0,
+      "unmatchedGyroscopeInterruptionSpans": 1
+    },
+    "sampleRatesHz": {
+      "accelerometer": 99.90233983290362,
+      "gyroscope": 99.90233949906477
+    },
+    "calibration": {
+      "calibratedSampleFraction": 0.9768125408229915,
+      "firstCalibrationSeconds": 0.710693,
+      "calibratedAtEnd": true
+    },
+    "detectedEventSeconds": [
+      3.713623,
+      5.685547,
+      7.787598,
+      9.759521,
+      22.942413,
+      24.644073,
+      26.295685,
+      27.957306,
+      29.618927
+    ]
+  },
+  {
+    "id": "squat-04",
+    "expected": 10,
+    "detected": 7,
+    "error": -3,
+    "durationSeconds": 36.355499,
+    "gyroInputUnit": "deg/s",
+    "samples": {
+      "accelerometer": 3633,
+      "gyroscope": 3630,
+      "matchedAccelerometer": 3631,
+      "unmatchedAccelerometer": 2,
+      "unmatchedGyroscope": 0,
+      "unmatchedGyroscopeInterruptionSpans": 1
+    },
+    "sampleRatesHz": {
+      "accelerometer": 99.90235589944729,
+      "gyroscope": 99.90235776446548
+    },
+    "calibration": {
+      "calibratedSampleFraction": 0.9504541701073493,
+      "firstCalibrationSeconds": 1.801758,
+      "calibratedAtEnd": true
+    },
+    "detectedEventSeconds": [
+      4.124024,
+      6.166016,
+      8.248047,
+      10.470215,
+      29.238556,
+      31.150421,
+      32.972199
+    ]
+  },
+  {
+    "id": "squat-05",
+    "expected": 15,
+    "detected": 8,
+    "error": -7,
+    "durationSeconds": 103.978913,
+    "gyroInputUnit": "deg/s",
+    "samples": {
+      "accelerometer": 8454,
+      "gyroscope": 8452,
+      "matchedAccelerometer": 8453,
+      "unmatchedAccelerometer": 1,
+      "unmatchedGyroscope": 0,
+      "unmatchedGyroscopeInterruptionSpans": 1
+    },
+    "sampleRatesHz": {
+      "accelerometer": 81.29532956360103,
+      "gyroscope": 81.2917467291615
+    },
+    "calibration": {
+      "calibratedSampleFraction": 0.7124438135793707,
+      "firstCalibrationSeconds": 43.700105,
+      "calibratedAtEnd": true
+    },
+    "detectedEventSeconds": [
+      45.892243,
+      47.694001,
+      49.565827,
+      51.417634,
+      81.316804,
+      96.771882,
+      98.293367,
+      100.045076
+    ]
+  }
+]

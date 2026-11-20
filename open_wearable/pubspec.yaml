@@ -60,7 +60,6 @@ dependencies:
   sensors_plus: ^7.0.0
   device_info_plus: ^13.2.0
   pub_semver: ^2.2.0
-  flutter_headset_detector: ^3.1.0
   record: ^7.0.0
   path: ^1.9.1
   web: ^1.1.1
@@ -107,6 +106,7 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
+    - lib/apps/activity_tracker/assets/
     - lib/apps/posture_tracker/assets/
     - lib/apps/heart_tracker/assets/
     - lib/apps/seal_check/assets/

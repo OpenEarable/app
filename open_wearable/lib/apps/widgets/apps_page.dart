@@ -14,6 +14,7 @@ import 'package:open_wearable/widgets/connector_activity_indicator.dart';
 import 'package:open_wearable/widgets/recording_activity_indicator.dart';
 import 'package:open_wearable/widgets/sensors/sensor_page_spacing.dart';
 import 'package:provider/provider.dart';
+import 'package:open_wearable/apps/activity_tracker/widgets/activity_tracker_page.dart';
 
 /// Metadata and launch configuration for one built-in wearable app.
 class AppInfo {
@@ -27,6 +28,7 @@ class AppInfo {
   final double? svgIconInset;
   final double? svgIconScale;
   final Color? iconBackgroundColor;
+  final bool availableWithoutDevice;
 
   AppInfo({
     required this.logoPath,
@@ -39,6 +41,7 @@ class AppInfo {
     this.svgIconInset,
     this.svgIconScale,
     this.iconBackgroundColor,
+    this.availableWithoutDevice = false,
   });
 }
 
@@ -106,6 +109,16 @@ Sensor? _findOpticalTemperatureSensor(List<Sensor> sensors) {
 }
 
 final List<AppInfo> _apps = [
+  AppInfo(
+    logoPath: 'lib/apps/activity_tracker/assets/logo.svg',
+    title: 'Activity Tracker',
+    description: 'Steps, exercises and jump height',
+    availableWithoutDevice: true,
+    supportedDevices: const ['OpenEarable'],
+    requiredCapabilities: _postureRequiredCapabilities,
+    accentColor: _appAccentColor,
+    widget: const ActivityTrackerPage(),
+  ),
   AppInfo(
     logoPath: "lib/apps/posture_tracker/assets/logo.png",
     title: "Posture Tracker",
@@ -254,12 +267,13 @@ class AppsPage extends StatelessWidget {
     final enabledApps = <_AppListEntry>[];
     final disabledApps = <_AppListEntry>[];
     for (final app in _apps) {
-      final isEnabled = connectedWearableNames.any(
-        (wearableName) => wearableIsCompatibleWithApp(
-          wearableName: wearableName,
-          supportedDevicePrefixes: app.supportedDevices,
-        ),
-      );
+      final isEnabled = app.availableWithoutDevice ||
+          connectedWearableNames.any(
+            (wearableName) => wearableIsCompatibleWithApp(
+              wearableName: wearableName,
+              supportedDevicePrefixes: app.supportedDevices,
+            ),
+          );
       final entry = _AppListEntry(app: app, isEnabled: isEnabled);
       if (isEnabled) {
         enabledApps.add(entry);

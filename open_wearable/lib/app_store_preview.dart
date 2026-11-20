@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'apps/activity_tracker/services/activity_sensor_source.dart';
+import 'apps/activity_tracker/view_models/activity_tracker_controller.dart';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -104,6 +107,12 @@ class _AppStorePreviewAppState extends State<AppStorePreviewApp> {
         ),
         ChangeNotifierProvider(
           create: (_) => FirmwareUpdateRequestProvider(),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => ActivityTrackerController(
+            source:
+                OpenEarableActivitySource(context.read<WearablesProvider>()),
+          ),
         ),
         ChangeNotifierProxyProvider<WearablesProvider, SensorRecorderProvider>(
           create: (_) => SensorRecorderProvider(),

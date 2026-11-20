@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "expectedCountsSource": "original_folder_names_only",
+  "participants": null,
+  "measurementDate": null,
+  "recordings": [
+    {
+      "id": "squat-01",
+      "sourceFolder": "10 Squats",
+      "expectedSquats": 10,
+      "activities": [{"activity": "squats", "count": 10}]
+    },
+    {
+      "id": "squat-02",
+      "sourceFolder": "5 Squats, Gehen, 5 squats",
+      "expectedSquats": 10,
+      "activities": [
+        {"activity": "squats", "count": 5},
+        {"activity": "walking"},
+        {"activity": "squats", "count": 5}
+      ]
+    },
+    {
+      "id": "squat-03",
+      "sourceFolder": "5 Squats, hinsetzten, 5 squats",
+      "expectedSquats": 10,
+      "activities": [
+        {"activity": "squats", "count": 5},
+        {"activity": "sitting_down"},
+        {"activity": "squats", "count": 5}
+      ]
+    },
+    {
+      "id": "squat-04",
+      "sourceFolder": "5 Squats, 3 push-ups, 5 squats",
+      "expectedSquats": 10,
+      "activities": [
+        {"activity": "squats", "count": 5},
+        {"activity": "push_ups", "count": 3},
+        {"activity": "squats", "count": 5}
+      ]
+    },
+    {
+      "id": "squat-05",
+      "sourceFolder": "5 Squats, Treppen & Gehen, 5 Squats, hinsetzten, 5 squats, 3 push-ups ",
+      "expectedSquats": 15,
+      "activities": [
+        {"activity": "squats", "count": 5},
+        {"activity": "stairs_and_walking"},
+        {"activity": "squats", "count": 5},
+        {"activity": "sitting_down"},
+        {"activity": "squats", "count": 5},
+        {"activity": "push_ups", "count": 3}
+      ]
+    }
+  ]
+}

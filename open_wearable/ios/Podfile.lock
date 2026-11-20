@@ -1,7 +1,5 @@
 PODS:
   - Flutter (1.0.0)
-  - flutter_headset_detector (3.1.0):
-    - Flutter
   - iOSMcuManagerLibrary (1.12):
     - SwiftCBOR (= 0.5.0)
     - ZIPFoundation (= 0.9.19)
@@ -16,7 +14,6 @@ PODS:
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
-  - flutter_headset_detector (from `.symlinks/plugins/flutter_headset_detector/ios`)
   - mcumgr_flutter (from `.symlinks/plugins/mcumgr_flutter/darwin`)
   - SwiftProtobuf (= 1.37.0)
 
@@ -30,14 +27,11 @@ SPEC REPOS:
 EXTERNAL SOURCES:
   Flutter:
     :path: Flutter
-  flutter_headset_detector:
-    :path: ".symlinks/plugins/flutter_headset_detector/ios"
   mcumgr_flutter:
     :path: ".symlinks/plugins/mcumgr_flutter/darwin"
 
 SPEC CHECKSUMS:
   Flutter: 71a624a5bc0c04062bf19101d501e466baf2fb47
-  flutter_headset_detector: 37d2407c6c59aa6e8a9daecf732854862ff6dd4a
   iOSMcuManagerLibrary: f72db849f6dd66b1f26cd7eea776050a22c8591c
   mcumgr_flutter: b9864b2ae8334b6ba2b33f9ab4fc0a67bbe75c7a
   SwiftCBOR: aa87349b4ccddd19f861aa544f7c27d43dee5772

@@ -159,3 +159,7 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 open_wearable/devtools_options.yaml
+
+# Private participant recordings and local squat development data.
+/temp/
+/open_wearable/tool/squats/data/
